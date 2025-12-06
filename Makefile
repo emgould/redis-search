@@ -1,5 +1,5 @@
 
-.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all
+.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy-api deploy-etl create-redis-vm
 
 help:
 	@echo "Available make commands:"
@@ -32,6 +32,12 @@ help:
 	@echo "    make docker-api    - Run API in Docker (uses LOCAL_DEV=true)"
 	@echo "    make docker-etl    - Run ETL in Docker (uses LOCAL_DEV=true)"
 	@echo "    make docker-down   - Stop all Docker containers"
+	@echo ""
+	@echo "  Cloud Run Deployment:"
+	@echo "    make create-redis-vm - Create Redis Stack VM on GCE (one-time)"
+	@echo "    make deploy-api      - Deploy Search API to Cloud Run"
+	@echo "    make deploy-etl      - Deploy ETL job to Cloud Run"
+	@echo "    (Set REDIS_HOST=<vm-ip> before deploy commands)"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -127,3 +133,13 @@ local-gcs-load-tv:
 
 local-gcs-load-all:
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local etl && python scripts/load_gcs_metadata.py --type all'
+
+# Cloud Run deployment
+create-redis-vm:
+	./scripts/create_redis_vm.sh
+
+deploy-api:
+	./scripts/deploy_cloud_run.sh api prod
+
+deploy-etl:
+	./scripts/deploy_cloud_run.sh etl prod
