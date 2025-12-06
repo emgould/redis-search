@@ -33,8 +33,8 @@ class RedisRepository:
 
         return await self.idx.search(query)
 
-    async def set_document(self, key: str, value: dict):
-        await self.redis.json().set(key, "$", value)
+    async def set_document(self, key: str, value: dict) -> None:
+        await self.redis.json().set(key, "$", value)  # type: ignore[misc]
 
     async def stats(self):
         info = await self.redis.info()

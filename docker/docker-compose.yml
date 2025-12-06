@@ -4,6 +4,13 @@ services:
     ports:
       - "6380:6379"
       - "8001:8001"
+    volumes:
+      - redis_data:/data
+    environment:
+      # Auto-accept RedisInsight EULA
+      - RIPROXYEULA=true
+      # Persistence: AOF + RDB snapshots (same as GCE VM)
+      - REDIS_ARGS=--appendonly yes --save 60 1
 
   search_api:
     build:
@@ -51,3 +58,6 @@ services:
       bash -c "
         source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} etl &&
         python -m src.etl.run_etl"
+
+volumes:
+  redis_data:

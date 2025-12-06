@@ -1,5 +1,5 @@
 
-.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all
+.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy-api deploy-etl create-redis-vm local deploy tunnel
 
 help:
 	@echo "Available make commands:"
@@ -11,6 +11,7 @@ help:
 	@echo "    make secrets-setup - Upload secrets to GCP Secret Manager (requires GCP_PROJECT_ID)"
 	@echo ""
 	@echo "  Local Development:"
+	@echo "    make local         - Start Redis, API & Web (if not running), then load all GCS metadata"
 	@echo "    make web           - Start developer test website on port 9001"
 	@echo "    make local-api     - Run Search API with local env secrets"
 	@echo "    make local-etl     - Run ETL with local env secrets"
@@ -32,6 +33,12 @@ help:
 	@echo "    make docker-api    - Run API in Docker (uses LOCAL_DEV=true)"
 	@echo "    make docker-etl    - Run ETL in Docker (uses LOCAL_DEV=true)"
 	@echo "    make docker-down   - Stop all Docker containers"
+	@echo ""
+	@echo "  Cloud Run Deployment:"
+	@echo "    make deploy SERVICE=api ENV=dev  - Deploy Search API to Cloud Run (dev)"
+	@echo "    make deploy SERVICE=etl ENV=dev  - Deploy ETL job to Cloud Run (dev)"
+	@echo "    make create-redis-vm             - Create Redis Stack VM on GCE (one-time)"
+	@echo "    make tunnel                      - Create IAP tunnel to public Redis VM (localhost:6381)"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -71,18 +78,13 @@ local-dev:
 	@echo "  make local-etl   - Run ETL with dev secrets"
 
 local-api:
-	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh dev search_api && uvicorn src.search_api.main:app --reload --port 8080'
+	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local api && uvicorn src.search_api.main:app --reload --port 8080'
 
 local-etl:
-	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh dev etl && python -m src.etl.run_etl'
+	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local etl && python -m src.etl.run_etl'
 
 # GCP Secret Manager setup (one-time per environment)
-secrets-setup:
-	@if [ -z "$(GCP_PROJECT_ID)" ]; then \
-		echo "Error: GCP_PROJECT_ID is required"; \
-		echo "Usage: GCP_PROJECT_ID=your-project make secrets-setup ENV=dev"; \
-		exit 1; \
-	fi
+secrets-setup:	
 	GCP_PROJECT_ID=$(GCP_PROJECT_ID) bash scripts/setup_gcp_secrets.sh $(ENV)
 
 api:
@@ -97,11 +99,15 @@ redis-mac:
 redis-docker:
 	cd docker && docker-compose up -d redis
 
+redis-status:
+	@gcloud compute instances describe redis-stack-vm --zone=us-central1-a --format='value(status)'
+	@gcloud compute instances describe redis-stack-vm --zone=us-central1-a --format='value(networkInterfaces[0].networkIP)'
+
 test:
 	. venv/bin/activate && pytest -q
 
 web:
-	. venv/bin/activate && uvicorn web.app:app --reload --port 9001
+	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
 docker-api:
 	cd docker && docker-compose up search_api
@@ -127,3 +133,84 @@ local-gcs-load-tv:
 
 local-gcs-load-all:
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local etl && python scripts/load_gcs_metadata.py --type all'
+
+# Start Redis & API if not running, then load all GCS metadata
+local:
+	@echo "🚀 Starting local development environment..."
+	@echo ""
+	@echo "1️⃣  Checking Redis..."
+	@if ! docker ps --format '{{.Names}}' | grep -q '^docker-redis-1$$' 2>/dev/null; then \
+		echo "   Redis not running, starting it..."; \
+		$(MAKE) redis-docker; \
+		sleep 3; \
+	else \
+		echo "   ✅ Redis is already running"; \
+	fi
+	@echo ""
+	@echo "2️⃣  Checking API..."
+	@if ! lsof -ti:8080 > /dev/null 2>&1; then \
+		echo "   API not running, starting it in background..."; \
+		(nohup bash -c 'cd $(CURDIR) && source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn src.search_api.main:app --reload --port 8080' > /tmp/api.log 2>&1 &) && \
+		echo "   API started in background (logs: /tmp/api.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ API is already running on port 8080"; \
+	fi
+	@echo ""
+	@echo "3️⃣  Checking Web..."
+	@if ! lsof -ti:9001 > /dev/null 2>&1; then \
+		echo "   Web not running, starting it in background..."; \
+		(nohup bash -c 'cd $(CURDIR) && source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001' > /tmp/web.log 2>&1 &) && \
+		echo "   Web started in background (logs: /tmp/web.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ Web is already running on port 9001"; \
+	fi
+	@echo ""
+	@echo "4️⃣  Building Redis search index..."
+	@. venv/bin/activate && python scripts/build_redis_index.py
+	@echo ""
+	@echo "5️⃣  Loading all GCS metadata..."
+	@$(MAKE) local-gcs-load-all
+	@echo ""
+	@echo "✅ Local environment ready!"
+	@echo ""
+	@echo "🌐 Opening browser..."
+	@open http://localhost:9001 2>/dev/null || xdg-open http://localhost:9001 2>/dev/null || echo "   Please open http://localhost:9001 in your browser"
+
+# Cloud Run deployment
+create-redis-vm:
+	./scripts/create_redis_vm.sh
+
+# Deploy to Cloud Run: make deploy SERVICE=api ENV=dev
+SERVICE ?= api
+ENV ?= dev
+deploy:
+	@if [ "$(SERVICE)" != "api" ] && [ "$(SERVICE)" != "etl" ]; then \
+		echo "❌ SERVICE must be 'api' or 'etl'"; \
+		echo "   Usage: make deploy SERVICE=api ENV=dev"; \
+		exit 1; \
+	fi
+	./scripts/deploy_cloud_run.sh $(SERVICE) $(ENV)
+
+# Legacy targets (for backwards compatibility)
+deploy-api:
+	./scripts/deploy_cloud_run.sh api prod
+
+deploy-etl:
+	./scripts/deploy_cloud_run.sh etl prod
+
+# IAP tunnel to Redis VM - forwards localhost:6381 to Redis VM port 6379
+# Use PUBLIC_REDIS_PORT=6381 in local.env to connect through tunnel
+tunnel:
+	@echo "🔐 Creating IAP tunnel to Redis VM..."
+	@echo "   Local port:  localhost:6381"
+	@echo "   Remote:      redis-stack-vm:6379"
+	@echo ""
+	@echo "   To use: set PUBLIC_REDIS_PORT=6381 in config/local.env"
+	@echo "   Press Ctrl+C to close the tunnel"
+	@echo ""
+	gcloud compute start-iap-tunnel redis-stack-vm 6379 \
+		--local-host-port=localhost:6381 \
+		--zone=us-central1-a \
+		--project=media-circle

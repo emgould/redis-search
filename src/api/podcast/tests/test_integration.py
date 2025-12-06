@@ -12,6 +12,7 @@ Run with: pytest services/podcast/tests/test_integration.py -v
 """
 
 import pytest
+from contracts.models import MCSources, MCSubType, MCType
 
 from api.podcast.core import PodcastService
 from api.podcast.models import (
@@ -27,7 +28,6 @@ from api.podcast.models import (
 )
 from api.podcast.search import PodcastSearchService
 from api.podcast.wrappers import podcast_wrapper
-from contracts.models import MCSources, MCSubType, MCType
 from utils.pytest_utils import write_snapshot
 
 pytestmark = pytest.mark.integration

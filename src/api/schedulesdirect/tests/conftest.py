@@ -14,15 +14,15 @@ from api.schedulesdirect.core import SchedulesDirectService
 os.environ["ENVIRONMENT"] = "test"
 os.environ["ENABLE_CACHE_FOR_TESTS"] = "1"
 
-# Load environment variables from firebase.dev.env for integration tests
+# Load environment variables from api.dev.env for integration tests
 # Try multiple paths to find the config file
 config_paths = [
     # Path relative to python_functions directory (when running from python_functions/)
-    Path(__file__).parent.parent.parent.parent.parent / "config" / "firebase.dev.env",
+    Path(__file__).parent.parent.parent.parent.parent / "config" / "api.dev.env",
     # Path from current working directory
-    Path.cwd() / "config" / "firebase.dev.env",
+    Path.cwd() / "config" / "api.dev.env",
     # Absolute path fallback
-    Path("/Users/ericgould/dev/mediacircle/config/firebase.dev.env"),
+    Path("/Users/ericgould/dev/mediacircle/config/api.dev.env"),
 ]
 
 config_loaded = False

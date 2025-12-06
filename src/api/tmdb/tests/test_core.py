@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from contracts.models import MCType
 
 from api.tmdb.core import TMDBService
 from api.tmdb.models import MCBaseMediaItem, MCMovieItem, MCTvItem
@@ -18,7 +19,6 @@ from api.tmdb.tmdb_models import (
     TMDBTvDetailsResult,
     TMDBTVMultiSearch,
 )
-from contracts.models import MCType
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"

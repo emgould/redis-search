@@ -7,10 +7,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
+from contracts.models import MCType
 
 from api.youtube.core import YouTubeService
 from api.youtube.tests.conftest import load_fixture
-from contracts.models import MCType
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

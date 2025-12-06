@@ -4,6 +4,7 @@ Tests Pydantic model validation and serialization.
 """
 
 import pytest
+from contracts.models import MCType
 from pydantic import ValidationError
 
 from api.youtube.models import (
@@ -17,7 +18,6 @@ from api.youtube.models import (
     YouTubeTrendingResponse,
     YouTubeVideo,
 )
-from contracts.models import MCType
 
 pytestmark = pytest.mark.unit
 

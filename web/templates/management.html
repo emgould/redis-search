@@ -1,13 +1,275 @@
+{% extends "base.html" %}
 
-<h2>Redis Management Dashboard</h2>
+{% block title %}Management - Redis Search{% endblock %}
 
-<h3>DB Size</h3>
-<pre>{{ stats.dbsize }}</pre>
+{% block body %}
+<div class="min-h-full">
+  <!-- Header -->
+  <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="text-xl font-semibold text-white hover:text-brand-400 transition-colors">
+        ← Media Search
+      </a>
+      <h1 class="text-lg font-medium text-surface-300">Management Dashboard</h1>
+    </div>
+  </header>
 
-<h3>Memory Info</h3>
-<pre>{{ stats.info.memory | tojson(indent=2) }}</pre>
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+    
+    <!-- Redis Environment Switcher -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+        <span class="text-2xl">🔌</span> Redis Connection
+      </h2>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Local Redis -->
+        <div id="local-card" class="relative rounded-lg border-2 p-5 transition-all cursor-pointer
+          {% if current_env == 'local' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
+          onclick="switchRedis('local')">
+          
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-lg">Local Redis</h3>
+              <p class="text-sm text-surface-400">Docker container (localhost:6380)</p>
+            </div>
+            <span id="local-status" class="px-2 py-1 rounded text-xs font-medium
+              {% if local_status.status == 'connected' %}bg-green-500/20 text-green-400{% else %}bg-red-500/20 text-red-400{% endif %}">
+              {{ local_status.status }}
+            </span>
+          </div>
+          
+          {% if local_status.status == 'connected' %}
+          <div class="text-sm text-surface-400 space-y-1">
+            <p>Version: {{ local_status.redis_version }}</p>
+            <p>Documents: {{ local_status.dbsize }}</p>
+          </div>
+          {% else %}
+          <p class="text-sm text-red-400">{{ local_status.error }}</p>
+          {% endif %}
+          
+          {% if current_env == 'local' %}
+          <div class="absolute top-3 right-3">
+            <span class="text-brand-400 text-sm font-medium">● Active</span>
+          </div>
+          {% endif %}
+        </div>
+        
+        <!-- Public Redis -->
+        <div id="public-card" class="relative rounded-lg border-2 p-5 transition-all cursor-pointer
+          {% if current_env == 'public' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
+          onclick="switchRedis('public')">
+          
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-lg">Public Redis</h3>
+              <p class="text-sm text-surface-400">GCE VM ({{ public_status.host }}:{{ public_status.port }})</p>
+            </div>
+            <span id="public-status" class="px-2 py-1 rounded text-xs font-medium
+              {% if public_status.status == 'connected' %}bg-green-500/20 text-green-400{% else %}bg-red-500/20 text-red-400{% endif %}">
+              {{ public_status.status }}
+            </span>
+          </div>
+          
+          {% if public_status.status == 'connected' %}
+          <div class="text-sm text-surface-400 space-y-1">
+            <p>Version: {{ public_status.redis_version }}</p>
+            <p>Documents: {{ public_status.dbsize }}</p>
+          </div>
+          {% else %}
+          <p class="text-sm text-red-400">{{ public_status.error }}</p>
+          {% endif %}
+          
+          {% if current_env == 'public' %}
+          <div class="absolute top-3 right-3">
+            <span class="text-brand-400 text-sm font-medium">● Active</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div id="switch-message" class="mt-4 text-center text-sm hidden"></div>
+    </section>
+    
+    <!-- Data Loading -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+        <span class="text-2xl">📥</span> Load GCS Metadata
+      </h2>
+      
+      <p class="text-surface-400 mb-6">
+        Load TMDB movie and TV metadata from Google Cloud Storage into the currently active Redis instance.
+      </p>
+      
+      <div class="flex flex-wrap gap-3 mb-6">
+        <button onclick="loadMetadata('movie')" 
+          class="px-4 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+          id="btn-movie">
+          🎬 Load Movies
+        </button>
+        <button onclick="loadMetadata('tv')"
+          class="px-4 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+          id="btn-tv">
+          📺 Load TV Shows
+        </button>
+        <button onclick="loadMetadata('all')"
+          class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50"
+          id="btn-all">
+          🔄 Load All
+        </button>
+      </div>
+      
+      <!-- Task Status -->
+      <div id="task-status" class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}">
+        <div class="bg-surface-800 rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span id="task-indicator" class="{% if task_status.running %}animate-spin{% endif %}">
+              {% if task_status.running %}⏳{% elif task_status.error %}❌{% else %}✅{% endif %}
+            </span>
+            <span id="task-label" class="font-medium">
+              {% if task_status.running %}Loading...{% elif task_status.error %}Error{% else %}Complete{% endif %}
+            </span>
+          </div>
+          
+          <pre id="task-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap">{{ task_status.output }}{{ task_status.error }}</pre>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Current Stats -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+        <span class="text-2xl">📊</span> Current Redis Stats
+      </h2>
+      
+      {% if stats.error %}
+      <p class="text-red-400">{{ stats.error }}</p>
+      {% else %}
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Total Documents</p>
+          <p class="text-3xl font-bold text-brand-400">{{ stats.dbsize }}</p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Memory Used</p>
+          <p class="text-3xl font-bold text-brand-400">
+            {{ ((stats.info.used_memory | default(0)) / 1024 / 1024) | round(1) }} MB
+          </p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Peak Memory</p>
+          <p class="text-3xl font-bold text-surface-300">
+            {{ ((stats.info.used_memory_peak | default(0)) / 1024 / 1024) | round(1) }} MB
+          </p>
+        </div>
+      </div>
+      {% endif %}
+      
+      <div class="mt-4">
+        <a href="/admin/index_info" class="text-brand-400 hover:text-brand-300 text-sm">
+          View Search Index Info →
+        </a>
+      </div>
+    </section>
+    
+  </main>
+</div>
 
-<h3>Keyspace Info</h3>
-<pre>{{ stats.info.Keyspace | tojson(indent=2) }}</pre>
+<script>
+async function switchRedis(env) {
+  const msgEl = document.getElementById('switch-message');
+  msgEl.textContent = 'Switching...';
+  msgEl.className = 'mt-4 text-center text-sm text-surface-400';
+  msgEl.classList.remove('hidden');
+  
+  try {
+    const res = await fetch(`/api/switch-redis?env=${env}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (data.success) {
+      msgEl.textContent = `Switched to ${env} Redis`;
+      msgEl.className = 'mt-4 text-center text-sm text-green-400';
+      // Reload page to show updated stats
+      setTimeout(() => location.reload(), 500);
+    } else {
+      msgEl.textContent = data.error;
+      msgEl.className = 'mt-4 text-center text-sm text-red-400';
+    }
+  } catch (e) {
+    msgEl.textContent = 'Failed to switch: ' + e.message;
+    msgEl.className = 'mt-4 text-center text-sm text-red-400';
+  }
+}
 
-<p><a href="/admin/index_info">View Index Info</a></p>
+async function loadMetadata(type) {
+  const btns = ['btn-movie', 'btn-tv', 'btn-all'];
+  btns.forEach(id => document.getElementById(id).disabled = true);
+  
+  const statusEl = document.getElementById('task-status');
+  const indicatorEl = document.getElementById('task-indicator');
+  const labelEl = document.getElementById('task-label');
+  const outputEl = document.getElementById('task-output');
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = `Loading ${type} metadata...`;
+  outputEl.textContent = '';
+  
+  try {
+    const res = await fetch(`/api/load-gcs-metadata?media_type=${type}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    // Poll for status
+    pollTaskStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    outputEl.textContent = e.message;
+    btns.forEach(id => document.getElementById(id).disabled = false);
+  }
+}
+
+async function pollTaskStatus() {
+  const btns = ['btn-movie', 'btn-tv', 'btn-all'];
+  const indicatorEl = document.getElementById('task-indicator');
+  const labelEl = document.getElementById('task-label');
+  const outputEl = document.getElementById('task-output');
+  
+  try {
+    const res = await fetch('/api/task-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output + data.error;
+    
+    if (data.running) {
+      setTimeout(pollTaskStatus, 2000);
+    } else {
+      indicatorEl.className = '';
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error';
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'Complete';
+      }
+      btns.forEach(id => document.getElementById(id).disabled = false);
+    }
+  } catch (e) {
+    setTimeout(pollTaskStatus, 2000);
+  }
+}
+
+// Poll if task is running on page load
+{% if task_status.running %}
+pollTaskStatus();
+{% endif %}
+</script>
+{% endblock %}

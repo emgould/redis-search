@@ -12,7 +12,7 @@
 set -e
 
 ENV=${1:-dev}
-PROJECT_ID=${GCP_PROJECT_ID:-""}
+PROJECT_ID=${GCP_PROJECT_ID:-"media-circle"}
 
 echo "🚀 Setting up GCP secrets for ${ENV} environment"
 echo "=============================================="
@@ -24,7 +24,7 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
-ENV_FILE="config/${ENV}.env"
+ENV_FILE="config/etl.${ENV}.env"
 if [ ! -f "$ENV_FILE" ]; then
     echo "❌ Error: Environment file not found: ${ENV_FILE}"
     exit 1
@@ -43,69 +43,69 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # =============================================================================
-# Create ETL Environment Bundle (all secrets as one file)
+# Create API Environment Bundle (minimal secrets for API)
+# =============================================================================
+echo ""
+echo "📦 Creating API environment bundle..."
+echo "   API Environment File: ${API_ENV_FILE}"
+echo "   The is the fast api service in front of redis"
+API_ENV_FILE="config/api.${ENV}.env"
+API_SECRET_NAME="redis-search-${ENV}-api-env"
+
+if [ ! -f "$API_ENV_FILE" ]; then
+    echo "   ⚠️  Skipping API bundle (file not found: ${API_ENV_FILE})"
+else
+    # Create the secret if it doesn't exist
+    if ! gcloud secrets describe "${API_SECRET_NAME}" --project="${PROJECT_ID}" &>/dev/null; then
+        echo "   Creating secret: ${API_SECRET_NAME}"
+        gcloud secrets create "${API_SECRET_NAME}" \
+            --replication-policy="automatic" \
+            --project="${PROJECT_ID}"
+    else
+        echo "   Secret exists: ${API_SECRET_NAME}"
+    fi
+
+    # Add new version with current env file contents
+    echo "   Adding new version from ${API_ENV_FILE}..."
+    gcloud secrets versions add "${API_SECRET_NAME}" \
+        --data-file="${API_ENV_FILE}" \
+        --project="${PROJECT_ID}"
+    
+    echo "   ✅ API bundle created: ${API_SECRET_NAME}"
+fi
+
+# =============================================================================
+# Create ETL Environment Bundle (minimal secrets for API)
 # =============================================================================
 echo ""
 echo "📦 Creating ETL environment bundle..."
-
+echo "   ETL Environment File: ${ETL_ENV_FILE}"
+echo "   The is the etl service that loads the data into redis"
+ETL_ENV_FILE="config/etl.${ENV}.env"
 ETL_SECRET_NAME="redis-search-${ENV}-etl-env"
 
-# Create the secret if it doesn't exist
-if ! gcloud secrets describe "${ETL_SECRET_NAME}" --project="${PROJECT_ID}" &>/dev/null; then
-    echo "   Creating secret: ${ETL_SECRET_NAME}"
-    gcloud secrets create "${ETL_SECRET_NAME}" \
-        --replication-policy="automatic" \
-        --project="${PROJECT_ID}"
+if [ ! -f "$ETL_ENV_FILE" ]; then
+    echo "   ⚠️  Skipping ETL bundle (file not found: ${ETL_ENV_FILE})"
 else
-    echo "   Secret exists: ${ETL_SECRET_NAME}"
-fi
-
-# Add new version with current env file contents
-echo "   Adding new version from ${ENV_FILE}..."
-gcloud secrets versions add "${ETL_SECRET_NAME}" \
-    --data-file="${ENV_FILE}" \
-    --project="${PROJECT_ID}"
-
-echo "   ✅ ETL bundle created: ${ETL_SECRET_NAME}"
-
-# =============================================================================
-# Create Individual Secrets for Search API (minimal)
-# =============================================================================
-echo ""
-echo "🔑 Creating individual secrets for Search API..."
-
-# Function to create/update individual secret
-create_secret() {
-    local secret_name=$1
-    local secret_value=$2
-    
-    if [ -z "$secret_value" ]; then
-        echo "   ⚠️  Skipping ${secret_name} (empty value)"
-        return
-    fi
-    
     # Create the secret if it doesn't exist
-    if ! gcloud secrets describe "${secret_name}" --project="${PROJECT_ID}" &>/dev/null; then
-        echo "   Creating: ${secret_name}"
-        gcloud secrets create "${secret_name}" \
+    if ! gcloud secrets describe "${ETL_SECRET_NAME}" --project="${PROJECT_ID}" &>/dev/null; then
+        echo "   Creating secret: ${ETL_SECRET_NAME}"
+        gcloud secrets create "${ETL_SECRET_NAME}" \
             --replication-policy="automatic" \
             --project="${PROJECT_ID}"
+    else
+        echo "   Secret exists: ${ETL_SECRET_NAME}"
     fi
-    
-    # Add new version
-    echo "   Updating: ${secret_name}"
-    echo -n "${secret_value}" | gcloud secrets versions add "${secret_name}" \
-        --data-file=- \
+
+    # Add new version with current env file contents
+    echo "   Adding new version from ${API_ENV_FILE}..."
+    gcloud secrets versions add "${ETL_SECRET_NAME}" \
+        --data-file="${API_ENV_FILE}" \
         --project="${PROJECT_ID}"
-}
+    
+    echo "   ✅ ETL bundle created: ${ETL_SECRET_NAME}"
+fi
 
-# Extract values from env file
-REDIS_HOST=$(grep -E "^REDIS_HOST=" "${ENV_FILE}" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-REDIS_PORT=$(grep -E "^REDIS_PORT=" "${ENV_FILE}" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-
-# Create individual secrets
-create_secret "redis-search-${ENV}-redis-host" "${REDIS_HOST}"
-create_secret "redis-search-${ENV}-redis-port" "${REDIS_PORT}"
 
 # =============================================================================
 # Summary
@@ -116,8 +116,7 @@ echo "✅ GCP Secret Manager setup complete!"
 echo ""
 echo "Secrets created:"
 echo "  • ${ETL_SECRET_NAME} (full env bundle for ETL)"
-echo "  • redis-search-${ENV}-redis-host"
-echo "  • redis-search-${ENV}-redis-port"
+echo "  • ${API_SECRET_NAME} (full env bundle for API)"
 echo ""
 echo "📋 Next steps:"
 echo ""

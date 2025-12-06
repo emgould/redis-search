@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from contracts.models import MCType
 
 from api.lastfm.models import (
     LastFMAlbumSearchResponse,
@@ -16,7 +17,6 @@ from api.lastfm.models import (
 )
 from api.lastfm.search import LastFMSearchService
 from api.lastfm.tests.conftest import load_fixture
-from contracts.models import MCType
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

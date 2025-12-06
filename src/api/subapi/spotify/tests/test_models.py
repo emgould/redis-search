@@ -3,6 +3,7 @@ Tests for Spotify models.
 """
 
 import pytest
+from contracts.models import MCSources, MCType
 
 from api.subapi.spotify.models import (
     SpotifyAlbum,
@@ -13,7 +14,6 @@ from api.subapi.spotify.models import (
     SpotifyMultiSearchResponse,
     SpotifyPlaylist,
 )
-from contracts.models import MCSources, MCType
 
 
 class TestSpotifyArtist:

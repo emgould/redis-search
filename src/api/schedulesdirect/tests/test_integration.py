@@ -3,8 +3,9 @@
 # CRITICAL: Set environment variables FIRST, before any other imports
 import os
 
-from api.tmdb.models import MCMovieItem, MCTvItem
 from contracts.models import MCType
+
+from api.tmdb.models import MCMovieItem, MCTvItem
 
 os.environ.setdefault("FIRESTORE_EMULATOR_HOST", "localhost:8080")
 os.environ.setdefault("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
