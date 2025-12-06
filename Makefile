@@ -101,7 +101,7 @@ test:
 	. venv/bin/activate && pytest -q
 
 web:
-	. venv/bin/activate && uvicorn web.app:app --reload --port 9001
+	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local search_api && uvicorn web.app:app --reload --port 9001'
 
 docker-api:
 	cd docker && docker-compose up search_api

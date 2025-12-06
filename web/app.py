@@ -1,7 +1,3 @@
-
-import os
-
-from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -9,11 +5,6 @@ from fastapi.templating import Jinja2Templates
 from src.adapters.redis_client import get_redis
 from src.adapters.redis_repository import RedisRepository
 from src.services.search_service import autocomplete
-
-# Load environment variables BEFORE any imports that use Redis
-# Defaults to local.env for local development
-env_file = os.getenv("ENV_FILE", "config/local.env")
-load_dotenv(env_file)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")

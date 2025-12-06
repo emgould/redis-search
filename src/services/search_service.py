@@ -1,18 +1,10 @@
-
 import json
-import os
-
-from dotenv import load_dotenv
 
 from src.adapters.redis_repository import RedisRepository
 from src.core.search_queries import (
     build_autocomplete_query,
     build_fuzzy_fulltext_query,
 )
-
-# Load environment variables before creating Redis connection
-env_file = os.getenv("ENV_FILE", "config/dev.env")
-load_dotenv(env_file)
 
 # Lazy initialization
 _repo = None
