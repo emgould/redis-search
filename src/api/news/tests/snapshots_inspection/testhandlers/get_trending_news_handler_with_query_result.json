@@ -1,0 +1,12 @@
+{
+  "articles": [],
+  "category": null,
+  "country": "us",
+  "error": null,
+  "fetched_at": "2025-11-03T13:04:26.928864",
+  "page": 1,
+  "page_size": 5,
+  "query": "technology",
+  "status": "ok",
+  "total_results": 0
+}

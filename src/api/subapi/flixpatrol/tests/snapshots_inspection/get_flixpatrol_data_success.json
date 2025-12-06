@@ -1,0 +1,56 @@
+{
+  "date": "2025-01-15",
+  "error": null,
+  "metadata": {
+    "platforms": [
+      "netflix"
+    ],
+    "source": "FlixPatrol",
+    "total_movies": 0,
+    "total_shows": 1
+  },
+  "movies": {},
+  "shows": {
+    "netflix": [
+      {
+        "content_type": "tv",
+        "error": null,
+        "external_ids": {},
+        "id": "netflix:Test Show:tv",
+        "images": [],
+        "links": [],
+        "mc_id": "flixpatrol_netflix:Test Show:tv",
+        "mc_subtype": null,
+        "mc_type": "flixpatrol",
+        "metrics": {},
+        "platform": "netflix",
+        "rank": 1,
+        "score": 1000,
+        "source": "flixpatrol",
+        "source_id": null,
+        "title": "Test Show"
+      }
+    ]
+  },
+  "top_trending_movies": [],
+  "top_trending_tv_shows": [
+    {
+      "content_type": "tv",
+      "error": null,
+      "external_ids": {},
+      "id": "netflix:Test Show:tv",
+      "images": [],
+      "links": [],
+      "mc_id": "flixpatrol_netflix:Test Show:tv",
+      "mc_subtype": null,
+      "mc_type": "flixpatrol",
+      "metrics": {},
+      "platform": "netflix",
+      "rank": 1,
+      "score": 1000,
+      "source": "flixpatrol",
+      "source_id": null,
+      "title": "Test Show"
+    }
+  ]
+}

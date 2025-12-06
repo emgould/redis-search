@@ -1,0 +1,16 @@
+{
+  "category": null,
+  "country": "us",
+  "data_source": "NewsAPI Trending",
+  "data_type": "news_article",
+  "error": null,
+  "fetched_at": "2025-11-09T19:43:47.281151",
+  "metrics": {},
+  "page": 1,
+  "page_size": 5,
+  "query": "technology",
+  "results": [],
+  "status": "ok",
+  "status_code": 200,
+  "total_results": 0
+}

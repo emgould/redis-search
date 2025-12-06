@@ -1,0 +1,1699 @@
+{
+  "data_source": "watchmode_list + tmdb_complete",
+  "error": null,
+  "external_ids": {},
+  "generated_at": "2025-11-07T11:51:03.995099+00:00",
+  "images": [],
+  "links": [],
+  "mc_id": "watchmode_whats_new_US_2025-11-07",
+  "mc_subtype": null,
+  "mc_type": "mixed",
+  "metrics": {},
+  "region": "US",
+  "results": [
+    {
+      "adult": false,
+      "availability_type": null,
+      "backdrop_path": "/7myBq0J5SeNIBkprlnvNWDYpLAG.jpg",
+      "clips": [],
+      "content_type": "tv",
+      "director": {
+        "id": 2814758,
+        "job": "Director",
+        "name": "Lilli Tautfest"
+      },
+      "error": null,
+      "external_ids": {
+        "watchmode_id": 3240708
+      },
+      "final_score": null,
+      "first_air_date": null,
+      "genre_ids": [
+        35
+      ],
+      "genres": [],
+      "images": [
+        {
+          "description": "poster",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/qDrybfyA2MKyiHlxCmegDXuI3a5.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/qDrybfyA2MKyiHlxCmegDXuI3a5.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/qDrybfyA2MKyiHlxCmegDXuI3a5.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/qDrybfyA2MKyiHlxCmegDXuI3a5.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/7myBq0J5SeNIBkprlnvNWDYpLAG.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/7myBq0J5SeNIBkprlnvNWDYpLAG.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/7myBq0J5SeNIBkprlnvNWDYpLAG.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/7myBq0J5SeNIBkprlnvNWDYpLAG.jpg"
+        }
+      ],
+      "keywords": [
+        {
+          "id": 253419,
+          "name": "social media influencer"
+        }
+      ],
+      "keywords_count": 1,
+      "last_air_date": null,
+      "links": [],
+      "main_cast": [
+        {
+          "character": "Donna",
+          "gender": 1,
+          "has_image": true,
+          "id": 2719248,
+          "image_url": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+          "name": "Lia von Blarer",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+            "original": "https://image.tmdb.org/t/p/original/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg"
+          },
+          "profile_path": "/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg"
+        },
+        {
+          "character": "Milou",
+          "gender": 1,
+          "has_image": false,
+          "id": 3336929,
+          "image_url": null,
+          "name": "Salome Kiessling",
+          "order": 1,
+          "profile_image_url": null,
+          "profile_images": null,
+          "profile_path": null
+        },
+        {
+          "character": "Rico",
+          "gender": 2,
+          "has_image": true,
+          "id": 1816591,
+          "image_url": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+          "name": "Nils Hohenhövel",
+          "order": 2,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+            "original": "https://image.tmdb.org/t/p/original/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg"
+          },
+          "profile_path": "/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg"
+        },
+        {
+          "character": "Pascal",
+          "gender": 2,
+          "has_image": true,
+          "id": 1864583,
+          "image_url": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+          "name": "Lukas Sperber",
+          "order": 3,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+            "original": "https://image.tmdb.org/t/p/original/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/h5h059k3tRpWFd0nY55FsACJdh7.jpg"
+          },
+          "profile_path": "/h5h059k3tRpWFd0nY55FsACJdh7.jpg"
+        }
+      ],
+      "mc_id": "tmdb_275355",
+      "mc_subtype": null,
+      "mc_type": "tv",
+      "media_type": "tv",
+      "metrics": {
+        "popularity": 0.7276,
+        "vote_average": 10.0,
+        "vote_count": 1
+      },
+      "name": "Bad Influencer",
+      "network": null,
+      "number_of_episodes": null,
+      "number_of_seasons": null,
+      "origin_country": [],
+      "original_language": "de",
+      "overview": "Donna actually just wanted to have a nice little sex date, but her chosen man, Pascal, is a manfluencer for whom she is nothing more than another point in his 7-ONS-in-7-days challenge. Without her consent, he films her naked in bed and streams the whole thing. But Donna hits back, literally, by kicking Pascal in the groin on camera. The video goes viral, and with it Donna. At first it looks as if her life is destroyed. But Donna is not that easy to get down. With her best friend and roommate, Milou, she makes a video herself and strikes back against pick-up artist Pascal and all the toxic incels on the internet. She announces that she will have more followers than Pascal within a month - that's only a measly 1.5 million.  BAD INFLUENCER is the German adaptation of the Dutch comedy series of the same name and gives the audience a revealing look behind the scenes of the glamorous world of influencers. The series is about how young people have to bend to be successful influencers.",
+      "popularity": 0.0,
+      "poster_path": "/qDrybfyA2MKyiHlxCmegDXuI3a5.jpg",
+      "primary_trailer": {},
+      "relevancy_debug": null,
+      "source": "tmdb",
+      "source_id": "275355",
+      "spoken_languages": [],
+      "status": "Returning Series",
+      "status_code": 200,
+      "streaming_platform": null,
+      "title": "Bad Influencer",
+      "tmdb_cast": {
+        "cast": [
+          {
+            "character": "Donna",
+            "gender": 1,
+            "has_image": true,
+            "id": 2719248,
+            "image_url": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+            "name": "Lia von Blarer",
+            "order": 0,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+              "original": "https://image.tmdb.org/t/p/original/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg"
+            },
+            "profile_path": "/b0kgRwAHs1MhEFb7xuo52iMk8cH.jpg"
+          },
+          {
+            "character": "Milou",
+            "gender": 1,
+            "has_image": false,
+            "id": 3336929,
+            "image_url": null,
+            "name": "Salome Kiessling",
+            "order": 1,
+            "profile_image_url": null,
+            "profile_images": null,
+            "profile_path": null
+          },
+          {
+            "character": "Rico",
+            "gender": 2,
+            "has_image": true,
+            "id": 1816591,
+            "image_url": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+            "name": "Nils Hohenhövel",
+            "order": 2,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+              "original": "https://image.tmdb.org/t/p/original/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg"
+            },
+            "profile_path": "/q5J1taxMFk8ng4tHy6jbqZH0ZdV.jpg"
+          },
+          {
+            "character": "Pascal",
+            "gender": 2,
+            "has_image": true,
+            "id": 1864583,
+            "image_url": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+            "name": "Lukas Sperber",
+            "order": 3,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+              "original": "https://image.tmdb.org/t/p/original/h5h059k3tRpWFd0nY55FsACJdh7.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/h5h059k3tRpWFd0nY55FsACJdh7.jpg"
+            },
+            "profile_path": "/h5h059k3tRpWFd0nY55FsACJdh7.jpg"
+          }
+        ],
+        "cast_count": 4,
+        "director": {
+          "id": 2814758,
+          "job": "Director",
+          "name": "Lilli Tautfest"
+        },
+        "total_cast": 4
+      },
+      "tmdb_id": 275355,
+      "tmdb_videos": {
+        "behind_the_scenes": [],
+        "clips": [],
+        "other": [],
+        "teasers": [],
+        "total_videos": 0,
+        "trailers": [],
+        "video_categories": {
+          "behind_the_scenes_count": 0,
+          "clips_count": 0,
+          "other_count": 0,
+          "teasers_count": 0,
+          "trailers_count": 0
+        }
+      },
+      "trailers": [],
+      "vote_average": 0.0,
+      "vote_count": 0,
+      "watch_providers": {}
+    },
+    {
+      "adult": false,
+      "availability_type": null,
+      "backdrop_path": "/6qlfBwASsbzQCw6U2JEBIjTUoN1.jpg",
+      "clips": [],
+      "content_type": "tv",
+      "director": {},
+      "error": null,
+      "external_ids": {
+        "watchmode_id": 3185420
+      },
+      "final_score": null,
+      "first_air_date": null,
+      "genre_ids": [
+        10764
+      ],
+      "genres": [],
+      "images": [
+        {
+          "description": "poster",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/fywhrJNTWC70f4xzUKGqLOS8dkD.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/fywhrJNTWC70f4xzUKGqLOS8dkD.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/fywhrJNTWC70f4xzUKGqLOS8dkD.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/fywhrJNTWC70f4xzUKGqLOS8dkD.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/6qlfBwASsbzQCw6U2JEBIjTUoN1.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/6qlfBwASsbzQCw6U2JEBIjTUoN1.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/6qlfBwASsbzQCw6U2JEBIjTUoN1.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/6qlfBwASsbzQCw6U2JEBIjTUoN1.jpg"
+        }
+      ],
+      "keywords": [
+        {
+          "id": 6383,
+          "name": "music competition"
+        },
+        {
+          "id": 283297,
+          "name": "music"
+        }
+      ],
+      "keywords_count": 2,
+      "last_air_date": null,
+      "links": [],
+      "main_cast": [
+        {
+          "character": "Self - Judge",
+          "gender": 2,
+          "has_image": true,
+          "id": 3236805,
+          "image_url": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+          "name": "SCH",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+            "original": "https://image.tmdb.org/t/p/original/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg"
+          },
+          "profile_path": "/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg"
+        },
+        {
+          "character": "Self - Judge",
+          "gender": 0,
+          "has_image": true,
+          "id": 3716387,
+          "image_url": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+          "name": "SDM",
+          "order": 4,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+            "original": "https://image.tmdb.org/t/p/original/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg"
+          },
+          "profile_path": "/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg"
+        }
+      ],
+      "mc_id": "tmdb_133784",
+      "mc_subtype": null,
+      "mc_type": "tv",
+      "media_type": "tv",
+      "metrics": {
+        "popularity": 3.9279,
+        "vote_average": 7.3,
+        "vote_count": 15
+      },
+      "name": "Rhythm + Flow France",
+      "network": null,
+      "number_of_episodes": null,
+      "number_of_seasons": null,
+      "origin_country": [],
+      "original_language": "fr",
+      "overview": "French rappers freestyle, battle and write their way to a game-changing 100,000 euro prize in a music competition series judged by Niska, Shay and SCH.",
+      "popularity": 0.0,
+      "poster_path": "/fywhrJNTWC70f4xzUKGqLOS8dkD.jpg",
+      "primary_trailer": {
+        "embed_url": "https://www.youtube.com/embed/dYPwTZQ_zbc",
+        "id": "628e5eccb6abc41296930fee",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "dYPwTZQ_zbc",
+        "name": "Official Trailer [Subtitled]",
+        "official": true,
+        "published_at": "2022-05-25T15:00:07.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/dYPwTZQ_zbc/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=dYPwTZQ_zbc"
+      },
+      "relevancy_debug": null,
+      "source": "tmdb",
+      "source_id": "133784",
+      "spoken_languages": [],
+      "status": "Returning Series",
+      "status_code": 200,
+      "streaming_platform": "Netflix",
+      "title": "Rhythm + Flow France",
+      "tmdb_cast": {
+        "cast": [
+          {
+            "character": "Self - Judge",
+            "gender": 2,
+            "has_image": true,
+            "id": 3236805,
+            "image_url": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+            "name": "SCH",
+            "order": 0,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+              "original": "https://image.tmdb.org/t/p/original/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg"
+            },
+            "profile_path": "/9sFnc3RDXa1LsPKaFYrrq0pUCuN.jpg"
+          },
+          {
+            "character": "Self - Judge",
+            "gender": 0,
+            "has_image": true,
+            "id": 3716387,
+            "image_url": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+            "name": "SDM",
+            "order": 4,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+              "original": "https://image.tmdb.org/t/p/original/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg"
+            },
+            "profile_path": "/ze5SVR0J4qsWbXB8g39qWXRXm9m.jpg"
+          }
+        ],
+        "cast_count": 2,
+        "total_cast": 2
+      },
+      "tmdb_id": 133784,
+      "tmdb_videos": {
+        "behind_the_scenes": [],
+        "clips": [],
+        "other": [],
+        "primary_trailer": {
+          "embed_url": "https://www.youtube.com/embed/dYPwTZQ_zbc",
+          "id": "628e5eccb6abc41296930fee",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "dYPwTZQ_zbc",
+          "name": "Official Trailer [Subtitled]",
+          "official": true,
+          "published_at": "2022-05-25T15:00:07.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/dYPwTZQ_zbc/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=dYPwTZQ_zbc"
+        },
+        "teasers": [],
+        "total_videos": 1,
+        "trailers": [
+          {
+            "embed_url": "https://www.youtube.com/embed/dYPwTZQ_zbc",
+            "id": "628e5eccb6abc41296930fee",
+            "iso_3166_1": "US",
+            "iso_639_1": "en",
+            "key": "dYPwTZQ_zbc",
+            "name": "Official Trailer [Subtitled]",
+            "official": true,
+            "published_at": "2022-05-25T15:00:07.000Z",
+            "site": "YouTube",
+            "size": 1080,
+            "thumbnail_url": "https://img.youtube.com/vi/dYPwTZQ_zbc/maxresdefault.jpg",
+            "type": "Trailer",
+            "url": "https://www.youtube.com/watch?v=dYPwTZQ_zbc"
+          }
+        ],
+        "video_categories": {
+          "behind_the_scenes_count": 0,
+          "clips_count": 0,
+          "other_count": 0,
+          "teasers_count": 0,
+          "trailers_count": 1
+        }
+      },
+      "trailers": [
+        {
+          "embed_url": "https://www.youtube.com/embed/dYPwTZQ_zbc",
+          "id": "628e5eccb6abc41296930fee",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "dYPwTZQ_zbc",
+          "name": "Official Trailer [Subtitled]",
+          "official": true,
+          "published_at": "2022-05-25T15:00:07.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/dYPwTZQ_zbc/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=dYPwTZQ_zbc"
+        }
+      ],
+      "vote_average": 0.0,
+      "vote_count": 0,
+      "watch_providers": {
+        "content_type": "tv",
+        "flatrate": [
+          {
+            "display_priority": 1,
+            "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+            "provider_id": 8,
+            "provider_name": "Netflix"
+          },
+          {
+            "display_priority": 157,
+            "logo_path": "/dpR8r13zWDeUR0QkzWidrdMxa56.jpg",
+            "provider_id": 1796,
+            "provider_name": "Netflix Standard with Ads"
+          }
+        ],
+        "link": "https://www.themoviedb.org/tv/133784-nouvelle-ecole/watch?locale=US",
+        "primary_provider": {
+          "display_priority": 1,
+          "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+          "provider_id": 8,
+          "provider_name": "Netflix",
+          "type": "flatrate"
+        },
+        "region": "US",
+        "tmdb_id": 133784
+      }
+    },
+    {
+      "adult": false,
+      "availability_type": null,
+      "backdrop_path": "/wT4hYTghX8tFaKsthpHlXcZlgn9.jpg",
+      "clips": [],
+      "content_type": "tv",
+      "director": {},
+      "error": null,
+      "external_ids": {
+        "watchmode_id": 3220420
+      },
+      "final_score": null,
+      "first_air_date": null,
+      "genre_ids": [
+        10765,
+        9648
+      ],
+      "genres": [],
+      "images": [
+        {
+          "description": "poster",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/vAmcxOxKX1n4njoj5i5w9atZj4c.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/vAmcxOxKX1n4njoj5i5w9atZj4c.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/vAmcxOxKX1n4njoj5i5w9atZj4c.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/vAmcxOxKX1n4njoj5i5w9atZj4c.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/wT4hYTghX8tFaKsthpHlXcZlgn9.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/wT4hYTghX8tFaKsthpHlXcZlgn9.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/wT4hYTghX8tFaKsthpHlXcZlgn9.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/wT4hYTghX8tFaKsthpHlXcZlgn9.jpg"
+        }
+      ],
+      "keywords": [
+        {
+          "id": 160292,
+          "name": "religious conflict"
+        },
+        {
+          "id": 210608,
+          "name": "1990s"
+        },
+        {
+          "id": 315058,
+          "name": "horror"
+        },
+        {
+          "id": 315263,
+          "name": "rural town"
+        }
+      ],
+      "keywords_count": 4,
+      "last_air_date": null,
+      "links": [],
+      "main_cast": [
+        {
+          "character": "Sonia",
+          "gender": 1,
+          "has_image": true,
+          "id": 114463,
+          "image_url": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+          "name": "Michelle Jenner",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+            "original": "https://image.tmdb.org/t/p/original/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/2F6P2UcKQvnadk2ML8xBymbrlws.jpg"
+          },
+          "profile_path": "/2F6P2UcKQvnadk2ML8xBymbrlws.jpg"
+        },
+        {
+          "character": "Father Ángel",
+          "gender": 2,
+          "has_image": true,
+          "id": 3618,
+          "image_url": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+          "name": "Darío Grandinetti",
+          "order": 1,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+            "original": "https://image.tmdb.org/t/p/original/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg"
+          },
+          "profile_path": "/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg"
+        },
+        {
+          "character": "Safir",
+          "gender": 2,
+          "has_image": true,
+          "id": 1389576,
+          "image_url": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+          "name": "Younes Bouab",
+          "order": 2,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+            "original": "https://image.tmdb.org/t/p/original/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg"
+          },
+          "profile_path": "/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg"
+        },
+        {
+          "character": "",
+          "gender": 1,
+          "has_image": true,
+          "id": 1380389,
+          "image_url": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+          "name": "Elena Rivera",
+          "order": 3,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+            "original": "https://image.tmdb.org/t/p/original/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/qZeIDCOThIKvJutGBP62sCs8fqN.jpg"
+          },
+          "profile_path": "/qZeIDCOThIKvJutGBP62sCs8fqN.jpg"
+        },
+        {
+          "character": "",
+          "gender": 2,
+          "has_image": true,
+          "id": 34021,
+          "image_url": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+          "name": "Raúl Arévalo",
+          "order": 4,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+            "original": "https://image.tmdb.org/t/p/original/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg"
+          },
+          "profile_path": "/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg"
+        }
+      ],
+      "mc_id": "tmdb_248488",
+      "mc_subtype": null,
+      "mc_type": "tv",
+      "media_type": "tv",
+      "metrics": {
+        "popularity": 12.3423,
+        "vote_average": 5.0,
+        "vote_count": 3
+      },
+      "name": "Tell Me Your Name",
+      "network": null,
+      "number_of_episodes": null,
+      "number_of_seasons": null,
+      "origin_country": [],
+      "original_language": "es",
+      "overview": "Toledo, Spain, 1997. The residents of Río Blanco have accepted the settlement of Moroccan seasonal workers in Fuensanta. Coexistence brings tensions, known by Sonia, an NGO leader; Father Ángel, the local priest; and Safir, the imam. What they don't imagine is that Fuensanta's foundations hide something capable of unleashing their worst nightmares, regardless of their beliefs or prayers.",
+      "popularity": 0.0,
+      "poster_path": "/vAmcxOxKX1n4njoj5i5w9atZj4c.jpg",
+      "primary_trailer": {},
+      "relevancy_debug": null,
+      "source": "tmdb",
+      "source_id": "248488",
+      "spoken_languages": [],
+      "status": "Returning Series",
+      "status_code": 200,
+      "streaming_platform": "Amazon Prime Video",
+      "title": "Tell Me Your Name",
+      "tmdb_cast": {
+        "cast": [
+          {
+            "character": "Sonia",
+            "gender": 1,
+            "has_image": true,
+            "id": 114463,
+            "image_url": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+            "name": "Michelle Jenner",
+            "order": 0,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+              "original": "https://image.tmdb.org/t/p/original/2F6P2UcKQvnadk2ML8xBymbrlws.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/2F6P2UcKQvnadk2ML8xBymbrlws.jpg"
+            },
+            "profile_path": "/2F6P2UcKQvnadk2ML8xBymbrlws.jpg"
+          },
+          {
+            "character": "Father Ángel",
+            "gender": 2,
+            "has_image": true,
+            "id": 3618,
+            "image_url": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+            "name": "Darío Grandinetti",
+            "order": 1,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+              "original": "https://image.tmdb.org/t/p/original/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg"
+            },
+            "profile_path": "/l1Gw8OLzw7FehGeQK7pZ5wJOIgF.jpg"
+          },
+          {
+            "character": "Safir",
+            "gender": 2,
+            "has_image": true,
+            "id": 1389576,
+            "image_url": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+            "name": "Younes Bouab",
+            "order": 2,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+              "original": "https://image.tmdb.org/t/p/original/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg"
+            },
+            "profile_path": "/vlZtenkbtcUB6nt6qyfRjYRzshR.jpg"
+          },
+          {
+            "character": "",
+            "gender": 1,
+            "has_image": true,
+            "id": 1380389,
+            "image_url": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+            "name": "Elena Rivera",
+            "order": 3,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+              "original": "https://image.tmdb.org/t/p/original/qZeIDCOThIKvJutGBP62sCs8fqN.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/qZeIDCOThIKvJutGBP62sCs8fqN.jpg"
+            },
+            "profile_path": "/qZeIDCOThIKvJutGBP62sCs8fqN.jpg"
+          },
+          {
+            "character": "",
+            "gender": 2,
+            "has_image": true,
+            "id": 34021,
+            "image_url": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+            "name": "Raúl Arévalo",
+            "order": 4,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+              "original": "https://image.tmdb.org/t/p/original/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg"
+            },
+            "profile_path": "/npWhiRnqlbqku6mNnk5RTgGvnj2.jpg"
+          }
+        ],
+        "cast_count": 5,
+        "total_cast": 5
+      },
+      "tmdb_id": 248488,
+      "tmdb_videos": {
+        "behind_the_scenes": [],
+        "clips": [],
+        "other": [],
+        "teasers": [],
+        "total_videos": 0,
+        "trailers": [],
+        "video_categories": {
+          "behind_the_scenes_count": 0,
+          "clips_count": 0,
+          "other_count": 0,
+          "teasers_count": 0,
+          "trailers_count": 0
+        }
+      },
+      "trailers": [],
+      "vote_average": 0.0,
+      "vote_count": 0,
+      "watch_providers": {
+        "content_type": "tv",
+        "flatrate": [
+          {
+            "display_priority": 4,
+            "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+            "provider_id": 9,
+            "provider_name": "Amazon Prime Video"
+          },
+          {
+            "display_priority": 208,
+            "logo_path": "/8aBqoNeGGr0oSA85iopgNZUOTOc.jpg",
+            "provider_id": 2100,
+            "provider_name": "Amazon Prime Video with Ads"
+          }
+        ],
+        "link": "https://www.themoviedb.org/tv/248488-dime-tu-nombre/watch?locale=US",
+        "primary_provider": {
+          "display_priority": 4,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "provider_id": 9,
+          "provider_name": "Amazon Prime Video",
+          "type": "flatrate"
+        },
+        "region": "US",
+        "tmdb_id": 248488
+      }
+    },
+    {
+      "adult": false,
+      "availability_type": null,
+      "backdrop_path": "/ca3UijLciLkhxXeriCWWbRXN98i.jpg",
+      "clips": [],
+      "content_type": "tv",
+      "director": {
+        "id": 1371890,
+        "job": "Director",
+        "name": "Vera Egito",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+          "original": "https://image.tmdb.org/t/p/original/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg"
+        }
+      },
+      "error": null,
+      "external_ids": {
+        "watchmode_id": 3249324
+      },
+      "final_score": null,
+      "first_air_date": null,
+      "genre_ids": [
+        18,
+        80
+      ],
+      "genres": [],
+      "images": [
+        {
+          "description": "poster",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/eVqBFACBpovk0sEtjx3HEb3jOYS.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/eVqBFACBpovk0sEtjx3HEb3jOYS.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/eVqBFACBpovk0sEtjx3HEb3jOYS.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/eVqBFACBpovk0sEtjx3HEb3jOYS.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/ca3UijLciLkhxXeriCWWbRXN98i.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/ca3UijLciLkhxXeriCWWbRXN98i.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/ca3UijLciLkhxXeriCWWbRXN98i.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/ca3UijLciLkhxXeriCWWbRXN98i.jpg"
+        }
+      ],
+      "keywords": [
+        {
+          "id": 9672,
+          "name": "based on true story"
+        },
+        {
+          "id": 33722,
+          "name": "true crime"
+        }
+      ],
+      "keywords_count": 2,
+      "last_air_date": null,
+      "links": [],
+      "main_cast": [
+        {
+          "character": "Suzane Louise von Richthofen",
+          "gender": 1,
+          "has_image": true,
+          "id": 1540112,
+          "image_url": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+          "name": "Marina Ruy Barbosa",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+            "original": "https://image.tmdb.org/t/p/original/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg"
+          },
+          "profile_path": "/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg"
+        },
+        {
+          "character": "Elize Araújo Matsunaga",
+          "gender": 1,
+          "has_image": true,
+          "id": 2382896,
+          "image_url": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+          "name": "Carol Garcia",
+          "order": 1,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+            "original": "https://image.tmdb.org/t/p/original/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg"
+          },
+          "profile_path": "/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg"
+        },
+        {
+          "character": "Sandra Regina Ruiz (Sandrão)",
+          "gender": 0,
+          "has_image": true,
+          "id": 5275554,
+          "image_url": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+          "name": "Letícia Rodrigues",
+          "order": 2,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+            "original": "https://image.tmdb.org/t/p/original/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg"
+          },
+          "profile_path": "/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg"
+        },
+        {
+          "character": "Anna Carolina Trotta Peixoto Jatobá",
+          "gender": 1,
+          "has_image": true,
+          "id": 931850,
+          "image_url": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+          "name": "Bianca Comparato",
+          "order": 3,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+            "original": "https://image.tmdb.org/t/p/original/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg"
+          },
+          "profile_path": "/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg"
+        },
+        {
+          "character": "Daniel Cravinhos de Paula e Silva",
+          "gender": 2,
+          "has_image": true,
+          "id": 1373439,
+          "image_url": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+          "name": "Felipe Simas",
+          "order": 4,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+            "original": "https://image.tmdb.org/t/p/original/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg"
+          },
+          "profile_path": "/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg"
+        }
+      ],
+      "mc_id": "tmdb_279013",
+      "mc_subtype": null,
+      "mc_type": "tv",
+      "media_type": "tv",
+      "metrics": {
+        "popularity": 61.804,
+        "vote_average": 8.786,
+        "vote_count": 7
+      },
+      "name": "TREMEMBÉ",
+      "network": null,
+      "number_of_episodes": null,
+      "number_of_seasons": null,
+      "origin_country": [],
+      "original_language": "pt",
+      "overview": "In the penitentiary complex that houses Brazil’s most famous criminals, unusual stories, intrigues and love affairs are revealed, going beyond the real crimes thar shocked the nation.",
+      "popularity": 0.0,
+      "poster_path": "/eVqBFACBpovk0sEtjx3HEb3jOYS.jpg",
+      "primary_trailer": {},
+      "relevancy_debug": null,
+      "source": "tmdb",
+      "source_id": "279013",
+      "spoken_languages": [],
+      "status": "Ended",
+      "status_code": 200,
+      "streaming_platform": "Amazon Prime Video",
+      "title": "TREMEMBÉ",
+      "tmdb_cast": {
+        "cast": [
+          {
+            "character": "Suzane Louise von Richthofen",
+            "gender": 1,
+            "has_image": true,
+            "id": 1540112,
+            "image_url": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+            "name": "Marina Ruy Barbosa",
+            "order": 0,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+              "original": "https://image.tmdb.org/t/p/original/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg"
+            },
+            "profile_path": "/ugn98DaGNKv5cpXlRKBCO1Hpcbq.jpg"
+          },
+          {
+            "character": "Elize Araújo Matsunaga",
+            "gender": 1,
+            "has_image": true,
+            "id": 2382896,
+            "image_url": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+            "name": "Carol Garcia",
+            "order": 1,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+              "original": "https://image.tmdb.org/t/p/original/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg"
+            },
+            "profile_path": "/958ZmZciiVsqFFwN7T3CJPMN3UJ.jpg"
+          },
+          {
+            "character": "Sandra Regina Ruiz (Sandrão)",
+            "gender": 0,
+            "has_image": true,
+            "id": 5275554,
+            "image_url": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+            "name": "Letícia Rodrigues",
+            "order": 2,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+              "original": "https://image.tmdb.org/t/p/original/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg"
+            },
+            "profile_path": "/t1M1O8VR4hioza9Gf6nR5Kr1sdL.jpg"
+          },
+          {
+            "character": "Anna Carolina Trotta Peixoto Jatobá",
+            "gender": 1,
+            "has_image": true,
+            "id": 931850,
+            "image_url": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+            "name": "Bianca Comparato",
+            "order": 3,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+              "original": "https://image.tmdb.org/t/p/original/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg"
+            },
+            "profile_path": "/sDYX8F5TInMRmqdyECO9xyt3Ir1.jpg"
+          },
+          {
+            "character": "Daniel Cravinhos de Paula e Silva",
+            "gender": 2,
+            "has_image": true,
+            "id": 1373439,
+            "image_url": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+            "name": "Felipe Simas",
+            "order": 4,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+              "original": "https://image.tmdb.org/t/p/original/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg"
+            },
+            "profile_path": "/ahJ7PSKlFZQ5hvZoeKvCLKkvAse.jpg"
+          }
+        ],
+        "cast_count": 5,
+        "director": {
+          "id": 1371890,
+          "job": "Director",
+          "name": "Vera Egito",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+            "original": "https://image.tmdb.org/t/p/original/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/1tp2reJbJ0WcSge45VqjfHtyRGu.jpg"
+          }
+        },
+        "total_cast": 8
+      },
+      "tmdb_id": 279013,
+      "tmdb_videos": {
+        "behind_the_scenes": [],
+        "clips": [],
+        "other": [],
+        "teasers": [],
+        "total_videos": 0,
+        "trailers": [],
+        "video_categories": {
+          "behind_the_scenes_count": 0,
+          "clips_count": 0,
+          "other_count": 0,
+          "teasers_count": 0,
+          "trailers_count": 0
+        }
+      },
+      "trailers": [],
+      "vote_average": 0.0,
+      "vote_count": 0,
+      "watch_providers": {
+        "content_type": "tv",
+        "flatrate": [
+          {
+            "display_priority": 4,
+            "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+            "provider_id": 9,
+            "provider_name": "Amazon Prime Video"
+          },
+          {
+            "display_priority": 208,
+            "logo_path": "/8aBqoNeGGr0oSA85iopgNZUOTOc.jpg",
+            "provider_id": 2100,
+            "provider_name": "Amazon Prime Video with Ads"
+          }
+        ],
+        "link": "https://www.themoviedb.org/tv/279013-tremembe/watch?locale=US",
+        "primary_provider": {
+          "display_priority": 4,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "provider_id": 9,
+          "provider_name": "Amazon Prime Video",
+          "type": "flatrate"
+        },
+        "region": "US",
+        "tmdb_id": 279013
+      }
+    },
+    {
+      "adult": false,
+      "availability_type": null,
+      "backdrop_path": "/ljfI31geKnqP3K7EECp9z0ALyFB.jpg",
+      "clips": [],
+      "content_type": "tv",
+      "director": {},
+      "error": null,
+      "external_ids": {
+        "watchmode_id": 3236476
+      },
+      "final_score": null,
+      "first_air_date": null,
+      "genre_ids": [
+        35
+      ],
+      "genres": [],
+      "images": [
+        {
+          "description": "poster",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/6xrLXEQABvoVwGka9KDDAOt4lFs.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/6xrLXEQABvoVwGka9KDDAOt4lFs.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/6xrLXEQABvoVwGka9KDDAOt4lFs.jpg"
+        },
+        {
+          "description": "poster",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/6xrLXEQABvoVwGka9KDDAOt4lFs.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "small",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w45/ljfI31geKnqP3K7EECp9z0ALyFB.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "medium",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/w185/ljfI31geKnqP3K7EECp9z0ALyFB.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "large",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/h632/ljfI31geKnqP3K7EECp9z0ALyFB.jpg"
+        },
+        {
+          "description": "backdrop",
+          "key": "original",
+          "type": "url",
+          "url": "https://image.tmdb.org/t/p/original/ljfI31geKnqP3K7EECp9z0ALyFB.jpg"
+        }
+      ],
+      "keywords": [
+        {
+          "id": 3487,
+          "name": "assistant"
+        },
+        {
+          "id": 9713,
+          "name": "friends"
+        },
+        {
+          "id": 155939,
+          "name": "group of friends"
+        },
+        {
+          "id": 252990,
+          "name": "codependency"
+        },
+        {
+          "id": 357090,
+          "name": "influencer"
+        }
+      ],
+      "keywords_count": 5,
+      "last_air_date": null,
+      "links": [],
+      "main_cast": [
+        {
+          "character": "Maia",
+          "gender": 1,
+          "has_image": true,
+          "id": 1976054,
+          "image_url": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+          "name": "Rachel Sennott",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+            "original": "https://image.tmdb.org/t/p/original/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/zvx8lP4p3gvijQLg235e3xjxrFG.jpg"
+          },
+          "profile_path": "/zvx8lP4p3gvijQLg235e3xjxrFG.jpg"
+        },
+        {
+          "character": "Tallulah",
+          "gender": 1,
+          "has_image": true,
+          "id": 1972166,
+          "image_url": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+          "name": "Odessa A'zion",
+          "order": 1,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+            "original": "https://image.tmdb.org/t/p/original/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg"
+          },
+          "profile_path": "/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg"
+        },
+        {
+          "character": "Charlie",
+          "gender": 2,
+          "has_image": true,
+          "id": 1760947,
+          "image_url": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+          "name": "Jordan Firstman",
+          "order": 2,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+            "original": "https://image.tmdb.org/t/p/original/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg"
+          },
+          "profile_path": "/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg"
+        },
+        {
+          "character": "Alani",
+          "gender": 1,
+          "has_image": true,
+          "id": 3084424,
+          "image_url": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+          "name": "True Whitaker",
+          "order": 3,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+            "original": "https://image.tmdb.org/t/p/original/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg"
+          },
+          "profile_path": "/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg"
+        },
+        {
+          "character": "Dylan",
+          "gender": 2,
+          "has_image": true,
+          "id": 27972,
+          "image_url": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+          "name": "Josh Hutcherson",
+          "order": 4,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+            "original": "https://image.tmdb.org/t/p/original/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg"
+          },
+          "profile_path": "/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg"
+        }
+      ],
+      "mc_id": "tmdb_271053",
+      "mc_subtype": null,
+      "mc_type": "tv",
+      "media_type": "tv",
+      "metrics": {
+        "popularity": 14.6972,
+        "vote_average": 5.667,
+        "vote_count": 9
+      },
+      "name": "I Love LA",
+      "network": null,
+      "number_of_episodes": null,
+      "number_of_seasons": null,
+      "origin_country": [],
+      "original_language": "en",
+      "overview": "A codependent friend group navigates life and love in Los Angeles. With aspirations of becoming a talent manager, Maia is stalled out as an assistant while living with her boyfriend...until her longtime best friend and frenzied influencer Tallulah returns.",
+      "popularity": 0.0,
+      "poster_path": "/6xrLXEQABvoVwGka9KDDAOt4lFs.jpg",
+      "primary_trailer": {
+        "embed_url": "https://www.youtube.com/embed/DnBAmvw_Yow",
+        "id": "68e6aeef9e831c29e3b7a7a6",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "DnBAmvw_Yow",
+        "name": "Official Trailer",
+        "official": true,
+        "published_at": "2025-10-08T17:00:58.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/DnBAmvw_Yow/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=DnBAmvw_Yow"
+      },
+      "relevancy_debug": null,
+      "source": "tmdb",
+      "source_id": "271053",
+      "spoken_languages": [],
+      "status": "Returning Series",
+      "status_code": 200,
+      "streaming_platform": "HBO Max",
+      "title": "I Love LA",
+      "tmdb_cast": {
+        "cast": [
+          {
+            "character": "Maia",
+            "gender": 1,
+            "has_image": true,
+            "id": 1976054,
+            "image_url": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+            "name": "Rachel Sennott",
+            "order": 0,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+              "original": "https://image.tmdb.org/t/p/original/zvx8lP4p3gvijQLg235e3xjxrFG.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/zvx8lP4p3gvijQLg235e3xjxrFG.jpg"
+            },
+            "profile_path": "/zvx8lP4p3gvijQLg235e3xjxrFG.jpg"
+          },
+          {
+            "character": "Tallulah",
+            "gender": 1,
+            "has_image": true,
+            "id": 1972166,
+            "image_url": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+            "name": "Odessa A'zion",
+            "order": 1,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+              "original": "https://image.tmdb.org/t/p/original/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg"
+            },
+            "profile_path": "/meS7AUhkbybFiDtQyeczQ6rxO0F.jpg"
+          },
+          {
+            "character": "Charlie",
+            "gender": 2,
+            "has_image": true,
+            "id": 1760947,
+            "image_url": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+            "name": "Jordan Firstman",
+            "order": 2,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+              "original": "https://image.tmdb.org/t/p/original/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg"
+            },
+            "profile_path": "/9uC8hzZ5MmaJb0sSsOXsMWLmvrM.jpg"
+          },
+          {
+            "character": "Alani",
+            "gender": 1,
+            "has_image": true,
+            "id": 3084424,
+            "image_url": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+            "name": "True Whitaker",
+            "order": 3,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+              "original": "https://image.tmdb.org/t/p/original/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg"
+            },
+            "profile_path": "/lMt13QwJHyGqlsvdx62KIpNTRTj.jpg"
+          },
+          {
+            "character": "Dylan",
+            "gender": 2,
+            "has_image": true,
+            "id": 27972,
+            "image_url": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+            "name": "Josh Hutcherson",
+            "order": 4,
+            "profile_image_url": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+            "profile_images": {
+              "large": "https://image.tmdb.org/t/p/h632/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+              "medium": "https://image.tmdb.org/t/p/w185/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+              "original": "https://image.tmdb.org/t/p/original/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg",
+              "small": "https://image.tmdb.org/t/p/w45/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg"
+            },
+            "profile_path": "/f0eosZ1Fx0VBUyspq8K2f8sUSBn.jpg"
+          }
+        ],
+        "cast_count": 5,
+        "total_cast": 6
+      },
+      "tmdb_id": 271053,
+      "tmdb_videos": {
+        "behind_the_scenes": [],
+        "clips": [],
+        "other": [
+          {
+            "embed_url": "https://www.youtube.com/embed/DwYwTN5s2y0",
+            "id": "69091d8691b282abe9db8a33",
+            "iso_3166_1": "US",
+            "iso_639_1": "en",
+            "key": "DwYwTN5s2y0",
+            "name": "Rachel Sennott & Horace Gold Los Angeles Food Tour",
+            "official": true,
+            "published_at": "2025-10-31T18:05:07.000Z",
+            "site": "YouTube",
+            "size": 1080,
+            "thumbnail_url": "https://img.youtube.com/vi/DwYwTN5s2y0/maxresdefault.jpg",
+            "type": "Featurette",
+            "url": "https://www.youtube.com/watch?v=DwYwTN5s2y0"
+          }
+        ],
+        "primary_trailer": {
+          "embed_url": "https://www.youtube.com/embed/DnBAmvw_Yow",
+          "id": "68e6aeef9e831c29e3b7a7a6",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "DnBAmvw_Yow",
+          "name": "Official Trailer",
+          "official": true,
+          "published_at": "2025-10-08T17:00:58.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/DnBAmvw_Yow/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=DnBAmvw_Yow"
+        },
+        "teasers": [],
+        "total_videos": 2,
+        "trailers": [
+          {
+            "embed_url": "https://www.youtube.com/embed/DnBAmvw_Yow",
+            "id": "68e6aeef9e831c29e3b7a7a6",
+            "iso_3166_1": "US",
+            "iso_639_1": "en",
+            "key": "DnBAmvw_Yow",
+            "name": "Official Trailer",
+            "official": true,
+            "published_at": "2025-10-08T17:00:58.000Z",
+            "site": "YouTube",
+            "size": 1080,
+            "thumbnail_url": "https://img.youtube.com/vi/DnBAmvw_Yow/maxresdefault.jpg",
+            "type": "Trailer",
+            "url": "https://www.youtube.com/watch?v=DnBAmvw_Yow"
+          }
+        ],
+        "video_categories": {
+          "behind_the_scenes_count": 0,
+          "clips_count": 0,
+          "other_count": 1,
+          "teasers_count": 0,
+          "trailers_count": 1
+        }
+      },
+      "trailers": [
+        {
+          "embed_url": "https://www.youtube.com/embed/DnBAmvw_Yow",
+          "id": "68e6aeef9e831c29e3b7a7a6",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "DnBAmvw_Yow",
+          "name": "Official Trailer",
+          "official": true,
+          "published_at": "2025-10-08T17:00:58.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/DnBAmvw_Yow/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=DnBAmvw_Yow"
+        }
+      ],
+      "vote_average": 0.0,
+      "vote_count": 0,
+      "watch_providers": {
+        "content_type": "tv",
+        "flatrate": [
+          {
+            "display_priority": 11,
+            "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+            "provider_id": 1899,
+            "provider_name": "HBO Max"
+          },
+          {
+            "display_priority": 12,
+            "logo_path": "/5AkEgpCNaBP3Fbwd2m1GdQIk0vv.jpg",
+            "provider_id": 1825,
+            "provider_name": "HBO Max Amazon Channel"
+          },
+          {
+            "display_priority": 123,
+            "logo_path": "/aAb9CUHjFe9Y3O57qnrJH0KOF1B.jpg",
+            "provider_id": 486,
+            "provider_name": "Spectrum On Demand"
+          }
+        ],
+        "link": "https://www.themoviedb.org/tv/271053-i-love-la/watch?locale=US",
+        "primary_provider": {
+          "display_priority": 11,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "provider_id": 1899,
+          "provider_name": "HBO Max",
+          "type": "flatrate"
+        },
+        "region": "US",
+        "tmdb_id": 271053
+      }
+    }
+  ],
+  "source": "tmdb",
+  "source_id": "watchmode_whats_new_US_2025-11-07",
+  "status_code": 200,
+  "total_results": 5
+}

@@ -1,0 +1,1975 @@
+{
+  "category": null,
+  "country": "us",
+  "data_source": "NewsAI Trending Events",
+  "data_type": "news_article",
+  "error": null,
+  "metrics": {},
+  "page": 1,
+  "page_size": 5,
+  "query": null,
+  "results": [
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 20,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Arts/Television/Programs",
+          "uri": "dmoz/Arts/Television/Programs",
+          "wgt": 80
+        },
+        {
+          "label": "dmoz/Arts/Animation/Cartoons",
+          "uri": "dmoz/Arts/Animation/Cartoons",
+          "wgt": 100
+        },
+        {
+          "label": "dmoz/Society/Issues/Housing",
+          "uri": "dmoz/Society/Issues/Housing",
+          "wgt": 57
+        },
+        {
+          "label": "news/Arts and Entertainment",
+          "uri": "news/Arts_and_Entertainment",
+          "wgt": 91
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Spartacus"
+          },
+          "score": 100,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Spartacus"
+        },
+        {
+          "label": {
+            "eng": "Ashur (god)"
+          },
+          "score": 93,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Ashur_(god)"
+        },
+        {
+          "label": {
+            "eng": "Gladiator"
+          },
+          "score": 73,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Gladiator"
+        },
+        {
+          "label": {
+            "eng": "Starz"
+          },
+          "score": 71,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Starz"
+        },
+        {
+          "label": {
+            "eng": "Trailer (promotion)"
+          },
+          "score": 55,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Trailer_(promotion)"
+        },
+        {
+          "label": {
+            "eng": "Nick E. Tarabay"
+          },
+          "score": 38,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Nick_E._Tarabay"
+        },
+        {
+          "label": {
+            "eng": "Julius Caesar"
+          },
+          "score": 32,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Julius_Caesar"
+        },
+        {
+          "label": {
+            "eng": "Graham McTavish"
+          },
+          "score": 29,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Graham_McTavish"
+        },
+        {
+          "label": {
+            "eng": "Ancient Rome"
+          },
+          "score": 27,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Ancient_Rome"
+        },
+        {
+          "label": {
+            "eng": "Tenika Davis"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Tenika_Davis"
+        },
+        {
+          "label": {
+            "eng": "Slavery"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Slavery"
+        },
+        {
+          "label": {
+            "eng": "Steven S. DeKnight"
+          },
+          "score": 22,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Steven_S._DeKnight"
+        },
+        {
+          "label": {
+            "eng": "Alternate history"
+          },
+          "score": 21,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Alternate_history"
+        },
+        {
+          "label": {
+            "eng": "Showrunner"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Showrunner"
+        },
+        {
+          "label": {
+            "eng": "Spin-off (media)"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Spin-off_(media)"
+        },
+        {
+          "label": {
+            "eng": "Executive producer"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Executive_producer"
+        },
+        {
+          "label": {
+            "eng": "Ivana Baquero"
+          },
+          "score": 14,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Ivana_Baquero"
+        },
+        {
+          "label": {
+            "eng": "Jamaica"
+          },
+          "score": 14,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Jamaica"
+        },
+        {
+          "label": {
+            "eng": "Rick Jacobson"
+          },
+          "score": 13,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Rick_Jacobson"
+        },
+        {
+          "label": {
+            "eng": "Ludus (ancient Rome)"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Ludus_(ancient_Rome)"
+        },
+        {
+          "label": {
+            "eng": "Sequel"
+          },
+          "score": 11,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Sequel"
+        },
+        {
+          "label": {
+            "eng": "Sin"
+          },
+          "score": 11,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Sin"
+        },
+        {
+          "label": {
+            "eng": "Historical drama"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Historical_drama"
+        },
+        {
+          "label": {
+            "eng": "Claudia Black"
+          },
+          "score": 10,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Claudia_Black"
+        },
+        {
+          "label": {
+            "eng": "Graphic violence"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Graphic_violence"
+        },
+        {
+          "label": {
+            "eng": "Eroticism"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Eroticism"
+        },
+        {
+          "label": {
+            "eng": "Mobile app"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Mobile_app"
+        },
+        {
+          "label": {
+            "eng": "Revenge"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Revenge"
+        },
+        {
+          "label": {
+            "eng": "YouTube"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/YouTube"
+        },
+        {
+          "label": {
+            "eng": "Rome"
+          },
+          "score": 8,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Rome"
+        },
+        {
+          "label": {
+            "eng": "India"
+          },
+          "score": 8,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/India"
+        },
+        {
+          "label": {
+            "eng": "Aaron and Todd Helbing"
+          },
+          "score": 7,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Aaron_and_Todd_Helbing"
+        },
+        {
+          "label": {
+            "eng": "Villain"
+          },
+          "score": 7,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Villain"
+        },
+        {
+          "label": {
+            "eng": "Jackson, Mississippi"
+          },
+          "score": 7,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Jackson,_Mississippi"
+        },
+        {
+          "label": {
+            "eng": "Lionsgate Television"
+          },
+          "score": 6,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Lionsgate_Television"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-12-05",
+      "external_ids": {},
+      "images": [
+        "https://s.yimg.com/ny/api/res/1.2/1C4xnz6s1bcexRHnM0NZYA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzY7Y2Y9d2VicA--/https://media.zenfs.com/en/the_hollywood_reporter_217/b199632e470a245e610d803efa295c7d"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 12,
+      "rtl": null,
+      "sentiment": 0.07450980392156858,
+      "social_score": 8.199999809265137,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11100283",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "Starz is making sure audiences know Spartacus: House of Ashur will be as bloody and sexy as fans of the franchise have come to expect. The explicit red band trailer for the series, which bows on Starz Dec. 5, arrives more than a decade following the last entry in the Spartacus franchise, and finds Ashur (Nick E. Tarabay) resurrected and now the master of his own house.\n\nThe trailer introduces the players in Ashur's life including gladiator trainer Korris (Graham McTavish) gladiatrix Achillia (Ten",
+      "title": "The 'Spartacus: House of Ashur' Red-Band Trailer Is So Very Bloody",
+      "total_article_count": 20,
+      "uri": "eng-11100283",
+      "wgt": 502588800
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 7,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Arts/Television/Programs",
+          "uri": "dmoz/Arts/Television/Programs",
+          "wgt": 82
+        },
+        {
+          "label": "dmoz/Arts/Animation/Cartoons",
+          "uri": "dmoz/Arts/Animation/Cartoons",
+          "wgt": 100
+        },
+        {
+          "label": "news/Arts and Entertainment",
+          "uri": "news/Arts_and_Entertainment",
+          "wgt": 97
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Martin Scorsese"
+          },
+          "score": 100,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Martin_Scorsese"
+        },
+        {
+          "label": {
+            "eng": "Saint Patrick"
+          },
+          "score": 59,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Saint_Patrick"
+        },
+        {
+          "label": {
+            "eng": "Docudrama"
+          },
+          "score": 57,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Docudrama"
+        },
+        {
+          "label": {
+            "eng": "Saint Peter"
+          },
+          "score": 53,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Saint_Peter"
+        },
+        {
+          "label": {
+            "eng": "Fox Nation"
+          },
+          "score": 49,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Fox_Nation"
+        },
+        {
+          "label": {
+            "eng": "Christianity"
+          },
+          "score": 44,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Christianity"
+        },
+        {
+          "label": {
+            "eng": "Thomas Becket"
+          },
+          "score": 40,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Thomas_Becket"
+        },
+        {
+          "label": {
+            "eng": "Saint"
+          },
+          "score": 39,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Saint"
+        },
+        {
+          "label": {
+            "eng": "Jesus"
+          },
+          "score": 34,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Jesus"
+        },
+        {
+          "label": {
+            "eng": "Filmmaking"
+          },
+          "score": 33,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Filmmaking"
+        },
+        {
+          "label": {
+            "eng": "Academy Awards"
+          },
+          "score": 29,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Academy_Awards"
+        },
+        {
+          "label": {
+            "eng": "Internet celebrity"
+          },
+          "score": 28,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Internet_celebrity"
+        },
+        {
+          "label": {
+            "eng": "Executive producer"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Executive_producer"
+        },
+        {
+          "label": {
+            "eng": "Millennials"
+          },
+          "score": 22,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Millennials"
+        },
+        {
+          "label": {
+            "eng": "Fox Broadcasting Company"
+          },
+          "score": 22,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Fox_Broadcasting_Company"
+        },
+        {
+          "label": {
+            "eng": "John the Baptist"
+          },
+          "score": 21,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/John_the_Baptist"
+        },
+        {
+          "label": {
+            "eng": "Lionsgate"
+          },
+          "score": 19,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Lionsgate"
+        },
+        {
+          "label": {
+            "eng": "Mary Magdalene"
+          },
+          "score": 18,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Mary_Magdalene"
+        },
+        {
+          "label": {
+            "eng": "Joan of Arc"
+          },
+          "score": 18,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Joan_of_Arc"
+        },
+        {
+          "label": {
+            "eng": "Internet"
+          },
+          "score": 18,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Internet"
+        },
+        {
+          "label": {
+            "eng": "Kent"
+          },
+          "score": 16,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Kent"
+        },
+        {
+          "label": {
+            "eng": "Documentary film"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Documentary_film"
+        },
+        {
+          "label": {
+            "eng": "Streaming media"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Streaming_media"
+        },
+        {
+          "label": {
+            "eng": "Sikelia Productions"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Sikelia_Productions"
+        },
+        {
+          "label": {
+            "eng": "The Last Temptation of Christ (novel)"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/The_Last_Temptation_of_Christ_(novel)"
+        },
+        {
+          "label": {
+            "eng": "Fox News"
+          },
+          "score": 12,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Fox_News"
+        },
+        {
+          "label": {
+            "eng": "Republic Pictures"
+          },
+          "score": 12,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Republic_Pictures"
+        },
+        {
+          "label": {
+            "eng": "Feature film"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Feature_film"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-16",
+      "external_ids": {},
+      "images": [
+        "https://a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2025/08/1024/512/martin-scorsese.jpg?ve=1&tl=1"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 11,
+      "rtl": null,
+      "sentiment": 0.1764705882352942,
+      "social_score": 3.0,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11100032",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "NEW YORK - October 30, 2025 -- FOX Nation will debut the highly anticipated second season of Martin Scorsese Presents: THE SAINTS on Sunday, November 16, beginning with an episode dedicated to Saint Patrick. Hosted, narrated and executive produced by Academy Award-winning filmmaker Martin Scorsese, the exclusive docudrama continues to illuminate the extraordinary lives of men and women who risked everything to embody humanity's most noble and complex trait -- faith. A first look at the season is ",
+      "title": "FOX NATION TO PREMIERE SEASON II OF \"MARTIN SCORSESE PRESENTS: THE SAINTS\" ON SUNDAY, NOVEMBER 16",
+      "total_article_count": 7,
+      "uri": "eng-11100032",
+      "wgt": 500947200
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 14,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Society/Issues/Business",
+          "uri": "dmoz/Society/Issues/Business",
+          "wgt": 49
+        },
+        {
+          "label": "dmoz/Society/Activism/Media",
+          "uri": "dmoz/Society/Activism/Media",
+          "wgt": 100
+        },
+        {
+          "label": "dmoz/Arts/Television/Networks",
+          "uri": "dmoz/Arts/Television/Networks",
+          "wgt": 63
+        },
+        {
+          "label": "news/Technology",
+          "uri": "news/Technology",
+          "wgt": 69
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "MSNBC"
+          },
+          "score": 100,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/MSNBC"
+        },
+        {
+          "label": {
+            "eng": "National Organization for Women"
+          },
+          "score": 87,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/National_Organization_for_Women"
+        },
+        {
+          "label": {
+            "eng": "Rachel Maddow"
+          },
+          "score": 70,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Rachel_Maddow"
+        },
+        {
+          "label": {
+            "eng": "NBC News"
+          },
+          "score": 49,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBC_News"
+        },
+        {
+          "label": {
+            "eng": "Master of Science"
+          },
+          "score": 47,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Master_of_Science"
+        },
+        {
+          "label": {
+            "eng": "Mississippi"
+          },
+          "score": 47,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Mississippi"
+        },
+        {
+          "label": {
+            "eng": "Comcast"
+          },
+          "score": 45,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Comcast"
+        },
+        {
+          "label": {
+            "eng": "Maya Angelou"
+          },
+          "score": 42,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Maya_Angelou"
+        },
+        {
+          "label": {
+            "eng": "Constitution of the United States"
+          },
+          "score": 41,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Constitution_of_the_United_States"
+        },
+        {
+          "label": {
+            "eng": "NBCUniversal"
+          },
+          "score": 36,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBCUniversal"
+        },
+        {
+          "label": {
+            "eng": "Cable television"
+          },
+          "score": 27,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Cable_television"
+        },
+        {
+          "label": {
+            "eng": "NBC"
+          },
+          "score": 24,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBC"
+        },
+        {
+          "label": {
+            "eng": "Fox News"
+          },
+          "score": 23,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Fox_News"
+        },
+        {
+          "label": {
+            "eng": "United States cable news"
+          },
+          "score": 21,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/United_States_cable_news"
+        },
+        {
+          "label": {
+            "eng": "Chris Hayes"
+          },
+          "score": 19,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Chris_Hayes"
+        },
+        {
+          "label": {
+            "eng": "CNBC"
+          },
+          "score": 19,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/CNBC"
+        },
+        {
+          "label": {
+            "eng": "The New York Times"
+          },
+          "score": 19,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/The_New_York_Times"
+        },
+        {
+          "label": {
+            "eng": "Donald Trump"
+          },
+          "score": 18,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Donald_Trump"
+        },
+        {
+          "label": {
+            "eng": "United States"
+          },
+          "score": 17,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/United_States"
+        },
+        {
+          "label": {
+            "eng": "Jen Psaki"
+          },
+          "score": 16,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Jen_Psaki"
+        },
+        {
+          "label": {
+            "eng": "Lawrence O'Donnell"
+          },
+          "score": 16,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Lawrence_O'Donnell"
+        },
+        {
+          "label": {
+            "eng": "Mika Brzezinski"
+          },
+          "score": 16,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Mika_Brzezinski"
+        },
+        {
+          "label": {
+            "eng": "Joe Scarborough"
+          },
+          "score": 16,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Joe_Scarborough"
+        },
+        {
+          "label": {
+            "eng": "NBC logo"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/NBC_logo"
+        },
+        {
+          "label": {
+            "eng": "Steve Kornacki"
+          },
+          "score": 15,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Steve_Kornacki"
+        },
+        {
+          "label": {
+            "eng": "Liberalism"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Liberalism"
+        },
+        {
+          "label": {
+            "eng": "United Nations"
+          },
+          "score": 14,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/United_Nations"
+        },
+        {
+          "label": {
+            "eng": "Ari Melber"
+          },
+          "score": 13,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Ari_Melber"
+        },
+        {
+          "label": {
+            "eng": "Times Square"
+          },
+          "score": 13,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Times_Square"
+        },
+        {
+          "label": {
+            "eng": "Microsoft"
+          },
+          "score": 13,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Microsoft"
+        },
+        {
+          "label": {
+            "eng": "Acronym"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Acronym"
+        },
+        {
+          "label": {
+            "eng": "Social media"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Social_media"
+        },
+        {
+          "label": {
+            "eng": "Stephanie Ruhle"
+          },
+          "score": 12,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Stephanie_Ruhle"
+        },
+        {
+          "label": {
+            "eng": "Nicolle Wallace"
+          },
+          "score": 12,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Nicolle_Wallace"
+        },
+        {
+          "label": {
+            "eng": "Spin-off (media)"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Spin-off_(media)"
+        },
+        {
+          "label": {
+            "eng": "Marketing"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Marketing"
+        },
+        {
+          "label": {
+            "eng": "Left-wing politics"
+          },
+          "score": 11,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Left-wing_politics"
+        },
+        {
+          "label": {
+            "eng": "Alicia Menendez"
+          },
+          "score": 10,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Alicia_Menendez"
+        },
+        {
+          "label": {
+            "eng": "Michael Steele"
+          },
+          "score": 10,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Michael_Steele"
+        },
+        {
+          "label": {
+            "eng": "Manhattan"
+          },
+          "score": 10,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Manhattan"
+        },
+        {
+          "label": {
+            "eng": "Oxygen (TV channel)"
+          },
+          "score": 9,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Oxygen_(TV_channel)"
+        },
+        {
+          "label": {
+            "eng": "Syfy"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Syfy"
+        },
+        {
+          "label": {
+            "eng": "E!"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/E!"
+        },
+        {
+          "label": {
+            "eng": "Deadline Hollywood"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Deadline_Hollywood"
+        },
+        {
+          "label": {
+            "eng": "Nielsen Media Research"
+          },
+          "score": 8,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Nielsen_Media_Research"
+        },
+        {
+          "label": {
+            "eng": "Joint venture"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Joint_venture"
+        },
+        {
+          "label": {
+            "eng": "Streaming media"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Streaming_media"
+        },
+        {
+          "label": {
+            "eng": "CNN"
+          },
+          "score": 7,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/CNN"
+        },
+        {
+          "label": {
+            "eng": "Prime time"
+          },
+          "score": 5,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Prime_time"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-15",
+      "external_ids": {},
+      "images": [
+        "https://a57.foxnews.com/static.foxnews.com/foxnews.com/content/uploads/2025/08/1024/512/maddow-psaki-scarborough-brzezinski.jpg?ve=1&tl=1"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 10,
+      "rtl": null,
+      "sentiment": 0.09019607843137245,
+      "social_score": 15.89999961853027,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11114402",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "The clock is ticking for MSNBC as the liberal network's \"risky\" rebrand begins to take shape.\n\nMSNBC is set to officially change its name to \"My Source News Opinion World,\" or MS NOW, on Nov. 15. The drastic rebranding comes after Comcast spun off its cable assets into a new company named Versant and executives from both sides wanted to distance the progressive network from the NBC News brand.\n\n\"Rebranding a legacy media giant like MSNBC to MS NOW is a bold and risky move. It's not just changing ",
+      "title": "MSNBC's 'risky' rebrand to MS NOW draws skepticism from branding experts",
+      "total_article_count": 14,
+      "uri": "eng-11114402",
+      "wgt": 500860800
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 19,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Society/Issues/Business",
+          "uri": "dmoz/Society/Issues/Business",
+          "wgt": 78
+        },
+        {
+          "label": "dmoz/Society/Activism/Media",
+          "uri": "dmoz/Society/Activism/Media",
+          "wgt": 100
+        },
+        {
+          "label": "dmoz/Arts/Television/Networks",
+          "uri": "dmoz/Arts/Television/Networks",
+          "wgt": 36
+        },
+        {
+          "label": "news/Arts and Entertainment",
+          "uri": "news/Arts_and_Entertainment",
+          "wgt": 81
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "MSNBC"
+          },
+          "score": 100,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/MSNBC"
+        },
+        {
+          "label": {
+            "eng": "National Organization for Women"
+          },
+          "score": 67,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/National_Organization_for_Women"
+        },
+        {
+          "label": {
+            "eng": "NBCUniversal"
+          },
+          "score": 59,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBCUniversal"
+        },
+        {
+          "label": {
+            "eng": "NBC News"
+          },
+          "score": 54,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBC_News"
+        },
+        {
+          "label": {
+            "eng": "Master of Science"
+          },
+          "score": 47,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Master_of_Science"
+        },
+        {
+          "label": {
+            "eng": "NBC"
+          },
+          "score": 37,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NBC"
+        },
+        {
+          "label": {
+            "eng": "Comcast"
+          },
+          "score": 36,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Comcast"
+        },
+        {
+          "label": {
+            "eng": "CNBC"
+          },
+          "score": 33,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/CNBC"
+        },
+        {
+          "label": {
+            "eng": "Rachel Maddow"
+          },
+          "score": 29,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Rachel_Maddow"
+        },
+        {
+          "label": {
+            "eng": "Cable television"
+          },
+          "score": 29,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Cable_television"
+        },
+        {
+          "label": {
+            "eng": "Golf Channel"
+          },
+          "score": 23,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Golf_Channel"
+        },
+        {
+          "label": {
+            "eng": "E!"
+          },
+          "score": 20,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/E!"
+        },
+        {
+          "label": {
+            "eng": "Oxygen (TV channel)"
+          },
+          "score": 19,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Oxygen_(TV_channel)"
+        },
+        {
+          "label": {
+            "eng": "Syfy"
+          },
+          "score": 19,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Syfy"
+        },
+        {
+          "label": {
+            "eng": "Marketing"
+          },
+          "score": 18,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Marketing"
+        },
+        {
+          "label": {
+            "eng": "Deadline Hollywood"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Deadline_Hollywood"
+        },
+        {
+          "label": {
+            "eng": "Sky News"
+          },
+          "score": 17,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Sky_News"
+        },
+        {
+          "label": {
+            "eng": "Washington (state)"
+          },
+          "score": 17,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Washington_(state)"
+        },
+        {
+          "label": {
+            "eng": "USA Network"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/USA_Network"
+        },
+        {
+          "label": {
+            "eng": "United States cable news"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/United_States_cable_news"
+        },
+        {
+          "label": {
+            "eng": "Independent film"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Independent_film"
+        },
+        {
+          "label": {
+            "eng": "Streaming media"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Streaming_media"
+        },
+        {
+          "label": {
+            "eng": "NBC Sports Group"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/NBC_Sports_Group"
+        },
+        {
+          "label": {
+            "eng": "TheWrap"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/TheWrap"
+        },
+        {
+          "label": {
+            "eng": "Spin-off (media)"
+          },
+          "score": 12,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Spin-off_(media)"
+        },
+        {
+          "label": {
+            "eng": "Promo (media)"
+          },
+          "score": 11,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Promo_(media)"
+        },
+        {
+          "label": {
+            "eng": "Mississippi"
+          },
+          "score": 11,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Mississippi"
+        },
+        {
+          "label": {
+            "eng": "Peacock (streaming service)"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Peacock_(streaming_service)"
+        },
+        {
+          "label": {
+            "eng": "News presenter"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/News_presenter"
+        },
+        {
+          "label": {
+            "eng": "Variety (magazine)"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Variety_(magazine)"
+        },
+        {
+          "label": {
+            "eng": "Social media"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Social_media"
+        },
+        {
+          "label": {
+            "eng": "Bravo (American TV network)"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Bravo_(American_TV_network)"
+        },
+        {
+          "label": {
+            "eng": "The Washington Post"
+          },
+          "score": 8,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/The_Washington_Post"
+        },
+        {
+          "label": {
+            "eng": "HBO"
+          },
+          "score": 7,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/HBO"
+        },
+        {
+          "label": {
+            "eng": "United States"
+          },
+          "score": 7,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/United_States"
+        },
+        {
+          "label": {
+            "eng": "Fox News"
+          },
+          "score": 6,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Fox_News"
+        },
+        {
+          "label": {
+            "eng": "Bloomberg L.P."
+          },
+          "score": 6,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Bloomberg_L.P."
+        },
+        {
+          "label": {
+            "eng": "CNN"
+          },
+          "score": 6,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/CNN"
+        },
+        {
+          "label": {
+            "eng": "Washington, D.C."
+          },
+          "score": 6,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Washington,_D.C."
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-15",
+      "external_ids": {},
+      "images": [
+        "https://s.yimg.com/ny/api/res/1.2/LLNrOFRJqfdxMMzf7jZyRw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD03NTA-/https://media.zenfs.com/en/aol_variety_168/848a5a94f87943641c2cd60d6763f729"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 7,
+      "rtl": null,
+      "sentiment": 0.1137254901960785,
+      "social_score": 13.5,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11089183",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "MSNBC Sets Official Date for MS NOW Name Change\n\nBrian Steinberg\n\nOctober 27, 2025 at 3:05 PM\n\n0\n\nWhat's in a name? On November 15, MSNBC will quickly find out.\n\nThe cable-news outlet, slated to be spun out of NBCUniversal in the next few months and become part of a new publicly traded company called Versant, will change its name to MS NOW in mid-November. The maneuver comes because NBCUniversal felt a news operation that was about to become a rival should not carry the \"NBC\" markings. MSNBC has ",
+      "title": "MSNBC Sets Official Date for MS NOW Name Change",
+      "total_article_count": 19,
+      "uri": "eng-11089183",
+      "wgt": 500860800
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 66,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Arts/Television/Programs",
+          "uri": "dmoz/Arts/Television/Programs",
+          "wgt": 63
+        },
+        {
+          "label": "dmoz/Arts/Performing Arts/Dance",
+          "uri": "dmoz/Arts/Performing_Arts/Dance",
+          "wgt": 62
+        },
+        {
+          "label": "dmoz/Recreation/Humor/Bizarre",
+          "uri": "dmoz/Recreation/Humor/Bizarre",
+          "wgt": 100
+        },
+        {
+          "label": "news/Arts and Entertainment",
+          "uri": "news/Arts_and_Entertainment",
+          "wgt": 95
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Tom Bergeron"
+          },
+          "score": 100,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Tom_Bergeron"
+        },
+        {
+          "label": {
+            "eng": "Dancing with the Stars"
+          },
+          "score": 50,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Dancing_with_the_Stars"
+        },
+        {
+          "label": {
+            "eng": "Dancing with the Stars (American TV series)"
+          },
+          "score": 38,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Dancing_with_the_Stars_(American_TV_series)"
+        },
+        {
+          "label": {
+            "eng": "Sean Spicer"
+          },
+          "score": 30,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Sean_Spicer"
+        },
+        {
+          "label": {
+            "eng": "American Broadcasting Company"
+          },
+          "score": 28,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/American_Broadcasting_Company"
+        },
+        {
+          "label": {
+            "eng": "Dancing with the Stars (American season 28)"
+          },
+          "score": 25,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Dancing_with_the_Stars_(American_season_28)"
+        },
+        {
+          "label": {
+            "eng": "Good Morning America"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Good_Morning_America"
+        },
+        {
+          "label": {
+            "eng": "Erin Andrews"
+          },
+          "score": 23,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Erin_Andrews"
+        },
+        {
+          "label": {
+            "eng": "White House Press Secretary"
+          },
+          "score": 23,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/White_House_Press_Secretary"
+        },
+        {
+          "label": {
+            "eng": "Showrunner"
+          },
+          "score": 23,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Showrunner"
+        },
+        {
+          "label": {
+            "eng": "Podcast"
+          },
+          "score": 22,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Podcast"
+        },
+        {
+          "label": {
+            "eng": "Bruno Tonioli"
+          },
+          "score": 19,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Bruno_Tonioli"
+        },
+        {
+          "label": {
+            "eng": "Alfonso Ribeiro"
+          },
+          "score": 19,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Alfonso_Ribeiro"
+        },
+        {
+          "label": {
+            "eng": "Tyra Banks"
+          },
+          "score": 19,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Tyra_Banks"
+        },
+        {
+          "label": {
+            "eng": "Carrie Ann Inaba"
+          },
+          "score": 18,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Carrie_Ann_Inaba"
+        },
+        {
+          "label": {
+            "eng": "Derek Hough"
+          },
+          "score": 17,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Derek_Hough"
+        },
+        {
+          "label": {
+            "eng": "Dance"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Dance"
+        },
+        {
+          "label": {
+            "eng": "Donald Trump"
+          },
+          "score": 16,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Donald_Trump"
+        },
+        {
+          "label": {
+            "eng": "Julianne Hough"
+          },
+          "score": 14,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Julianne_Hough"
+        },
+        {
+          "label": {
+            "eng": "TV Guide"
+          },
+          "score": 14,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/TV_Guide"
+        },
+        {
+          "label": {
+            "eng": "Social media"
+          },
+          "score": 14,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Social_media"
+        },
+        {
+          "label": {
+            "eng": "Nielsen Media Research"
+          },
+          "score": 12,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Nielsen_Media_Research"
+        },
+        {
+          "label": {
+            "eng": "Dancing with the Stars (American season 29)"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Dancing_with_the_Stars_(American_season_29)"
+        },
+        {
+          "label": {
+            "eng": "Ballroom dance"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Ballroom_dance"
+        },
+        {
+          "label": {
+            "eng": "Conrad Green"
+          },
+          "score": 9,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Conrad_Green"
+        },
+        {
+          "label": {
+            "eng": "Executive producer"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Executive_producer"
+        },
+        {
+          "label": {
+            "eng": "Reality television"
+          },
+          "score": 9,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Reality_television"
+        },
+        {
+          "label": {
+            "eng": "Disney+"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Disney+"
+        },
+        {
+          "label": {
+            "eng": "Prime time"
+          },
+          "score": 8,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Prime_time"
+        },
+        {
+          "label": {
+            "eng": "Cheryl Burke"
+          },
+          "score": 7,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Cheryl_Burke"
+        },
+        {
+          "label": {
+            "eng": "Emmy Awards"
+          },
+          "score": 5,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Emmy_Awards"
+        },
+        {
+          "label": {
+            "eng": "Bob Saget"
+          },
+          "score": 5,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Bob_Saget"
+        },
+        {
+          "label": {
+            "eng": "Ballroom"
+          },
+          "score": 5,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Ballroom"
+        },
+        {
+          "label": {
+            "eng": "Television special"
+          },
+          "score": 5,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Television_special"
+        },
+        {
+          "label": {
+            "eng": "Celebrity"
+          },
+          "score": 5,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Celebrity"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://deadline.com/wp-content/uploads/2025/11/Tom-Bergeron.jpg?w=1000"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 12,
+      "rtl": null,
+      "sentiment": 0.192156862745098,
+      "social_score": 16.29999923706055,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11116998",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "Five years after his exit from Dancing With The Stars, original host Tom Bergeron is returning as a guest judge for the show's 20th anniversary special on Tuesday, Nov. 11.\n\n\"It feels really good,\" Bergeron said Tuesday on Good Morning America about his return. \"I'm really looking forward to it.\"\n\nAfter hosting DWTS since its launch in 2005, Bergeron exited in 2020 after being publicly critical of the show's choice to cast then-President Donald Trump's White House Press Secretary Sean Spicer in S",
+      "title": "Tom Bergeron Returning To 'Dancing With The Stars' Five Years After Shocking Show Exit",
+      "total_article_count": 66,
+      "uri": "eng-11116998",
+      "wgt": 500515200
+    }
+  ],
+  "status": "ok",
+  "status_code": 200,
+  "total_results": 143
+}

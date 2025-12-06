@@ -1,0 +1,245 @@
+{
+  "data_source": "Spotify Artist Search",
+  "error": null,
+  "query": "The Weeknd",
+  "results": [
+    {
+      "artist": "The Weeknd",
+      "content_type": "musician",
+      "error": null,
+      "external_ids": {},
+      "followers": 113083758,
+      "genres": [],
+      "id": "1Xyo4u8uXC1ZmMpatF05PJ",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb9e528993a2820267b97f6aae",
+      "images": [],
+      "known_for": "One Of The Girls (with JENNIE, Lily Rose Depp)",
+      "known_for_department": "Music",
+      "links": [],
+      "mc_id": "spotify_artist_1Xyo4u8uXC1ZmMpatF05PJ",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "metrics": {},
+      "name": "The Weeknd",
+      "popularity": 94,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb9e528993a2820267b97f6aae",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051749e528993a2820267b97f6aae",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1789e528993a2820267b97f6aae",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/1Xyo4u8uXC1ZmMpatF05PJ",
+      "title": "The Weeknd",
+      "top_track_album": "The Idol Episode 4 (Music from the HBO Original Series)",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273b0dd6a5cd1dec96c4119c262",
+      "top_track_release_date": "2023-06-23",
+      "top_track_track": "One Of The Girls (with JENNIE, Lily Rose Depp)"
+    },
+    {
+      "artist": "Bruno Mars",
+      "content_type": "musician",
+      "error": null,
+      "external_ids": {},
+      "followers": 75535963,
+      "genres": [],
+      "id": "0du5cEVh5yTK9QJze8zA0C",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebc36dd9eb55fb0db4911f25dd",
+      "images": [],
+      "known_for": "Die With A Smile",
+      "known_for_department": "Music",
+      "links": [],
+      "mc_id": "spotify_artist_0du5cEVh5yTK9QJze8zA0C",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "metrics": {},
+      "name": "Bruno Mars",
+      "popularity": 90,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebc36dd9eb55fb0db4911f25dd",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174c36dd9eb55fb0db4911f25dd",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178c36dd9eb55fb0db4911f25dd",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+      "title": "Bruno Mars",
+      "top_track_album": "MAYHEM",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273b0860cf0a98e09663c82290c",
+      "top_track_release_date": "2025-03-07",
+      "top_track_track": "Die With A Smile"
+    },
+    {
+      "artist": "The Weeks",
+      "content_type": "musician",
+      "error": null,
+      "external_ids": {},
+      "followers": 41704,
+      "genres": [],
+      "id": "3zE5jV6Uw9hhdWCXM8hS3j",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb8118fd1beb8e2af89554aead",
+      "images": [],
+      "known_for": "Buttons",
+      "known_for_department": "Music",
+      "links": [],
+      "mc_id": "spotify_artist_3zE5jV6Uw9hhdWCXM8hS3j",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "metrics": {},
+      "name": "The Weeks",
+      "popularity": 28,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb8118fd1beb8e2af89554aead",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051748118fd1beb8e2af89554aead",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1788118fd1beb8e2af89554aead",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/3zE5jV6Uw9hhdWCXM8hS3j",
+      "title": "The Weeks",
+      "top_track_album": "Comeback Cadillac (Expanded Edition)",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273403516ed07f62f37b38be479",
+      "top_track_release_date": "2008-07-08",
+      "top_track_track": "Buttons"
+    },
+    {
+      "artist": "Drake",
+      "content_type": "musician",
+      "error": null,
+      "external_ids": {},
+      "followers": 103157777,
+      "genres": [
+        "rap"
+      ],
+      "id": "3TVXtAsR1Inumwj472S9r4",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9",
+      "images": [],
+      "known_for": "One Dance",
+      "known_for_department": "Music",
+      "links": [],
+      "mc_id": "spotify_artist_3TVXtAsR1Inumwj472S9r4",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "metrics": {},
+      "name": "Drake",
+      "popularity": 95,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744293385d324db8558179afd9",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784293385d324db8558179afd9",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+      "title": "Drake",
+      "top_track_album": "Views",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2739416ed64daf84936d89e671c",
+      "top_track_release_date": "2016-05-06",
+      "top_track_track": "One Dance"
+    },
+    {
+      "artist": "Arijit Singh",
+      "content_type": "musician",
+      "error": null,
+      "external_ids": {},
+      "followers": 163917283,
+      "genres": [
+        "hindi pop",
+        "bollywood",
+        "desi",
+        "bangla pop"
+      ],
+      "id": "4YRxDV8wJFPHPTeXepOstw",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb5ba2d75eb08a2d672f9b69b7",
+      "images": [],
+      "known_for": "Apna Bana Le",
+      "known_for_department": "Music",
+      "links": [],
+      "mc_id": "spotify_artist_4YRxDV8wJFPHPTeXepOstw",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "metrics": {},
+      "name": "Arijit Singh",
+      "popularity": 89,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb5ba2d75eb08a2d672f9b69b7",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051745ba2d75eb08a2d672f9b69b7",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1785ba2d75eb08a2d672f9b69b7",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw",
+      "title": "Arijit Singh",
+      "top_track_album": "Bhediya (Original Motion Picture Soundtrack)",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273b85b4e8fb6ba961aedfde386",
+      "top_track_release_date": "2022-12-06",
+      "top_track_track": "Apna Bana Le"
+    }
+  ],
+  "total_results": 5
+}

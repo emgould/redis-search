@@ -1,0 +1,18 @@
+
+<h2>Redis Search Index Information</h2>
+
+{% if info.error %}
+  <p><b>Error:</b> {{ info.error }}</p>
+{% else %}
+  <h3>Fields</h3>
+  <pre>{{ info.fields | tojson(indent=2) }}</pre>
+
+  <h3>Document Count</h3>
+  <pre>{{ info.num_docs }}</pre>
+
+  <h3>Index Memory Usage (bytes)</h3>
+  <pre>{{ info.inverted_sz_bytes }}</pre>
+
+  <h3>Full FT.INFO</h3>
+  <pre>{{ info | tojson(indent=2) }}</pre>
+{% endif %}

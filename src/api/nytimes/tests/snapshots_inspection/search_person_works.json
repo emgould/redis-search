@@ -1,0 +1,44 @@
+{
+  "details": null,
+  "error": null,
+  "input": {
+    "mc_id": "nytimes_author_Louise_Penny",
+    "mc_subtype": "author",
+    "mc_type": "person",
+    "name": "Louise Penny",
+    "source": "nytimes",
+    "source_id": "Louise Penny"
+  },
+  "related": [],
+  "status_code": 200,
+  "works": [
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [],
+      "links": [],
+      "mc_id": "book_9781250328182",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781250328182",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [],
+      "links": [],
+      "mc_id": "book_9781250328175",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781250328175",
+      "status_code": 200
+    }
+  ]
+}

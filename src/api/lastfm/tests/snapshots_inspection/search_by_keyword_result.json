@@ -1,0 +1,1496 @@
+{
+  "album_count": 10,
+  "artist_count": 10,
+  "data_source": "LastFM Multi-Type Search",
+  "data_type": "mixed",
+  "error": null,
+  "metrics": {},
+  "page": 1,
+  "playlist_count": 4,
+  "query": "classical",
+  "results": [
+    {
+      "artist": "Johann Sebastian Bach",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 4815316,
+      "genres": [
+        "classical",
+        "classical piano"
+      ],
+      "id": "5aIqB5nVVvmFsvSdExz408",
+      "image": null,
+      "images": [
+        {
+          "description": "479x479",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/a2ec08fe69ecec2748fbc764aede8f1b03ae8f88"
+        },
+        {
+          "description": "200x200",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/53ec9642cf116eca56d88284c40bb1497585e28e"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/438b280a22e63f994fd39feb031683fb861a31cb"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/5aIqB5nVVvmFsvSdExz408"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/5aIqB5nVVvmFsvSdExz408"
+        }
+      ],
+      "mc_id": "spotify_artist_5aIqB5nVVvmFsvSdExz408",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 4815316,
+        "popularity": 76
+      },
+      "name": "Johann Sebastian Bach",
+      "popularity": 76,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "5aIqB5nVVvmFsvSdExz408",
+      "spotify_url": "https://open.spotify.com/artist/5aIqB5nVVvmFsvSdExz408",
+      "status_code": 200,
+      "title": "Johann Sebastian Bach",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Wolfgang Amadeus Mozart",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 5907809,
+      "genres": [
+        "classical",
+        "opera",
+        "requiem",
+        "classical piano",
+        "chamber music"
+      ],
+      "id": "4NJhFmfw43RLBLjQvxDuRS",
+      "image": null,
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eb7fa9108c6dadb8c3ec21da88"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab676161000051747fa9108c6dadb8c3ec21da88"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f1787fa9108c6dadb8c3ec21da88"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/4NJhFmfw43RLBLjQvxDuRS"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/4NJhFmfw43RLBLjQvxDuRS"
+        }
+      ],
+      "mc_id": "spotify_artist_4NJhFmfw43RLBLjQvxDuRS",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 5907809,
+        "popularity": 75
+      },
+      "name": "Wolfgang Amadeus Mozart",
+      "popularity": 75,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "4NJhFmfw43RLBLjQvxDuRS",
+      "spotify_url": "https://open.spotify.com/artist/4NJhFmfw43RLBLjQvxDuRS",
+      "status_code": 200,
+      "title": "Wolfgang Amadeus Mozart",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Maurice Ravel",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 548053,
+      "genres": [
+        "classical",
+        "classical piano",
+        "neoclassical"
+      ],
+      "id": "17hR0sYHpx7VYTMRfFUOmY",
+      "image": null,
+      "images": [
+        {
+          "description": "200x276",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/0d8f2b3e9ab748e7767fd31ff9386e06e5834e2b"
+        },
+        {
+          "description": "64x88",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/4404ed7696076fd8f990cecdfbbbd4971f370e0f"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/17hR0sYHpx7VYTMRfFUOmY"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/17hR0sYHpx7VYTMRfFUOmY"
+        }
+      ],
+      "mc_id": "spotify_artist_17hR0sYHpx7VYTMRfFUOmY",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 548053,
+        "popularity": 59
+      },
+      "name": "Maurice Ravel",
+      "popularity": 59,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "17hR0sYHpx7VYTMRfFUOmY",
+      "spotify_url": "https://open.spotify.com/artist/17hR0sYHpx7VYTMRfFUOmY",
+      "status_code": 200,
+      "title": "Maurice Ravel",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Pyotr Ilyich Tchaikovsky",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 1533941,
+      "genres": [
+        "classical",
+        "orchestral"
+      ],
+      "id": "3MKCzCnpzw3TjUYs2v7vDA",
+      "image": null,
+      "images": [
+        {
+          "description": "1000x1000",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/9a7c31f43e22a95f6d3c57baf4f87a3a9d2b93e0"
+        },
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/697936fd6d369e8d2d36b38e385c9b2b478524cb"
+        },
+        {
+          "description": "200x200",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/98e3a081097659f0d7554b232977019750972902"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/0fc4439f1b6b478408292baa38bd44d9268e4b33"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/3MKCzCnpzw3TjUYs2v7vDA"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/3MKCzCnpzw3TjUYs2v7vDA"
+        }
+      ],
+      "mc_id": "spotify_artist_3MKCzCnpzw3TjUYs2v7vDA",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 1533941,
+        "popularity": 70
+      },
+      "name": "Pyotr Ilyich Tchaikovsky",
+      "popularity": 70,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "3MKCzCnpzw3TjUYs2v7vDA",
+      "spotify_url": "https://open.spotify.com/artist/3MKCzCnpzw3TjUYs2v7vDA",
+      "status_code": 200,
+      "title": "Pyotr Ilyich Tchaikovsky",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Ludwig van Beethoven",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 5723236,
+      "genres": [
+        "classical",
+        "classical piano",
+        "chamber music"
+      ],
+      "id": "2wOqMjp9TyABvtHdOSOTUS",
+      "image": null,
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eba636b0b244253f602a629796"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616100005174a636b0b244253f602a629796"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f178a636b0b244253f602a629796"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/2wOqMjp9TyABvtHdOSOTUS"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/2wOqMjp9TyABvtHdOSOTUS"
+        }
+      ],
+      "mc_id": "spotify_artist_2wOqMjp9TyABvtHdOSOTUS",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 5723236,
+        "popularity": 71
+      },
+      "name": "Ludwig van Beethoven",
+      "popularity": 71,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2wOqMjp9TyABvtHdOSOTUS",
+      "spotify_url": "https://open.spotify.com/artist/2wOqMjp9TyABvtHdOSOTUS",
+      "status_code": 200,
+      "title": "Ludwig van Beethoven",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Claude Debussy",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 1647883,
+      "genres": [
+        "classical",
+        "classical piano"
+      ],
+      "id": "1Uff91EOsvd99rtAupatMP",
+      "image": null,
+      "images": [
+        {
+          "description": "387x458",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/5e1155c852578ddf5d2cfea94ccb3a8a65efa882"
+        },
+        {
+          "description": "200x237",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/d9bf00a7a314028df902da1d026a9844a3365d61"
+        },
+        {
+          "description": "64x76",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/155965c396369f20273bc6ba6a14f4185ffad805"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/1Uff91EOsvd99rtAupatMP"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/1Uff91EOsvd99rtAupatMP"
+        }
+      ],
+      "mc_id": "spotify_artist_1Uff91EOsvd99rtAupatMP",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 1647883,
+        "popularity": 68
+      },
+      "name": "Claude Debussy",
+      "popularity": 68,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1Uff91EOsvd99rtAupatMP",
+      "spotify_url": "https://open.spotify.com/artist/1Uff91EOsvd99rtAupatMP",
+      "status_code": 200,
+      "title": "Claude Debussy",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Classical",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 811,
+      "genres": [],
+      "id": "6kC8M8ichRylufC4IWPRNj",
+      "image": null,
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273ffb4113213931df0f006a575"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02ffb4113213931df0f006a575"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851ffb4113213931df0f006a575"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/6kC8M8ichRylufC4IWPRNj"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/6kC8M8ichRylufC4IWPRNj"
+        }
+      ],
+      "mc_id": "spotify_artist_6kC8M8ichRylufC4IWPRNj",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 811,
+        "popularity": 8
+      },
+      "name": "Classical",
+      "popularity": 8,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "6kC8M8ichRylufC4IWPRNj",
+      "spotify_url": "https://open.spotify.com/artist/6kC8M8ichRylufC4IWPRNj",
+      "status_code": 200,
+      "title": "Classical",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Classical",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 258,
+      "genres": [],
+      "id": "5ViCdpm0klRRRMcBgcPMQt",
+      "image": null,
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27317199dc20b94cbd020ce4a82"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0217199dc20b94cbd020ce4a82"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485117199dc20b94cbd020ce4a82"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/5ViCdpm0klRRRMcBgcPMQt"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/5ViCdpm0klRRRMcBgcPMQt"
+        }
+      ],
+      "mc_id": "spotify_artist_5ViCdpm0klRRRMcBgcPMQt",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 258,
+        "popularity": 8
+      },
+      "name": "Classical",
+      "popularity": 8,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "5ViCdpm0klRRRMcBgcPMQt",
+      "spotify_url": "https://open.spotify.com/artist/5ViCdpm0klRRRMcBgcPMQt",
+      "status_code": 200,
+      "title": "Classical",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Classical",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 12,
+      "genres": [],
+      "id": "6ZTDVRyUjnay20hip3iXYc",
+      "image": null,
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/6ZTDVRyUjnay20hip3iXYc"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/6ZTDVRyUjnay20hip3iXYc"
+        }
+      ],
+      "mc_id": "spotify_artist_6ZTDVRyUjnay20hip3iXYc",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 12,
+        "popularity": 0
+      },
+      "name": "Classical",
+      "popularity": 0,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "6ZTDVRyUjnay20hip3iXYc",
+      "spotify_url": "https://open.spotify.com/artist/6ZTDVRyUjnay20hip3iXYc",
+      "status_code": 200,
+      "title": "Classical",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Frédéric Chopin",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 3570680,
+      "genres": [
+        "classical piano",
+        "classical"
+      ],
+      "id": "7y97mc3bZRFXzT2szRM4L4",
+      "image": null,
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe55372097569b7b56b439365"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616100005174e55372097569b7b56b439365"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f178e55372097569b7b56b439365"
+        }
+      ],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/7y97mc3bZRFXzT2szRM4L4"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/7y97mc3bZRFXzT2szRM4L4"
+        }
+      ],
+      "mc_id": "spotify_artist_7y97mc3bZRFXzT2szRM4L4",
+      "mc_subtype": "music_artist",
+      "mc_type": "person",
+      "media_type": null,
+      "metrics": {
+        "followers": 3570680,
+        "popularity": 74
+      },
+      "name": "Frédéric Chopin",
+      "popularity": 74,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "7y97mc3bZRFXzT2szRM4L4",
+      "spotify_url": "https://open.spotify.com/artist/7y97mc3bZRFXzT2szRM4L4",
+      "status_code": 200,
+      "title": "Frédéric Chopin",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Antonio Vivaldi",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "4eEJooUkzenp7lZTtfbIP7",
+      "image": "https://i.scdn.co/image/ab67616d00004851c7464f9c451674bc683cb47f",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273c7464f9c451674bc683cb47f"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02c7464f9c451674bc683cb47f"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851c7464f9c451674bc683cb47f"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/4eEJooUkzenp7lZTtfbIP7"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/4eEJooUkzenp7lZTtfbIP7"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_4eEJooUkzenp7lZTtfbIP7",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "1985-01-01",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "4eEJooUkzenp7lZTtfbIP7",
+      "spotify_url": "https://open.spotify.com/album/4eEJooUkzenp7lZTtfbIP7",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Vivaldi: The Four Seasons",
+      "total_tracks": 12,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Various Artists",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "5LuljJVnAIJCp6TRThxr3u",
+      "image": "https://i.scdn.co/image/ab67616d00004851e38890140ea9afa1ba62eac1",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273e38890140ea9afa1ba62eac1"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02e38890140ea9afa1ba62eac1"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851e38890140ea9afa1ba62eac1"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/5LuljJVnAIJCp6TRThxr3u"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/5LuljJVnAIJCp6TRThxr3u"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_5LuljJVnAIJCp6TRThxr3u",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2021-01-23",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "5LuljJVnAIJCp6TRThxr3u",
+      "spotify_url": "https://open.spotify.com/album/5LuljJVnAIJCp6TRThxr3u",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Classical Music for Babies",
+      "total_tracks": 50,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Various Artists",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "26bQ8ka40C7SjHhqyNrqoj",
+      "image": "https://i.scdn.co/image/ab67616d000048515f6972ebe670054306cbe7be",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2735f6972ebe670054306cbe7be"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e025f6972ebe670054306cbe7be"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048515f6972ebe670054306cbe7be"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/26bQ8ka40C7SjHhqyNrqoj"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/26bQ8ka40C7SjHhqyNrqoj"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_26bQ8ka40C7SjHhqyNrqoj",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2011-06-28",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "26bQ8ka40C7SjHhqyNrqoj",
+      "spotify_url": "https://open.spotify.com/album/26bQ8ka40C7SjHhqyNrqoj",
+      "status_code": 200,
+      "streamable": null,
+      "title": "40 Most Beautiful Piano Classics",
+      "total_tracks": 40,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Various Artists",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "0bgjJ99UFbk0yBOzjJl7cq",
+      "image": "https://i.scdn.co/image/ab67616d0000485176206bd8de3a477aafd7ba83",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27376206bd8de3a477aafd7ba83"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0276206bd8de3a477aafd7ba83"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485176206bd8de3a477aafd7ba83"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0bgjJ99UFbk0yBOzjJl7cq"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0bgjJ99UFbk0yBOzjJl7cq"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_0bgjJ99UFbk0yBOzjJl7cq",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 168
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2009-11-23",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0bgjJ99UFbk0yBOzjJl7cq",
+      "spotify_url": "https://open.spotify.com/album/0bgjJ99UFbk0yBOzjJl7cq",
+      "status_code": 200,
+      "streamable": null,
+      "title": "The 50 Greatest Pieces of Classical Music",
+      "total_tracks": 50,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Nursery Rhymes ABC",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "16RjMIDd3s4ktAW5s5c2Hp",
+      "image": "https://i.scdn.co/image/ab67616d00004851079c4375da1257304b8be2cf",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273079c4375da1257304b8be2cf"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02079c4375da1257304b8be2cf"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851079c4375da1257304b8be2cf"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/16RjMIDd3s4ktAW5s5c2Hp"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/16RjMIDd3s4ktAW5s5c2Hp"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_16RjMIDd3s4ktAW5s5c2Hp",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2022-04-22",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "16RjMIDd3s4ktAW5s5c2Hp",
+      "spotify_url": "https://open.spotify.com/album/16RjMIDd3s4ktAW5s5c2Hp",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Classical Baby : Classical Lullabies for Babies",
+      "total_tracks": 24,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Johann Sebastian Bach",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "2FxlDEmuGpgsAwqVPrZsIG",
+      "image": "https://i.scdn.co/image/ab67616d0000485166aabfcf3fda257fafb50d07",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27366aabfcf3fda257fafb50d07"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0266aabfcf3fda257fafb50d07"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485166aabfcf3fda257fafb50d07"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/2FxlDEmuGpgsAwqVPrZsIG"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/2FxlDEmuGpgsAwqVPrZsIG"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_2FxlDEmuGpgsAwqVPrZsIG",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2025-11-01",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2FxlDEmuGpgsAwqVPrZsIG",
+      "spotify_url": "https://open.spotify.com/album/2FxlDEmuGpgsAwqVPrZsIG",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Classical Sanctuary | Christmas Edition",
+      "total_tracks": 30,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Antonio Vivaldi",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "68HXGd5YSWT8HHN7GSH1Gw",
+      "image": "https://i.scdn.co/image/ab67616d0000485140a1db49008401c775ebfda7",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27340a1db49008401c775ebfda7"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0240a1db49008401c775ebfda7"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485140a1db49008401c775ebfda7"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/68HXGd5YSWT8HHN7GSH1Gw"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/68HXGd5YSWT8HHN7GSH1Gw"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_68HXGd5YSWT8HHN7GSH1Gw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2025-11-09",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "68HXGd5YSWT8HHN7GSH1Gw",
+      "spotify_url": "https://open.spotify.com/album/68HXGd5YSWT8HHN7GSH1Gw",
+      "status_code": 200,
+      "streamable": null,
+      "title": "The Sound of Winter",
+      "total_tracks": 25,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Pyotr Ilyich Tchaikovsky",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "1I7YtPusQHZyLRdUqnaBSZ",
+      "image": "https://i.scdn.co/image/ab67616d0000485189eb19fa649d6ac5a251aa47",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27389eb19fa649d6ac5a251aa47"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0289eb19fa649d6ac5a251aa47"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485189eb19fa649d6ac5a251aa47"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1I7YtPusQHZyLRdUqnaBSZ"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1I7YtPusQHZyLRdUqnaBSZ"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_1I7YtPusQHZyLRdUqnaBSZ",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 183
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2025-11-09",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1I7YtPusQHZyLRdUqnaBSZ",
+      "spotify_url": "https://open.spotify.com/album/1I7YtPusQHZyLRdUqnaBSZ",
+      "status_code": 200,
+      "streamable": null,
+      "title": "\"The Nutcracker\" and Other Instrumental Christmas Music",
+      "total_tracks": 80,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Various Artists",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "0m8zvPL66y78Hpt2ynfdA8",
+      "image": "https://i.scdn.co/image/ab67616d000048517eaf9bdae056d130d4968cb0",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2737eaf9bdae056d130d4968cb0"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e027eaf9bdae056d130d4968cb0"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048517eaf9bdae056d130d4968cb0"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0m8zvPL66y78Hpt2ynfdA8"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0m8zvPL66y78Hpt2ynfdA8"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_0m8zvPL66y78Hpt2ynfdA8",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2019-05-24",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0m8zvPL66y78Hpt2ynfdA8",
+      "spotify_url": "https://open.spotify.com/album/0m8zvPL66y78Hpt2ynfdA8",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Soft Classical Music for Sleeping",
+      "total_tracks": 25,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "album_type": "album",
+      "apple_music_url": null,
+      "artist": "Classical Lullabies",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "1TN3ksb21pW97iqh7vcLdw",
+      "image": "https://i.scdn.co/image/ab67616d00004851717176cf27375acf5c7b68e9",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273717176cf27375acf5c7b68e9"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02717176cf27375acf5c7b68e9"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851717176cf27375acf5c7b68e9"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1TN3ksb21pW97iqh7vcLdw"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1TN3ksb21pW97iqh7vcLdw"
+        }
+      ],
+      "listeners": 0,
+      "mbid": "",
+      "mc_id": "album_1TN3ksb21pW97iqh7vcLdw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "playcount": 0,
+      "popularity": null,
+      "release_date": "2011-11-29",
+      "release_date_precision": "day",
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1TN3ksb21pW97iqh7vcLdw",
+      "spotify_url": "https://open.spotify.com/album/1TN3ksb21pW97iqh7vcLdw",
+      "status_code": 200,
+      "streamable": null,
+      "title": "Bedtime Bach: Classical Lullabies for Babies",
+      "total_tracks": 40,
+      "url": "",
+      "youtube_music_url": null,
+      "youtube_music_url_android": null,
+      "youtube_music_url_ios": null
+    },
+    {
+      "artist": "Classical Study Music for Focus 🎻🎶",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "0QknRAZUpwPtM2dQIzAnAa",
+      "image": null,
+      "images": [
+        {
+          "description": "0x0",
+          "key": "s",
+          "type": "url",
+          "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000d72c490274beb31d3c613639793e"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/playlist/0QknRAZUpwPtM2dQIzAnAa"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/playlists/0QknRAZUpwPtM2dQIzAnAa"
+        }
+      ],
+      "mc_id": "spotify_playlist_0QknRAZUpwPtM2dQIzAnAa",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "Classical Study Music for Focus 🎻🎶",
+      "popularity": 0,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0QknRAZUpwPtM2dQIzAnAa",
+      "spotify_url": "https://open.spotify.com/playlist/0QknRAZUpwPtM2dQIzAnAa",
+      "status_code": 200,
+      "title": "Classical Study Music for Focus 🎻🎶"
+    },
+    {
+      "artist": "Classical Bangers 🎹🎻",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "27Zm1P410dPfedsdoO9fqm",
+      "image": null,
+      "images": [
+        {
+          "description": "0x0",
+          "key": "s",
+          "type": "url",
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da841d36875da61b27546bdec036"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/playlist/27Zm1P410dPfedsdoO9fqm"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/playlists/27Zm1P410dPfedsdoO9fqm"
+        }
+      ],
+      "mc_id": "spotify_playlist_27Zm1P410dPfedsdoO9fqm",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "Classical Bangers 🎹🎻",
+      "popularity": 0,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "27Zm1P410dPfedsdoO9fqm",
+      "spotify_url": "https://open.spotify.com/playlist/27Zm1P410dPfedsdoO9fqm",
+      "status_code": 200,
+      "title": "Classical Bangers 🎹🎻"
+    },
+    {
+      "artist": "classical music to study or sleep to",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "5cwPclg5ZtafoBPWgZMHMb",
+      "image": null,
+      "images": [
+        {
+          "description": "0x0",
+          "key": "s",
+          "type": "url",
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c3dcdcb8727cd0038e662f4c4"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/playlist/5cwPclg5ZtafoBPWgZMHMb"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/playlists/5cwPclg5ZtafoBPWgZMHMb"
+        }
+      ],
+      "mc_id": "spotify_playlist_5cwPclg5ZtafoBPWgZMHMb",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "classical music to study or sleep to",
+      "popularity": 0,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "5cwPclg5ZtafoBPWgZMHMb",
+      "spotify_url": "https://open.spotify.com/playlist/5cwPclg5ZtafoBPWgZMHMb",
+      "status_code": 200,
+      "title": "classical music to study or sleep to"
+    },
+    {
+      "artist": "100 of the most famous classical music pieces 🎻 🎹 🎺",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "2AIyLES2xJfPa6EOxmKySl",
+      "image": null,
+      "images": [
+        {
+          "description": "0x0",
+          "key": "s",
+          "type": "url",
+          "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84c412db80f63b7b43b38c52db"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/playlist/2AIyLES2xJfPa6EOxmKySl"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/playlists/2AIyLES2xJfPa6EOxmKySl"
+        }
+      ],
+      "mc_id": "spotify_playlist_2AIyLES2xJfPa6EOxmKySl",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "100 of the most famous classical music pieces 🎻 🎹 🎺",
+      "popularity": 0,
+      "raw_images": [],
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2AIyLES2xJfPa6EOxmKySl",
+      "spotify_url": "https://open.spotify.com/playlist/2AIyLES2xJfPa6EOxmKySl",
+      "status_code": 200,
+      "title": "100 of the most famous classical music pieces 🎻 🎹 🎺"
+    }
+  ],
+  "status_code": 200,
+  "total_results": 24
+}

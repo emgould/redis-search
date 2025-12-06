@@ -1,0 +1,1039 @@
+{
+  "category": null,
+  "country": "us",
+  "data_source": "NewsAI Trending Events",
+  "data_type": "news_article",
+  "error": null,
+  "metrics": {},
+  "page": 1,
+  "page_size": 5,
+  "query": null,
+  "results": [
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 23,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Computers/Artificial Intelligence/Natural Language",
+          "uri": "dmoz/Computers/Artificial_Intelligence/Natural_Language",
+          "wgt": 33
+        },
+        {
+          "label": "dmoz/Computers/Artificial Intelligence/Publications",
+          "uri": "dmoz/Computers/Artificial_Intelligence/Publications",
+          "wgt": 18
+        },
+        {
+          "label": "dmoz/Computers/Artificial Intelligence/Games",
+          "uri": "dmoz/Computers/Artificial_Intelligence/Games",
+          "wgt": 25
+        },
+        {
+          "label": "news/Technology",
+          "uri": "news/Technology",
+          "wgt": 89
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Artificial intelligence"
+          },
+          "score": 100,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Artificial_intelligence"
+        },
+        {
+          "label": {
+            "eng": "Samsung"
+          },
+          "score": 94,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Samsung"
+        },
+        {
+          "label": {
+            "eng": "Microsoft"
+          },
+          "score": 35,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Microsoft"
+        },
+        {
+          "label": {
+            "eng": "Chatbot"
+          },
+          "score": 32,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Chatbot"
+        },
+        {
+          "label": {
+            "eng": "Computer monitor"
+          },
+          "score": 28,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Computer_monitor"
+        },
+        {
+          "label": {
+            "eng": "Virtual assistant"
+          },
+          "score": 25,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Virtual_assistant"
+        },
+        {
+          "label": {
+            "eng": "Television"
+          },
+          "score": 25,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Television"
+        },
+        {
+          "label": {
+            "eng": "Speech recognition"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Speech_recognition"
+        },
+        {
+          "label": {
+            "eng": "OLED"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/OLED"
+        },
+        {
+          "label": {
+            "eng": "Smart TV"
+          },
+          "score": 23,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Smart_TV"
+        },
+        {
+          "label": {
+            "eng": "RGB color model"
+          },
+          "score": 22,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/RGB_color_model"
+        },
+        {
+          "label": {
+            "eng": "Real-time computing"
+          },
+          "score": 20,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Real-time_computing"
+        },
+        {
+          "label": {
+            "eng": "Tizen"
+          },
+          "score": 19,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Tizen"
+        },
+        {
+          "label": {
+            "eng": "One UI"
+          },
+          "score": 18,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/One_UI"
+        },
+        {
+          "label": {
+            "eng": "Quantum dot display"
+          },
+          "score": 18,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Quantum_dot_display"
+        },
+        {
+          "label": {
+            "eng": "Samsung Electronics"
+          },
+          "score": 18,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Samsung_Electronics"
+        },
+        {
+          "label": {
+            "eng": "English language"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/English_language"
+        },
+        {
+          "label": {
+            "eng": "Korean language"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Korean_language"
+        },
+        {
+          "label": {
+            "eng": "Spanish language"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Spanish_language"
+        },
+        {
+          "label": {
+            "eng": "Operating system"
+          },
+          "score": 15,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Operating_system"
+        },
+        {
+          "label": {
+            "eng": "Generative artificial intelligence"
+          },
+          "score": 14,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Generative_artificial_intelligence"
+        },
+        {
+          "label": {
+            "eng": "Streaming media"
+          },
+          "score": 14,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Streaming_media"
+        },
+        {
+          "label": {
+            "eng": "French language"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/French_language"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://fdn.gsmarena.com/imgroot/news/25/11/samsung-vision-ai-companion-for-tvs/-728x314/gsmarena_000.jpg"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 10,
+      "rtl": null,
+      "sentiment": 0.3098039215686275,
+      "social_score": 1.799999952316284,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11134349",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "Samsung's 2025 TVs in the Neo QLED, Micro RGB, OLED and QLED series feature a new conversational AI - the Samsung Vision AI Companion.\n\nSamsung says that unlike a typical AI assistant, which is designed to be used on individual devices, this AI is \"purpose-built for the communal screen\". In other words, you use your phone by yourself, while the TV can be used by multiple people at once.\n\nThe Vision AI Companion has a Live Translate mode - this is a real-time translation of dialog in TVs and movie",
+      "title": "The Vision AI Companion on 2025 Samsung TVs can answer questions and translate dialog",
+      "total_article_count": 23,
+      "uri": "eng-11134349",
+      "wgt": 500515200
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 10,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Computers/Artificial Intelligence/Games",
+          "uri": "dmoz/Computers/Artificial_Intelligence/Games",
+          "wgt": 18
+        },
+        {
+          "label": "news/Technology",
+          "uri": "news/Technology",
+          "wgt": 92
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Appian"
+          },
+          "score": 100,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Appian"
+        },
+        {
+          "label": {
+            "eng": "Artificial intelligence"
+          },
+          "score": 95,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Artificial_intelligence"
+        },
+        {
+          "label": {
+            "eng": "Low-code development platform"
+          },
+          "score": 36,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Low-code_development_platform"
+        },
+        {
+          "label": {
+            "eng": "Business process"
+          },
+          "score": 34,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Business_process"
+        },
+        {
+          "label": {
+            "eng": "Textile"
+          },
+          "score": 34,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Textile"
+        },
+        {
+          "label": {
+            "eng": "Software release life cycle"
+          },
+          "score": 31,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Software_release_life_cycle"
+        },
+        {
+          "label": {
+            "eng": "Automation"
+          },
+          "score": 28,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Automation"
+        },
+        {
+          "label": {
+            "eng": "Real-time computing"
+          },
+          "score": 27,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Real-time_computing"
+        },
+        {
+          "label": {
+            "eng": "Nasdaq"
+          },
+          "score": 26,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Nasdaq"
+        },
+        {
+          "label": {
+            "eng": "Natural language"
+          },
+          "score": 26,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Natural_language"
+        },
+        {
+          "label": {
+            "eng": "Platform game"
+          },
+          "score": 26,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Platform_game"
+        },
+        {
+          "label": {
+            "eng": "Workflow"
+          },
+          "score": 25,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Workflow"
+        },
+        {
+          "label": {
+            "eng": "PR Newswire"
+          },
+          "score": 25,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/PR_Newswire"
+        },
+        {
+          "label": {
+            "eng": "Business process automation"
+          },
+          "score": 24,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Business_process_automation"
+        },
+        {
+          "label": {
+            "eng": "Software"
+          },
+          "score": 23,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Software"
+        },
+        {
+          "label": {
+            "eng": "Earnings before interest, taxes, depreciation, and amortization"
+          },
+          "score": 21,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Earnings_before_interest,_taxes,_depreciation,_and_amortization"
+        },
+        {
+          "label": {
+            "eng": "Unstructured data"
+          },
+          "score": 20,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Unstructured_data"
+        },
+        {
+          "label": {
+            "eng": "Marketing"
+          },
+          "score": 19,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Marketing"
+        },
+        {
+          "label": {
+            "eng": "Chief executive officer"
+          },
+          "score": 19,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Chief_executive_officer"
+        },
+        {
+          "label": {
+            "eng": "Software engineering"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Software_engineering"
+        },
+        {
+          "label": {
+            "eng": "Vice president"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Vice_president"
+        },
+        {
+          "label": {
+            "eng": "Friction"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Friction"
+        },
+        {
+          "label": {
+            "eng": "Massachusetts Institute of Technology"
+          },
+          "score": 11,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Massachusetts_Institute_of_Technology"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://media.zenfs.com/en/motleyfool.com/3eb98d151f92e4977a74d0feda2d1611"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 6,
+      "rtl": null,
+      "sentiment": 0.3725490196078431,
+      "social_score": 0.0,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11137108",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "Appian (NASDAQ: APPN) has now been a publicly traded company for nearly 10 years, and its software business has gone through several evolutions during that time -- from a low-code software to process mining to now an artificial intelligence (AI) platform. That transition was made clear from the company's third-quarter earnings report as the stock jumped 30.8% on the news on Thursday.\n\nAppian's Q3 report showed better-than 20% revenue growth since 2022. Appian reported 21% top-line growth to $187 ",
+      "title": "Appian Shares Just Exploded. Here's Why the AI Stock Could Keep Climbing.",
+      "total_article_count": 10,
+      "uri": "eng-11137108",
+      "wgt": 500515200
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 5,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Science/Environment",
+          "uri": "dmoz/Science/Environment",
+          "wgt": 62
+        },
+        {
+          "label": "dmoz/Computers/Security/Honeypots and Honeynets",
+          "uri": "dmoz/Computers/Security/Honeypots_and_Honeynets",
+          "wgt": 100
+        },
+        {
+          "label": "dmoz/Science/Agriculture/Practices and Systems",
+          "uri": "dmoz/Science/Agriculture/Practices_and_Systems",
+          "wgt": 100
+        },
+        {
+          "label": "news/Business",
+          "uri": "news/Business",
+          "wgt": 65
+        },
+        {
+          "label": "news/Technology",
+          "uri": "news/Technology",
+          "wgt": 63
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Data center"
+          },
+          "score": 100,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Data_center"
+        },
+        {
+          "label": {
+            "eng": "Computer"
+          },
+          "score": 57,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Computer"
+        },
+        {
+          "label": {
+            "eng": "Cloud computing"
+          },
+          "score": 55,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Cloud_computing"
+        },
+        {
+          "label": {
+            "eng": "Electricity"
+          },
+          "score": 53,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Electricity"
+        },
+        {
+          "label": {
+            "eng": "Artificial intelligence"
+          },
+          "score": 43,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Artificial_intelligence"
+        },
+        {
+          "label": {
+            "eng": "Sustainability"
+          },
+          "score": 35,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Sustainability"
+        },
+        {
+          "label": {
+            "eng": "Computer security"
+          },
+          "score": 33,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Computer_security"
+        },
+        {
+          "label": {
+            "eng": "Latency (engineering)"
+          },
+          "score": 26,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Latency_(engineering)"
+        },
+        {
+          "label": {
+            "eng": "Efficient energy use"
+          },
+          "score": 25,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Efficient_energy_use"
+        },
+        {
+          "label": {
+            "eng": "Electric power transmission"
+          },
+          "score": 21,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Electric_power_transmission"
+        },
+        {
+          "label": {
+            "eng": "Irrigation"
+          },
+          "score": 16,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Irrigation"
+        },
+        {
+          "label": {
+            "eng": "Microsoft"
+          },
+          "score": 15,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/Microsoft"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://resources.arcamax.com/newspics/362/36248/3624853.gif"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 26,
+      "rtl": null,
+      "sentiment": 0.1764705882352942,
+      "social_score": 0.0,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11137701",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "By clicking submit, I authorize Arcamax and its affiliates to: (1) use, sell, and share my information for marketing purposes, including cross-context behavioral advertising, as described in our Privacy Policy , (2) add to information that I provide with other information like interests inferred from web page views, or data lawfully obtained from data brokers, such as past purchase or location data, or publicly available data, (3) contact me or enable others to contact me by email or other mean",
+      "title": "Commentary: Data centers as new economic foundations",
+      "total_article_count": 5,
+      "uri": "eng-11137701",
+      "wgt": 500515200
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 8,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Society/Issues/Warfare and Conflict",
+          "uri": "dmoz/Society/Issues/Warfare_and_Conflict",
+          "wgt": 46
+        },
+        {
+          "label": "dmoz/Computers/Security",
+          "uri": "dmoz/Computers/Security",
+          "wgt": 16
+        },
+        {
+          "label": "dmoz/Business/Chemicals/Explosives",
+          "uri": "dmoz/Business/Chemicals/Explosives",
+          "wgt": 23
+        },
+        {
+          "label": "news/Politics",
+          "uri": "news/Politics",
+          "wgt": 96
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "Islamabad"
+          },
+          "score": 100,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Islamabad"
+        },
+        {
+          "label": {
+            "eng": "Pakistan"
+          },
+          "score": 90,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Pakistan"
+        },
+        {
+          "label": {
+            "eng": "CNN"
+          },
+          "score": 83,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/CNN"
+        },
+        {
+          "label": {
+            "eng": "Pakistan Institute of Medical Sciences"
+          },
+          "score": 60,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Pakistan_Institute_of_Medical_Sciences"
+        },
+        {
+          "label": {
+            "eng": "Suicide attack"
+          },
+          "score": 50,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Suicide_attack"
+        },
+        {
+          "label": {
+            "eng": "Taliban"
+          },
+          "score": 40,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Taliban"
+        },
+        {
+          "label": {
+            "eng": "Afghanistan"
+          },
+          "score": 37,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Afghanistan"
+        },
+        {
+          "label": {
+            "eng": "High Court of Justice"
+          },
+          "score": 33,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/High_Court_of_Justice"
+        },
+        {
+          "label": {
+            "eng": "Asif Ali Zardari"
+          },
+          "score": 30,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Asif_Ali_Zardari"
+        },
+        {
+          "label": {
+            "eng": "India"
+          },
+          "score": 30,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/India"
+        },
+        {
+          "label": {
+            "eng": "Pakistani Taliban"
+          },
+          "score": 23,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Pakistani_Taliban"
+        },
+        {
+          "label": {
+            "eng": "Kabul"
+          },
+          "score": 23,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Kabul"
+        },
+        {
+          "label": {
+            "eng": "Khawaja Muhammad Asif"
+          },
+          "score": 20,
+          "title": null,
+          "type": "person",
+          "uri": "http://en.wikipedia.org/wiki/Khawaja_Muhammad_Asif"
+        },
+        {
+          "label": {
+            "eng": "War"
+          },
+          "score": 20,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/War"
+        },
+        {
+          "label": {
+            "eng": "Islamism"
+          },
+          "score": 17,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Islamism"
+        },
+        {
+          "label": {
+            "eng": "Ceasefire"
+          },
+          "score": 10,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Ceasefire"
+        },
+        {
+          "label": {
+            "eng": "Istanbul"
+          },
+          "score": 10,
+          "title": null,
+          "type": "loc",
+          "uri": "http://en.wikipedia.org/wiki/Istanbul"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://media.zenfs.com/en/cnn_articles_875/a1bc426df8eccf84513b2a1e31327103"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 5,
+      "rtl": null,
+      "sentiment": -0.3490196078431372,
+      "social_score": 0.800000011920929,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11134035",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "A rare explosion in Pakistan's capital city of Islamabad on Tuesday has left 12 dead and 20 injured, the Pakistan Institute of Medical Sciences Hospital told reporters.\n\nA security source in Pakistan told CNN that the explosion near the city's High Court early on Tuesday afternoon is being investigated as a suicide attack.\n\nThe country's president Asif Ali Zardari released a statement condemning what he called a \"suicide blast\" near the city's High Court.\n\nIslamabad requires a high level of secur",
+      "title": "At least 12 killed in blast outside court in Islamabad, Pakistan - Yahoo News Singapore",
+      "total_article_count": 8,
+      "uri": "eng-11134035",
+      "wgt": 500515200
+    },
+    {
+      "article_counts": {
+        "deu": null,
+        "eng": 5,
+        "spa": null
+      },
+      "categories": [
+        {
+          "label": "dmoz/Business/Investing/Stocks and Bonds",
+          "uri": "dmoz/Business/Investing/Stocks_and_Bonds",
+          "wgt": 19
+        },
+        {
+          "label": "dmoz/Business/Investing/Research and Analysis",
+          "uri": "dmoz/Business/Investing/Research_and_Analysis",
+          "wgt": 16
+        },
+        {
+          "label": "dmoz/Computers/Software/Master Data Management",
+          "uri": "dmoz/Computers/Software/Master_Data_Management",
+          "wgt": 58
+        },
+        {
+          "label": "news/Technology",
+          "uri": "news/Technology",
+          "wgt": 78
+        }
+      ],
+      "category": null,
+      "concepts": [
+        {
+          "label": {
+            "eng": "NetApp"
+          },
+          "score": 100,
+          "title": null,
+          "type": "org",
+          "uri": "http://en.wikipedia.org/wiki/NetApp"
+        },
+        {
+          "label": {
+            "eng": "Cloud computing"
+          },
+          "score": 76,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Cloud_computing"
+        },
+        {
+          "label": {
+            "eng": "Artificial intelligence"
+          },
+          "score": 44,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Artificial_intelligence"
+        },
+        {
+          "label": {
+            "eng": "On-premises software"
+          },
+          "score": 40,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/On-premises_software"
+        },
+        {
+          "label": {
+            "eng": "Scalability"
+          },
+          "score": 34,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Scalability"
+        },
+        {
+          "label": {
+            "eng": "Information technology"
+          },
+          "score": 29,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Information_technology"
+        },
+        {
+          "label": {
+            "eng": "Data breach"
+          },
+          "score": 13,
+          "title": null,
+          "type": "wiki",
+          "uri": "http://en.wikipedia.org/wiki/Data_breach"
+        }
+      ],
+      "error": null,
+      "event_date": "2025-11-11",
+      "external_ids": {},
+      "images": [
+        "https://s.yimg.com/ny/api/res/1.2/xMm7BsOs1quUXp_0Yzbk1g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA7Y2Y9d2VicA--/https://media.zenfs.com/en/barchart_com_477/ebe53520a26f8310b971a4f05e75e343"
+      ],
+      "info_article": null,
+      "links": [],
+      "location_str": null,
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "relevance": 15,
+      "rtl": null,
+      "sentiment": 0.2549019607843137,
+      "social_score": 0.0,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "eng-11137561",
+      "source_title": null,
+      "status_code": 200,
+      "summary": "NetApp, Inc. (NTAP), headquartered in San Jose, California, specializes in advanced cloud, on-premises, and hybrid data solutions. The company develops unified data storage hardware and software, delivering efficient management for network environments and enabling enterprises to maximize the potential of their data.\n\nNetApp's technology supports data-driven decision-making, cybersecurity, and scalable cloud integration, streamlining business operations and fostering innovation for organizations ",
+      "title": "Are Wall Street Analysts Predicting NetApp Stock Will Climb or Sink?",
+      "total_article_count": 5,
+      "uri": "eng-11137561",
+      "wgt": 500515200
+    }
+  ],
+  "status": "ok",
+  "status_code": 200,
+  "total_results": 1514
+}

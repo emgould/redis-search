@@ -1,0 +1,384 @@
+{
+  "data_source": "Spotify Artist Search",
+  "error": null,
+  "query": "Coldplay",
+  "results": [
+    {
+      "artist": "Coldplay",
+      "content_type": "musician",
+      "followers": 60861836,
+      "genres": [],
+      "id": "4gzpq5DPGxSnKTe4SA8HAU",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb1ba8fc5f5c73e7e9313cc6eb",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb1ba8fc5f5c73e7e9313cc6eb",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051741ba8fc5f5c73e7e9313cc6eb",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1781ba8fc5f5c73e7e9313cc6eb",
+          "width": 160
+        }
+      ],
+      "known_for": "Yellow",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_4gzpq5DPGxSnKTe4SA8HAU",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Coldplay",
+      "popularity": 88,
+      "spotify_url": "https://open.spotify.com/artist/4gzpq5DPGxSnKTe4SA8HAU",
+      "title": "Coldplay",
+      "top_track_album": "Parachutes",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2739164bafe9aaa168d93f4816a",
+      "top_track_release_date": "2000-07-10",
+      "top_track_track": "Yellow"
+    },
+    {
+      "artist": "Bad Bunny",
+      "content_type": "musician",
+      "followers": 102650218,
+      "genres": [
+        "reggaeton",
+        "trap latino",
+        "urbano latino",
+        "latin"
+      ],
+      "id": "4q3ewBCX7sLwd24euuV69X",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb81f47f44084e0a09b5f0fa13",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb81f47f44084e0a09b5f0fa13",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517481f47f44084e0a09b5f0fa13",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17881f47f44084e0a09b5f0fa13",
+          "width": 160
+        }
+      ],
+      "known_for": "DtMF",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_4q3ewBCX7sLwd24euuV69X",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Bad Bunny",
+      "popularity": 95,
+      "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
+      "title": "Bad Bunny",
+      "top_track_album": "DeBÍ TiRAR MáS FOToS",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273bbd45c8d36e0e045ef640411",
+      "top_track_release_date": "2025-01-05",
+      "top_track_track": "DtMF"
+    },
+    {
+      "artist": "Imagine Dragons",
+      "content_type": "musician",
+      "followers": 58392141,
+      "genres": [],
+      "id": "53XhwfbYqKCa1cC15pYq2q",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebab47d8dae2b24f5afe7f9d38",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebab47d8dae2b24f5afe7f9d38",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174ab47d8dae2b24f5afe7f9d38",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178ab47d8dae2b24f5afe7f9d38",
+          "width": 160
+        }
+      ],
+      "known_for": "Believer",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_53XhwfbYqKCa1cC15pYq2q",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Imagine Dragons",
+      "popularity": 85,
+      "spotify_url": "https://open.spotify.com/artist/53XhwfbYqKCa1cC15pYq2q",
+      "title": "Imagine Dragons",
+      "top_track_album": "Evolve",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2735675e83f707f1d7271e5cf8a",
+      "top_track_release_date": "2017-06-23",
+      "top_track_track": "Believer"
+    },
+    {
+      "artist": "Drake",
+      "content_type": "musician",
+      "followers": 103157777,
+      "genres": [
+        "rap"
+      ],
+      "id": "3TVXtAsR1Inumwj472S9r4",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744293385d324db8558179afd9",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784293385d324db8558179afd9",
+          "width": 160
+        }
+      ],
+      "known_for": "One Dance",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_3TVXtAsR1Inumwj472S9r4",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Drake",
+      "popularity": 95,
+      "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+      "title": "Drake",
+      "top_track_album": "Views",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2739416ed64daf84936d89e671c",
+      "top_track_release_date": "2016-05-06",
+      "top_track_track": "One Dance"
+    },
+    {
+      "artist": "Ed Sheeran",
+      "content_type": "musician",
+      "followers": 122841770,
+      "genres": [
+        "soft pop"
+      ],
+      "id": "6eUKZXaKkcviH0Ku9w2n3V",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebd55c95ad400aed87da52daec",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebd55c95ad400aed87da52daec",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174d55c95ad400aed87da52daec",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178d55c95ad400aed87da52daec",
+          "width": 160
+        }
+      ],
+      "known_for": "Shape of You",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_6eUKZXaKkcviH0Ku9w2n3V",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Ed Sheeran",
+      "popularity": 88,
+      "spotify_url": "https://open.spotify.com/artist/6eUKZXaKkcviH0Ku9w2n3V",
+      "title": "Ed Sheeran",
+      "top_track_album": "÷ (Deluxe)",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96",
+      "top_track_release_date": "2017-03-03",
+      "top_track_track": "Shape of You"
+    },
+    {
+      "artist": "Bruno Mars",
+      "content_type": "musician",
+      "followers": 75535963,
+      "genres": [],
+      "id": "0du5cEVh5yTK9QJze8zA0C",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebc36dd9eb55fb0db4911f25dd",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebc36dd9eb55fb0db4911f25dd",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174c36dd9eb55fb0db4911f25dd",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178c36dd9eb55fb0db4911f25dd",
+          "width": 160
+        }
+      ],
+      "known_for": "Die With A Smile",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_0du5cEVh5yTK9QJze8zA0C",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Bruno Mars",
+      "popularity": 90,
+      "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+      "title": "Bruno Mars",
+      "top_track_album": "MAYHEM",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273b0860cf0a98e09663c82290c",
+      "top_track_release_date": "2025-03-07",
+      "top_track_track": "Die With A Smile"
+    },
+    {
+      "artist": "Taylor Swift",
+      "content_type": "musician",
+      "followers": 145596065,
+      "genres": [],
+      "id": "06HL4z0CvFAxyc27GXpf02",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebe2e8e7ff002a4afda1c7147e",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe2e8e7ff002a4afda1c7147e",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174e2e8e7ff002a4afda1c7147e",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178e2e8e7ff002a4afda1c7147e",
+          "width": 160
+        }
+      ],
+      "known_for": "The Fate of Ophelia",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_06HL4z0CvFAxyc27GXpf02",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Taylor Swift",
+      "popularity": 100,
+      "spotify_url": "https://open.spotify.com/artist/06HL4z0CvFAxyc27GXpf02",
+      "title": "Taylor Swift",
+      "top_track_album": "The Life of a Showgirl",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b273d7812467811a7da6e6a44902",
+      "top_track_release_date": "2025-10-03",
+      "top_track_track": "The Fate of Ophelia"
+    },
+    {
+      "artist": "coldlakes",
+      "content_type": "musician",
+      "followers": 1151,
+      "genres": [
+        "dark ambient",
+        "ambient"
+      ],
+      "id": "3jxJQ1JkYdqHNGnvIoW0nI",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb4fcdbd1166f8598dd236c101",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4fcdbd1166f8598dd236c101",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744fcdbd1166f8598dd236c101",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784fcdbd1166f8598dd236c101",
+          "width": 160
+        }
+      ],
+      "known_for": "blinded",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_3jxJQ1JkYdqHNGnvIoW0nI",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "coldlakes",
+      "popularity": 28,
+      "spotify_url": "https://open.spotify.com/artist/3jxJQ1JkYdqHNGnvIoW0nI",
+      "title": "coldlakes",
+      "top_track_album": "blinded",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2736eb4779163e99738734303b9",
+      "top_track_release_date": "2023-09-29",
+      "top_track_track": "blinded"
+    },
+    {
+      "artist": "Coldplay & Lele",
+      "content_type": "musician",
+      "followers": 247,
+      "genres": [],
+      "id": "14cDx3yNMNO94Ghqo3kVoF",
+      "image": null,
+      "images": [],
+      "known_for": "Clocks/Relojes (Haitian Mix)",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_14cDx3yNMNO94Ghqo3kVoF",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Coldplay & Lele",
+      "popularity": 6,
+      "spotify_url": "https://open.spotify.com/artist/14cDx3yNMNO94Ghqo3kVoF",
+      "title": "Coldplay & Lele",
+      "top_track_album": "Rhythms Del Mundo Revival",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2733ff61c62794fa8fc3470b71c",
+      "top_track_release_date": "2010-07-27",
+      "top_track_track": "Clocks/Relojes (Haitian Mix)"
+    },
+    {
+      "artist": "Coldplay Piano Covers",
+      "content_type": "musician",
+      "followers": 311,
+      "genres": [],
+      "id": "2fSzCIUiE4rNjULU0aIyyt",
+      "image": "https://i.scdn.co/image/ab67616d0000b2737af0e1e9c97998e86e2903db",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2737af0e1e9c97998e86e2903db",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e027af0e1e9c97998e86e2903db",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048517af0e1e9c97998e86e2903db",
+          "width": 64
+        }
+      ],
+      "known_for": "Coldplay - Clocks - Piano Cover",
+      "known_for_department": "Music",
+      "mc_id": "spotify_artist_2fSzCIUiE4rNjULU0aIyyt",
+      "mc_type": "music_artist",
+      "media_type": "person",
+      "name": "Coldplay Piano Covers",
+      "popularity": 10,
+      "spotify_url": "https://open.spotify.com/artist/2fSzCIUiE4rNjULU0aIyyt",
+      "title": "Coldplay Piano Covers",
+      "top_track_album": "Coldplay - Piano Covers",
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d0000b2737af0e1e9c97998e86e2903db",
+      "top_track_release_date": "2023-05-20",
+      "top_track_track": "Coldplay - Clocks - Piano Cover"
+    }
+  ],
+  "total_results": 10
+}

@@ -1,0 +1,427 @@
+{
+  "headends": [
+    {
+      "headend": "0000001",
+      "lineups": [
+        {
+          "lineup": "USA-0000001-CUSTOM",
+          "name": "ChannelsDVR TV-Everywhere",
+          "uri": "/20141201/lineups/USA-0000001-CUSTOM"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "07417",
+      "lineups": [
+        {
+          "lineup": "USA-OTA-07417",
+          "name": "Antenna",
+          "uri": "/20141201/lineups/USA-OTA-07417"
+        }
+      ],
+      "location": "07417",
+      "transport": "Antenna"
+    },
+    {
+      "headend": "AFN",
+      "lineups": [
+        {
+          "lineup": "USA-AFN-X",
+          "name": "AFN Satellite",
+          "uri": "/20141201/lineups/USA-AFN-X"
+        }
+      ],
+      "location": "National",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "AMZPV",
+      "lineups": [
+        {
+          "lineup": "USA-AMZPV-X",
+          "name": "Amazon Prime Video",
+          "uri": "/20141201/lineups/USA-AMZPV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "DISH501",
+      "lineups": [
+        {
+          "lineup": "USA-DISH501-X",
+          "name": "DISH New York",
+          "uri": "/20141201/lineups/USA-DISH501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "DITV",
+      "lineups": [
+        {
+          "lineup": "USA-DITV-X",
+          "name": "DIRECTV",
+          "uri": "/20141201/lineups/USA-DITV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "DITV501",
+      "lineups": [
+        {
+          "lineup": "USA-DITV501-X",
+          "name": "DIRECTV New York",
+          "uri": "/20141201/lineups/USA-DITV501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "DNOW501",
+      "lineups": [
+        {
+          "lineup": "USA-DNOW501-X",
+          "name": "DIRECTV STREAM New York",
+          "uri": "/20141201/lineups/USA-DNOW501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "DTVNOW",
+      "lineups": [
+        {
+          "lineup": "USA-DTVNOW-X",
+          "name": "DIRECTV STREAM",
+          "uri": "/20141201/lineups/USA-DTVNOW-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "ECHOST",
+      "lineups": [
+        {
+          "lineup": "USA-ECHOST-X",
+          "name": "DISH Network",
+          "uri": "/20141201/lineups/USA-ECHOST-X"
+        }
+      ],
+      "location": "National",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "FRNDLY",
+      "lineups": [
+        {
+          "lineup": "USA-FRNDLY-X",
+          "name": "frndly",
+          "uri": "/20141201/lineups/USA-FRNDLY-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "FUBO501",
+      "lineups": [
+        {
+          "lineup": "USA-FUBO501-X",
+          "name": "FuboTV New York",
+          "uri": "/20141201/lineups/USA-FUBO501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "FUBOTV",
+      "lineups": [
+        {
+          "lineup": "USA-FUBOTV-DEFAULT",
+          "name": "fuboTV",
+          "uri": "/20141201/lineups/USA-FUBOTV-DEFAULT"
+        },
+        {
+          "lineup": "USA-FUBOTV-X",
+          "name": "fuboTV",
+          "uri": "/20141201/lineups/USA-FUBOTV-X"
+        }
+      ],
+      "location": "None",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "GLRYSTR",
+      "lineups": [
+        {
+          "lineup": "USA-GLRYSTR-X",
+          "name": "GLORYSTAR",
+          "uri": "/20141201/lineups/USA-GLRYSTR-X"
+        }
+      ],
+      "location": "National",
+      "transport": "Satellite"
+    },
+    {
+      "headend": "GNSTR",
+      "lineups": [
+        {
+          "lineup": "USA-GNSTR-X",
+          "name": "US Streaming (Extended)",
+          "uri": "/20141201/lineups/USA-GNSTR-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "HULU501",
+      "lineups": [
+        {
+          "lineup": "USA-HULU501-X",
+          "name": "Hulu New York",
+          "uri": "/20141201/lineups/USA-HULU501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "HULUTV",
+      "lineups": [
+        {
+          "lineup": "USA-HULUTV-X",
+          "name": "Hulu",
+          "uri": "/20141201/lineups/USA-HULUTV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "IMDBTV",
+      "lineups": [
+        {
+          "lineup": "USA-IMDBTV-X",
+          "name": "FREEVEE",
+          "uri": "/20141201/lineups/USA-IMDBTV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "NJ29429",
+      "lineups": [
+        {
+          "lineup": "USA-NJ29429-DEFAULT",
+          "name": "Optimum",
+          "uri": "/20141201/lineups/USA-NJ29429-DEFAULT"
+        },
+        {
+          "lineup": "USA-NJ29429-L",
+          "name": "Optimum",
+          "uri": "/20141201/lineups/USA-NJ29429-L"
+        },
+        {
+          "lineup": "USA-NJ29429-X",
+          "name": "Optimum",
+          "uri": "/20141201/lineups/USA-NJ29429-X"
+        }
+      ],
+      "location": "Oakland",
+      "transport": "Cable"
+    },
+    {
+      "headend": "NJ65968",
+      "lineups": [
+        {
+          "lineup": "USA-NJ65968-X",
+          "name": "Verizon Fios Freehold",
+          "uri": "/20141201/lineups/USA-NJ65968-X"
+        }
+      ],
+      "location": "Freehold",
+      "transport": "Cable"
+    },
+    {
+      "headend": "NJ67209",
+      "lineups": [
+        {
+          "lineup": "USA-NJ67209-X",
+          "name": "Verizon Fios Basking Ridge",
+          "uri": "/20141201/lineups/USA-NJ67209-X"
+        }
+      ],
+      "location": "Basking Ridge",
+      "transport": "Cable"
+    },
+    {
+      "headend": "PEACOCK",
+      "lineups": [
+        {
+          "lineup": "USA-PEACOCK-X",
+          "name": "Peacock",
+          "uri": "/20141201/lineups/USA-PEACOCK-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "PHILO",
+      "lineups": [
+        {
+          "lineup": "USA-PHILO-X",
+          "name": "Philo",
+          "uri": "/20141201/lineups/USA-PHILO-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "PLUTOTV",
+      "lineups": [
+        {
+          "lineup": "USA-PLUTOTV-X",
+          "name": "Pluto TV",
+          "uri": "/20141201/lineups/USA-PLUTOTV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "SAMSUNG",
+      "lineups": [
+        {
+          "lineup": "USA-SAMSUNG-X",
+          "name": "Samsung TV Plus",
+          "uri": "/20141201/lineups/USA-SAMSUNG-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "SLINGTV",
+      "lineups": [
+        {
+          "lineup": "USA-SLINGTV-X",
+          "name": "Sling TV",
+          "uri": "/20141201/lineups/USA-SLINGTV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "SLNG501",
+      "lineups": [
+        {
+          "lineup": "USA-SLNG501-X",
+          "name": "Sling TV New York",
+          "uri": "/20141201/lineups/USA-SLNG501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "SMSG501",
+      "lineups": [
+        {
+          "lineup": "USA-SMSG501-X",
+          "name": "Samsung TV Plus New York",
+          "uri": "/20141201/lineups/USA-SMSG501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "TUBISTR",
+      "lineups": [
+        {
+          "lineup": "USA-TUBISTR-X",
+          "name": "TUBI TV",
+          "uri": "/20141201/lineups/USA-TUBISTR-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "VIZIO",
+      "lineups": [
+        {
+          "lineup": "USA-VIZIO-X",
+          "name": "Vizio",
+          "uri": "/20141201/lineups/USA-VIZIO-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "XFINSTR",
+      "lineups": [
+        {
+          "lineup": "USA-XFINSTR-X",
+          "name": "Xfinity Stream",
+          "uri": "/20141201/lineups/USA-XFINSTR-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "XUMOTV",
+      "lineups": [
+        {
+          "lineup": "USA-XUMOTV-X",
+          "name": "Xumo TV",
+          "uri": "/20141201/lineups/USA-XUMOTV-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "YOUTUBE",
+      "lineups": [
+        {
+          "lineup": "USA-YOUTUBE-X",
+          "name": "You Tube TV",
+          "uri": "/20141201/lineups/USA-YOUTUBE-X"
+        }
+      ],
+      "location": "National",
+      "transport": "IPTV"
+    },
+    {
+      "headend": "YTBE501",
+      "lineups": [
+        {
+          "lineup": "USA-YTBE501-X",
+          "name": "You Tube New York",
+          "uri": "/20141201/lineups/USA-YTBE501-X"
+        }
+      ],
+      "location": "New York",
+      "transport": "IPTV"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "category": "technology",
+  "country": null,
+  "error": null,
+  "language": null,
+  "sources": [
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "The PC enthusiast's resource. Power users and the tools they love, without computing religion.",
+      "id": "ars-technica",
+      "language": "en",
+      "name": "Ars Technica",
+      "url": "https://arstechnica.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "Providing breaking cryptocurrency news - focusing on Bitcoin, Ethereum, ICOs, blockchain technology, and smart contracts.",
+      "id": "crypto-coins-news",
+      "language": "en",
+      "name": "Crypto Coins News",
+      "url": "https://www.ccn.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "Engadget is a web magazine with obsessive daily coverage of everything new in gadgets and consumer electronics.",
+      "id": "engadget",
+      "language": "en",
+      "name": "Engadget",
+      "url": "https://www.engadget.com"
+    },
+    {
+      "category": "technology",
+      "country": "de",
+      "description": "Online-Magazin für Startups und die digitale Wirtschaft. News und Hintergründe zu Investment, VC und Gründungen.",
+      "id": "gruenderszene",
+      "language": "de",
+      "name": "Gruenderszene",
+      "url": "http://www.gruenderszene.de"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "Hacker News is a social news website focusing on computer science and entrepreneurship. It is run by Paul Graham's investment fund and startup incubator, Y Combinator. In general, content that can be submitted is defined as \"anything that gratifies one's intellectual curiosity\".",
+      "id": "hacker-news",
+      "language": "en",
+      "name": "Hacker News",
+      "url": "https://news.ycombinator.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "Get the latest independent tech news, reviews and analysis from Recode with the most informed and respected journalists in technology and media.",
+      "id": "recode",
+      "language": "en",
+      "name": "Recode",
+      "url": "http://www.recode.net"
+    },
+    {
+      "category": "technology",
+      "country": "de",
+      "description": "Das Online-Magazin bietet Artikel zu den Themen E-Business, Social Media, Startups und Webdesign.",
+      "id": "t3n",
+      "language": "de",
+      "name": "T3n",
+      "url": "https://t3n.de"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "TechCrunch is a leading technology media property, dedicated to obsessively profiling startups, reviewing new Internet products, and breaking tech news.",
+      "id": "techcrunch",
+      "language": "en",
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com"
+    },
+    {
+      "category": "technology",
+      "country": "zh",
+      "description": "TechCrunch is a leading technology media property, dedicated to obsessively profiling startups, reviewing new Internet products, and breaking tech news.",
+      "id": "techcrunch-cn",
+      "language": "zh",
+      "name": "TechCrunch (CN)",
+      "url": "https://techcrunch.cn"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "The latest technology news and reviews, covering computing, home entertainment systems, gadgets and more.",
+      "id": "techradar",
+      "language": "en",
+      "name": "TechRadar",
+      "url": "https://www.techradar.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "The Next Web is one of the world’s largest online publications that delivers an international perspective on the latest news about Internet technology, business and culture.",
+      "id": "the-next-web",
+      "language": "en",
+      "name": "The Next Web",
+      "url": "http://thenextweb.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "The Verge covers the intersection of technology, science, art, and culture.",
+      "id": "the-verge",
+      "language": "en",
+      "name": "The Verge",
+      "url": "http://www.theverge.com"
+    },
+    {
+      "category": "technology",
+      "country": "us",
+      "description": "Wired is a monthly American magazine, published in print and online editions, that focuses on how emerging technologies affect culture, the economy, and politics.",
+      "id": "wired",
+      "language": "en",
+      "name": "Wired",
+      "url": "https://www.wired.com"
+    },
+    {
+      "category": "technology",
+      "country": "de",
+      "description": "Wired reports on how emerging technologies affect culture, the economy and politics.",
+      "id": "wired-de",
+      "language": "de",
+      "name": "Wired.de",
+      "url": "https://www.wired.de"
+    }
+  ],
+  "status": "ok",
+  "total_sources": 14
+}

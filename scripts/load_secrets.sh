@@ -1,0 +1,141 @@
+#!/bin/bash
+# scripts/load_secrets.sh
+# Load secrets from GCP Secret Manager or local env files
+#
+# Usage: 
+#   source scripts/load_secrets.sh [dev|prod] [etl|search_api]
+#
+# Environment Variables:
+#   GCP_PROJECT_ID  - Required for GCP Secret Manager (unless LOCAL_DEV=true)
+#   LOCAL_DEV       - Set to "true" to use local env files instead of Secret Manager
+
+set -e
+
+ENV=${1:-dev}
+SERVICE=${2:-etl}
+
+echo "🔐 Loading secrets for ${SERVICE} in ${ENV} environment..."
+
+# =============================================================================
+# LOCAL DEVELOPMENT SHORTCUT
+# =============================================================================
+# If LOCAL_DEV is set and local env file exists, use it directly
+# This allows faster iteration without hitting Secret Manager
+
+if [ "$LOCAL_DEV" = "true" ]; then
+    LOCAL_ENV_FILE="config/${ENV}.env"
+    
+    # Try relative path first, then absolute from script location
+    if [ ! -f "$LOCAL_ENV_FILE" ]; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        LOCAL_ENV_FILE="${SCRIPT_DIR}/../config/${ENV}.env"
+    fi
+    
+    if [ -f "$LOCAL_ENV_FILE" ]; then
+        echo "📁 Using local env file (LOCAL_DEV mode): ${LOCAL_ENV_FILE}"
+        set -a  # auto-export all variables
+        source "$LOCAL_ENV_FILE"
+        set +a
+        echo "✅ Loaded secrets from local file"
+        return 0 2>/dev/null || exit 0
+    else
+        echo "⚠️  LOCAL_DEV=true but no local env file found at ${LOCAL_ENV_FILE}"
+        echo "    Falling back to GCP Secret Manager..."
+    fi
+fi
+
+# =============================================================================
+# GCP SECRET MANAGER
+# =============================================================================
+
+# Validate GCP_PROJECT_ID
+if [ -z "$GCP_PROJECT_ID" ]; then
+    echo "❌ Error: GCP_PROJECT_ID environment variable is required"
+    echo "   Set it with: export GCP_PROJECT_ID=your-project-id"
+    return 1 2>/dev/null || exit 1
+fi
+
+# Check if gcloud is available
+if ! command -v gcloud &> /dev/null; then
+    echo "❌ Error: gcloud CLI not found"
+    echo "   Install it from: https://cloud.google.com/sdk/docs/install"
+    return 1 2>/dev/null || exit 1
+fi
+
+# Verify GCP authentication
+if ! gcloud auth print-identity-token &>/dev/null 2>&1; then
+    # Try application-default credentials
+    if ! gcloud auth application-default print-access-token &>/dev/null 2>&1; then
+        echo "⚠️  GCP authentication may not be configured"
+        echo "   For local dev, run: gcloud auth application-default login"
+        echo "   In Cloud Run, ensure service account has secretAccessor role"
+    fi
+fi
+
+echo "🔑 Fetching secrets from GCP Secret Manager (project: ${GCP_PROJECT_ID})..."
+
+# -----------------------------------------------------------------------------
+# ETL Service - needs all secrets (full env bundle)
+# -----------------------------------------------------------------------------
+if [ "$SERVICE" = "etl" ]; then
+    SECRET_NAME="redis-search-${ENV}-etl-env"
+    
+    echo "   Fetching full environment bundle: ${SECRET_NAME}"
+    
+    # Create temp file for the env
+    TEMP_ENV=$(mktemp)
+    trap "rm -f $TEMP_ENV" EXIT
+    
+    if ! gcloud secrets versions access latest \
+        --secret="${SECRET_NAME}" \
+        --project="${GCP_PROJECT_ID}" > "$TEMP_ENV" 2>/dev/null; then
+        echo "❌ Failed to fetch secret: ${SECRET_NAME}"
+        echo "   Ensure the secret exists and you have access:"
+        echo "   gcloud secrets describe ${SECRET_NAME} --project=${GCP_PROJECT_ID}"
+        return 1 2>/dev/null || exit 1
+    fi
+    
+    # Source the env file
+    set -a
+    source "$TEMP_ENV"
+    set +a
+    
+    echo "✅ Loaded full environment bundle for ETL ($(wc -l < "$TEMP_ENV" | tr -d ' ') variables)"
+
+# -----------------------------------------------------------------------------
+# Search API - needs minimal secrets
+# -----------------------------------------------------------------------------
+elif [ "$SERVICE" = "search_api" ]; then
+    echo "   Fetching individual secrets for search_api..."
+    
+    # Redis Host
+    export REDIS_HOST=$(gcloud secrets versions access latest \
+        --secret="redis-search-${ENV}-redis-host" \
+        --project="${GCP_PROJECT_ID}" 2>/dev/null) || {
+        echo "❌ Failed to fetch redis-search-${ENV}-redis-host"
+        return 1 2>/dev/null || exit 1
+    }
+    
+    # Redis Port
+    export REDIS_PORT=$(gcloud secrets versions access latest \
+        --secret="redis-search-${ENV}-redis-port" \
+        --project="${GCP_PROJECT_ID}" 2>/dev/null) || {
+        echo "❌ Failed to fetch redis-search-${ENV}-redis-port"
+        return 1 2>/dev/null || exit 1
+    }
+    
+    echo "✅ Loaded minimal secrets for Search API"
+    echo "   REDIS_HOST=${REDIS_HOST}"
+    echo "   REDIS_PORT=${REDIS_PORT}"
+
+# -----------------------------------------------------------------------------
+# Unknown service
+# -----------------------------------------------------------------------------
+else
+    echo "❌ Unknown service: ${SERVICE}"
+    echo "   Supported services: etl, search_api"
+    return 1 2>/dev/null || exit 1
+fi
+
+echo "🎉 Secrets loaded successfully"
+

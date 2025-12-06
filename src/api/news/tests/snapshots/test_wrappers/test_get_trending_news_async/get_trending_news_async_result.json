@@ -1,0 +1,25 @@
+{
+  "articles": [
+    {
+      "author": null,
+      "content": null,
+      "description": null,
+      "mc_type": "news_article",
+      "published_at": null,
+      "source": {
+        "id": null,
+        "name": "BBC News"
+      },
+      "title": "Test",
+      "url": "https://example.com",
+      "url_to_image": null
+    }
+  ],
+  "category": null,
+  "country": "us",
+  "page": 1,
+  "page_size": 20,
+  "query": null,
+  "status": "ok",
+  "total_results": 1
+}

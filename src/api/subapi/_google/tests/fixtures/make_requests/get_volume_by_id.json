@@ -1,0 +1,120 @@
+{
+  "kind": "books#volume",
+  "id": "wrOQLV6xB-wC",
+  "etag": "YX0VTZbMT3A",
+  "selfLink": "https://www.googleapis.com/books/v1/volumes/wrOQLV6xB-wC",
+  "volumeInfo": {
+    "title": "Harry Potter and the Sorcerer's Stone",
+    "authors": [
+      "J.K. Rowling"
+    ],
+    "publisher": "Pottermore Publishing",
+    "publishedDate": "2015-12-08",
+    "description": "<p><i>Turning the envelope over, his hand trembling, Harry saw a purple wax seal bearing a coat of arms; a lion, an eagle, a badger and a snake surrounding a large letter 'H'.</i><br><br>Harry Potter has never even heard of Hogwarts when the letters start dropping on the doormat at number four, Privet Drive. Addressed in green ink on yellowish parchment with a purple seal, they are swiftly confiscated by his grisly aunt and uncle. Then, on Harry's eleventh birthday, a great beetle-eyed giant of a man called Rubeus Hagrid bursts in with some astonishing news: Harry Potter is a wizard, and he has a place at Hogwarts School of Witchcraft and Wizardry. An incredible adventure is about to begin!<br><br><br><i>Having become classics of our time, the Harry Potter eBooks never fail to bring comfort and escapism. With their message of hope, belonging and the enduring power of truth and love, the story of the Boy Who Lived continues to delight generations of new readers.</i></p>",
+    "industryIdentifiers": [
+      {
+        "type": "ISBN_10",
+        "identifier": "1781100489"
+      },
+      {
+        "type": "ISBN_13",
+        "identifier": "9781781100486"
+      }
+    ],
+    "readingModes": {
+      "text": true,
+      "image": true
+    },
+    "pageCount": 309,
+    "printedPageCount": 312,
+    "printType": "BOOK",
+    "categories": [
+      "Juvenile Fiction / Action & Adventure / General",
+      "Juvenile Fiction / Fantasy & Magic",
+      "Young Adult Fiction / Action & Adventure / General",
+      "Young Adult Fiction / Fantasy / Wizards & Witches",
+      "Young Adult Fiction / School & Education / Boarding School & Prep School",
+      "Juvenile Fiction / Family / General",
+      "Young Adult Fiction / Fantasy / General",
+      "Young Adult Fiction / Fantasy / Contemporary",
+      "Fiction / Action & Adventure",
+      "Fiction / Fantasy / General",
+      "Juvenile Fiction / School & Education"
+    ],
+    "averageRating": 4.5,
+    "ratingsCount": 318,
+    "maturityRating": "NOT_MATURE",
+    "allowAnonLogging": true,
+    "contentVersion": "3.40.38.0.preview.3",
+    "panelizationSummary": {
+      "containsEpubBubbles": false,
+      "containsImageBubbles": false
+    },
+    "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=5&edge=curl&imgtk=AFLRE71Rnf_xDIWZNrDcnMBvuiAb3r5zReboLkaDKVaLJswCa69KYW5Wy1xC8VLQMJVPetfKe-6yH6Wt_T0pqsPBlBXBBQJAVpbW2tEvb4CmxfpwMdIDJacC4S8f_KjfMDYP4hSaIAX3&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=1&edge=curl&imgtk=AFLRE73lGzTvGZZSkLLVMlSbCG67X7WbKPS7ODB-UzCbvL-b7H7qBZb4jCRycOCpL1OGvTNrgAKnWV_gHCsZov_ae4iE8xgjryTn6Hc1ukC0-JynW-MJiHr_oz2uF5wA1NUW9vAUZfZF&source=gbs_api",
+      "small": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=2&edge=curl&imgtk=AFLRE733vH52x-C_3t6xP3IsZWjBKjjqaS_YQtaEqqZWL6uM8DhW9kj5WQn5h0-6ZnOctt_wzAElNO5WdzPDvfW5w_r7r44znr3asRsHguUD6JlM7W5jbP-aGPTOlCY4P5bxUK9QMrTJ&source=gbs_api",
+      "medium": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=3&edge=curl&imgtk=AFLRE73TjBud0MmvThxex7nVYeAUovlLJifixxVtn0-X_jAGsb-H3VFtu9Gte0pfgZ_FynhMmErSUFSwO5-82PHjsi6ECnJL9PQuWFnwTr7nAGHhHLb6OQeds1WCarUUpTpkGoUBoZ7F&source=gbs_api",
+      "large": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=4&edge=curl&imgtk=AFLRE72_pwpmHT87mn9ylINjFCXTl2Z93aJLJqa9heszXhEQ9Mf3gSJqGidYidBSI5M3pJea9833sh3dtIcQ6OFRNU894WvVfoef0AgQ-Ebc7kK7jRXDxnsiUnoL-5Yz5g4xlrzf_9G7&source=gbs_api",
+      "extraLarge": "http://books.google.com/books/content?id=wrOQLV6xB-wC&printsec=frontcover&img=1&zoom=6&edge=curl&imgtk=AFLRE71d8KGk7qopHl0i6MxXBL4M4292kSFMc9TTllumjZcruF1qm5Eyz0DoJGLa-Qx_01Z2MNK8iuytF529fPFk6Ltqx9Sh648A7wCcOK5QmSUwoA4liscXfYf2H_jNfh5YWEkg6ucE&source=gbs_api"
+    },
+    "language": "en",
+    "previewLink": "http://books.google.com/books?id=wrOQLV6xB-wC&hl=&source=gbs_api",
+    "infoLink": "https://play.google.com/store/books/details?id=wrOQLV6xB-wC&source=gbs_api",
+    "canonicalVolumeLink": "https://play.google.com/store/books/details?id=wrOQLV6xB-wC"
+  },
+  "layerInfo": {
+    "layers": [
+      {
+        "layerId": "geo",
+        "volumeAnnotationsVersion": "47"
+      }
+    ]
+  },
+  "saleInfo": {
+    "country": "US",
+    "saleability": "FOR_SALE",
+    "isEbook": true,
+    "listPrice": {
+      "amount": 11.99,
+      "currencyCode": "USD"
+    },
+    "retailPrice": {
+      "amount": 11.99,
+      "currencyCode": "USD"
+    },
+    "buyLink": "https://play.google.com/store/books/details?id=wrOQLV6xB-wC&rdid=book-wrOQLV6xB-wC&rdot=1&source=gbs_api",
+    "offers": [
+      {
+        "finskyOfferType": 1,
+        "listPrice": {
+          "amountInMicros": 11990000,
+          "currencyCode": "USD"
+        },
+        "retailPrice": {
+          "amountInMicros": 11990000,
+          "currencyCode": "USD"
+        },
+        "giftable": true
+      }
+    ]
+  },
+  "accessInfo": {
+    "country": "US",
+    "viewability": "PARTIAL",
+    "embeddable": true,
+    "publicDomain": false,
+    "textToSpeechPermission": "ALLOWED",
+    "epub": {
+      "isAvailable": true,
+      "acsTokenLink": "http://books.google.com/books/download/Harry_Potter_and_the_Sorcerer_s_Stone-sample-epub.acsm?id=wrOQLV6xB-wC&format=epub&output=acs4_fulfillment_token&dl_type=sample&source=gbs_api"
+    },
+    "pdf": {
+      "isAvailable": true,
+      "acsTokenLink": "http://books.google.com/books/download/Harry_Potter_and_the_Sorcerer_s_Stone-sample-pdf.acsm?id=wrOQLV6xB-wC&format=pdf&output=acs4_fulfillment_token&dl_type=sample&source=gbs_api"
+    },
+    "webReaderLink": "http://play.google.com/books/reader?id=wrOQLV6xB-wC&hl=&source=gbs_api",
+    "accessViewStatus": "SAMPLE",
+    "quoteSharingAllowed": false
+  }
+}

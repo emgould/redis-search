@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6380:6379"
+      - "8001:8001"
+
+  search_api:
+    build:
+      context: ..
+      dockerfile: src/search_api/Dockerfile
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      - LOCAL_DEV=${LOCAL_DEV:-true}
+      # For GCP authentication in local dev (mounted below)
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    volumes:
+      # Mount GCP credentials for local development
+      # Falls back gracefully if file doesn't exist when using LOCAL_DEV=true
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
+      # Mount local config for LOCAL_DEV mode
+      - ../config:/app/config:ro
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} search_api &&
+        python -m src.search_api.main"
+
+  etl:
+    build:
+      context: ..
+      dockerfile: src/etl/Dockerfile
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      - LOCAL_DEV=${LOCAL_DEV:-true}
+      # For GCP authentication in local dev (mounted below)
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    volumes:
+      # Mount GCP credentials for local development
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
+      # Mount local config for LOCAL_DEV mode
+      - ../config:/app/config:ro
+    depends_on:
+      - redis
+    command: >
+      bash -c "
+        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} etl &&
+        python -m src.etl.run_etl"

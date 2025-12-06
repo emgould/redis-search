@@ -1,0 +1,51 @@
+{
+  "category": null,
+  "country": "us",
+  "data_source": "NewsAI Trending",
+  "data_type": "news_article",
+  "error": null,
+  "metrics": {},
+  "page": 1,
+  "page_size": 20,
+  "query": null,
+  "results": [
+    {
+      "author": null,
+      "content": null,
+      "date": null,
+      "date_time": null,
+      "description": null,
+      "error": null,
+      "external_ids": {},
+      "id": null,
+      "images": [],
+      "is_duplicate": null,
+      "lang": null,
+      "links": [],
+      "mc_subtype": null,
+      "mc_type": "news_article",
+      "metrics": {},
+      "news_source": {
+        "id": null,
+        "name": "BBC News"
+      },
+      "published_at": null,
+      "relevance": null,
+      "sentiment": null,
+      "sim": null,
+      "sort_order": 0.0,
+      "source": "newsai",
+      "source_id": "url_1317034086",
+      "status_code": 200,
+      "time": null,
+      "title": "Test",
+      "uri": null,
+      "url": "https://example.com",
+      "url_to_image": null,
+      "wgt": null
+    }
+  ],
+  "status": "ok",
+  "status_code": 200,
+  "total_results": 1
+}

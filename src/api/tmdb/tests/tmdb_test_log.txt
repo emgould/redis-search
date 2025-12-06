@@ -1,0 +1,539 @@
+[1m============================= test session starts ==============================[0m
+platform darwin -- Python 3.11.13, pytest-8.4.2, pluggy-1.6.0 -- /Users/ericgould/dev/mediacircle/firebase/python_functions/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/ericgould/dev/mediacircle/firebase/python_functions
+configfile: pytest.ini
+plugins: snapshot-0.9.0, asyncio-1.2.0, anyio-4.11.0, xdist-3.8.0, sugar-1.1.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+[1mcollecting ... [0mcollected 127 items
+
+api/tmdb/tests/test_core.py::TestProcessMediaItem::test_process_movie_item [32mPASSED[0m[32m [  0%][0m
+api/tmdb/tests/test_core.py::TestProcessMediaItem::test_process_tv_item [32mPASSED[0m[32m [  1%][0m
+api/tmdb/tests/test_core.py::TestProcessMediaItem::test_process_movie_details [32mPASSED[0m[32m [  2%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_init_with_token [32mPASSED[0m[32m [  3%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_make_request_success [32mPASSED[0m[32m [  3%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_make_request_non_200_status [32mPASSED[0m[32m [  4%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_make_request_exception [32mPASSED[0m[33m [  5%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_sort_date_with_release_date [32mPASSED[0m[33m [  6%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_sort_date_with_first_air_date [32mPASSED[0m[33m [  7%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_sort_date_without_date [32mPASSED[0m[33m [  7%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_sort_date_with_invalid_date [32mPASSED[0m[33m [  8%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_media_details_movie [32mPASSED[0m[33m [  9%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_media_details_tv [32mPASSED[0m[33m [ 10%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_media_details_not_found [32mPASSED[0m[33m [ 11%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_enhance_media_item [32mPASSED[0m[33m [ 11%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_cast_and_crew [32mPASSED[0m[33m [ 12%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_cast_and_crew_with_limit [32mPASSED[0m[33m [ 13%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_videos [32mPASSED[0m[33m     [ 14%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_watch_providers [32mPASSED[0m[33m [ 14%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_watch_providers_no_data [32mPASSED[0m[33m [ 15%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_keywords_movie [32mPASSED[0m[33m [ 16%][0m
+api/tmdb/tests/test_core.py::TestTMDBService::test_get_keywords_tv [32mPASSED[0m[33m [ 17%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_tv_providers_success [32mPASSED[0m[33m [ 18%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_tv_providers_filters_channels [32mPASSED[0m[33m [ 18%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_tv_providers_empty_results [32mPASSED[0m[33m [ 19%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_tv_providers_error_handling [32mPASSED[0m[33m [ 20%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_movie_providers_success [32mPASSED[0m[33m [ 21%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_movie_providers_filters_channels [32mPASSED[0m[33m [ 22%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_movie_providers_empty_results [32mPASSED[0m[33m [ 22%][0m
+api/tmdb/tests/test_core.py::TestProviderFunctions::test_get_movie_providers_error_handling [32mPASSED[0m[33m [ 23%][0m
+api/tmdb/tests/test_fixture_loading.py::test_load_fixture_function [32mPASSED[0m[33m [ 24%][0m
+api/tmdb/tests/test_fixture_loading.py::test_fixtures_directory_structure [32mPASSED[0m[33m [ 25%][0m
+api/tmdb/tests/test_fixture_loading.py::test_fixture_data_structure [32mPASSED[0m[33m [ 25%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_trending_movies [31mFAILED[0m[31m [ 26%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_trending_tv [31mFAILED[0m[31m [ 27%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_search_multi [31mFAILED[0m[31m [ 28%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_search_tv_shows [31mFAILED[0m[31m [ 29%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_search_by_genre [31mFAILED[0m[31m [ 29%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_search_by_keywords [31mFAILED[0m[31m [ 30%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_media_details_movie [31mFAILED[0m[31m [ 31%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_media_details_tv [31mFAILED[0m[31m [ 32%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_now_playing [31mFAILED[0m[31m [ 33%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_popular_tv [31mFAILED[0m[31m [ 33%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_search_people [31mFAILED[0m[31m [ 34%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_person_details [31mFAILED[0m[31m [ 35%][0m
+api/tmdb/tests/test_integration.py::TestTMDBHandlers::test_get_person_credits [31mFAILED[0m[31m [ 36%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_create_movie_item [32mPASSED[0m[31m [ 37%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_create_tv_item [32mPASSED[0m[31m [ 37%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_auto_generate_mc_id [32mPASSED[0m[31m [ 38%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_auto_generate_mc_type [32mPASSED[0m[31m [ 39%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_model_dump [32mPASSED[0m[31m [ 40%][0m
+api/tmdb/tests/test_models.py::TestTMDBMediaItem::test_default_values [32mPASSED[0m[31m [ 40%][0m
+api/tmdb/tests/test_models.py::TestMCPersonItem::test_create_person [32mPASSED[0m[31m [ 41%][0m
+api/tmdb/tests/test_models.py::TestMCPersonItem::test_auto_generate_mc_fields [32mPASSED[0m[31m [ 42%][0m
+api/tmdb/tests/test_models.py::TestMCPersonItem::test_has_image_flag [32mPASSED[0m[31m [ 43%][0m
+api/tmdb/tests/test_models.py::TestTMDBCastMember::test_create_cast_member [32mPASSED[0m[31m [ 44%][0m
+api/tmdb/tests/test_models.py::TestTMDBCastMember::test_default_order [32mPASSED[0m[31m [ 44%][0m
+api/tmdb/tests/test_models.py::TestTMDBVideo::test_create_video [32mPASSED[0m[31m   [ 45%][0m
+api/tmdb/tests/test_models.py::TestTMDBWatchProvider::test_create_watch_provider [32mPASSED[0m[31m [ 46%][0m
+api/tmdb/tests/test_models.py::TestTMDBWatchProvider::test_default_display_priority [32mPASSED[0m[31m [ 47%][0m
+api/tmdb/tests/test_models.py::TestTMDBKeyword::test_create_keyword [32mPASSED[0m[31m [ 48%][0m
+api/tmdb/tests/test_models.py::TestMCSearchResponse::test_create_search_response [32mPASSED[0m[31m [ 48%][0m
+api/tmdb/tests/test_models.py::TestMCSearchResponse::test_optional_fields [32mPASSED[0m[31m [ 49%][0m
+api/tmdb/tests/test_models.py::TestTMDBGetTrendingMovieResult::test_create_trending_movie_result [32mPASSED[0m[31m [ 50%][0m
+api/tmdb/tests/test_models.py::TestTMDBGetTrendingShowResult::test_create_trending_show_result [32mPASSED[0m[31m [ 51%][0m
+api/tmdb/tests/test_models.py::TestTMDBNowPlayingResponse::test_create_now_playing_response [32mPASSED[0m[31m [ 51%][0m
+api/tmdb/tests/test_models.py::TestTMDBPopularTVResponse::test_create_popular_tv_response [32mPASSED[0m[31m [ 52%][0m
+api/tmdb/tests/test_models.py::TestTMDBDiscoverResponse::test_create_discover_response [32mPASSED[0m[31m [ 53%][0m
+api/tmdb/tests/test_models.py::TestTMDBPersonCreditsResponse::test_create_person_credits_response [32mPASSED[0m[31m [ 54%][0m
+api/tmdb/tests/test_models.py::TestTMDBPersonCreditsResult::test_create_person_credits_result [32mPASSED[0m[31m [ 55%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_details [32mPASSED[0m[31m [ 55%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_details_not_found [32mPASSED[0m[31m [ 56%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_details_with_profile_images [32mPASSED[0m[31m [ 57%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_movie_credits [32mPASSED[0m[31m [ 58%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_movie_credits_filters_low_popularity [31mFAILED[0m[31m [ 59%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_tv_credits [31mFAILED[0m[31m [ 59%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_tv_credits_filters_no_episodes [31mFAILED[0m[31m [ 60%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_person_tv_credits_filters_talk_shows [31mFAILED[0m[31m [ 61%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_cast_details [33mSKIPPED[0m[31m [ 62%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_cast_details_person_not_found [31mFAILED[0m[31m [ 62%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_get_cast_details_invalid_person_id [31mFAILED[0m[31m [ 63%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_search_people [31mFAILED[0m[31m [ 64%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_search_people_empty_query [31mFAILED[0m[31m [ 65%][0m
+api/tmdb/tests/test_person.py::TestTMDBPersonService::test_search_people_with_profile_images [32mPASSED[0m[31m [ 66%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestTVProvidersWrapper::test_get_tv_providers_async_success [32mPASSED[0m[31m [ 66%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestTVProvidersWrapper::test_get_tv_providers_async_no_providers [32mPASSED[0m[31m [ 67%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestTVProvidersWrapper::test_get_tv_providers_async_error_handling [32mPASSED[0m[31m [ 68%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestTVProvidersWrapper::test_get_tv_providers_async_different_regions [32mPASSED[0m[31m [ 69%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestMovieProvidersWrapper::test_get_movie_providers_async_success [32mPASSED[0m[31m [ 70%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestMovieProvidersWrapper::test_get_movie_providers_async_no_providers [32mPASSED[0m[31m [ 70%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestMovieProvidersWrapper::test_get_movie_providers_async_error_handling [32mPASSED[0m[31m [ 71%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestMovieProvidersWrapper::test_get_movie_providers_async_different_regions [32mPASSED[0m[31m [ 72%][0m
+api/tmdb/tests/test_providers_wrappers.py::TestMovieProvidersWrapper::test_get_movie_providers_async_kwargs_passed [32mPASSED[0m[31m [ 73%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_get_now_playing [32mPASSED[0m[31m [ 74%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_get_popular_tv [32mPASSED[0m[31m [ 74%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_multi_raw [32mPASSED[0m[31m [ 75%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_multi [32mPASSED[0m[31m [ 76%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_multi_filters_people [32mPASSED[0m[31m [ 77%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_tv_shows [32mPASSED[0m[31m [ 77%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_tv_shows_filters_no_images [32mPASSED[0m[31m [ 78%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_keywords [32mPASSED[0m[31m [ 79%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_by_keywords [32mPASSED[0m[31m [ 80%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_with_keywords_regular [32mPASSED[0m[31m [ 81%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_with_keywords_keyword_syntax [32mPASSED[0m[31m [ 81%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_with_keywords_no_keyword_found [32mPASSED[0m[31m [ 82%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_by_genre [31mFAILED[0m[31m [ 83%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_by_genre_empty_response [33mSKIPPED[0mgenre IDs)[31m [ 84%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_by_genre_with_details [32mPASSED[0m[31m [ 85%][0m
+api/tmdb/tests/test_search.py::TestTMDBSearchService::test_search_by_genre_filters_invalid_items [31mFAILED[0m[31m [ 85%][0m
+api/tmdb/tests/test_trending.py::TestGetTrendingMovies::test_get_trending_movies_success [32mPASSED[0m[31m [ 86%][0m
+api/tmdb/tests/test_trending.py::TestGetTrendingMovies::test_get_trending_movies_fallback_to_tmdb [32mPASSED[0m[31m [ 87%][0m
+api/tmdb/tests/test_trending.py::TestGetTrendingMovies::test_get_trending_movies_empty_results [32mPASSED[0m[31m [ 88%][0m
+api/tmdb/tests/test_trending.py::TestGetTrendingTvShows::test_get_trending_tv_shows_success [32mPASSED[0m[31m [ 88%][0m
+api/tmdb/tests/test_trending.py::TestGetTrendingTvShows::test_get_trending_tv_shows_fallback_to_tmdb [32mPASSED[0m[31m [ 89%][0m
+api/tmdb/tests/test_trending.py::TestGetTmdbTrending::test_get_tmdb_trending_movies [32mPASSED[0m[31m [ 90%][0m
+api/tmdb/tests/test_trending.py::TestGetTmdbTrending::test_get_tmdb_trending_tv [32mPASSED[0m[31m [ 91%][0m
+api/tmdb/tests/test_trending.py::TestGetTmdbTrending::test_get_tmdb_trending_with_details [32mPASSED[0m[31m [ 92%][0m
+api/tmdb/tests/test_trending.py::TestGetTmdbTrending::test_get_tmdb_trending_multiple_pages [32mPASSED[0m[31m [ 92%][0m
+api/tmdb/tests/test_trending.py::TestGetTmdbTrending::test_get_tmdb_trending_error_handling [32mPASSED[0m[31m [ 93%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_movies_success [32mPASSED[0m[31m [ 94%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_tv_success [32mPASSED[0m[31m [ 95%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_invalid_media_type [32mPASSED[0m[31m [ 96%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_movies_exception [32mPASSED[0m[31m [ 96%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_tv_exception [32mPASSED[0m[31m [ 97%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_default_limit [32mPASSED[0m[31m [ 98%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_kwargs_passed [32mPASSED[0m[31m [ 99%][0m
+api/tmdb/tests/test_trending_wrappers.py::TestGetTrendingAsync::test_get_trending_async_response_structure [32mPASSED[0m[31m [100%][0m
+
+=================================== FAILURES ===================================
+[31m[1m__________________ TestTMDBHandlers.test_get_trending_movies ___________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:81: in test_get_trending_movies
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = TMDBGetTrendingMovieResult(results=[], total_results=0, query='limit:10', data_source='top_trending_movies(10)', data_type=<MCType.MOVIE: 'movie'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Aileen: Queen of the Serial Killers'
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'All of You'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Lilo & Stitch'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Weapons'
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'A House of Dynamite'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Gorge'
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Family Plan'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Ballad of a Small Player'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Shrek'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Lost Bus'
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Highest 2 Lowest'
+
+09:01:49 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/movie
+
+09:01:49 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'It'
+
+09:01:49 AM api.tmdb.trending   :INFO     Enriched 0 MCType.MOVIE items from 70 FlixPatrol items
+[31m[1m____________________ TestTMDBHandlers.test_get_trending_tv _____________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:107: in test_get_trending_tv
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = TMDBGetTrendingShowResult(results=[], total_results=0, query='limit:10', data_source='top_trending_tv_shows(10)', data_type=<MCType.TV_SERIES: 'tv'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Asset'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Down Cemetery Road'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Slow Horses'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Witcher'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Morning Show'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Nobody Wants This'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Invasion'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Summer I Turned Pretty'
+
+09:01:50 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:50 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'Task'
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:51 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Wonderfully Weird World of Gumball'
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:51 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'The Last Frontier'
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+09:01:51 AM api.tmdb.trending   :WARNING  =====> Warning No TMDB match found for 'IT: Welcome to Derry'
+
+09:01:51 AM api.tmdb.trending   :INFO     Enriched 0 MCType.TV_SERIES items from 70 FlixPatrol items
+[31m[1m______________________ TestTMDBHandlers.test_search_multi ______________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:133: in test_search_multi
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = MCSearchResponse(results=[], total_results=0, query='Breaking Bad', data_source='TMDB Multi Search', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/multi
+
+[31m[1m____________________ TestTMDBHandlers.test_search_tv_shows _____________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:161: in test_search_tv_shows
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = MCSearchResponse(results=[], total_results=0, query='The Office', data_source='TMDB TV Search (weighted by relevancy + recency)', data_type=<MCType.TV_SERIES: 'tv'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/tv
+
+[31m[1m____________________ TestTMDBHandlers.test_search_by_genre _____________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:187: in test_search_by_genre
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = MCSearchResponse(results=[], total_results=0, query='genre ids: 18,80', data_source='TMDB Search by Genres', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/tv
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/tv
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/movie
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/movie
+
+09:01:51 AM api.tmdb.search     :INFO     Retrieved 0 keyword discovery results (0 movies, 0 TV shows)
+[31m[1m___________________ TestTMDBHandlers.test_search_by_keywords ___________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:216: in test_search_by_keywords
+    [0m[94massert[39;49;00m result.total_results > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   AssertionError: assert 0 > 0[0m
+[1m[31mE    +  where 0 = MCSearchResponse(results=[], total_results=0, query='keyword ids: 825', data_source='TMDB Search by Keywords', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/movie
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/movie
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/tv
+
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for discover/tv
+
+09:01:51 AM api.tmdb.search     :INFO     Retrieved 0 keyword search results (0 movies, 0 TV shows)
+[31m[1m________________ TestTMDBHandlers.test_get_media_details_movie _________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:239: in test_get_media_details_movie
+    [0m[94massert[39;49;00m response.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 404 == 200[0m
+[1m[31mE    +  where 404 = <Response 42 bytes [404 NOT FOUND]>.status_code[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for movie/550
+
+[31m[1m__________________ TestTMDBHandlers.test_get_media_details_tv __________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:260: in test_get_media_details_tv
+    [0m[94massert[39;49;00m response.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 404 == 200[0m
+[1m[31mE    +  where 404 = <Response 43 bytes [404 NOT FOUND]>.status_code[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for tv/1396
+
+[31m[1m____________________ TestTMDBHandlers.test_get_now_playing _____________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:286: in test_get_now_playing
+    [0m[94massert[39;49;00m [96mlen[39;49;00m(data[[33m"[39;49;00m[33mresults[39;49;00m[33m"[39;49;00m]) > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 0 > 0[0m
+[1m[31mE    +  where 0 = len([])[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:51 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for movie/now_playing
+
+09:01:51 AM api.tmdb.search     :INFO     Retrieved 0 now playing movies from 1 pages
+[31m[1m_____________________ TestTMDBHandlers.test_get_popular_tv _____________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:310: in test_get_popular_tv
+    [0m[94massert[39;49;00m [96mlen[39;49;00m(data[[33m"[39;49;00m[33mresults[39;49;00m[33m"[39;49;00m]) > [94m0[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 0 > 0[0m
+[1m[31mE    +  where 0 = len([])[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for tv/popular
+
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for tv/popular
+
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for tv/popular
+
+09:01:52 AM api.tmdb.search     :INFO     Retrieved 0 popular TV shows from 3 pages (filtered from past year)
+[31m[1m_____________________ TestTMDBHandlers.test_search_people ______________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:329: in test_search_people
+    [0m[94massert[39;49;00m response.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 500 == 200[0m
+[1m[31mE    +  where 500 = <Response 806 bytes [500 INTERNAL SERVER ERROR]>.status_code[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for search/person
+
+
+
+09:01:52 AM api.tmdb.wrappers    =====> ERROR 
+Error in person search for 'Brad Pitt': 4 validation errors for TMDBSearchPersonResult
+results
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+total_results
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+total_pages
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+page
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+---END ERROR ---
+
+[31m[1m___________________ TestTMDBHandlers.test_get_person_details ___________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:354: in test_get_person_details
+    [0m[94massert[39;49;00m response.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 404 == 200[0m
+[1m[31mE    +  where 404 = <Response 165 bytes [404 NOT FOUND]>.status_code[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for person/287
+
+[31m[1m___________________ TestTMDBHandlers.test_get_person_credits ___________________[0m
+[1m[31mapi/tmdb/tests/test_integration.py[0m:375: in test_get_person_credits
+    [0m[94massert[39;49;00m response.status_code == [94m200[39;49;00m[90m[39;49;00m
+[1m[31mE   assert 500 == 200[0m
+[1m[31mE    +  where 500 = <Response 299 bytes [500 INTERNAL SERVER ERROR]>.status_code[0m
+----------------------------- Captured stderr call -----------------------------
+09:01:52 AM api.tmdb.core       :WARNING  =====> Warning TMDB API returned status 401 for person/287
+
+
+
+09:01:52 AM api.tmdb.wrappers    =====> ERROR 
+Error getting person credits for 287: 'NoneType' object has no attribute 'metadata'
+---END ERROR ---
+
+[31m[1m__ TestTMDBPersonService.test_get_person_movie_credits_filters_low_popularity __[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:122: in test_get_person_movie_credits_filters_low_popularity
+    [0mresult = [94mawait[39;49;00m service.get_person_movie_credits([94m287[39;49;00m)[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mapi/tmdb/person.py[0m:332: in get_person_movie_credits
+    [0mTMDBPersonMovieCreditsResponse.model_validate(data)[90m[39;49;00m
+[1m[31mE   pydantic_core._pydantic_core.ValidationError: 1 validation error for TMDBPersonMovieCreditsResponse[0m
+[1m[31mE   id[0m
+[1m[31mE     Field required [type=missing, input_value={'cast': [{'id': 123, 'ti...'media_type': 'movie'}]}, input_type=dict][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/missing[0m
+[31m[1m_______________ TestTMDBPersonService.test_get_person_tv_credits _______________[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:135: in test_get_person_tv_credits
+    [0mresult = [94mawait[39;49;00m service.get_person_tv_credits([94m287[39;49;00m, [94m50[39;49;00m)[90m[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'[0m
+[31m[1m_____ TestTMDBPersonService.test_get_person_tv_credits_filters_no_episodes _____[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:230: in test_get_person_tv_credits_filters_no_episodes
+    [0mresult = [94mawait[39;49;00m service.get_person_tv_credits([94m287[39;49;00m, [94m50[39;49;00m)[90m[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'[0m
+[31m[1m_____ TestTMDBPersonService.test_get_person_tv_credits_filters_talk_shows ______[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:266: in test_get_person_tv_credits_filters_talk_shows
+    [0mresult = [94mawait[39;49;00m service.get_person_tv_credits([94m287[39;49;00m, [94m50[39;49;00m)[90m[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'[0m
+[31m[1m_________ TestTMDBPersonService.test_get_cast_details_person_not_found _________[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:320: in test_get_cast_details_person_not_found
+    [0mresult = [94mawait[39;49;00m service.get_cast_details([94m999999[39;49;00m)[90m[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   AttributeError: 'TMDBPersonService' object has no attribute 'get_cast_details'[0m
+[31m[1m________ TestTMDBPersonService.test_get_cast_details_invalid_person_id _________[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:329: in test_get_cast_details_invalid_person_id
+    [0mresult = [94mawait[39;49;00m service.get_cast_details(-[94m1[39;49;00m)[90m[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   AttributeError: 'TMDBPersonService' object has no attribute 'get_cast_details'[0m
+[31m[1m___________________ TestTMDBPersonService.test_search_people ___________________[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:365: in test_search_people
+    [0m[94massert[39;49;00m [96misinstance[39;49;00m(result, TMDBSearchPersonResult)[90m[39;49;00m
+[1m[31mE   AssertionError: assert False[0m
+[1m[31mE    +  where False = isinstance(MCSearchResponse(results=[MCPersonItem(mc_type=<MCType.PERSON: 'person'>, mc_id='person_287', mc_subtype=<MCSubType.PERSON: 'person'>, source_id='287', source=<MCSources.TMDB: 'tmdb'>, links=[], images=[MCImage(url='/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='small', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='medium', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='large', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='original', type=<MCUrlType.URL: 'url'>, description='')], metrics={}, external_ids={}, error=None, adult=False, id=287, name='Brad Pitt', gender=2, biography='', birthday=None, deathday=None, place_of_birth=None, known_for_department='Acting', popularity=7.3943, also_known_as=[], homepage=None, profile_path='/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', profile_images={'small': 'https://image.tmdb.org/t/p/w45/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'medium': 'https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'large': 'https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'original': 'https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg'}, has_image=True)], total_results=1, query=None, data_source=None, data_type=None, page=1, error=None), TMDBSearchPersonResult)[0m
+[31m[1m_____________ TestTMDBPersonService.test_search_people_empty_query _____________[0m
+[1m[31mapi/tmdb/tests/test_person.py[0m:375: in test_search_people_empty_query
+    [0mresult = [94mawait[39;49;00m service.search_people([33m"[39;49;00m[33m"[39;49;00m, [94m1[39;49;00m, [94m20[39;49;00m)[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mapi/tmdb/person.py[0m:243: in search_people
+    [0msearch_response = [94mawait[39;49;00m [96mself[39;49;00m._search_person(query, page)[90m[39;49;00m
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mapi/tmdb/person.py[0m:258: in _search_person
+    [0m[94mreturn[39;49;00m TMDBSearchPersonResult()[90m[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mE   pydantic_core._pydantic_core.ValidationError: 4 validation errors for TMDBSearchPersonResult[0m
+[1m[31mE   results[0m
+[1m[31mE     Field required [type=missing, input_value={}, input_type=dict][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/missing[0m
+[1m[31mE   total_results[0m
+[1m[31mE     Field required [type=missing, input_value={}, input_type=dict][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/missing[0m
+[1m[31mE   total_pages[0m
+[1m[31mE     Field required [type=missing, input_value={}, input_type=dict][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/missing[0m
+[1m[31mE   page[0m
+[1m[31mE     Field required [type=missing, input_value={}, input_type=dict][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/missing[0m
+[31m[1m__________________ TestTMDBSearchService.test_search_by_genre __________________[0m
+[1m[31mapi/tmdb/tests/test_search.py[0m:520: in test_search_by_genre
+    [0mresult = [94mawait[39;49;00m service.search_by_genre([33m"[39;49;00m[33m18,80[39;49;00m[33m"[39;49;00m, [94m1[39;49;00m, [94m50[39;49;00m, include_details=[94mFalse[39;49;00m)[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mapi/tmdb/search.py[0m:808: in search_by_genre
+    [0mmc_item = TMDBTvItem.from_tv_search([90m[39;49;00m
+[1m[31mapi/tmdb/models.py[0m:275: in from_tv_search
+    [0mtv_item = TMDBTvItem([90m[39;49;00m
+[1m[31mE   pydantic_core._pydantic_core.ValidationError: 2 validation errors for TMDBTvItem[0m
+[1m[31mE   name[0m
+[1m[31mE     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/string_type[0m
+[1m[31mE   title[0m
+[1m[31mE     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/string_type[0m
+[31m[1m_______ TestTMDBSearchService.test_search_by_genre_filters_invalid_items _______[0m
+[1m[31mapi/tmdb/tests/test_search.py[0m:595: in test_search_by_genre_filters_invalid_items
+    [0mresult = [94mawait[39;49;00m service.search_by_genre([33m"[39;49;00m[33m18[39;49;00m[33m"[39;49;00m, [94m1[39;49;00m, [94m50[39;49;00m, include_details=[94mFalse[39;49;00m)[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mapi/tmdb/search.py[0m:808: in search_by_genre
+    [0mmc_item = TMDBTvItem.from_tv_search([90m[39;49;00m
+[1m[31mapi/tmdb/models.py[0m:275: in from_tv_search
+    [0mtv_item = TMDBTvItem([90m[39;49;00m
+[1m[31mE   pydantic_core._pydantic_core.ValidationError: 2 validation errors for TMDBTvItem[0m
+[1m[31mE   name[0m
+[1m[31mE     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/string_type[0m
+[1m[31mE   title[0m
+[1m[31mE     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType][0m
+[1m[31mE       For further information visit https://errors.pydantic.dev/2.12/v/string_type[0m
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_trending_movies[0m - AssertionError: assert 0 > 0
+ +  where 0 = TMDBGetTrendingMovieResult(results=[], total_results=0, query='limit:10', data_source='top_trending_movies(10)', data_type=<MCType.MOVIE: 'movie'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_trending_tv[0m - AssertionError: assert 0 > 0
+ +  where 0 = TMDBGetTrendingShowResult(results=[], total_results=0, query='limit:10', data_source='top_trending_tv_shows(10)', data_type=<MCType.TV_SERIES: 'tv'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_search_multi[0m - AssertionError: assert 0 > 0
+ +  where 0 = MCSearchResponse(results=[], total_results=0, query='Breaking Bad', data_source='TMDB Multi Search', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_search_tv_shows[0m - AssertionError: assert 0 > 0
+ +  where 0 = MCSearchResponse(results=[], total_results=0, query='The Office', data_source='TMDB TV Search (weighted by relevancy + recency)', data_type=<MCType.TV_SERIES: 'tv'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_search_by_genre[0m - AssertionError: assert 0 > 0
+ +  where 0 = MCSearchResponse(results=[], total_results=0, query='genre ids: 18,80', data_source='TMDB Search by Genres', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_search_by_keywords[0m - AssertionError: assert 0 > 0
+ +  where 0 = MCSearchResponse(results=[], total_results=0, query='keyword ids: 825', data_source='TMDB Search by Keywords', data_type=<MCType.MIXED: 'mixed'>, page=1, error=None).total_results
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_media_details_movie[0m - assert 404 == 200
+ +  where 404 = <Response 42 bytes [404 NOT FOUND]>.status_code
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_media_details_tv[0m - assert 404 == 200
+ +  where 404 = <Response 43 bytes [404 NOT FOUND]>.status_code
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_now_playing[0m - assert 0 > 0
+ +  where 0 = len([])
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_popular_tv[0m - assert 0 > 0
+ +  where 0 = len([])
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_search_people[0m - assert 500 == 200
+ +  where 500 = <Response 806 bytes [500 INTERNAL SERVER ERROR]>.status_code
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_person_details[0m - assert 404 == 200
+ +  where 404 = <Response 165 bytes [404 NOT FOUND]>.status_code
+[31mFAILED[0m api/tmdb/tests/test_integration.py::[1mTestTMDBHandlers::test_get_person_credits[0m - assert 500 == 200
+ +  where 500 = <Response 299 bytes [500 INTERNAL SERVER ERROR]>.status_code
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_person_movie_credits_filters_low_popularity[0m - pydantic_core._pydantic_core.ValidationError: 1 validation error for TMDBPersonMovieCreditsResponse
+id
+  Field required [type=missing, input_value={'cast': [{'id': 123, 'ti...'media_type': 'movie'}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_person_tv_credits[0m - AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_person_tv_credits_filters_no_episodes[0m - AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_person_tv_credits_filters_talk_shows[0m - AttributeError: 'TMDBPersonService' object has no attribute 'get_person_tv_credits'
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_cast_details_person_not_found[0m - AttributeError: 'TMDBPersonService' object has no attribute 'get_cast_details'
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_get_cast_details_invalid_person_id[0m - AttributeError: 'TMDBPersonService' object has no attribute 'get_cast_details'
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_search_people[0m - AssertionError: assert False
+ +  where False = isinstance(MCSearchResponse(results=[MCPersonItem(mc_type=<MCType.PERSON: 'person'>, mc_id='person_287', mc_subtype=<MCSubType.PERSON: 'person'>, source_id='287', source=<MCSources.TMDB: 'tmdb'>, links=[], images=[MCImage(url='/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='small', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='medium', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='large', type=<MCUrlType.URL: 'url'>, description=''), MCImage(url='https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', key='original', type=<MCUrlType.URL: 'url'>, description='')], metrics={}, external_ids={}, error=None, adult=False, id=287, name='Brad Pitt', gender=2, biography='', birthday=None, deathday=None, place_of_birth=None, known_for_department='Acting', popularity=7.3943, also_known_as=[], homepage=None, profile_path='/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', profile_images={'small': 'https://image.tmdb.org/t/p/w45/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'medium': 'https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'large': 'https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg', 'original': 'https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg'}, has_image=True)], total_results=1, query=None, data_source=None, data_type=None, page=1, error=None), TMDBSearchPersonResult)
+[31mFAILED[0m api/tmdb/tests/test_person.py::[1mTestTMDBPersonService::test_search_people_empty_query[0m - pydantic_core._pydantic_core.ValidationError: 4 validation errors for TMDBSearchPersonResult
+results
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+total_results
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+total_pages
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+page
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+[31mFAILED[0m api/tmdb/tests/test_search.py::[1mTestTMDBSearchService::test_search_by_genre[0m - pydantic_core._pydantic_core.ValidationError: 2 validation errors for TMDBTvItem
+name
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+title
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+[31mFAILED[0m api/tmdb/tests/test_search.py::[1mTestTMDBSearchService::test_search_by_genre_filters_invalid_items[0m - pydantic_core._pydantic_core.ValidationError: 2 validation errors for TMDBTvItem
+name
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+title
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type
+[31m============ [31m[1m23 failed[0m, [32m102 passed[0m, [33m2 skipped[0m, [33m15 warnings[0m[31m in 5.63s[0m[31m ============[0m

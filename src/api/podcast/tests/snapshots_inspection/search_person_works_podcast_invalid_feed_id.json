@@ -1,0 +1,15 @@
+{
+  "details": null,
+  "error": "No podcasts found for the provided feed IDs",
+  "input": {
+    "mc_id": "podcaster_nonexistent",
+    "mc_subtype": "podcaster",
+    "mc_type": "person",
+    "name": "Test Podcaster",
+    "source": "podcastindex",
+    "source_id": "999999999"
+  },
+  "related": [],
+  "status_code": 404,
+  "works": []
+}

@@ -1,0 +1,27 @@
+{
+  "articles": [
+    {
+      "author": null,
+      "content": null,
+      "description": null,
+      "mc_type": "news_article",
+      "published_at": null,
+      "source": {
+        "id": null,
+        "name": "TechCrunch"
+      },
+      "title": "AI News",
+      "url": "https://example.com",
+      "url_to_image": null
+    }
+  ],
+  "from_date": null,
+  "language": "en",
+  "page": 1,
+  "page_size": 20,
+  "query": "AI",
+  "sort_by": "publishedAt",
+  "status": "ok",
+  "to_date": null,
+  "total_results": 1
+}

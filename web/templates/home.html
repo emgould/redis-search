@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Media Search - Find Movies & TV Shows{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col">
+    <!-- Header -->
+    <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                    </svg>
+                </div>
+                <span class="font-semibold text-lg">MediaSearch</span>
+            </a>
+            <nav class="flex items-center gap-4 text-sm text-surface-400">
+                <a href="/management" class="hover:text-white transition-colors">Management</a>
+                <a href="/admin/index_info" class="hover:text-white transition-colors">Index Info</a>
+                <a href="http://localhost:8001" target="_blank" class="flex items-center gap-1 hover:text-white transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                    RedisInsight
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col items-center justify-start pt-16 md:pt-24 px-4">
+        <!-- Hero Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-white via-surface-200 to-surface-400 bg-clip-text text-transparent">
+                Find Your Next Watch
+            </h1>
+            <p class="text-surface-400 text-lg">Search movies and TV shows powered by Redis</p>
+        </div>
+
+        <!-- Search Container -->
+        <div class="w-full max-w-2xl relative" id="search-container">
+            <!-- Search Input -->
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    id="search-input"
+                    placeholder="Search for movies, TV shows..."
+                    autocomplete="off"
+                    class="w-full pl-12 pr-4 py-4 bg-surface-800 border border-surface-700 rounded-2xl text-white placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-lg transition-all"
+                >
+                <div id="loading-spinner" class="absolute inset-y-0 right-0 pr-4 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Results Dropdown -->
+            <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden">
+                <div class="bg-surface-900 border border-surface-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden search-results-enter">
+                    <div id="results-list" class="max-h-[70vh] overflow-y-auto">
+                        <!-- Results will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick hints -->
+        <div class="mt-6 flex flex-wrap gap-2 justify-center">
+            <span class="text-surface-500 text-sm">Try:</span>
+            <button onclick="searchFor('The Office')" class="px-3 py-1 bg-surface-800 hover:bg-surface-700 rounded-full text-sm text-surface-300 transition-colors">The Office</button>
+            <button onclick="searchFor('Breaking')" class="px-3 py-1 bg-surface-800 hover:bg-surface-700 rounded-full text-sm text-surface-300 transition-colors">Breaking</button>
+            <button onclick="searchFor('Star')" class="px-3 py-1 bg-surface-800 hover:bg-surface-700 rounded-full text-sm text-surface-300 transition-colors">Star</button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-6 text-center text-surface-600 text-sm">
+        <p>Powered by Redis Search • Built for speed</p>
+    </footer>
+</div>
+
+<script>
+const searchInput = document.getElementById('search-input');
+const resultsContainer = document.getElementById('results-container');
+const resultsList = document.getElementById('results-list');
+const loadingSpinner = document.getElementById('loading-spinner');
+
+let debounceTimer;
+let currentQuery = '';
+
+function searchFor(query) {
+    searchInput.value = query;
+    searchInput.dispatchEvent(new Event('input'));
+    searchInput.focus();
+}
+
+function formatYear(item) {
+    const date = item.original?.first_air_date || item.original?.release_date;
+    if (date) {
+        return date.split('-')[0];
+    }
+    return '';
+}
+
+function getPosterUrl(item) {
+    // Check for images array format first
+    const images = item.original?.images || [];
+    const poster = images.find(img => img.description === 'poster' && img.key === 'medium');
+    if (poster?.url) return poster.url;
+    
+    // Fall back to TMDB poster_path format
+    const posterPath = item.original?.poster_path;
+    if (posterPath) {
+        return `https://image.tmdb.org/t/p/w185${posterPath}`;
+    }
+    
+    return null;
+}
+
+function getRating(item) {
+    return item.original?.metrics?.vote_average || item.original?.vote_average || 0;
+}
+
+function getTypeLabel(item) {
+    const type = item.type || item.original?.content_type || item.original?.mc_type;
+    if (type === 'tv') return 'TV Series';
+    if (type === 'movie') return 'Movie';
+    return type || 'Media';
+}
+
+function getTypeColor(item) {
+    const type = item.type || item.original?.content_type || item.original?.mc_type;
+    if (type === 'tv') return 'bg-blue-500/20 text-blue-400';
+    if (type === 'movie') return 'bg-purple-500/20 text-purple-400';
+    return 'bg-surface-500/20 text-surface-400';
+}
+
+function highlightMatch(text, query) {
+    if (!text || !query) return text || '';
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark class="bg-brand-500/30 text-white rounded px-0.5">$1</mark>');
+}
+
+function renderResults(results, query) {
+    if (!results || results.length === 0) {
+        resultsList.innerHTML = `
+            <div class="p-8 text-center text-surface-500">
+                <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>No results found for "<span class="text-surface-400">${query}</span>"</p>
+            </div>
+        `;
+        return;
+    }
+
+    resultsList.innerHTML = results.map((item, index) => {
+        const title = item.search_title || item.original?.title || item.original?.name || 'Unknown';
+        const year = formatYear(item);
+        const poster = getPosterUrl(item);
+        const rating = getRating(item);
+        const overview = item.original?.overview || '';
+        const cast = (item.original?.main_cast || []).slice(0, 3).map(c => c.name).join(', ');
+        
+        return `
+            <div class="group flex gap-4 p-4 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800 last:border-b-0"
+                 style="animation-delay: ${index * 30}ms">
+                <!-- Poster -->
+                <div class="flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden bg-surface-800">
+                    ${poster 
+                        ? `<img src="${poster}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600\\'><svg class=\\'w-8 h-8\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
+                        : `<div class="w-full h-full flex items-center justify-center text-surface-600">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                            </svg>
+                        </div>`
+                    }
+                </div>
+                
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h3 class="font-semibold text-white group-hover:text-brand-400 transition-colors truncate">
+                                ${highlightMatch(title, query)}
+                            </h3>
+                            <div class="flex items-center gap-2 mt-1 text-sm">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(item)}">
+                                    ${getTypeLabel(item)}
+                                </span>
+                                ${year ? `<span class="text-surface-500">${year}</span>` : ''}
+                                ${rating > 0 ? `
+                                    <span class="flex items-center gap-1 text-surface-400">
+                                        <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        ${rating.toFixed(1)}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    ${overview ? `
+                        <p class="mt-2 text-sm text-surface-400 line-clamp-2">${overview.substring(0, 120)}${overview.length > 120 ? '...' : ''}</p>
+                    ` : ''}
+                    ${cast ? `
+                        <p class="mt-1 text-xs text-surface-500 truncate">
+                            <span class="text-surface-600">Cast:</span> ${cast}
+                        </p>
+                    ` : ''}
+                </div>
+                
+                <!-- Arrow -->
+                <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function performSearch(query) {
+    if (!query || query.length < 2) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+
+    loadingSpinner.classList.remove('hidden');
+    
+    try {
+        const response = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}`);
+        const results = await response.json();
+        
+        if (query === currentQuery) {
+            renderResults(results, query);
+            resultsContainer.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsList.innerHTML = `
+            <div class="p-8 text-center text-red-400">
+                <p>Search failed. Please try again.</p>
+            </div>
+        `;
+        resultsContainer.classList.remove('hidden');
+    } finally {
+        loadingSpinner.classList.add('hidden');
+    }
+}
+
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    currentQuery = query;
+    
+    clearTimeout(debounceTimer);
+    
+    if (!query || query.length < 2) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+    
+    debounceTimer = setTimeout(() => {
+        performSearch(query);
+    }, 150);
+});
+
+// Close results when clicking outside
+document.addEventListener('click', (e) => {
+    if (!document.getElementById('search-container').contains(e.target)) {
+        resultsContainer.classList.add('hidden');
+    }
+});
+
+// Handle escape key
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        resultsContainer.classList.add('hidden');
+        searchInput.blur();
+    }
+});
+
+// Re-show results when focusing input with existing query
+searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim().length >= 2) {
+        performSearch(searchInput.value.trim());
+    }
+});
+</script>
+{% endblock %}

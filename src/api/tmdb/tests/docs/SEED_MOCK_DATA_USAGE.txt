@@ -1,0 +1,191 @@
+================================================================================
+SEED MOCK DATA - Quick Reference
+================================================================================
+
+PURPOSE
+-------
+Generate test fixtures from real API responses for TMDB and LastFM api.
+
+USAGE
+-----
+
+Seed all services:
+  ./seed_mock_data.sh
+
+Seed specific service:
+  ./seed_mock_data.sh tmdb
+  ./seed_mock_data.sh lastfm
+
+REQUIREMENTS
+------------
+
+Environment variables (automatically loaded from .env file):
+  - TMDB_READ_TOKEN
+  - LASTFM_API_KEY
+  - SPOTIFY_CLIENT_ID
+  - SPOTIFY_CLIENT_SECRET
+
+The script will:
+  ✓ Auto-detect and load .env file
+  ✓ Show which variables are set
+  ✓ Generate fixtures from real API calls
+  ✓ Save JSON files in fixtures/ directories
+  ✓ Display progress and results
+
+WHAT GETS GENERATED
+-------------------
+
+TMDB Service (8 fixtures):
+  - mock_movie_data.json              (Fight Club details)
+  - mock_tv_data.json                 (Breaking Bad details)
+  - mock_person_data.json             (Brad Pitt details)
+  - mock_cast_data.json               (Cast/crew data)
+  - mock_videos_data.json             (Trailers/videos)
+  - mock_watch_providers_data.json    (Streaming availability)
+  - mock_keywords_data.json           (Keywords/tags)
+  - mock_search_results.json          (Search results)
+
+LastFM Service (10 fixtures):
+  - mock_album_data.json              (Dark Side of the Moon)
+  - mock_track_data.json              (Comfortably Numb)
+  - mock_artist_data.json             (Pink Floyd)
+  - mock_spotify_album_search.json    (Album search results)
+  - mock_spotify_track_search.json    (Track search results)
+  - mock_spotify_artist_search.json   (Artist search results)
+  - mock_spotify_top_tracks.json      (Top tracks)
+  - mock_lastfm_top_tracks.json       (Chart data)
+  - mock_spotify_token_response.json  (Auth token)
+  - mock_odesli_response.json         (Platform links)
+
+OUTPUT LOCATIONS
+----------------
+
+TMDB:   services/tmdb/tests/fixtures/
+LastFM: services/lastfm/tests/fixtures/
+
+WHEN TO RUN
+-----------
+
+Run this script when:
+  ✓ Setting up tests for the first time
+  ✓ API responses have changed
+  ✓ You want to update test data
+  ✓ Monthly (recommended for fresh data)
+
+EXAMPLE OUTPUT
+--------------
+
+$ ./seed_mock_data.sh
+
+========================================
+Seed Mock Data - Generate Test Fixtures
+========================================
+
+ℹ Loading environment from: .env
+✓ Environment loaded from .env
+
+========================================
+Environment Variables Status
+========================================
+
+TMDB:
+✓ TMDB_READ_TOKEN is set
+
+LastFM & Spotify:
+✓ LASTFM_API_KEY is set
+✓ SPOTIFY_CLIENT_ID is set
+✓ SPOTIFY_CLIENT_SECRET is set
+
+========================================
+Seeding TMDB Mock Data
+========================================
+
+✓ TMDB_READ_TOKEN is set
+ℹ Fetching real data from TMDB API...
+ℹ This may take 10-30 seconds...
+
+Fetching movie data for ID 550 (Fight Club)...
+✓ Fetched movie: Fight Club
+Fetching TV data for ID 1396 (Breaking Bad)...
+✓ Fetched TV show: Breaking Bad
+...
+
+✓ TMDB mock data seeded successfully
+✓ Generated 8 fixture files
+
+========================================
+✓ Mock Data Seeding Complete
+========================================
+
+✓ All fixtures generated successfully!
+ℹ Fixtures saved in services/*/tests/fixtures/
+
+TROUBLESHOOTING
+---------------
+
+"Environment variable not set"
+  → Check .env file exists and has correct variables
+  → Or export variables manually
+
+"API request failed"
+  → Check internet connection
+  → Verify API credentials are valid
+  → Check API status (not rate-limited)
+
+"generate_mock_data.py not found"
+  → Run from services/ directory
+  → Check files are in correct location
+
+AFTER SEEDING
+-------------
+
+1. Review generated fixtures:
+   ls -la tmdb/tests/fixtures/
+   ls -la lastfm/tests/fixtures/
+
+2. Run tests to verify:
+   cd ..
+   pytest services/tmdb/tests/ -v
+   pytest services/lastfm/tests/ -v
+
+3. Fixtures are gitignored (won't be committed)
+
+REGENERATING
+------------
+
+Safe to run multiple times:
+  ✓ Overwrites existing fixtures
+  ✓ No side effects
+  ✓ Idempotent operation
+
+Recommended frequency:
+  - Monthly for routine updates
+  - When API changes announced
+  - Before major releases
+
+BACKWARD COMPATIBILITY
+----------------------
+
+The old script name still works:
+  ./setup_test_fixtures.sh
+
+It's a symlink to seed_mock_data.sh
+
+RELATED FILES
+-------------
+
+Generator scripts:
+  - tmdb/tests/generate_mock_data.py
+  - lastfm/tests/generate_mock_data.py
+
+Conftest files (load fixtures):
+  - tmdb/tests/conftest.py
+  - lastfm/tests/conftest.py
+
+Documentation:
+  - QUICKSTART.txt
+  - REAL_API_FIXTURES_IMPLEMENTATION.txt
+  - IMPLEMENTATION_COMPLETE.txt
+
+================================================================================
+

@@ -1,0 +1,44 @@
+{
+  "details": null,
+  "error": null,
+  "input": {
+    "mc_id": "podcaster_multiple",
+    "mc_subtype": "podcaster",
+    "mc_type": "person",
+    "name": "Multiple Podcasters",
+    "source": "podcastindex",
+    "source_id": "360084,75075"
+  },
+  "related": [],
+  "status_code": 200,
+  "works": [
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [],
+      "links": [],
+      "mc_id": "podcast_360084",
+      "mc_subtype": null,
+      "mc_type": "podcast",
+      "metrics": {},
+      "sort_order": 0.0,
+      "source": "podcastindex",
+      "source_id": "360084",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [],
+      "links": [],
+      "mc_id": "podcast_75075",
+      "mc_subtype": null,
+      "mc_type": "podcast",
+      "metrics": {},
+      "sort_order": 0.0,
+      "source": "podcastindex",
+      "source_id": "75075",
+      "status_code": 200
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+
+<h2>Redis Management Dashboard</h2>
+
+<h3>DB Size</h3>
+<pre>{{ stats.dbsize }}</pre>
+
+<h3>Memory Info</h3>
+<pre>{{ stats.info.memory | tojson(indent=2) }}</pre>
+
+<h3>Keyspace Info</h3>
+<pre>{{ stats.info.Keyspace | tojson(indent=2) }}</pre>
+
+<p><a href="/admin/index_info">View Index Info</a></p>

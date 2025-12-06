@@ -1,0 +1,206 @@
+[
+  {
+    "lineup": "USA-0000001-CUSTOM",
+    "name": "ChannelsDVR TV-Everywhere",
+    "provider": "0000001",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-OTA-07417",
+    "name": "Antenna",
+    "provider": "07417",
+    "provider_type": "Antenna"
+  },
+  {
+    "lineup": "USA-AFN-X",
+    "name": "AFN Satellite",
+    "provider": "AFN",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-AMZPV-X",
+    "name": "Amazon Prime Video",
+    "provider": "AMZPV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-DISH501-X",
+    "name": "DISH New York",
+    "provider": "DISH501",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-DITV-X",
+    "name": "DIRECTV",
+    "provider": "DITV",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-DITV501-X",
+    "name": "DIRECTV New York",
+    "provider": "DITV501",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-DNOW501-X",
+    "name": "DIRECTV STREAM New York",
+    "provider": "DNOW501",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-DTVNOW-X",
+    "name": "DIRECTV STREAM",
+    "provider": "DTVNOW",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-ECHOST-X",
+    "name": "DISH Network",
+    "provider": "ECHOST",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-FRNDLY-X",
+    "name": "frndly",
+    "provider": "FRNDLY",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-FUBO501-X",
+    "name": "FuboTV New York",
+    "provider": "FUBO501",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-FUBOTV-DEFAULT",
+    "name": "fuboTV",
+    "provider": "FUBOTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-GLRYSTR-X",
+    "name": "GLORYSTAR",
+    "provider": "GLRYSTR",
+    "provider_type": "Satellite"
+  },
+  {
+    "lineup": "USA-GNSTR-X",
+    "name": "US Streaming (Extended)",
+    "provider": "GNSTR",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-HULU501-X",
+    "name": "Hulu New York",
+    "provider": "HULU501",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-HULUTV-X",
+    "name": "Hulu",
+    "provider": "HULUTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-IMDBTV-X",
+    "name": "FREEVEE",
+    "provider": "IMDBTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-NJ29429-L",
+    "name": "Optimum",
+    "provider": "NJ29429",
+    "provider_type": "Cable"
+  },
+  {
+    "lineup": "USA-NJ65968-X",
+    "name": "Verizon Fios Freehold",
+    "provider": "NJ65968",
+    "provider_type": "Cable"
+  },
+  {
+    "lineup": "USA-NJ67209-X",
+    "name": "Verizon Fios Basking Ridge",
+    "provider": "NJ67209",
+    "provider_type": "Cable"
+  },
+  {
+    "lineup": "USA-PEACOCK-X",
+    "name": "Peacock",
+    "provider": "PEACOCK",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-PHILO-X",
+    "name": "Philo",
+    "provider": "PHILO",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-PLUTOTV-X",
+    "name": "Pluto TV",
+    "provider": "PLUTOTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-SAMSUNG-X",
+    "name": "Samsung TV Plus",
+    "provider": "SAMSUNG",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-SLINGTV-X",
+    "name": "Sling TV",
+    "provider": "SLINGTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-SLNG501-X",
+    "name": "Sling TV New York",
+    "provider": "SLNG501",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-SMSG501-X",
+    "name": "Samsung TV Plus New York",
+    "provider": "SMSG501",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-TUBISTR-X",
+    "name": "TUBI TV",
+    "provider": "TUBISTR",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-VIZIO-X",
+    "name": "Vizio",
+    "provider": "VIZIO",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-XFINSTR-X",
+    "name": "Xfinity Stream",
+    "provider": "XFINSTR",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-XUMOTV-X",
+    "name": "Xumo TV",
+    "provider": "XUMOTV",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-YOUTUBE-X",
+    "name": "You Tube TV",
+    "provider": "YOUTUBE",
+    "provider_type": "IPTV"
+  },
+  {
+    "lineup": "USA-YTBE501-X",
+    "name": "You Tube New York",
+    "provider": "YTBE501",
+    "provider_type": "IPTV"
+  }
+]

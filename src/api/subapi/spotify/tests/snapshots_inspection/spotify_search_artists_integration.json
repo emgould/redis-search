@@ -1,0 +1,335 @@
+{
+  "data_source": "Spotify Artist Search",
+  "error": null,
+  "query": "The Weeknd",
+  "results": [
+    {
+      "artist": "The Weeknd",
+      "artist_link": {
+        "description": "The Weeknd",
+        "key": "artist",
+        "url": "https://open.spotify.com/artist/1Xyo4u8uXC1ZmMpatF05PJ"
+      },
+      "default_image": "https://i.scdn.co/image/ab6761610000f1789e528993a2820267b97f6aae",
+      "error": null,
+      "external_ids": {},
+      "followers": 113126496,
+      "genres": [],
+      "id": "1Xyo4u8uXC1ZmMpatF05PJ",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eb9e528993a2820267b97f6aae"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab676161000051749e528993a2820267b97f6aae"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f1789e528993a2820267b97f6aae"
+        }
+      ],
+      "known_for": "One Of The Girls (with JENNIE, Lily Rose Depp)",
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/1Xyo4u8uXC1ZmMpatF05PJ"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/1Xyo4u8uXC1ZmMpatF05PJ"
+        }
+      ],
+      "mc_id": "spotify_artist_1Xyo4u8uXC1ZmMpatF05PJ",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "metrics": {
+        "followers": 113126496,
+        "popularity": 94
+      },
+      "name": "The Weeknd",
+      "popularity": 94,
+      "source": "spotify",
+      "source_id": "1Xyo4u8uXC1ZmMpatF05PJ",
+      "spotify_url": "https://open.spotify.com/artist/1Xyo4u8uXC1ZmMpatF05PJ",
+      "title": null,
+      "top_track_album": null,
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d00004851b0dd6a5cd1dec96c4119c262",
+      "top_track_release_date": null,
+      "top_track_track": "One Of The Girls (with JENNIE, Lily Rose Depp)"
+    },
+    {
+      "artist": "Bruno Mars",
+      "artist_link": {
+        "description": "Bruno Mars",
+        "key": "artist",
+        "url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C"
+      },
+      "default_image": "https://i.scdn.co/image/ab6761610000f178c36dd9eb55fb0db4911f25dd",
+      "error": null,
+      "external_ids": {},
+      "followers": 75560615,
+      "genres": [],
+      "id": "0du5cEVh5yTK9QJze8zA0C",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5ebc36dd9eb55fb0db4911f25dd"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616100005174c36dd9eb55fb0db4911f25dd"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f178c36dd9eb55fb0db4911f25dd"
+        }
+      ],
+      "known_for": "Die With A Smile",
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/0du5cEVh5yTK9QJze8zA0C"
+        }
+      ],
+      "mc_id": "spotify_artist_0du5cEVh5yTK9QJze8zA0C",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "metrics": {
+        "followers": 75560615,
+        "popularity": 90
+      },
+      "name": "Bruno Mars",
+      "popularity": 90,
+      "source": "spotify",
+      "source_id": "0du5cEVh5yTK9QJze8zA0C",
+      "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+      "title": null,
+      "top_track_album": null,
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d00004851b0860cf0a98e09663c82290c",
+      "top_track_release_date": null,
+      "top_track_track": "Die With A Smile"
+    },
+    {
+      "artist": "The Weeks",
+      "artist_link": {
+        "description": "The Weeks",
+        "key": "artist",
+        "url": "https://open.spotify.com/artist/3zE5jV6Uw9hhdWCXM8hS3j"
+      },
+      "default_image": "https://i.scdn.co/image/ab6761610000f1788118fd1beb8e2af89554aead",
+      "error": null,
+      "external_ids": {},
+      "followers": 41701,
+      "genres": [],
+      "id": "3zE5jV6Uw9hhdWCXM8hS3j",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eb8118fd1beb8e2af89554aead"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab676161000051748118fd1beb8e2af89554aead"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f1788118fd1beb8e2af89554aead"
+        }
+      ],
+      "known_for": "Buttons",
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/3zE5jV6Uw9hhdWCXM8hS3j"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/3zE5jV6Uw9hhdWCXM8hS3j"
+        }
+      ],
+      "mc_id": "spotify_artist_3zE5jV6Uw9hhdWCXM8hS3j",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "metrics": {
+        "followers": 41701,
+        "popularity": 28
+      },
+      "name": "The Weeks",
+      "popularity": 28,
+      "source": "spotify",
+      "source_id": "3zE5jV6Uw9hhdWCXM8hS3j",
+      "spotify_url": "https://open.spotify.com/artist/3zE5jV6Uw9hhdWCXM8hS3j",
+      "title": null,
+      "top_track_album": null,
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d00004851403516ed07f62f37b38be479",
+      "top_track_release_date": null,
+      "top_track_track": "Buttons"
+    },
+    {
+      "artist": "Drake",
+      "artist_link": {
+        "description": "Drake",
+        "key": "artist",
+        "url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4"
+      },
+      "default_image": "https://i.scdn.co/image/ab6761610000f1784293385d324db8558179afd9",
+      "error": null,
+      "external_ids": {},
+      "followers": 103188326,
+      "genres": [
+        "rap"
+      ],
+      "id": "3TVXtAsR1Inumwj472S9r4",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab676161000051744293385d324db8558179afd9"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f1784293385d324db8558179afd9"
+        }
+      ],
+      "known_for": "One Dance",
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/3TVXtAsR1Inumwj472S9r4"
+        }
+      ],
+      "mc_id": "spotify_artist_3TVXtAsR1Inumwj472S9r4",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "metrics": {
+        "followers": 103188326,
+        "popularity": 95
+      },
+      "name": "Drake",
+      "popularity": 95,
+      "source": "spotify",
+      "source_id": "3TVXtAsR1Inumwj472S9r4",
+      "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+      "title": null,
+      "top_track_album": null,
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d000048519416ed64daf84936d89e671c",
+      "top_track_release_date": null,
+      "top_track_track": "One Dance"
+    },
+    {
+      "artist": "Arijit Singh",
+      "artist_link": {
+        "description": "Arijit Singh",
+        "key": "artist",
+        "url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw"
+      },
+      "default_image": "https://i.scdn.co/image/ab6761610000f1785ba2d75eb08a2d672f9b69b7",
+      "error": null,
+      "external_ids": {},
+      "followers": 164011763,
+      "genres": [
+        "hindi pop",
+        "bollywood",
+        "desi",
+        "bangla pop"
+      ],
+      "id": "4YRxDV8wJFPHPTeXepOstw",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000e5eb5ba2d75eb08a2d672f9b69b7"
+        },
+        {
+          "description": "320x320",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab676161000051745ba2d75eb08a2d672f9b69b7"
+        },
+        {
+          "description": "160x160",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab6761610000f1785ba2d75eb08a2d672f9b69b7"
+        }
+      ],
+      "known_for": "Apna Bana Le",
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/artists/4YRxDV8wJFPHPTeXepOstw"
+        }
+      ],
+      "mc_id": "spotify_artist_4YRxDV8wJFPHPTeXepOstw",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "metrics": {
+        "followers": 164011763,
+        "popularity": 89
+      },
+      "name": "Arijit Singh",
+      "popularity": 89,
+      "source": "spotify",
+      "source_id": "4YRxDV8wJFPHPTeXepOstw",
+      "spotify_url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw",
+      "title": null,
+      "top_track_album": null,
+      "top_track_album_image": "https://i.scdn.co/image/ab67616d00004851b85b4e8fb6ba961aedfde386",
+      "top_track_release_date": null,
+      "top_track_track": "Apna Bana Le"
+    }
+  ],
+  "total_results": 5
+}

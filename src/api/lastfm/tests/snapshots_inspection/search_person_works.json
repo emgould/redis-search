@@ -1,0 +1,949 @@
+{
+  "details": {
+    "error": null,
+    "external_ids": {},
+    "images": [],
+    "links": [],
+    "mc_id": "spotify_artist_3WrFJ7ztbogyGnTHbHJFl2",
+    "mc_subtype": "music_artist",
+    "mc_type": "person",
+    "metrics": {},
+    "sort_order": 0.0,
+    "source": "spotify",
+    "source_id": "3WrFJ7ztbogyGnTHbHJFl2",
+    "status_code": 200
+  },
+  "error": null,
+  "input": {
+    "mc_id": "person_invalid_spotify_id_123",
+    "mc_subtype": "musician",
+    "mc_type": "person",
+    "name": "The Beatles",
+    "source": "lastfm",
+    "source_id": "invalid_spotify_id_123"
+  },
+  "related": [],
+  "status_code": 200,
+  "works": [
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2732ad20d4688bdc999413ece39"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e022ad20d4688bdc999413ece39"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048512ad20d4688bdc999413ece39"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/2AlPRfYeskAMxhJS00xjeP"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/2AlPRfYeskAMxhJS00xjeP"
+        }
+      ],
+      "mc_id": "album_2AlPRfYeskAMxhJS00xjeP",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2AlPRfYeskAMxhJS00xjeP",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2734a4c7445df9b3719a60eb53b"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e024a4c7445df9b3719a60eb53b"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048514a4c7445df9b3719a60eb53b"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/39Ti6Be9Ak2d6YbxlQo0Ba"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/39Ti6Be9Ak2d6YbxlQo0Ba"
+        }
+      ],
+      "mc_id": "album_39Ti6Be9Ak2d6YbxlQo0Ba",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "39Ti6Be9Ak2d6YbxlQo0Ba",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27333b139ea459f9d93c7b8fb30"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0233b139ea459f9d93c7b8fb30"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485133b139ea459f9d93c7b8fb30"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/7C221PnWhYGv8Tc0xSbfdc"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/7C221PnWhYGv8Tc0xSbfdc"
+        }
+      ],
+      "mc_id": "album_7C221PnWhYGv8Tc0xSbfdc",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "7C221PnWhYGv8Tc0xSbfdc",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27304167cd5b7ddbf5c4a563456"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0204167cd5b7ddbf5c4a563456"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485104167cd5b7ddbf5c4a563456"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/6emgUTDksZyhhWmtjM9FCs"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/6emgUTDksZyhhWmtjM9FCs"
+        }
+      ],
+      "mc_id": "album_6emgUTDksZyhhWmtjM9FCs",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "6emgUTDksZyhhWmtjM9FCs",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2735a18ca8e4cd3652ef2617886"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e025a18ca8e4cd3652ef2617886"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048515a18ca8e4cd3652ef2617886"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1BdxbYp1FaNejpDgtDo25V"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1BdxbYp1FaNejpDgtDo25V"
+        }
+      ],
+      "mc_id": "album_1BdxbYp1FaNejpDgtDo25V",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1BdxbYp1FaNejpDgtDo25V",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273c94603dcb78ec39322cebb5b"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02c94603dcb78ec39322cebb5b"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851c94603dcb78ec39322cebb5b"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/5iT3F2EhjVQVrO4PKhsP8c"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/5iT3F2EhjVQVrO4PKhsP8c"
+        }
+      ],
+      "mc_id": "album_5iT3F2EhjVQVrO4PKhsP8c",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "5iT3F2EhjVQVrO4PKhsP8c",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2739daf50d073fd6e7ad9bc0076"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e029daf50d073fd6e7ad9bc0076"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048519daf50d073fd6e7ad9bc0076"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1WMVvswNzB9i2UMh9svso5"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1WMVvswNzB9i2UMh9svso5"
+        }
+      ],
+      "mc_id": "album_1WMVvswNzB9i2UMh9svso5",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1WMVvswNzB9i2UMh9svso5",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2731211f350b2fe058161c249f1"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e021211f350b2fe058161c249f1"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048511211f350b2fe058161c249f1"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0n9SWDBEftKwq09B01Pwzw"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0n9SWDBEftKwq09B01Pwzw"
+        }
+      ],
+      "mc_id": "album_0n9SWDBEftKwq09B01Pwzw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0n9SWDBEftKwq09B01Pwzw",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273b9dd63a105a5afe5d58a783b"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02b9dd63a105a5afe5d58a783b"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851b9dd63a105a5afe5d58a783b"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/4KYcffwC5HgjJLdpQU9SjC"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/4KYcffwC5HgjJLdpQU9SjC"
+        }
+      ],
+      "mc_id": "album_4KYcffwC5HgjJLdpQU9SjC",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "4KYcffwC5HgjJLdpQU9SjC",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2735c123475e140d4e9b21c996d"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e025c123475e140d4e9b21c996d"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048515c123475e140d4e9b21c996d"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/4On0Hf7VJC1jz5gXY2cU8p"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/4On0Hf7VJC1jz5gXY2cU8p"
+        }
+      ],
+      "mc_id": "album_4On0Hf7VJC1jz5gXY2cU8p",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "4On0Hf7VJC1jz5gXY2cU8p",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273d807dd713cdfbeed142881e2"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02d807dd713cdfbeed142881e2"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851d807dd713cdfbeed142881e2"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0XRZpF083HqgygM0v1hQyE"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0XRZpF083HqgygM0v1hQyE"
+        }
+      ],
+      "mc_id": "album_0XRZpF083HqgygM0v1hQyE",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0XRZpF083HqgygM0v1hQyE",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273c4821abf3351f0eedd6aff3b"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02c4821abf3351f0eedd6aff3b"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851c4821abf3351f0eedd6aff3b"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/2EowTulHWqSY6QZfTDf5vW"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/2EowTulHWqSY6QZfTDf5vW"
+        }
+      ],
+      "mc_id": "album_2EowTulHWqSY6QZfTDf5vW",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2EowTulHWqSY6QZfTDf5vW",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27384243a01af3c77b56fe01ab1"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0284243a01af3c77b56fe01ab1"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485184243a01af3c77b56fe01ab1"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0jTGHV5xqHPvEcwL8f6YU5"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0jTGHV5xqHPvEcwL8f6YU5"
+        }
+      ],
+      "mc_id": "album_0jTGHV5xqHPvEcwL8f6YU5",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0jTGHV5xqHPvEcwL8f6YU5",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273dc30583ba717007b00cceb25"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02dc30583ba717007b00cceb25"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851dc30583ba717007b00cceb25"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0ETFjACtuP2ADo6LFhL6HN"
+        }
+      ],
+      "mc_id": "album_0ETFjACtuP2ADo6LFhL6HN",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "0ETFjACtuP2ADo6LFhL6HN",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273d283808926ad3d2220e63c1c"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02d283808926ad3d2220e63c1c"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851d283808926ad3d2220e63c1c"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1gKZ5A1ndFqbcrWtW85cCy"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1gKZ5A1ndFqbcrWtW85cCy"
+        }
+      ],
+      "mc_id": "album_1gKZ5A1ndFqbcrWtW85cCy",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1gKZ5A1ndFqbcrWtW85cCy",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2734ce8b4e42588bf18182a1ad2"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e024ce8b4e42588bf18182a1ad2"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048514ce8b4e42588bf18182a1ad2"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1klALx0u4AavZNEvC4LrTL"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1klALx0u4AavZNEvC4LrTL"
+        }
+      ],
+      "mc_id": "album_1klALx0u4AavZNEvC4LrTL",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1klALx0u4AavZNEvC4LrTL",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273692d9189b2bd75525893f0c1"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02692d9189b2bd75525893f0c1"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851692d9189b2bd75525893f0c1"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/2BtE7qm1qzM80p9vLSiXkj"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/2BtE7qm1qzM80p9vLSiXkj"
+        }
+      ],
+      "mc_id": "album_2BtE7qm1qzM80p9vLSiXkj",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "2BtE7qm1qzM80p9vLSiXkj",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27334ef8f7d06cf2fc2146f420a"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0234ef8f7d06cf2fc2146f420a"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485134ef8f7d06cf2fc2146f420a"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/6QaVfG1pHYl1z15ZxkvVDW"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/6QaVfG1pHYl1z15ZxkvVDW"
+        }
+      ],
+      "mc_id": "album_6QaVfG1pHYl1z15ZxkvVDW",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "6QaVfG1pHYl1z15ZxkvVDW",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27348eeac769c253bfc05a0d1fc"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0248eeac769c253bfc05a0d1fc"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485148eeac769c253bfc05a0d1fc"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/6b7ycwe2rxq6FkaupNuGoS"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/6b7ycwe2rxq6FkaupNuGoS"
+        }
+      ],
+      "mc_id": "album_6b7ycwe2rxq6FkaupNuGoS",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "6b7ycwe2rxq6FkaupNuGoS",
+      "status_code": 200
+    },
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273c92b57b8307e5999ec2fed69"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02c92b57b8307e5999ec2fed69"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851c92b57b8307e5999ec2fed69"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1ntNLgaYCFCkeW4flGYlY2"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1ntNLgaYCFCkeW4flGYlY2"
+        }
+      ],
+      "mc_id": "album_1ntNLgaYCFCkeW4flGYlY2",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 0
+      },
+      "sort_order": 0.0,
+      "source": "spotify",
+      "source_id": "1ntNLgaYCFCkeW4flGYlY2",
+      "status_code": 200
+    }
+  ]
+}

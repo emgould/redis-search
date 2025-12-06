@@ -1,0 +1,158 @@
+Pytest Output Formatting Guide
+===============================
+
+Problem: When using -n auto (parallel execution), the PASSED/FAILED
+         output is not right-aligned and looks messy.
+
+Solutions:
+----------
+
+1. BEST FOR PRETTY OUTPUT (Sequential):
+   pytest services/tmdb/tests/ -v --tb=short
+   
+   Output:
+   test_core.py::TestProcessMediaItem::test_process_movie_item PASSED  [ 4%]
+   test_core.py::TestProcessMediaItem::test_process_tv_item PASSED     [ 8%]
+   
+   ✓ Perfect alignment
+   ✓ Easy to read
+   ✗ Slower (sequential execution)
+
+2. PARALLEL WITH BETTER FORMATTING:
+   pytest services/tmdb/tests/ -n auto --dist=loadscope --tb=line -v
+   
+   ✓ Faster (parallel execution)
+   ✓ Better alignment than plain -n auto
+   ✗ Still not perfectly aligned
+
+3. INSTALL PYTEST-SUGAR (Recommended):
+   pip install pytest-sugar
+   pytest services/tmdb/tests/ -v
+   
+   Output:
+   ✓ test_core.py::TestProcessMediaItem::test_process_movie_item
+   ✓ test_core.py::TestProcessMediaItem::test_process_tv_item
+   
+   ✓ Beautiful colored output
+   ✓ Progress bar
+   ✓ Works with or without -n auto
+
+4. COMPACT OUTPUT:
+   pytest services/tmdb/tests/ -v --tb=line
+   
+   ✓ One-line tracebacks
+   ✓ Less scrolling
+   ✗ Less detail on failures
+
+5. QUIET MODE (Just dots):
+   pytest services/tmdb/tests/
+   
+   Output:
+   ........................  [100%]
+   
+   ✓ Very compact
+   ✗ No test names shown
+
+Comparison:
+-----------
+
+Sequential (-v):
+  test_core.py::test_process_movie_item PASSED                    [ 4%]
+  test_core.py::test_process_tv_item PASSED                       [ 8%]
+  ✓ Perfect alignment
+  ✗ Slower
+
+Parallel (-n auto):
+  [gw0] PASSED test_core.py::test_process_movie_item
+  [gw1] PASSED test_core.py::test_process_tv_item
+  ✓ Faster
+  ✗ No alignment, messy output
+
+Parallel with loadscope (-n auto --dist=loadscope):
+  test_core.py::test_process_movie_item PASSED
+  test_core.py::test_process_tv_item PASSED
+  ✓ Faster
+  ✓ Better than plain -n auto
+  ✗ Still not perfectly aligned
+
+Pytest-sugar:
+  ✓ test_core.py::test_process_movie_item
+  ✓ test_core.py::test_process_tv_item
+  ✓ Beautiful
+  ✓ Works with everything
+
+Recommendations:
+----------------
+
+For development (pretty output):
+  pytest services/tmdb/tests/ -v --tb=short
+
+For CI/CD (speed):
+  pytest services/tmdb/tests/ -n auto --tb=line
+
+For best of both worlds:
+  pip install pytest-sugar
+  pytest services/tmdb/tests/ -v
+
+For debugging:
+  pytest services/tmdb/tests/ -v -s -x
+  (-s shows print statements, -x stops on first failure)
+
+Async Tests:
+------------
+
+The asyncio_mode = auto in pytest.ini handles async tests.
+This is separate from -n auto (parallel execution).
+
+  asyncio_mode = auto  → Handles @pytest.mark.asyncio tests
+  -n auto              → Runs tests in parallel
+
+You can use both:
+  pytest services/tmdb/tests/ -v  # async works automatically
+
+Additional Options:
+-------------------
+
+--tb=short   : Short tracebacks
+--tb=line    : One-line tracebacks
+--tb=no      : No tracebacks
+-x           : Stop on first failure
+-v           : Verbose
+-vv          : Extra verbose
+-s           : Show print statements
+-k "pattern" : Run tests matching pattern
+--lf         : Run last failed tests
+--ff         : Run failures first
+
+Examples:
+---------
+
+# Pretty output, stop on first failure
+pytest services/tmdb/tests/ -v -x --tb=short
+
+# Fast parallel execution
+pytest services/tmdb/tests/ -n auto --tb=line
+
+# Debug specific test with prints
+pytest services/tmdb/tests/test_core.py::test_process_movie_item -v -s
+
+# Run only failed tests from last run
+pytest services/tmdb/tests/ -v --lf
+
+# Run tests matching pattern
+pytest services/tmdb/tests/ -v -k "movie"
+
+Current Setup:
+--------------
+
+Your pytest.ini already has:
+  asyncio_mode = auto
+
+This handles async tests automatically.
+No need for special flags.
+
+Just run:
+  pytest services/tmdb/tests/ -v
+
+For nice aligned output!
+

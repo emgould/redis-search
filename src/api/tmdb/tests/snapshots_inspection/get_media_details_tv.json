@@ -1,0 +1,545 @@
+{
+  "adult": false,
+  "availability_type": null,
+  "backdrop_path": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+  "clips": [],
+  "content_type": "tv",
+  "director": {},
+  "error": null,
+  "external_ids": {},
+  "final_score": null,
+  "first_air_date": "2008-01-20",
+  "genre_ids": [
+    18,
+    80
+  ],
+  "genres": [],
+  "images": [
+    {
+      "description": "poster",
+      "key": "small",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/w45/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg"
+    },
+    {
+      "description": "poster",
+      "key": "medium",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/w185/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg"
+    },
+    {
+      "description": "poster",
+      "key": "large",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/h632/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg"
+    },
+    {
+      "description": "poster",
+      "key": "original",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/original/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg"
+    },
+    {
+      "description": "backdrop",
+      "key": "small",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/w45/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+    },
+    {
+      "description": "backdrop",
+      "key": "medium",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/w185/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+    },
+    {
+      "description": "backdrop",
+      "key": "large",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/h632/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+    },
+    {
+      "description": "backdrop",
+      "key": "original",
+      "type": "url",
+      "url": "https://image.tmdb.org/t/p/original/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+    }
+  ],
+  "keywords": [
+    {
+      "id": 1508,
+      "name": "new mexico"
+    },
+    {
+      "id": 2231,
+      "name": "drug dealer"
+    },
+    {
+      "id": 5857,
+      "name": "narcissism"
+    },
+    {
+      "id": 6259,
+      "name": "psychopath"
+    },
+    {
+      "id": 6564,
+      "name": "terminal illness"
+    },
+    {
+      "id": 9503,
+      "name": "outlaw"
+    },
+    {
+      "id": 10123,
+      "name": "dark comedy"
+    },
+    {
+      "id": 10163,
+      "name": "cancer"
+    },
+    {
+      "id": 10614,
+      "name": "tragedy"
+    },
+    {
+      "id": 14964,
+      "name": "drugs"
+    },
+    {
+      "id": 15009,
+      "name": "criminal"
+    },
+    {
+      "id": 15208,
+      "name": "biting"
+    },
+    {
+      "id": 15484,
+      "name": "meth lab"
+    },
+    {
+      "id": 18026,
+      "name": "drug lord"
+    },
+    {
+      "id": 41525,
+      "name": "high school teacher"
+    },
+    {
+      "id": 156805,
+      "name": "dea agent"
+    },
+    {
+      "id": 168713,
+      "name": "neo-western"
+    },
+    {
+      "id": 185959,
+      "name": "narcissist"
+    },
+    {
+      "id": 191005,
+      "name": "albuquerque, new mexico"
+    },
+    {
+      "id": 191199,
+      "name": "criminal lawyer"
+    },
+    {
+      "id": 199660,
+      "name": "fall from grace"
+    },
+    {
+      "id": 206594,
+      "name": "cartel"
+    },
+    {
+      "id": 217064,
+      "name": "mexican cartel"
+    },
+    {
+      "id": 217104,
+      "name": "male egos"
+    },
+    {
+      "id": 239108,
+      "name": "crystal meth"
+    },
+    {
+      "id": 259094,
+      "name": "dark"
+    },
+    {
+      "id": 281692,
+      "name": "methamphetamine"
+    },
+    {
+      "id": 286125,
+      "name": "gritty"
+    },
+    {
+      "id": 316362,
+      "name": "thriller"
+    },
+    {
+      "id": 325766,
+      "name": "antagonistic"
+    },
+    {
+      "id": 342828,
+      "name": "violent"
+    },
+    {
+      "id": 360934,
+      "name": "tortured genius"
+    }
+  ],
+  "keywords_count": 32,
+  "last_air_date": "2013-09-29",
+  "links": [],
+  "main_cast": [
+    {
+      "character": "Walter White",
+      "gender": 2,
+      "has_image": true,
+      "id": 17419,
+      "image_url": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+      "name": "Bryan Cranston",
+      "order": 0,
+      "profile_image_url": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+      "profile_images": {
+        "large": "https://image.tmdb.org/t/p/h632/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+        "medium": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+        "original": "https://image.tmdb.org/t/p/original/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+        "small": "https://image.tmdb.org/t/p/w45/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg"
+      },
+      "profile_path": "/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg"
+    },
+    {
+      "character": "Jesse Pinkman",
+      "gender": 2,
+      "has_image": true,
+      "id": 84497,
+      "image_url": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+      "name": "Aaron Paul",
+      "order": 1,
+      "profile_image_url": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+      "profile_images": {
+        "large": "https://image.tmdb.org/t/p/h632/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+        "medium": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+        "original": "https://image.tmdb.org/t/p/original/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+        "small": "https://image.tmdb.org/t/p/w45/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg"
+      },
+      "profile_path": "/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg"
+    },
+    {
+      "character": "Skyler White",
+      "gender": 1,
+      "has_image": true,
+      "id": 134531,
+      "image_url": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+      "name": "Anna Gunn",
+      "order": 2,
+      "profile_image_url": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+      "profile_images": {
+        "large": "https://image.tmdb.org/t/p/h632/adppyeu1a4REN3khtgmXusrapFi.jpg",
+        "medium": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+        "original": "https://image.tmdb.org/t/p/original/adppyeu1a4REN3khtgmXusrapFi.jpg",
+        "small": "https://image.tmdb.org/t/p/w45/adppyeu1a4REN3khtgmXusrapFi.jpg"
+      },
+      "profile_path": "/adppyeu1a4REN3khtgmXusrapFi.jpg"
+    },
+    {
+      "character": "Walter White Jr.",
+      "gender": 2,
+      "has_image": true,
+      "id": 209674,
+      "image_url": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+      "name": "RJ Mitte",
+      "order": 3,
+      "profile_image_url": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+      "profile_images": {
+        "large": "https://image.tmdb.org/t/p/h632/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+        "medium": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+        "original": "https://image.tmdb.org/t/p/original/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+        "small": "https://image.tmdb.org/t/p/w45/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg"
+      },
+      "profile_path": "/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg"
+    },
+    {
+      "character": "Hank Schrader",
+      "gender": 2,
+      "has_image": true,
+      "id": 14329,
+      "image_url": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+      "name": "Dean Norris",
+      "order": 4,
+      "profile_image_url": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+      "profile_images": {
+        "large": "https://image.tmdb.org/t/p/h632/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+        "medium": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+        "original": "https://image.tmdb.org/t/p/original/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+        "small": "https://image.tmdb.org/t/p/w45/mKRrEbsxAX3ro700HsViFArRM7l.jpg"
+      },
+      "profile_path": "/mKRrEbsxAX3ro700HsViFArRM7l.jpg"
+    }
+  ],
+  "mc_id": "tmdb_1396",
+  "mc_subtype": null,
+  "mc_type": "tv",
+  "media_type": "tv",
+  "metrics": {
+    "popularity": 71.8642,
+    "vote_average": 8.927,
+    "vote_count": 16360
+  },
+  "name": "Breaking Bad",
+  "network": "AMC",
+  "number_of_episodes": 62,
+  "number_of_seasons": 5,
+  "origin_country": [
+    "US"
+  ],
+  "original_language": "en",
+  "overview": "Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live. He becomes filled with a sense of fearlessness and an unrelenting desire to secure his family's financial future at any cost as he enters the dangerous world of drugs and crime.",
+  "popularity": 0.0,
+  "poster_path": "/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
+  "primary_trailer": {
+    "embed_url": "https://www.youtube.com/embed/XZ8daibM3AE",
+    "id": "5759db2fc3a3683e7c003df7",
+    "iso_3166_1": "US",
+    "iso_639_1": "en",
+    "key": "XZ8daibM3AE",
+    "name": "Series Trailer",
+    "official": true,
+    "published_at": "2013-03-25T16:28:54.000Z",
+    "site": "YouTube",
+    "size": 480,
+    "thumbnail_url": "https://img.youtube.com/vi/XZ8daibM3AE/maxresdefault.jpg",
+    "type": "Trailer",
+    "url": "https://www.youtube.com/watch?v=XZ8daibM3AE"
+  },
+  "relevancy_debug": null,
+  "sort_order": 0.0,
+  "source": "tmdb",
+  "source_id": "1396",
+  "spoken_languages": [
+    "English",
+    "German",
+    "Spanish"
+  ],
+  "status": "Ended",
+  "status_code": 200,
+  "streaming_platform": "Netflix",
+  "title": "Breaking Bad",
+  "tmdb_cast": {
+    "cast": [
+      {
+        "character": "Walter White",
+        "gender": 2,
+        "has_image": true,
+        "id": 17419,
+        "image_url": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+        "name": "Bryan Cranston",
+        "order": 0,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+          "original": "https://image.tmdb.org/t/p/original/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg"
+        },
+        "profile_path": "/7Jahy5LZX2Fo8fGJltMreAI49hC.jpg"
+      },
+      {
+        "character": "Jesse Pinkman",
+        "gender": 2,
+        "has_image": true,
+        "id": 84497,
+        "image_url": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+        "name": "Aaron Paul",
+        "order": 1,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+          "original": "https://image.tmdb.org/t/p/original/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg"
+        },
+        "profile_path": "/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg"
+      },
+      {
+        "character": "Skyler White",
+        "gender": 1,
+        "has_image": true,
+        "id": 134531,
+        "image_url": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+        "name": "Anna Gunn",
+        "order": 2,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/adppyeu1a4REN3khtgmXusrapFi.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/adppyeu1a4REN3khtgmXusrapFi.jpg",
+          "original": "https://image.tmdb.org/t/p/original/adppyeu1a4REN3khtgmXusrapFi.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/adppyeu1a4REN3khtgmXusrapFi.jpg"
+        },
+        "profile_path": "/adppyeu1a4REN3khtgmXusrapFi.jpg"
+      },
+      {
+        "character": "Walter White Jr.",
+        "gender": 2,
+        "has_image": true,
+        "id": 209674,
+        "image_url": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+        "name": "RJ Mitte",
+        "order": 3,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+          "original": "https://image.tmdb.org/t/p/original/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg"
+        },
+        "profile_path": "/sNPA92ZrssYhlaB1UA2pWcLD9db.jpg"
+      },
+      {
+        "character": "Hank Schrader",
+        "gender": 2,
+        "has_image": true,
+        "id": 14329,
+        "image_url": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+        "name": "Dean Norris",
+        "order": 4,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+          "original": "https://image.tmdb.org/t/p/original/mKRrEbsxAX3ro700HsViFArRM7l.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/mKRrEbsxAX3ro700HsViFArRM7l.jpg"
+        },
+        "profile_path": "/mKRrEbsxAX3ro700HsViFArRM7l.jpg"
+      }
+    ],
+    "cast_count": 5,
+    "total_cast": 8
+  },
+  "tmdb_id": 1396,
+  "tmdb_videos": {
+    "behind_the_scenes": [],
+    "clips": [],
+    "other": [],
+    "primary_trailer": {
+      "embed_url": "https://www.youtube.com/embed/XZ8daibM3AE",
+      "id": "5759db2fc3a3683e7c003df7",
+      "iso_3166_1": "US",
+      "iso_639_1": "en",
+      "key": "XZ8daibM3AE",
+      "name": "Series Trailer",
+      "official": true,
+      "published_at": "2013-03-25T16:28:54.000Z",
+      "site": "YouTube",
+      "size": 480,
+      "thumbnail_url": "https://img.youtube.com/vi/XZ8daibM3AE/maxresdefault.jpg",
+      "type": "Trailer",
+      "url": "https://www.youtube.com/watch?v=XZ8daibM3AE"
+    },
+    "teasers": [],
+    "total_videos": 1,
+    "trailers": [
+      {
+        "embed_url": "https://www.youtube.com/embed/XZ8daibM3AE",
+        "id": "5759db2fc3a3683e7c003df7",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "XZ8daibM3AE",
+        "name": "Series Trailer",
+        "official": true,
+        "published_at": "2013-03-25T16:28:54.000Z",
+        "site": "YouTube",
+        "size": 480,
+        "thumbnail_url": "https://img.youtube.com/vi/XZ8daibM3AE/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=XZ8daibM3AE"
+      }
+    ],
+    "video_categories": {
+      "behind_the_scenes_count": 0,
+      "clips_count": 0,
+      "other_count": 0,
+      "teasers_count": 0,
+      "trailers_count": 1
+    }
+  },
+  "trailers": [
+    {
+      "embed_url": "https://www.youtube.com/embed/XZ8daibM3AE",
+      "id": "5759db2fc3a3683e7c003df7",
+      "iso_3166_1": "US",
+      "iso_639_1": "en",
+      "key": "XZ8daibM3AE",
+      "name": "Series Trailer",
+      "official": true,
+      "published_at": "2013-03-25T16:28:54.000Z",
+      "site": "YouTube",
+      "size": 480,
+      "thumbnail_url": "https://img.youtube.com/vi/XZ8daibM3AE/maxresdefault.jpg",
+      "type": "Trailer",
+      "url": "https://www.youtube.com/watch?v=XZ8daibM3AE"
+    }
+  ],
+  "vote_average": 0.0,
+  "vote_count": 0,
+  "watch_providers": {
+    "buy": [
+      {
+        "display_priority": 6,
+        "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+        "provider_id": 10,
+        "provider_name": "Amazon Video"
+      },
+      {
+        "display_priority": 7,
+        "logo_path": "/SPnB1qiCkYfirS2it3hZORwGVn.jpg",
+        "provider_id": 2,
+        "provider_name": "Apple TV"
+      },
+      {
+        "display_priority": 16,
+        "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "provider_id": 3,
+        "provider_name": "Google Play Movies"
+      },
+      {
+        "display_priority": 37,
+        "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+        "provider_id": 7,
+        "provider_name": "Fandango At Home"
+      }
+    ],
+    "content_type": "tv",
+    "flatrate": [
+      {
+        "display_priority": 1,
+        "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "provider_id": 8,
+        "provider_name": "Netflix"
+      },
+      {
+        "display_priority": 157,
+        "logo_path": "/dpR8r13zWDeUR0QkzWidrdMxa56.jpg",
+        "provider_id": 1796,
+        "provider_name": "Netflix Standard with Ads"
+      }
+    ],
+    "link": "https://www.themoviedb.org/tv/1396-breaking-bad/watch?locale=US",
+    "primary_provider": {
+      "display_priority": 1,
+      "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+      "provider_id": 8,
+      "provider_name": "Netflix",
+      "type": "flatrate"
+    },
+    "region": "US",
+    "tmdb_id": 1396
+  }
+}

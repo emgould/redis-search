@@ -1,0 +1,288 @@
+{
+  "data_source": "Spotify Album Search",
+  "error": null,
+  "query": "track:wish you were here artist:pink floyd",
+  "results": [
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_url": null,
+      "default_image": "https://i.scdn.co/image/ab67616d00004851e895ebededd1f73a2c875ce6",
+      "error": null,
+      "external_ids": {},
+      "id": "0bCAjiUamIFqKJsekOYuRw",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273e895ebededd1f73a2c875ce6"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02e895ebededd1f73a2c875ce6"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851e895ebededd1f73a2c875ce6"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/0bCAjiUamIFqKJsekOYuRw"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/0bCAjiUamIFqKJsekOYuRw"
+        }
+      ],
+      "mbid": "",
+      "mc_id": "album_0bCAjiUamIFqKJsekOYuRw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "release_date": "1975-09-12",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": "0bCAjiUamIFqKJsekOYuRw",
+      "spotify_url": "https://open.spotify.com/album/0bCAjiUamIFqKJsekOYuRw",
+      "title": "Wish You Were Here",
+      "total_tracks": 5
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_url": null,
+      "default_image": "https://i.scdn.co/image/ab67616d00004851269587516908cd9bf9be6dc8",
+      "error": null,
+      "external_ids": {},
+      "id": "1uSpngQgBBgwRFYS5sOdqI",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b273269587516908cd9bf9be6dc8"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e02269587516908cd9bf9be6dc8"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00004851269587516908cd9bf9be6dc8"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/1uSpngQgBBgwRFYS5sOdqI"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/1uSpngQgBBgwRFYS5sOdqI"
+        }
+      ],
+      "mbid": "",
+      "mc_id": "album_1uSpngQgBBgwRFYS5sOdqI",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "release_date": "1995-05-29",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": "1uSpngQgBBgwRFYS5sOdqI",
+      "spotify_url": "https://open.spotify.com/album/1uSpngQgBBgwRFYS5sOdqI",
+      "title": "Pulse (Live)",
+      "total_tracks": 25
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_url": null,
+      "default_image": "https://i.scdn.co/image/ab67616d0000485161d593559ee208eb88965167",
+      "error": null,
+      "external_ids": {},
+      "id": "4fLDPTMutLCNWb7WoyCF86",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b27361d593559ee208eb88965167"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e0261d593559ee208eb88965167"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000485161d593559ee208eb88965167"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/4fLDPTMutLCNWb7WoyCF86"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/4fLDPTMutLCNWb7WoyCF86"
+        }
+      ],
+      "mbid": "",
+      "mc_id": "album_4fLDPTMutLCNWb7WoyCF86",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "release_date": "2001-11-06",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": "4fLDPTMutLCNWb7WoyCF86",
+      "spotify_url": "https://open.spotify.com/album/4fLDPTMutLCNWb7WoyCF86",
+      "title": "Echoes: The Best of Pink Floyd",
+      "total_tracks": 26
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_url": null,
+      "default_image": "https://i.scdn.co/image/ab67616d000048516a4d51e04dd9d10f35278e5d",
+      "error": null,
+      "external_ids": {},
+      "id": "4Iy1JP7YE0d256eCwn3VJA",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2736a4d51e04dd9d10f35278e5d"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e026a4d51e04dd9d10f35278e5d"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048516a4d51e04dd9d10f35278e5d"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/4Iy1JP7YE0d256eCwn3VJA"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/4Iy1JP7YE0d256eCwn3VJA"
+        }
+      ],
+      "mbid": "",
+      "mc_id": "album_4Iy1JP7YE0d256eCwn3VJA",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "release_date": "1988-11-22",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": "4Iy1JP7YE0d256eCwn3VJA",
+      "spotify_url": "https://open.spotify.com/album/4Iy1JP7YE0d256eCwn3VJA",
+      "title": "Delicate Sound of Thunder (Live)",
+      "total_tracks": 15
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_url": null,
+      "default_image": "https://i.scdn.co/image/ab67616d000048510dc0b9e098dbb492fbf6317e",
+      "error": null,
+      "external_ids": {},
+      "id": "53eu9AgHyg3eQNUiePWRHD",
+      "images": [
+        {
+          "description": "640x640",
+          "key": "l",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d0000b2730dc0b9e098dbb492fbf6317e"
+        },
+        {
+          "description": "300x300",
+          "key": "m",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d00001e020dc0b9e098dbb492fbf6317e"
+        },
+        {
+          "description": "64x64",
+          "key": "s",
+          "type": "url",
+          "url": "https://i.scdn.co/image/ab67616d000048510dc0b9e098dbb492fbf6317e"
+        }
+      ],
+      "links": [
+        {
+          "description": "spotify",
+          "key": "spotify",
+          "url": "https://open.spotify.com/album/53eu9AgHyg3eQNUiePWRHD"
+        },
+        {
+          "description": "Spotify Href",
+          "key": "href",
+          "url": "https://api.spotify.com/v1/albums/53eu9AgHyg3eQNUiePWRHD"
+        }
+      ],
+      "mbid": "",
+      "mc_id": "album_53eu9AgHyg3eQNUiePWRHD",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "release_date": "2011",
+      "release_date_precision": "year",
+      "source": "spotify",
+      "source_id": "53eu9AgHyg3eQNUiePWRHD",
+      "spotify_url": "https://open.spotify.com/album/53eu9AgHyg3eQNUiePWRHD",
+      "title": "A Foot in the Door: The Best of Pink Floyd",
+      "total_tracks": 16
+    }
+  ],
+  "total_results": 5
+}

@@ -1,0 +1,27 @@
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: API Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "src/search_api/main.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: ETL Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "src/etl/run_etl.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Web Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "web/app.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}

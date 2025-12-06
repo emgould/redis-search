@@ -1,0 +1,30 @@
+{
+  "details": null,
+  "error": null,
+  "input": {
+    "mc_id": "podcaster_peter_attia",
+    "mc_subtype": "podcaster",
+    "mc_type": "person",
+    "name": "Peter Attia",
+    "source": "podcastindex",
+    "source_id": "75075"
+  },
+  "related": [],
+  "status_code": 200,
+  "works": [
+    {
+      "error": null,
+      "external_ids": {},
+      "images": [],
+      "links": [],
+      "mc_id": "podcast_75075",
+      "mc_subtype": null,
+      "mc_type": "podcast",
+      "metrics": {},
+      "sort_order": 0.0,
+      "source": "podcastindex",
+      "source_id": "75075",
+      "status_code": 200
+    }
+  ]
+}

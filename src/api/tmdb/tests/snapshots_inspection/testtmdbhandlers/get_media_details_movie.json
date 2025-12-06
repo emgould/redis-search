@@ -1,0 +1,589 @@
+{
+  "content_type": "movie",
+  "media": {
+    "adult": false,
+    "availability_type": null,
+    "backdrop_path": "/5TiwfWEaPSwD20uwXjCTUqpQX70.jpg",
+    "clips": [],
+    "content_type": "movie",
+    "director": {},
+    "error": null,
+    "external_ids": {},
+    "final_score": null,
+    "genre_ids": [
+      18,
+      53
+    ],
+    "genres": [],
+    "images": [
+      {
+        "description": "poster",
+        "key": "small",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/w45/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+      },
+      {
+        "description": "poster",
+        "key": "medium",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/w185/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+      },
+      {
+        "description": "poster",
+        "key": "large",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/h632/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+      },
+      {
+        "description": "poster",
+        "key": "original",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/original/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+      },
+      {
+        "description": "backdrop",
+        "key": "small",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/w45/5TiwfWEaPSwD20uwXjCTUqpQX70.jpg"
+      },
+      {
+        "description": "backdrop",
+        "key": "medium",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/w185/5TiwfWEaPSwD20uwXjCTUqpQX70.jpg"
+      },
+      {
+        "description": "backdrop",
+        "key": "large",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/h632/5TiwfWEaPSwD20uwXjCTUqpQX70.jpg"
+      },
+      {
+        "description": "backdrop",
+        "key": "original",
+        "type": "url",
+        "url": "https://image.tmdb.org/t/p/original/5TiwfWEaPSwD20uwXjCTUqpQX70.jpg"
+      }
+    ],
+    "keywords": [
+      {
+        "id": 851,
+        "name": "dual identity"
+      },
+      {
+        "id": 3927,
+        "name": "rage and hate"
+      },
+      {
+        "id": 818,
+        "name": "based on novel or book"
+      },
+      {
+        "id": 1541,
+        "name": "nihilism"
+      },
+      {
+        "id": 1721,
+        "name": "fight"
+      },
+      {
+        "id": 825,
+        "name": "support group"
+      },
+      {
+        "id": 4565,
+        "name": "dystopia"
+      },
+      {
+        "id": 4142,
+        "name": "insomnia"
+      },
+      {
+        "id": 9181,
+        "name": "alter ego"
+      },
+      {
+        "id": 11687,
+        "name": "breaking the fourth wall"
+      },
+      {
+        "id": 156761,
+        "name": "split personality"
+      },
+      {
+        "id": 179173,
+        "name": "quitting a job"
+      },
+      {
+        "id": 212803,
+        "name": "dissociative identity disorder"
+      },
+      {
+        "id": 260426,
+        "name": "self destructiveness"
+      }
+    ],
+    "keywords_count": 14,
+    "links": [],
+    "main_cast": [
+      {
+        "character": "Narrator",
+        "gender": 2,
+        "has_image": true,
+        "id": 819,
+        "image_url": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+        "name": "Edward Norton",
+        "order": 0,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+          "original": "https://image.tmdb.org/t/p/original/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg"
+        },
+        "profile_path": "/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg"
+      },
+      {
+        "character": "Tyler Durden",
+        "gender": 2,
+        "has_image": true,
+        "id": 287,
+        "image_url": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+        "name": "Brad Pitt",
+        "order": 1,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+          "original": "https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg"
+        },
+        "profile_path": "/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg"
+      },
+      {
+        "character": "Marla Singer",
+        "gender": 1,
+        "has_image": true,
+        "id": 1283,
+        "image_url": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+        "name": "Helena Bonham Carter",
+        "order": 2,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+          "original": "https://image.tmdb.org/t/p/original/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg"
+        },
+        "profile_path": "/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg"
+      },
+      {
+        "character": "Robert Paulson",
+        "gender": 2,
+        "has_image": true,
+        "id": 7470,
+        "image_url": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+        "name": "Meat Loaf",
+        "order": 3,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+          "original": "https://image.tmdb.org/t/p/original/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg"
+        },
+        "profile_path": "/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg"
+      },
+      {
+        "character": "Angel Face",
+        "gender": 2,
+        "has_image": true,
+        "id": 7499,
+        "image_url": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+        "name": "Jared Leto",
+        "order": 4,
+        "profile_image_url": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+        "profile_images": {
+          "large": "https://image.tmdb.org/t/p/h632/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+          "medium": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+          "original": "https://image.tmdb.org/t/p/original/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+          "small": "https://image.tmdb.org/t/p/w45/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg"
+        },
+        "profile_path": "/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg"
+      }
+    ],
+    "mc_id": "tmdb_550",
+    "mc_subtype": null,
+    "mc_type": "movie",
+    "media_type": "movie",
+    "metrics": {
+      "popularity": 19.7722,
+      "vote_average": 8.438,
+      "vote_count": 30938
+    },
+    "name": "Fight Club",
+    "original_language": "en",
+    "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy. Their concept catches on, with underground \"fight clubs\" forming in every town, until an eccentric gets in the way and ignites an out-of-control spiral toward oblivion.",
+    "popularity": 0.0,
+    "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+    "primary_trailer": {
+      "embed_url": "https://www.youtube.com/embed/6JnN1DmbqoU",
+      "id": "653b36ba5907de00c4953699",
+      "iso_3166_1": "US",
+      "iso_639_1": "en",
+      "key": "6JnN1DmbqoU",
+      "name": "Theatrical Trailer (HD Fan Remaster)",
+      "official": false,
+      "published_at": "2015-02-26T03:19:25.000Z",
+      "site": "YouTube",
+      "size": 1080,
+      "thumbnail_url": "https://img.youtube.com/vi/6JnN1DmbqoU/maxresdefault.jpg",
+      "type": "Trailer",
+      "url": "https://www.youtube.com/watch?v=6JnN1DmbqoU"
+    },
+    "release_date": "1999-10-15",
+    "relevancy_debug": null,
+    "revenue": 100853753,
+    "runtime": 139,
+    "source": "tmdb",
+    "source_id": "550",
+    "spoken_languages": [
+      "English"
+    ],
+    "status": "Released",
+    "streaming_platform": "fuboTV",
+    "title": "Fight Club",
+    "tmdb_cast": {
+      "cast": [
+        {
+          "character": "Narrator",
+          "gender": 2,
+          "has_image": true,
+          "id": 819,
+          "image_url": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+          "name": "Edward Norton",
+          "order": 0,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+            "original": "https://image.tmdb.org/t/p/original/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg"
+          },
+          "profile_path": "/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg"
+        },
+        {
+          "character": "Tyler Durden",
+          "gender": 2,
+          "has_image": true,
+          "id": 287,
+          "image_url": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+          "name": "Brad Pitt",
+          "order": 1,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+            "original": "https://image.tmdb.org/t/p/original/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg"
+          },
+          "profile_path": "/9OfnD7lxgIj3BNQpJFnwxnwl6w5.jpg"
+        },
+        {
+          "character": "Marla Singer",
+          "gender": 1,
+          "has_image": true,
+          "id": 1283,
+          "image_url": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+          "name": "Helena Bonham Carter",
+          "order": 2,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+            "original": "https://image.tmdb.org/t/p/original/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg"
+          },
+          "profile_path": "/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg"
+        },
+        {
+          "character": "Robert Paulson",
+          "gender": 2,
+          "has_image": true,
+          "id": 7470,
+          "image_url": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+          "name": "Meat Loaf",
+          "order": 3,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+            "original": "https://image.tmdb.org/t/p/original/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg"
+          },
+          "profile_path": "/7gKLR1u46OB8WJ6m06LemNBCMx6.jpg"
+        },
+        {
+          "character": "Angel Face",
+          "gender": 2,
+          "has_image": true,
+          "id": 7499,
+          "image_url": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+          "name": "Jared Leto",
+          "order": 4,
+          "profile_image_url": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+          "profile_images": {
+            "large": "https://image.tmdb.org/t/p/h632/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+            "medium": "https://image.tmdb.org/t/p/w185/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+            "original": "https://image.tmdb.org/t/p/original/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg",
+            "small": "https://image.tmdb.org/t/p/w45/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg"
+          },
+          "profile_path": "/ca3x0OfIKbJppZh8S1Alx3GfUZO.jpg"
+        }
+      ],
+      "cast_count": 5,
+      "total_cast": 76
+    },
+    "tmdb_id": 550,
+    "tmdb_videos": {
+      "behind_the_scenes": [],
+      "clips": [],
+      "other": [
+        {
+          "embed_url": "https://www.youtube.com/embed/V0Fqdb-smqo",
+          "id": "67c90f7a3dd7da394f24957b",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "V0Fqdb-smqo",
+          "name": "Yeah... no wonder this movie never won an Oscar",
+          "official": false,
+          "published_at": "2025-02-14T14:25:16.000Z",
+          "site": "YouTube",
+          "size": 2160,
+          "thumbnail_url": "https://img.youtube.com/vi/V0Fqdb-smqo/maxresdefault.jpg",
+          "type": "Featurette",
+          "url": "https://www.youtube.com/watch?v=V0Fqdb-smqo"
+        },
+        {
+          "embed_url": "https://www.youtube.com/embed/tiWCNtGDGEY",
+          "id": "65d00d0c57176f017b8fc73d",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "tiWCNtGDGEY",
+          "name": "Mark Kermode introduces Fight Club | Film4 Interview",
+          "official": true,
+          "published_at": "2015-05-08T15:59:05.000Z",
+          "site": "YouTube",
+          "size": 480,
+          "thumbnail_url": "https://img.youtube.com/vi/tiWCNtGDGEY/maxresdefault.jpg",
+          "type": "Featurette",
+          "url": "https://www.youtube.com/watch?v=tiWCNtGDGEY"
+        }
+      ],
+      "primary_trailer": {
+        "embed_url": "https://www.youtube.com/embed/6JnN1DmbqoU",
+        "id": "653b36ba5907de00c4953699",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "6JnN1DmbqoU",
+        "name": "Theatrical Trailer (HD Fan Remaster)",
+        "official": false,
+        "published_at": "2015-02-26T03:19:25.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/6JnN1DmbqoU/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=6JnN1DmbqoU"
+      },
+      "teasers": [],
+      "total_videos": 5,
+      "trailers": [
+        {
+          "embed_url": "https://www.youtube.com/embed/6JnN1DmbqoU",
+          "id": "653b36ba5907de00c4953699",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "6JnN1DmbqoU",
+          "name": "Theatrical Trailer (HD Fan Remaster)",
+          "official": false,
+          "published_at": "2015-02-26T03:19:25.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/6JnN1DmbqoU/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=6JnN1DmbqoU"
+        },
+        {
+          "embed_url": "https://www.youtube.com/embed/dfeUzm6KF4g",
+          "id": "64fb16fbdb4ed610343d72c3",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "dfeUzm6KF4g",
+          "name": "20th Anniversary Trailer",
+          "official": true,
+          "published_at": "2019-10-15T18:59:47.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/dfeUzm6KF4g/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=dfeUzm6KF4g"
+        },
+        {
+          "embed_url": "https://www.youtube.com/embed/BdJKm16Co6M",
+          "id": "5c9294240e0a267cd516835f",
+          "iso_3166_1": "US",
+          "iso_639_1": "en",
+          "key": "BdJKm16Co6M",
+          "name": "#TBT Trailer",
+          "official": true,
+          "published_at": "2014-10-02T19:20:22.000Z",
+          "site": "YouTube",
+          "size": 1080,
+          "thumbnail_url": "https://img.youtube.com/vi/BdJKm16Co6M/maxresdefault.jpg",
+          "type": "Trailer",
+          "url": "https://www.youtube.com/watch?v=BdJKm16Co6M"
+        }
+      ],
+      "video_categories": {
+        "behind_the_scenes_count": 0,
+        "clips_count": 0,
+        "other_count": 2,
+        "teasers_count": 0,
+        "trailers_count": 3
+      }
+    },
+    "trailers": [
+      {
+        "embed_url": "https://www.youtube.com/embed/6JnN1DmbqoU",
+        "id": "653b36ba5907de00c4953699",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "6JnN1DmbqoU",
+        "name": "Theatrical Trailer (HD Fan Remaster)",
+        "official": false,
+        "published_at": "2015-02-26T03:19:25.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/6JnN1DmbqoU/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=6JnN1DmbqoU"
+      },
+      {
+        "embed_url": "https://www.youtube.com/embed/dfeUzm6KF4g",
+        "id": "64fb16fbdb4ed610343d72c3",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "dfeUzm6KF4g",
+        "name": "20th Anniversary Trailer",
+        "official": true,
+        "published_at": "2019-10-15T18:59:47.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/dfeUzm6KF4g/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=dfeUzm6KF4g"
+      },
+      {
+        "embed_url": "https://www.youtube.com/embed/BdJKm16Co6M",
+        "id": "5c9294240e0a267cd516835f",
+        "iso_3166_1": "US",
+        "iso_639_1": "en",
+        "key": "BdJKm16Co6M",
+        "name": "#TBT Trailer",
+        "official": true,
+        "published_at": "2014-10-02T19:20:22.000Z",
+        "site": "YouTube",
+        "size": 1080,
+        "thumbnail_url": "https://img.youtube.com/vi/BdJKm16Co6M/maxresdefault.jpg",
+        "type": "Trailer",
+        "url": "https://www.youtube.com/watch?v=BdJKm16Co6M"
+      }
+    ],
+    "vote_average": 0.0,
+    "vote_count": 0,
+    "watch_providers": {
+      "buy": [
+        {
+          "display_priority": 6,
+          "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+          "provider_id": 10,
+          "provider_name": "Amazon Video"
+        },
+        {
+          "display_priority": 7,
+          "logo_path": "/oMYZg3cGAGp9ecKGlBgumcjDmnN.jpg",
+          "provider_id": 2,
+          "provider_name": "Apple TV"
+        },
+        {
+          "display_priority": 16,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "provider_id": 3,
+          "provider_name": "Google Play Movies"
+        },
+        {
+          "display_priority": 17,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "provider_id": 192,
+          "provider_name": "YouTube"
+        },
+        {
+          "display_priority": 37,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "provider_id": 7,
+          "provider_name": "Fandango At Home"
+        }
+      ],
+      "content_type": "movie",
+      "flatrate": [
+        {
+          "display_priority": 10,
+          "logo_path": "/9BgaNQRMDvVlji1JBZi6tcfxpKx.jpg",
+          "provider_id": 257,
+          "provider_name": "fuboTV"
+        }
+      ],
+      "link": "https://www.themoviedb.org/movie/550-fight-club/watch?locale=US",
+      "primary_provider": {
+        "display_priority": 10,
+        "logo_path": "/9BgaNQRMDvVlji1JBZi6tcfxpKx.jpg",
+        "provider_id": 257,
+        "provider_name": "fuboTV",
+        "type": "flatrate"
+      },
+      "region": "US",
+      "rent": [
+        {
+          "display_priority": 7,
+          "logo_path": "/oMYZg3cGAGp9ecKGlBgumcjDmnN.jpg",
+          "provider_id": 2,
+          "provider_name": "Apple TV"
+        },
+        {
+          "display_priority": 16,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "provider_id": 3,
+          "provider_name": "Google Play Movies"
+        },
+        {
+          "display_priority": 17,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "provider_id": 192,
+          "provider_name": "YouTube"
+        },
+        {
+          "display_priority": 37,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "provider_id": 7,
+          "provider_name": "Fandango At Home"
+        }
+      ],
+      "tmdb_id": 550
+    }
+  },
+  "metadata": {
+    "data_source": "TMDB Details (unified)",
+    "generated_at": "2025-11-03T10:33:13.301224"
+  },
+  "tmdb_id": "550"
+}

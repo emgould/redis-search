@@ -1,0 +1,12 @@
+# Generated test fixtures - do not commit
+# Run ./seed_mock_data.sh to regenerate
+
+# Ignore all JSON files in subdirectories
+make_requests/*.json
+models/*.json
+core/*.json
+search/*.json
+
+# Keep directory structure
+!.gitkeep
+

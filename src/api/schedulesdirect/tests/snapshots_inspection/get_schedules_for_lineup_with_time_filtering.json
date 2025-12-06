@@ -1,0 +1,1630 @@
+{
+  "145484": [
+    {
+      "airDateTime": "2025-11-29T20:00:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "Atlanta",
+          "country": "USA",
+          "postalcode": "30340",
+          "state": "GA"
+        },
+        "callsign": "CWTV",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s145484_dark_360w_270h.png",
+          "category": null,
+          "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+          "height": 270,
+          "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+          "source": null,
+          "width": 360
+        },
+        "name": "CW TV",
+        "stationID": "145484",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s145484_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "height": 270,
+            "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s145484_white_360w_270h.png",
+            "category": "white",
+            "hash": "20eb64a225db40f16aedffced09a279d",
+            "height": 270,
+            "md5": "20eb64a225db40f16aedffced09a279d",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s145484_light_360w_270h.png",
+            "category": "light",
+            "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "height": 270,
+            "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s145484_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "3d9f3130f6049e55efb77e3748d0bc82",
+            "height": 270,
+            "md5": "3d9f3130f6049e55efb77e3748d0bc82",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "162",
+      "duration": 12600,
+      "programID": "EP043373527802",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": null,
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "Syracuse (3-8, 1-6 ACC) and Boston College (1-10, 0-7) close out the 2025 campaign with this tilt.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "The Orange (3-8, 1-6 ACC) and Eagles (1-10, 0-7) close out the 2025 campaign with this tilt. Boston College has won two straight meetings, and four of its last five visits to Syracuse. The programs have lost a combined 17 consecutive outings.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 10800,
+        "entityType": "Team Event",
+        "episodeTitle150": "Boston College at Syracuse",
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "4df063eeeed1f0f0b1041fcb45031610",
+        "md5": "TfBj7u7R8PCxBB/LRQMWEA",
+        "metadata": null,
+        "originalAirDate": "2025-11-29",
+        "programID": "EP043373527802",
+        "resourceID": "191261",
+        "showType": "Sports event",
+        "titles": [
+          {
+            "title120": "College Football",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "16689": [
+    {
+      "airDateTime": "2025-11-29T20:00:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WCBSDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_dark_360w_270h.png",
+          "category": null,
+          "hash": "f65b5df5a53d8c816851185b9a57f852",
+          "height": 270,
+          "md5": "f65b5df5a53d8c816851185b9a57f852",
+          "source": null,
+          "width": 360
+        },
+        "name": "WCBS-DT",
+        "stationID": "16689",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "f65b5df5a53d8c816851185b9a57f852",
+            "height": 270,
+            "md5": "f65b5df5a53d8c816851185b9a57f852",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_light_360w_270h.png",
+            "category": "light",
+            "hash": "ae7a014e47c48042af143ef8360dddfe",
+            "height": 270,
+            "md5": "ae7a014e47c48042af143ef8360dddfe",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "ec51570c467da61d74a9a7b294be0fe5",
+            "height": 270,
+            "md5": "ec51570c467da61d74a9a7b294be0fe5",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_white_360w_270h.png",
+            "category": "white",
+            "hash": "f65b5df5a53d8c816851185b9a57f852",
+            "height": 270,
+            "md5": "f65b5df5a53d8c816851185b9a57f852",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "004",
+      "duration": 1800,
+      "programID": "SH000812550000",
+      "program_details": {
+        "cast": [
+          {
+            "billingOrder": "01",
+            "characterName": null,
+            "name": "Adam Zucker",
+            "nameId": null,
+            "personId": null,
+            "role": "Host"
+          },
+          {
+            "billingOrder": "02",
+            "characterName": null,
+            "name": "Brian Jones",
+            "nameId": "853718",
+            "personId": "814040",
+            "role": "Host"
+          },
+          {
+            "billingOrder": "03",
+            "characterName": null,
+            "name": "Rick Neuheisel",
+            "nameId": "963525",
+            "personId": "912162",
+            "role": "Actor"
+          },
+          {
+            "billingOrder": "04",
+            "characterName": null,
+            "name": "Spencer Tillman",
+            "nameId": null,
+            "personId": null,
+            "role": "Host"
+          },
+          {
+            "billingOrder": "05",
+            "characterName": null,
+            "name": "Tim Brando",
+            "nameId": null,
+            "personId": null,
+            "role": "Host"
+          }
+        ],
+        "contentRating": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TV14",
+            "contentWarning": null,
+            "country": "USA"
+          },
+          {
+            "body": "Canadian Parental Rating",
+            "code": "14+",
+            "contentWarning": null,
+            "country": "CAN"
+          }
+        ],
+        "country": [
+          "USA"
+        ],
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "Preview of upcoming games.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "Adam Zucker, Brian Jones and Rick Neuheisel present all the day's news and highlights on CBS' pregame, halftime and postgame studio show.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 1800,
+        "entityType": "Series",
+        "episodeTitle150": null,
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "ccf529cabbed6fd323a1a6b699e18da6",
+        "md5": "zPUpyrvtb9Mjoaa2meGNpg",
+        "metadata": null,
+        "originalAirDate": "1997-09-20",
+        "programID": "SH000812550000",
+        "resourceID": "221280",
+        "showType": "Sports non-event",
+        "titles": [
+          {
+            "title120": "College Football Today",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    },
+    {
+      "airDateTime": "2025-11-29T20:30:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WCBSDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_dark_360w_270h.png",
+          "category": null,
+          "hash": "f65b5df5a53d8c816851185b9a57f852",
+          "height": 270,
+          "md5": "f65b5df5a53d8c816851185b9a57f852",
+          "source": null,
+          "width": 360
+        },
+        "name": "WCBS-DT",
+        "stationID": "16689",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "f65b5df5a53d8c816851185b9a57f852",
+            "height": 270,
+            "md5": "f65b5df5a53d8c816851185b9a57f852",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_light_360w_270h.png",
+            "category": "light",
+            "hash": "ae7a014e47c48042af143ef8360dddfe",
+            "height": 270,
+            "md5": "ae7a014e47c48042af143ef8360dddfe",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "ec51570c467da61d74a9a7b294be0fe5",
+            "height": 270,
+            "md5": "ec51570c467da61d74a9a7b294be0fe5",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28711_white_360w_270h.png",
+            "category": "white",
+            "hash": "f65b5df5a53d8c816851185b9a57f852",
+            "height": 270,
+            "md5": "f65b5df5a53d8c816851185b9a57f852",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "004",
+      "duration": 12600,
+      "programID": "EP043373527813",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": null,
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "Washington (8-3, 5-3 Big Ten) and No. 6 Oregon (10-1, 7-1) end their slates with a rivalry matchup.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "The Huskies (8-3, 5-3 Big Ten) and No. 6 Ducks (10-1, 7-1) end their slates with a rivalry matchup. Oregon toppled Washington 49-21 last year, snapping a three-game series skid that included a 34-31 loss in the most recent Pac-12 title game in 2023.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 10800,
+        "entityType": "Team Event",
+        "episodeTitle150": "Oregon at Washington",
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "3b169bcdbcd3ce3e0ba1c6afb43373a9",
+        "md5": "OxabzbzTzj4LocavtDNzqQ",
+        "metadata": null,
+        "originalAirDate": "2025-11-29",
+        "programID": "EP043373527813",
+        "resourceID": "191261",
+        "showType": "Sports event",
+        "titles": [
+          {
+            "title120": "College Football",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "20360": [
+    {
+      "airDateTime": "2025-11-29T20:30:00Z",
+      "channel_details": {
+        "URL": "WWW.FOX.COM",
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10021",
+          "state": "NY"
+        },
+        "callsign": "WNYWDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28719_dark_360w_270h.png",
+          "category": null,
+          "hash": "4821ac6877910d528128f5d8168e87d2",
+          "height": 270,
+          "md5": "4821ac6877910d528128f5d8168e87d2",
+          "source": null,
+          "width": 360
+        },
+        "name": "WNYW-DT",
+        "stationID": "20360",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28719_white_360w_270h.png",
+            "category": "white",
+            "hash": "4821ac6877910d528128f5d8168e87d2",
+            "height": 270,
+            "md5": "4821ac6877910d528128f5d8168e87d2",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28719_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "4821ac6877910d528128f5d8168e87d2",
+            "height": 270,
+            "md5": "4821ac6877910d528128f5d8168e87d2",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28719_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "49a2c3edea02a4dd329ad09e2a7e80fc",
+            "height": 270,
+            "md5": "49a2c3edea02a4dd329ad09e2a7e80fc",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28719_light_360w_270h.png",
+            "category": "light",
+            "hash": "37a969ff0324f171804334d0b582defb",
+            "height": 270,
+            "md5": "37a969ff0324f171804334d0b582defb",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "005",
+      "duration": 12600,
+      "programID": "EP043373527780",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": null,
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "TCU (7-4, 4-4 Big 12) and Cincinnati (7-4, 5-3) put their finishing touches on the regular season.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "The Horned Frogs (7-4, 4-4 Big 12) and Bearcats (7-4, 5-3) put the finishing touches on their regular-season slates. In 2024, TCU spoiled Cincinnati's bid for bowl eligibility with a 20-13 victory in the first meeting between the schools in 20 years.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 10800,
+        "entityType": "Team Event",
+        "episodeTitle150": "Cincinnati at TCU",
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "e8fc43b5704c3775e05e27184f9eb6de",
+        "md5": "6PxDtXBMN3XgXicYT5623g",
+        "metadata": null,
+        "originalAirDate": "2025-11-29",
+        "programID": "EP043373527780",
+        "resourceID": "191261",
+        "showType": "Sports event",
+        "titles": [
+          {
+            "title120": "College Football",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "20373": [
+    {
+      "airDateTime": "2025-11-29T20:00:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10017",
+          "state": "NY"
+        },
+        "callsign": "WPIXDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s53098_dark_360w_270h.png",
+          "category": null,
+          "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+          "height": 270,
+          "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+          "source": null,
+          "width": 360
+        },
+        "name": "WPIX-DT",
+        "stationID": "20373",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s53098_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "height": 270,
+            "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s53098_white_360w_270h.png",
+            "category": "white",
+            "hash": "20eb64a225db40f16aedffced09a279d",
+            "height": 270,
+            "md5": "20eb64a225db40f16aedffced09a279d",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s53098_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "3d9f3130f6049e55efb77e3748d0bc82",
+            "height": 270,
+            "md5": "3d9f3130f6049e55efb77e3748d0bc82",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s53098_light_360w_270h.png",
+            "category": "light",
+            "hash": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "height": 270,
+            "md5": "1ccc8caafcdabf5c5bdbf80d580e0845",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "006",
+      "duration": 12600,
+      "programID": "EP043373527802",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": null,
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "Syracuse (3-8, 1-6 ACC) and Boston College (1-10, 0-7) close out the 2025 campaign with this tilt.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "The Orange (3-8, 1-6 ACC) and Eagles (1-10, 0-7) close out the 2025 campaign with this tilt. Boston College has won two straight meetings, and four of its last five visits to Syracuse. The programs have lost a combined 17 consecutive outings.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 10800,
+        "entityType": "Team Event",
+        "episodeTitle150": "Boston College at Syracuse",
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "4df063eeeed1f0f0b1041fcb45031610",
+        "md5": "TfBj7u7R8PCxBB/LRQMWEA",
+        "metadata": null,
+        "originalAirDate": "2025-11-29",
+        "programID": "EP043373527802",
+        "resourceID": "191261",
+        "showType": "Sports event",
+        "titles": [
+          {
+            "title120": "College Football",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "20453": [
+    {
+      "airDateTime": "2025-11-29T20:00:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10023",
+          "state": "NY"
+        },
+        "callsign": "WABCDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_dark_360w_270h.png",
+          "category": null,
+          "hash": "367ac430e25e4d2cfb92cafd56d18136",
+          "height": 270,
+          "md5": "367ac430e25e4d2cfb92cafd56d18136",
+          "source": null,
+          "width": 360
+        },
+        "name": "WABC-DT",
+        "stationID": "20453",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_light_360w_270h.png",
+            "category": "light",
+            "hash": "d177391104f309335aa4cfd7d1f0dbf2",
+            "height": 270,
+            "md5": "d177391104f309335aa4cfd7d1f0dbf2",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "367ac430e25e4d2cfb92cafd56d18136",
+            "height": 270,
+            "md5": "367ac430e25e4d2cfb92cafd56d18136",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "367ac430e25e4d2cfb92cafd56d18136",
+            "height": 270,
+            "md5": "367ac430e25e4d2cfb92cafd56d18136",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_white_360w_270h.png",
+            "category": "white",
+            "hash": "27a7c5e27c4922a9c40dff20ee1801ec",
+            "height": 270,
+            "md5": "27a7c5e27c4922a9c40dff20ee1801ec",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "008",
+      "duration": 1800,
+      "programID": "SH029966050000",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": [
+          "USA"
+        ],
+        "crew": null,
+        "descriptions": {
+          "description100": null,
+          "description1000": [
+            {
+              "description": "All the latest news and analysis from the world of college football.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 1800,
+        "entityType": "Series",
+        "episodeTitle150": null,
+        "genres": [
+          "Football",
+          "Sports talk"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "ec28aea712647ea4bfbe61c99fd112cd",
+        "md5": "7CiupxJkfqS/vmHJn9ESzQ",
+        "metadata": null,
+        "originalAirDate": "2018-09-01",
+        "programID": "SH029966050000",
+        "resourceID": "15663476",
+        "showType": "Series",
+        "titles": [
+          {
+            "title120": "College Football Scoreboard",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    },
+    {
+      "airDateTime": "2025-11-29T20:30:00Z",
+      "channel_details": {
+        "URL": null,
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10023",
+          "state": "NY"
+        },
+        "callsign": "WABCDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_dark_360w_270h.png",
+          "category": null,
+          "hash": "367ac430e25e4d2cfb92cafd56d18136",
+          "height": 270,
+          "md5": "367ac430e25e4d2cfb92cafd56d18136",
+          "source": null,
+          "width": 360
+        },
+        "name": "WABC-DT",
+        "stationID": "20453",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_light_360w_270h.png",
+            "category": "light",
+            "hash": "d177391104f309335aa4cfd7d1f0dbf2",
+            "height": 270,
+            "md5": "d177391104f309335aa4cfd7d1f0dbf2",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "367ac430e25e4d2cfb92cafd56d18136",
+            "height": 270,
+            "md5": "367ac430e25e4d2cfb92cafd56d18136",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "367ac430e25e4d2cfb92cafd56d18136",
+            "height": 270,
+            "md5": "367ac430e25e4d2cfb92cafd56d18136",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s28708_white_360w_270h.png",
+            "category": "white",
+            "hash": "27a7c5e27c4922a9c40dff20ee1801ec",
+            "height": 270,
+            "md5": "27a7c5e27c4922a9c40dff20ee1801ec",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "008",
+      "duration": 10800,
+      "programID": "EP043373527825",
+      "program_details": {
+        "cast": null,
+        "contentRating": null,
+        "country": null,
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "The No. 8 Sooners (9-2, 5-2 SEC) surge into a regular-season finale with the Tigers (7-4, 3-4).",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "The No. 8 Sooners (9-2, 5-2 SEC) surge into a regular-season finale with the Tigers (7-4, 3-4). Oklahoma has won three straight games, all against Top 25 teams, and would all but assure itself a spot in the College Football Playoff by beating LSU.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 10800,
+        "entityType": "Team Event",
+        "episodeTitle150": "LSU at Oklahoma",
+        "genres": [
+          "Football"
+        ],
+        "hasEpisodeArtwork": null,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": null,
+        "hasSeriesArtwork": true,
+        "hash": "bb9fe1d1464d7aaa96a2213fcb6a86e5",
+        "md5": "u5/h0UZNeqqWoiE/y2qG5Q",
+        "metadata": null,
+        "originalAirDate": "2025-11-29",
+        "programID": "EP043373527825",
+        "resourceID": "191261",
+        "showType": "Sports event",
+        "titles": [
+          {
+            "title120": "College Football",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "26182": [
+    {
+      "airDateTime": "2025-11-29T20:30:00Z",
+      "channel_details": {
+        "URL": "www.ptvdigital.org/dt2a_feb.html",
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WNETDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+          "category": null,
+          "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "height": 270,
+          "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "source": null,
+          "width": 360
+        },
+        "name": "WNET-DT",
+        "stationID": "26182",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "height": 270,
+            "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "height": 270,
+            "md5": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_white_360w_270h.png",
+            "category": "white",
+            "hash": "844d6e8f320612521b32b05010bb3c2c",
+            "height": 270,
+            "md5": "844d6e8f320612521b32b05010bb3c2c",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_light_360w_270h.png",
+            "category": "light",
+            "hash": "468400253cb4c14a74bb6d5618e5971a",
+            "height": 270,
+            "md5": "468400253cb4c14a74bb6d5618e5971a",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "003",
+      "duration": 9000,
+      "programID": "EP060025880003",
+      "program_details": {
+        "cast": [
+          {
+            "billingOrder": "01",
+            "characterName": null,
+            "name": "Peter Coyote",
+            "nameId": "71731",
+            "personId": "71731",
+            "role": "Narrator"
+          }
+        ],
+        "contentRating": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG",
+            "contentWarning": null,
+            "country": "USA"
+          },
+          {
+            "body": "Canadian Parental Rating",
+            "code": "PG",
+            "contentWarning": null,
+            "country": "CAN"
+          }
+        ],
+        "country": [
+          "USA"
+        ],
+        "crew": [
+          {
+            "billingOrder": "01",
+            "name": "Ken Burns",
+            "nameId": "245",
+            "personId": "245",
+            "role": "Director"
+          },
+          {
+            "billingOrder": "02",
+            "name": "Sarah Botstein",
+            "nameId": "1134262",
+            "personId": "1056456",
+            "role": "Director"
+          },
+          {
+            "billingOrder": "03",
+            "name": "David Schmidt",
+            "nameId": null,
+            "personId": null,
+            "role": "Director"
+          },
+          {
+            "billingOrder": "04",
+            "name": "Geoffrey Ward",
+            "nameId": "1863400",
+            "personId": "1737927",
+            "role": "Writer"
+          },
+          {
+            "billingOrder": "05",
+            "name": "Buddy Squires",
+            "nameId": "471995",
+            "personId": "463120",
+            "role": "Cinematography"
+          }
+        ],
+        "descriptions": {
+          "description100": [
+            {
+              "description": "The Americans are forced to abandon New York; Washington's army regroups in New Jersey.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "British General Howe defeats General Washington, forcing the Americans to abandon New York; Washington's army regroups in New Jersey before attacking an outpost at Trenton.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 7200,
+        "entityType": "Episode",
+        "episodeTitle150": "The Times That Try Men's Souls",
+        "genres": [
+          "Documentary",
+          "History",
+          "American history"
+        ],
+        "hasEpisodeArtwork": true,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": true,
+        "hasSeriesArtwork": true,
+        "hash": "186ec67d212917744deb38ffbad56fd6",
+        "md5": "GG7GfSEpF3RN6zj/utVv1g",
+        "metadata": [
+          {
+            "Gracenote": null
+          },
+          {
+            "Gracenote": {
+              "episode": 3,
+              "season": 1
+            }
+          }
+        ],
+        "originalAirDate": "2025-11-18",
+        "programID": "EP060025880003",
+        "resourceID": "31007702",
+        "showType": "Series",
+        "titles": [
+          {
+            "title120": "The American Revolution",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ],
+  "34325": [
+    {
+      "airDateTime": "2025-11-29T21:00:00Z",
+      "channel_details": {
+        "URL": "www.wliw.org",
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WLIWDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+          "category": null,
+          "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "height": 270,
+          "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "source": null,
+          "width": 360
+        },
+        "name": "WLIW-DT",
+        "stationID": "34325",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "height": 270,
+            "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "height": 270,
+            "md5": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_white_360w_270h.png",
+            "category": "white",
+            "hash": "844d6e8f320612521b32b05010bb3c2c",
+            "height": 270,
+            "md5": "844d6e8f320612521b32b05010bb3c2c",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_light_360w_270h.png",
+            "category": "light",
+            "hash": "468400253cb4c14a74bb6d5618e5971a",
+            "height": 270,
+            "md5": "468400253cb4c14a74bb6d5618e5971a",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "001",
+      "duration": 3600,
+      "programID": "EP014862530018",
+      "program_details": {
+        "cast": [
+          {
+            "billingOrder": "01",
+            "characterName": null,
+            "name": "Lidia Bastianich",
+            "nameId": "190273",
+            "personId": "188655",
+            "role": "Host"
+          }
+        ],
+        "contentRating": [
+          {
+            "body": "Canadian Parental Rating",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "Régie du cinéma",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG",
+            "contentWarning": null,
+            "country": "USA"
+          }
+        ],
+        "country": [
+          "USA"
+        ],
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "Lidia Bastianich highlights communities coming together in times of need.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "Lidia Bastianich highlights communities coming together in times of need, including selfless acts that foster connection and fulfillment on both sides.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 3600,
+        "entityType": "Episode",
+        "episodeTitle150": "A Nation of Neighbors",
+        "genres": [
+          "Cooking"
+        ],
+        "hasEpisodeArtwork": true,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": true,
+        "hasSeriesArtwork": true,
+        "hash": "b5409b0438b0f800c36a3acf7b9037a4",
+        "md5": "tUCbBDiw+ADDajrPe5A3pA",
+        "metadata": [
+          {
+            "Gracenote": {
+              "episode": 1,
+              "season": 12
+            }
+          }
+        ],
+        "originalAirDate": "2025-11-25",
+        "programID": "EP014862530018",
+        "resourceID": "8889252",
+        "showType": "Series",
+        "titles": [
+          {
+            "title120": "Lidia Celebrates America",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    },
+    {
+      "airDateTime": "2025-11-29T22:00:00Z",
+      "channel_details": {
+        "URL": "www.wliw.org",
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WLIWDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+          "category": null,
+          "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "height": 270,
+          "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "source": null,
+          "width": 360
+        },
+        "name": "WLIW-DT",
+        "stationID": "34325",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "height": 270,
+            "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "height": 270,
+            "md5": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_white_360w_270h.png",
+            "category": "white",
+            "hash": "844d6e8f320612521b32b05010bb3c2c",
+            "height": 270,
+            "md5": "844d6e8f320612521b32b05010bb3c2c",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_light_360w_270h.png",
+            "category": "light",
+            "hash": "468400253cb4c14a74bb6d5618e5971a",
+            "height": 270,
+            "md5": "468400253cb4c14a74bb6d5618e5971a",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "001",
+      "duration": 1800,
+      "programID": "EP000044441619",
+      "program_details": {
+        "cast": [
+          {
+            "billingOrder": "01",
+            "characterName": "Self",
+            "name": "Kevin O'Connor",
+            "nameId": "542074",
+            "personId": "522458",
+            "role": "Host"
+          },
+          {
+            "billingOrder": "02",
+            "characterName": null,
+            "name": "Richard Trethewey",
+            "nameId": "1587576",
+            "personId": "1481203",
+            "role": "Self"
+          },
+          {
+            "billingOrder": "03",
+            "characterName": null,
+            "name": "Tom Silva",
+            "nameId": "1067876",
+            "personId": "996197",
+            "role": "Self"
+          },
+          {
+            "billingOrder": "04",
+            "characterName": null,
+            "name": "Jenn Nawada",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          }
+        ],
+        "contentRating": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVG",
+            "contentWarning": null,
+            "country": "USA"
+          },
+          {
+            "body": "Canadian Parental Rating",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "Régie du cinéma",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "Australian Classification Board",
+            "code": "G",
+            "contentWarning": null,
+            "country": "AUS"
+          },
+          {
+            "body": "Dirección General de Radio, Televisión y Cinematografía",
+            "code": "A",
+            "contentWarning": null,
+            "country": "MEX"
+          }
+        ],
+        "country": [
+          "USA"
+        ],
+        "crew": [
+          {
+            "billingOrder": "01",
+            "name": "Russell Morash",
+            "nameId": "1489438",
+            "personId": "1387292",
+            "role": "Creator"
+          },
+          {
+            "billingOrder": "02",
+            "name": "Chris Wolfe",
+            "nameId": null,
+            "personId": null,
+            "role": "Executive Producer"
+          }
+        ],
+        "descriptions": {
+          "description100": [
+            {
+              "description": "In Swannanoa, Kevin helps Jim's brother Bill tile a bathroom.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "In Swannanoa, Kevin helps Jim's brother Bill tile a bathroom; father and son roofers JD and Jayden; removing rot and replacing the damaged area of Paula's deck.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 1800,
+        "entityType": "Episode",
+        "episodeTitle150": "Asheville: Waterproof Work",
+        "genres": [
+          "Home improvement",
+          "How-to",
+          "House/garden"
+        ],
+        "hasEpisodeArtwork": true,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": true,
+        "hasSeriesArtwork": true,
+        "hash": "cfd2c83a74fa30d1d5bf22ba4d35548b",
+        "md5": "z9LIOnT6MNHVvyK6TTVUiw",
+        "metadata": [
+          {
+            "Gracenote": null
+          },
+          {
+            "Gracenote": {
+              "episode": 4,
+              "season": 47
+            }
+          }
+        ],
+        "originalAirDate": "2025-10-16",
+        "programID": "EP000044441619",
+        "resourceID": "184111",
+        "showType": "Series",
+        "titles": [
+          {
+            "title120": "This Old House",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    },
+    {
+      "airDateTime": "2025-11-29T22:30:00Z",
+      "channel_details": {
+        "URL": "www.wliw.org",
+        "broadcastLanguage": [
+          "en"
+        ],
+        "broadcaster": {
+          "city": "New York",
+          "country": "USA",
+          "postalcode": "10019",
+          "state": "NY"
+        },
+        "callsign": "WLIWDT",
+        "descriptionLanguage": [
+          "en"
+        ],
+        "logo": {
+          "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+          "category": null,
+          "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "height": 270,
+          "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+          "source": null,
+          "width": 360
+        },
+        "name": "WLIW-DT",
+        "stationID": "34325",
+        "stationLogo": [
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_dark_360w_270h.png",
+            "category": "dark",
+            "hash": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "height": 270,
+            "md5": "8c5c353e817cca3ae51a81cb6d6a7caa",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_gray_360w_270h.png",
+            "category": "gray",
+            "hash": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "height": 270,
+            "md5": "d6c4ebfb6afa54441f68b83cbfd214df",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_white_360w_270h.png",
+            "category": "white",
+            "hash": "844d6e8f320612521b32b05010bb3c2c",
+            "height": 270,
+            "md5": "844d6e8f320612521b32b05010bb3c2c",
+            "source": "Gracenote",
+            "width": 360
+          },
+          {
+            "URL": "https://schedulesdirect-api20141201-logos.s3.dualstack.us-east-1.amazonaws.com/stationLogos/s32356_light_360w_270h.png",
+            "category": "light",
+            "hash": "468400253cb4c14a74bb6d5618e5971a",
+            "height": 270,
+            "md5": "468400253cb4c14a74bb6d5618e5971a",
+            "source": "Gracenote",
+            "width": 360
+          }
+        ]
+      },
+      "channel_number": "001",
+      "duration": 1800,
+      "programID": "EP005291090635",
+      "program_details": {
+        "cast": [
+          {
+            "billingOrder": "01",
+            "characterName": null,
+            "name": "Kevin O'Connor",
+            "nameId": "542074",
+            "personId": "522458",
+            "role": "Host"
+          },
+          {
+            "billingOrder": "02",
+            "characterName": null,
+            "name": "Tom Silva",
+            "nameId": "1067876",
+            "personId": "996197",
+            "role": "Self"
+          },
+          {
+            "billingOrder": "03",
+            "characterName": null,
+            "name": "Richard Trethewey",
+            "nameId": "1587576",
+            "personId": "1481203",
+            "role": "Self"
+          },
+          {
+            "billingOrder": "04",
+            "characterName": null,
+            "name": "Roger Cook",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          },
+          {
+            "billingOrder": "05",
+            "characterName": null,
+            "name": "Jenn Nawada",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          },
+          {
+            "billingOrder": "06",
+            "characterName": null,
+            "name": "Mark McCullough",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          },
+          {
+            "billingOrder": "07",
+            "characterName": null,
+            "name": "Mauro Henrique",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          },
+          {
+            "billingOrder": "08",
+            "characterName": null,
+            "name": "Nathan Gilbert",
+            "nameId": null,
+            "personId": null,
+            "role": "Self"
+          }
+        ],
+        "contentRating": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVG",
+            "contentWarning": null,
+            "country": "USA"
+          },
+          {
+            "body": "Canadian Parental Rating",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "Régie du cinéma",
+            "code": "G",
+            "contentWarning": null,
+            "country": "CAN"
+          },
+          {
+            "body": "Dirección General de Radio, Televisión y Cinematografía",
+            "code": "A",
+            "contentWarning": null,
+            "country": "MEX"
+          }
+        ],
+        "country": [
+          "USA"
+        ],
+        "crew": null,
+        "descriptions": {
+          "description100": [
+            {
+              "description": "The importance of hearing protection; relocating a washer and dryer to the main floor.",
+              "descriptionLanguage": "en"
+            }
+          ],
+          "description1000": [
+            {
+              "description": "Kevin meets with an audiologist to discuss the importance of hearing protection; Richard, Nathan and Heath team up to help a couple age in place by relocating their washer and dryer to the main floor.",
+              "descriptionLanguage": "en"
+            }
+          ]
+        },
+        "duration": 1800,
+        "entityType": "Episode",
+        "episodeTitle150": "Washer Dryer Relocation",
+        "genres": [
+          "House/garden",
+          "How-to",
+          "Home improvement"
+        ],
+        "hasEpisodeArtwork": true,
+        "hasImageArtwork": true,
+        "hasSeasonArtwork": true,
+        "hasSeriesArtwork": true,
+        "hash": "7ca2385d88e2f1f9c997ce460cd1cec5",
+        "md5": "fKI4XYji8fnJl85GDNHOxQ",
+        "metadata": [
+          {
+            "Gracenote": null
+          },
+          {
+            "Gracenote": {
+              "episode": 4,
+              "season": 24
+            }
+          }
+        ],
+        "originalAirDate": "2025-10-16",
+        "programID": "EP005291090635",
+        "resourceID": "186265",
+        "showType": "Series",
+        "titles": [
+          {
+            "title120": "Ask This Old House",
+            "titleLanguage": "en"
+          }
+        ]
+      }
+    }
+  ]
+}

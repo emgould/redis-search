@@ -1,0 +1,1108 @@
+{
+  "results": [
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_4LH4d3cOWNNsVw41Gqt2kv",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/4LH4d3cOWNNsVw41Gqt2kv",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/4LH4d3cOWNNsVw41Gqt2kv",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27317cb878012a0c769091e8045",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0217cb878012a0c769091e8045",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485117cb878012a0c769091e8045",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4LH4d3cOWNNsVw41Gqt2kv",
+      "title": "The Dark Side of the Moon",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "spotify_url": "https://open.spotify.com/album/4LH4d3cOWNNsVw41Gqt2kv",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485117cb878012a0c769091e8045",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "1973-03-01",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_14wH4mIm2pKnZ9ti5co81U",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/14wH4mIm2pKnZ9ti5co81U",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/14wH4mIm2pKnZ9ti5co81U",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273d918e2dedfd03faa485a143e",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02d918e2dedfd03faa485a143e",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851d918e2dedfd03faa485a143e",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "14wH4mIm2pKnZ9ti5co81U",
+      "title": "Dark Side Of The Moon",
+      "artist": "suisside",
+      "artist_id": "79oXnSqjYH5WW260RhSHzZ",
+      "spotify_url": "https://open.spotify.com/album/14wH4mIm2pKnZ9ti5co81U",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851d918e2dedfd03faa485a143e",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2020-11-30",
+      "release_date_precision": "day",
+      "total_tracks": 1
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_3t6eDNGmTJIHdU9PF0GJx2",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/3t6eDNGmTJIHdU9PF0GJx2",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/3t6eDNGmTJIHdU9PF0GJx2",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273a81591ea4e921c6749ca2d54",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02a81591ea4e921c6749ca2d54",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851a81591ea4e921c6749ca2d54",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 183
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3t6eDNGmTJIHdU9PF0GJx2",
+      "title": "Dark Side of the Moon",
+      "artist": "Moon Byul",
+      "artist_id": "1eTft3tXynrKdo6XD7QHLL",
+      "spotify_url": "https://open.spotify.com/album/3t6eDNGmTJIHdU9PF0GJx2",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851a81591ea4e921c6749ca2d54",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2020-02-14",
+      "release_date_precision": "day",
+      "total_tracks": 5
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2xGMvroBbxek49QWF0hzpI",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2xGMvroBbxek49QWF0hzpI",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2xGMvroBbxek49QWF0hzpI",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27324c6558b03a69581bfcbb711",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0224c6558b03a69581bfcbb711",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485124c6558b03a69581bfcbb711",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2xGMvroBbxek49QWF0hzpI",
+      "title": "The Dark Side Of The Moon (50th Anniversary) [2023 Remaster]",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "spotify_url": "https://open.spotify.com/album/2xGMvroBbxek49QWF0hzpI",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485124c6558b03a69581bfcbb711",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "1973-03-02",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2w9qrrsJaLRQuZPJeI9acc",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2w9qrrsJaLRQuZPJeI9acc",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2w9qrrsJaLRQuZPJeI9acc",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273bfd1939208257913120df757",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02bfd1939208257913120df757",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851bfd1939208257913120df757",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2w9qrrsJaLRQuZPJeI9acc",
+      "title": "Dub Side Of The Moon",
+      "artist": "Easy Star All-Stars",
+      "artist_id": "5FWTu1MZdB5fjKif2rZldJ",
+      "spotify_url": "https://open.spotify.com/album/2w9qrrsJaLRQuZPJeI9acc",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851bfd1939208257913120df757",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2003-02-18",
+      "release_date_precision": "day",
+      "total_tracks": 13
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_228DNs4AGk1ycRuYJdnDbl",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/228DNs4AGk1ycRuYJdnDbl",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/228DNs4AGk1ycRuYJdnDbl",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273acccce053811bc21356c028f",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02acccce053811bc21356c028f",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851acccce053811bc21356c028f",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "228DNs4AGk1ycRuYJdnDbl",
+      "title": "Dark Side of the Moon",
+      "artist": "Jacob Stelly",
+      "artist_id": "0UARFNqkG0EVLtLlUMyM41",
+      "spotify_url": "https://open.spotify.com/album/228DNs4AGk1ycRuYJdnDbl",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851acccce053811bc21356c028f",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2020-12-23",
+      "release_date_precision": "day",
+      "total_tracks": 1
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_6SDPwUC74HcxwB84kPs4pM",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/6SDPwUC74HcxwB84kPs4pM",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/6SDPwUC74HcxwB84kPs4pM",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27324053d3724ba3acd57108365",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0224053d3724ba3acd57108365",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485124053d3724ba3acd57108365",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6SDPwUC74HcxwB84kPs4pM",
+      "title": "The Dark Side Of The Moon (Live at Wembley 1974) [2023 Master]",
+      "artist": "Pink Floyd",
+      "artist_id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "spotify_url": "https://open.spotify.com/album/6SDPwUC74HcxwB84kPs4pM",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485124053d3724ba3acd57108365",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2023-03-24",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2CTHgiguluRbGp17cDKPHX",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2CTHgiguluRbGp17cDKPHX",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2CTHgiguluRbGp17cDKPHX",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2732ee658e17b741ac27e8f5130",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e022ee658e17b741ac27e8f5130",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048512ee658e17b741ac27e8f5130",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2CTHgiguluRbGp17cDKPHX",
+      "title": "Dark Side of the Moon",
+      "artist": "The Potion",
+      "artist_id": "1dGNuCRqigV0Y2TkcMPRRJ",
+      "spotify_url": "https://open.spotify.com/album/2CTHgiguluRbGp17cDKPHX",
+      "default_image": "https://i.scdn.co/image/ab67616d000048512ee658e17b741ac27e8f5130",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2024-09-13",
+      "release_date_precision": "day",
+      "total_tracks": 13
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_4xCxDkxhaGqBrz7suzp8Oc",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/4xCxDkxhaGqBrz7suzp8Oc",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/4xCxDkxhaGqBrz7suzp8Oc",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273dc2e26433a63d9a0d53b6943",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02dc2e26433a63d9a0d53b6943",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851dc2e26433a63d9a0d53b6943",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4xCxDkxhaGqBrz7suzp8Oc",
+      "title": "The dark side of the moon",
+      "artist": "Chokomignon",
+      "artist_id": "5ldlSsb92DAHPO0qzsAMR2",
+      "spotify_url": "https://open.spotify.com/album/4xCxDkxhaGqBrz7suzp8Oc",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851dc2e26433a63d9a0d53b6943",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2024-11-29",
+      "release_date_precision": "day",
+      "total_tracks": 1
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2LywAZA9wrn0VmDYnkp1CU",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2LywAZA9wrn0VmDYnkp1CU",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2LywAZA9wrn0VmDYnkp1CU",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2738be4f0c7f3d0ad999e534a5f",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e028be4f0c7f3d0ad999e534a5f",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048518be4f0c7f3d0ad999e534a5f",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2LywAZA9wrn0VmDYnkp1CU",
+      "title": "The Dark Side of the Moon Redux",
+      "artist": "Roger Waters",
+      "artist_id": "40DqL6Tv84cKT2pH2NMs9r",
+      "spotify_url": "https://open.spotify.com/album/2LywAZA9wrn0VmDYnkp1CU",
+      "default_image": "https://i.scdn.co/image/ab67616d000048518be4f0c7f3d0ad999e534a5f",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2023-10-06",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_3vXgzqeNQPIT9RDgShcKun",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/3vXgzqeNQPIT9RDgShcKun",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/3vXgzqeNQPIT9RDgShcKun",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2738730e79cddd56915a2fd61e7",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e028730e79cddd56915a2fd61e7",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048518730e79cddd56915a2fd61e7",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3vXgzqeNQPIT9RDgShcKun",
+      "title": "Metamorphosis",
+      "artist": "The Dark Side of the Moon",
+      "artist_id": "7mkJGPq0wt04Wz4xyWsGEm",
+      "spotify_url": "https://open.spotify.com/album/3vXgzqeNQPIT9RDgShcKun",
+      "default_image": "https://i.scdn.co/image/ab67616d000048518730e79cddd56915a2fd61e7",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2023-05-12",
+      "release_date_precision": "day",
+      "total_tracks": 11
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_1kTikiumLPQ4LvuhRGK0bp",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/1kTikiumLPQ4LvuhRGK0bp",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/1kTikiumLPQ4LvuhRGK0bp",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273c893a152754844d4bf6b93ef",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02c893a152754844d4bf6b93ef",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851c893a152754844d4bf6b93ef",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1kTikiumLPQ4LvuhRGK0bp",
+      "title": "The Dark Side Of The Moon",
+      "artist": "Martin Miller",
+      "artist_id": "1spSxLrhsCFplRSKYdmEz2",
+      "spotify_url": "https://open.spotify.com/album/1kTikiumLPQ4LvuhRGK0bp",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851c893a152754844d4bf6b93ef",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2024-02-02",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_27qcFva1x81mnWQmzA2Rl2",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/27qcFva1x81mnWQmzA2Rl2",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/27qcFva1x81mnWQmzA2Rl2",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27327d30061caa7a496e8c098b5",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0227d30061caa7a496e8c098b5",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485127d30061caa7a496e8c098b5",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "27qcFva1x81mnWQmzA2Rl2",
+      "title": "The Dark Side of the Moon",
+      "artist": "Pieter de Graaf",
+      "artist_id": "387mxb1p13O8OdJ6r8pc2q",
+      "spotify_url": "https://open.spotify.com/album/27qcFva1x81mnWQmzA2Rl2",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485127d30061caa7a496e8c098b5",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2023-04-14",
+      "release_date_precision": "day",
+      "total_tracks": 1
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_3blujlZ2W1BZAM9KcHrbP8",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/3blujlZ2W1BZAM9KcHrbP8",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/3blujlZ2W1BZAM9KcHrbP8",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27354c0c1ea300d471e9eb90ae9",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0254c0c1ea300d471e9eb90ae9",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485154c0c1ea300d471e9eb90ae9",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3blujlZ2W1BZAM9KcHrbP8",
+      "title": "Dark Side of the Clouds",
+      "artist": "$uicideboy$",
+      "artist_id": "1VPmR4DJC1PlOtd0IADAO0",
+      "spotify_url": "https://open.spotify.com/album/3blujlZ2W1BZAM9KcHrbP8",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485154c0c1ea300d471e9eb90ae9",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2016-02-03",
+      "release_date_precision": "day",
+      "total_tracks": 11
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5w6CyN2aEgajB8Gc6ylwvc",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5w6CyN2aEgajB8Gc6ylwvc",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5w6CyN2aEgajB8Gc6ylwvc",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2734213496556324834088ac9c4",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e024213496556324834088ac9c4",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048514213496556324834088ac9c4",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5w6CyN2aEgajB8Gc6ylwvc",
+      "title": "The Flaming Lips And Stardeath And White Dwarfs With Henry Rollins And Peaches Doing Dark Side Of The Moon",
+      "artist": "The Flaming Lips",
+      "artist_id": "16eRpMNXSQ15wuJoeqguaB",
+      "spotify_url": "https://open.spotify.com/album/5w6CyN2aEgajB8Gc6ylwvc",
+      "default_image": "https://i.scdn.co/image/ab67616d000048514213496556324834088ac9c4",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2009-12-22",
+      "release_date_precision": "day",
+      "total_tracks": 9
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2DDv1U1A1ipoeySQl6bRYI",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2DDv1U1A1ipoeySQl6bRYI",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2DDv1U1A1ipoeySQl6bRYI",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2736d12b229334ba21a22678836",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e026d12b229334ba21a22678836",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048516d12b229334ba21a22678836",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 183
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2DDv1U1A1ipoeySQl6bRYI",
+      "title": "THE DARK SiDE OF THE TRASH",
+      "artist": "YOOKiE",
+      "artist_id": "26RHyTSsP5JoS4udf8txU5",
+      "spotify_url": "https://open.spotify.com/album/2DDv1U1A1ipoeySQl6bRYI",
+      "default_image": "https://i.scdn.co/image/ab67616d000048516d12b229334ba21a22678836",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2025-09-19",
+      "release_date_precision": "day",
+      "total_tracks": 7
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_3xV5oXjvPZrNzqld7HVO3F",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/3xV5oXjvPZrNzqld7HVO3F",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/3xV5oXjvPZrNzqld7HVO3F",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2731cc20b40e681524106a9ca5e",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e021cc20b40e681524106a9ca5e",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048511cc20b40e681524106a9ca5e",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 3
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3xV5oXjvPZrNzqld7HVO3F",
+      "title": "Dark Side Of Black",
+      "artist": "Texas Hippie Coalition",
+      "artist_id": "6LG6fIvh2XpjqHUuR7NRtt",
+      "spotify_url": "https://open.spotify.com/album/3xV5oXjvPZrNzqld7HVO3F",
+      "default_image": "https://i.scdn.co/image/ab67616d000048511cc20b40e681524106a9ca5e",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2016-04-22",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_0zIb6xazDd72sVT8OtPX3E",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/0zIb6xazDd72sVT8OtPX3E",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/0zIb6xazDd72sVT8OtPX3E",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2735c75f5e02580f4c0c3e80e8e",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e025c75f5e02580f4c0c3e80e8e",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048515c75f5e02580f4c0c3e80e8e",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 183
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0zIb6xazDd72sVT8OtPX3E",
+      "title": "The World From The Side Of The Moon",
+      "artist": "Phillip Phillips",
+      "artist_id": "6p5JxpTc7USNnBnLzctyd4",
+      "spotify_url": "https://open.spotify.com/album/0zIb6xazDd72sVT8OtPX3E",
+      "default_image": "https://i.scdn.co/image/ab67616d000048515c75f5e02580f4c0c3e80e8e",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2012-01-01",
+      "release_date_precision": "day",
+      "total_tracks": 12
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_0FvZIwN0AHWYQVyuS3KR7H",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/0FvZIwN0AHWYQVyuS3KR7H",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/0FvZIwN0AHWYQVyuS3KR7H",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273b1fd209c11e33b3902159ab2",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02b1fd209c11e33b3902159ab2",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851b1fd209c11e33b3902159ab2",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0FvZIwN0AHWYQVyuS3KR7H",
+      "title": "Dark Side",
+      "artist": "Justine Skye",
+      "artist_id": "0jUQSUOcM7lxVn5eVGTkzQ",
+      "spotify_url": "https://open.spotify.com/album/0FvZIwN0AHWYQVyuS3KR7H",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851b1fd209c11e33b3902159ab2",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2023-01-31",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_7nACgH5cI6ctEXxaRFNdWS",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/7nACgH5cI6ctEXxaRFNdWS",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/7nACgH5cI6ctEXxaRFNdWS",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2738df46fd3e5f7bc76812117a1",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e028df46fd3e5f7bc76812117a1",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048518df46fd3e5f7bc76812117a1",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "7nACgH5cI6ctEXxaRFNdWS",
+      "title": "The Sunny Side of the Moon: The Best of Richard Cheese",
+      "artist": "Richard Cheese",
+      "artist_id": "74IIqlVQQmvf04EHOI6yKh",
+      "spotify_url": "https://open.spotify.com/album/7nACgH5cI6ctEXxaRFNdWS",
+      "default_image": "https://i.scdn.co/image/ab67616d000048518df46fd3e5f7bc76812117a1",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2006-02-07",
+      "release_date_precision": "day",
+      "total_tracks": 18
+    }
+  ],
+  "total_results": 20,
+  "query": "Dark Side of the Moon",
+  "data_source": "Spotify Album Search",
+  "error": null
+}

@@ -1,0 +1,15 @@
+{
+  "details": null,
+  "error": null,
+  "input": {
+    "mc_id": "author_david_leonhardt",
+    "mc_subtype": "author",
+    "mc_type": "person",
+    "name": "David Leonhardt",
+    "source": "newsapi",
+    "source_id": "123"
+  },
+  "related": [],
+  "status_code": 200,
+  "works": []
+}

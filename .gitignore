@@ -1,0 +1,19 @@
+
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+docker/*.log
+
+# Environment files with secrets (plaintext)
+config/*.env
+config/dev.env
+config/prod.env
+config/local.env
+
+# GCP service account keys
+config/*.json
+
+# Keep encrypted versions tracked (if using SOPS)
+!config/*.env.encrypted

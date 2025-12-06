@@ -1,0 +1,17 @@
+{
+  "data_source": "NewsAI Search",
+  "data_type": "news_article",
+  "error": null,
+  "from_date": "2025-10-13",
+  "language": "en",
+  "metrics": {},
+  "page": 1,
+  "page_size": 5,
+  "query": "The Lost Bus",
+  "results": [],
+  "sort_by": "date",
+  "status": "ok",
+  "status_code": 200,
+  "to_date": "2025-11-12",
+  "total_results": 0
+}

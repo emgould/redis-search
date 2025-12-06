@@ -1,0 +1,2242 @@
+{
+  "copyright": "Copyright (c) 2025 The New York Times Company. All Rights Reserved.",
+  "data_source": "NYTimes Bestseller List",
+  "data_type": "book",
+  "error": null,
+  "list_results": {
+    "bestsellers_date": "2025-11-01",
+    "books": [
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/B0DPJ5W41H?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Louise Penny",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+        "book_image_height": 500,
+        "book_image_width": 329,
+        "book_review_link": "",
+        "book_uri": "nyt://book/99f9a455-baa2-5d2f-ad53-a6dc7dae2199",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/B0DPJ5W41H?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781250328182?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-black-wolf-louise-penny%2F1146663292%3Fean%3D9781250328182"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DTHE%2520BLACK%2520WOLF%2520by%2520Louise%2520Penny"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781250328182"
+          }
+        ],
+        "contributor": "by Louise Penny",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg"
+        },
+        "dagger": 0,
+        "description": "The 20th book in the Chief Inspector Gamache series. After thwarting a terrorist attack, an injured Gamache leads a covert investigation.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781250328182"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781250328182",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781250328182",
+        "publisher": "Minotaur",
+        "rank": 1,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781250328182",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE BLACK WOLF",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0385548982?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "John Grisham",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/b4d35d23-bb5e-5f9c-b842-01c4352fe4dc",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0385548982?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780385548984?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-widow-john-grisham%2F1147191431%3Fean%3D9780385548984"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FWidow%2FJohn-Grisham%2F9780385548984"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780385548984"
+          }
+        ],
+        "contributor": "by John Grisham",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg"
+        },
+        "dagger": 0,
+        "description": "When Simon Latch, a lawyer in rural Virginia, is accused of murder, he goes in search of the real killer.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780385548984"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780385548984",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780385548984",
+        "publisher": "Doubleday",
+        "rank": 2,
+        "rank_last_week": 1,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780385548984",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE WIDOW",
+        "weeks_on_list": 2
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1335146989?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Jasmine Mas",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+        "book_image_height": 500,
+        "book_image_width": 318,
+        "book_review_link": "",
+        "book_uri": "nyt://book/1daa5a33-0526-5b5e-b5c2-59efc13c2a6e",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1335146989?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781335146984?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fbonds-of-hercules-jasmine-mas%2F1146294670%3Fean%3D9781335146984"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FBonds-Hercules-Deluxe-Limited%2FJasmine-Mas%2F9781335146984"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781335146984"
+          }
+        ],
+        "contributor": "by Jasmine Mas",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg"
+        },
+        "dagger": 0,
+        "description": "The second book in the Villains of Lore series. Seduction and danger put Hercules in a tough spot.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781335146984"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781335146984",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781335146984",
+        "publisher": "Canary Street",
+        "rank": 3,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781335146984",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "BONDS OF HERCULES",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0385546890?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Dan Brown",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "https://www.nytimes.com/2025/09/09/books/review/the-secret-of-secrets-dan-brown.html",
+        "book_uri": "nyt://book/49cff1bb-35bc-554b-a7d4-dbc946230c00",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0385546890?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-secret-of-secrets-dan-brown%2F1146902400%3Fean%3D9780385546898"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FSecret-Secrets%2FDan-Brown%2F9780385546898"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780385546898"
+          }
+        ],
+        "contributor": "by Dan Brown",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg"
+        },
+        "dagger": 0,
+        "description": "As he searches for the missing noetic scientist he has been seeing, Robert Langdon discovers something regarding a secret project.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780385546898"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780385546898",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780385546898",
+        "publisher": "Doubleday",
+        "rank": 4,
+        "rank_last_week": 4,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780385546898",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE SECRET OF SECRETS",
+        "weeks_on_list": 8
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/031656382X?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Michael Connelly",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+        "book_image_height": 500,
+        "book_image_width": 323,
+        "book_review_link": "",
+        "book_uri": "nyt://book/93096031-e0dc-5a57-b1a8-f6e6b1dac3fa",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/031656382X?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780316563826?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-proving-ground-michael-connelly%2F1147425306%3Fean%3D9780316563826"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FProving-Ground%2FMichael-Connelly%2F9780316563826"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780316563826"
+          }
+        ],
+        "contributor": "by Michael Connelly",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg"
+        },
+        "dagger": 0,
+        "description": "The eighth book in the Lincoln Lawyer series. Mickey Haller enlists a journalist to help his lawsuit against an A.I. company.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780316563826"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780316563826",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780316563826",
+        "publisher": "Little, Brown",
+        "rank": 5,
+        "rank_last_week": 2,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780316563826",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE PROVING GROUND",
+        "weeks_on_list": 2
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1464223335?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Ana Huang",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+        "book_image_height": 500,
+        "book_image_width": 324,
+        "book_review_link": "",
+        "book_uri": "nyt://book/fdfee028-8ada-5b4f-b380-4f0ab8aee897",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1464223335?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781464223334?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-defender-ana-huang%2F1146807813%3Fean%3D9781464223334"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FDefender-Deluxe%2FAna-Huang%2F9781464223334"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781464223334"
+          }
+        ],
+        "contributor": "by Ana Huang",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg"
+        },
+        "dagger": 0,
+        "description": "The second book in the Gods of the Game series. A professional athlete and the coach’s daughter, who is a sports nutritionist, share a flat.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781464223334"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781464223334",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781464223334",
+        "publisher": "Bloom",
+        "rank": 6,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781464223334",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE DEFENDER",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/B0DV6L9C9J?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Nelson DeMille and Alex DeMille",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/508ddd35-6731-5342-b9ab-761a2266f82c",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/B0DV6L9C9J?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781501101892?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-tin-men-nelson-demille%2F1146889895%3Fean%3D9781501101892"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DTHE%2520TIN%2520MEN%2520by%2520Nelson%2520DeMille%2520and%2520Alex%2520DeMille"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781501101892"
+          }
+        ],
+        "contributor": "by Nelson DeMille and Alex DeMille",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg"
+        },
+        "dagger": 0,
+        "description": "The third book in the Scott Brodie & Maggie Taylor series. An investigation into the death of a military scientist surfaces troubling technology.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781501101892"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781501101892",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781501101892",
+        "publisher": "Simon & Schuster",
+        "rank": 7,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781501101892",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE TIN MEN",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1538774704?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Reese Witherspoon and Harlan Coben",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/9b7486f1-4174-5974-85d4-6f3642a46e51",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1538774704?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781538774700?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fgone-before-goodbye-harlan-coben%2F1147449181%3Fean%3D9781538774700"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FGone-Before-Goodbye%2FHarlan-Coben%2F9781538774700"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781538774700"
+          }
+        ],
+        "contributor": "by Reese Witherspoon and Harlan Coben",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg"
+        },
+        "dagger": 0,
+        "description": "When a mysterious man disappears, the former combat surgeon giving him medical assistance goes on the lam.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781538774700"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781538774700",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781538774700",
+        "publisher": "Grand Central",
+        "rank": 8,
+        "rank_last_week": 5,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781538774700",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "GONE BEFORE GOODBYE",
+        "weeks_on_list": 3
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0593972708?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "SenLinYu",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+        "book_image_height": 500,
+        "book_image_width": 330,
+        "book_review_link": "",
+        "book_uri": "nyt://book/e9c567d8-7c38-5cb8-88e5-ba46078e2144",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0593972708?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780593972700?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Falchemised-senlinyu%2F1146838848%3Fean%3D9780593972700"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FAlchemised%2FSenLinYu%2F9780593972700"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780593972700"
+          }
+        ],
+        "contributor": "by SenLinYu",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg"
+        },
+        "dagger": 0,
+        "description": "After the war, an imprisoned alchemist is sent to a necromancer to recover her lost memories.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780593972700"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780593972700",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780593972700",
+        "publisher": "Del Rey",
+        "rank": 9,
+        "rank_last_week": 6,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780593972700",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "ALCHEMISED",
+        "weeks_on_list": 6
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/B0DZ5FPM6L?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Nicholas Sparks with M. Night Shyamalan",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+        "book_image_height": 500,
+        "book_image_width": 332,
+        "book_review_link": "",
+        "book_uri": "nyt://book/59f872d7-f5c3-5542-8473-f93b993d23c7",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/B0DZ5FPM6L?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9798217154043?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fremain-nicholas-sparks%2F1147568387%3Fean%3D9798217154043"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRemain%2FNicholas-Sparks%2F9798217154043"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9798217154043"
+          }
+        ],
+        "contributor": "by Nicholas Sparks with M. Night Shyamalan",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg"
+        },
+        "dagger": 0,
+        "description": "A New York architect moves to Cape Cod, where he enters a relationship that brings up a lot of questions.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9798217154043"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9798217154043",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9798217154043",
+        "publisher": "Random House",
+        "rank": 10,
+        "rank_last_week": 7,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9798217154043",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "REMAIN",
+        "weeks_on_list": 3
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0593952588?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Ali Hazelwood",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+        "book_image_height": 500,
+        "book_image_width": 333,
+        "book_review_link": "",
+        "book_uri": "nyt://book/1ebff77f-1937-506b-9d41-deb5c87ae102",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0593952588?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780593952580?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fmate-ali-hazelwood%2F1147034474%3Fean%3D9780593952580"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FMate%2FAli-Hazelwood%2F9780593952580"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780593952580"
+          }
+        ],
+        "contributor": "by Ali Hazelwood",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg"
+        },
+        "dagger": 0,
+        "description": "To help stave off her enemies, Serena Paris, a Human-Were hybrid, forms a partnership with Koen Alexander.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780593952580"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780593952580",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780593952580",
+        "publisher": "Berkley",
+        "rank": 11,
+        "rank_last_week": 8,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780593952580",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "MATE",
+        "weeks_on_list": 4
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/006240668X?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Mitch Albom",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+        "book_image_height": 500,
+        "book_image_width": 340,
+        "book_review_link": "",
+        "book_uri": "nyt://book/c29f65eb-1196-5749-bbf1-7dff2b35022e",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/006240668X?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780062406682?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Ftwice-mitch-albom%2F1146840194%3Fean%3D9780062406682"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTwice%2FMitch-Albom%2F9780062406682"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780062406682"
+          }
+        ],
+        "contributor": "by Mitch Albom",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg"
+        },
+        "dagger": 0,
+        "description": "Alfie Logan, who was gifted with the ability to live any moment a second time but must accept the outcomes, makes a risky love decision.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780062406682"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780062406682",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780062406682",
+        "publisher": "Harper",
+        "rank": 12,
+        "rank_last_week": 11,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780062406682",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "TWICE",
+        "weeks_on_list": 4
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1538742578?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Freida McFadden",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+        "book_image_height": 500,
+        "book_image_width": 333,
+        "book_review_link": "",
+        "book_uri": "nyt://book/34b29640-4b8c-59a9-8cf8-470356da1e2f",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1538742578?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781538742570?at=10lIEQ"
+          },
+          {
+            "name": "Barnes and Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9781538742570"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTHE%2BHOUSEMAID%2FFreida%2BMcFadden%2F9781538742570"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781538742570"
+          }
+        ],
+        "contributor": "by Freida McFadden",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg"
+        },
+        "dagger": 0,
+        "description": "Troubles surface when a woman looking to make a fresh start takes a job in the home of the Winchesters.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781538742570"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781538742570",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781538742570",
+        "publisher": "Grand Central",
+        "rank": 13,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781538742570",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE HOUSEMAID",
+        "weeks_on_list": 103
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1464260915?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Freida McFadden",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+        "book_image_height": 500,
+        "book_image_width": 394,
+        "book_review_link": "",
+        "book_uri": "nyt://book/65d085aa-5926-5741-8006-1cd6cb90849e",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1464260915?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781464260919?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-intruder-freida-mcfadden%2F1147331363%3Fean%3D9781464260919"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FIntruder%2FFreida-McFadden%2F9781464260919"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781464260919"
+          }
+        ],
+        "contributor": "by Freida McFadden",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg"
+        },
+        "dagger": 0,
+        "description": "During a rough storm, Casey puts herself in danger when she lets a girl, who is covered in blood, into her cabin.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781464260919"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781464260919",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781464260919",
+        "publisher": "Poisoned Pen",
+        "rank": 14,
+        "rank_last_week": 12,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781464260919",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE INTRUDER",
+        "weeks_on_list": 4
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0063453916?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Catherine Newman",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+        "book_image_height": 500,
+        "book_image_width": 329,
+        "book_review_link": "",
+        "book_uri": "nyt://book/23d34ad6-954a-5689-9a06-060332ae2b26",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0063453916?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780063453913?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fwreck-catherine-newman%2F1146989805%3Fean%3D9780063453913"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FWreck%2FCatherine-Newman%2F9780063453913"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780063453913"
+          }
+        ],
+        "contributor": "by Catherine Newman",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg"
+        },
+        "dagger": 0,
+        "description": "Shifts in circumstances affect Rocky and her family.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780063453913"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780063453913",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780063453913",
+        "publisher": "Harper",
+        "rank": 15,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780063453913",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "WRECK",
+        "weeks_on_list": 1
+      }
+    ],
+    "corrections": [],
+    "display_name": "Combined Print & E-Book Fiction",
+    "list_name": "Combined Print & E-Book Fiction",
+    "list_name_encoded": "combined-print-and-e-book-fiction",
+    "next_published_date": null,
+    "normal_list_ends_at": 15,
+    "previous_published_date": "2025-11-09",
+    "published_date": "2025-11-16",
+    "published_date_description": "",
+    "updated": "WEEKLY"
+  },
+  "metrics": {},
+  "num_results": 15,
+  "page": 1,
+  "query": null,
+  "results": [
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/B0DPJ5W41H?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Louise Penny",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+      "book_image_height": 500,
+      "book_image_width": 329,
+      "book_review_link": "",
+      "book_uri": "nyt://book/99f9a455-baa2-5d2f-ad53-a6dc7dae2199",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/B0DPJ5W41H?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781250328182?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-black-wolf-louise-penny%2F1146663292%3Fean%3D9781250328182"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DTHE%2520BLACK%2520WOLF%2520by%2520Louise%2520Penny"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781250328182"
+        }
+      ],
+      "contributor": "by Louise Penny",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781250328182.jpg"
+      },
+      "dagger": 0,
+      "description": "The 20th book in the Chief Inspector Gamache series. After thwarting a terrorist attack, an injured Gamache leads a covert investigation.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781250328182"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781250328182",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781250328182",
+      "publisher": "Minotaur",
+      "rank": 1,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781250328182",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE BLACK WOLF",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0385548982?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "John Grisham",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/b4d35d23-bb5e-5f9c-b842-01c4352fe4dc",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0385548982?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780385548984?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-widow-john-grisham%2F1147191431%3Fean%3D9780385548984"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FWidow%2FJohn-Grisham%2F9780385548984"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780385548984"
+        }
+      ],
+      "contributor": "by John Grisham",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780385548984.jpg"
+      },
+      "dagger": 0,
+      "description": "When Simon Latch, a lawyer in rural Virginia, is accused of murder, he goes in search of the real killer.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780385548984"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780385548984",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780385548984",
+      "publisher": "Doubleday",
+      "rank": 2,
+      "rank_last_week": 1,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780385548984",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE WIDOW",
+      "weeks_on_list": 2
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1335146989?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Jasmine Mas",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+      "book_image_height": 500,
+      "book_image_width": 318,
+      "book_review_link": "",
+      "book_uri": "nyt://book/1daa5a33-0526-5b5e-b5c2-59efc13c2a6e",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1335146989?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781335146984?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fbonds-of-hercules-jasmine-mas%2F1146294670%3Fean%3D9781335146984"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FBonds-Hercules-Deluxe-Limited%2FJasmine-Mas%2F9781335146984"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781335146984"
+        }
+      ],
+      "contributor": "by Jasmine Mas",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781335146984.jpg"
+      },
+      "dagger": 0,
+      "description": "The second book in the Villains of Lore series. Seduction and danger put Hercules in a tough spot.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781335146984"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781335146984",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781335146984",
+      "publisher": "Canary Street",
+      "rank": 3,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781335146984",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "BONDS OF HERCULES",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0385546890?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Dan Brown",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "https://www.nytimes.com/2025/09/09/books/review/the-secret-of-secrets-dan-brown.html",
+      "book_uri": "nyt://book/49cff1bb-35bc-554b-a7d4-dbc946230c00",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0385546890?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-secret-of-secrets-dan-brown%2F1146902400%3Fean%3D9780385546898"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FSecret-Secrets%2FDan-Brown%2F9780385546898"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780385546898"
+        }
+      ],
+      "contributor": "by Dan Brown",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780385546898.jpg"
+      },
+      "dagger": 0,
+      "description": "As he searches for the missing noetic scientist he has been seeing, Robert Langdon discovers something regarding a secret project.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780385546898"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780385546898",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780385546898",
+      "publisher": "Doubleday",
+      "rank": 4,
+      "rank_last_week": 4,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780385546898",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE SECRET OF SECRETS",
+      "weeks_on_list": 8
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/031656382X?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Michael Connelly",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+      "book_image_height": 500,
+      "book_image_width": 323,
+      "book_review_link": "",
+      "book_uri": "nyt://book/93096031-e0dc-5a57-b1a8-f6e6b1dac3fa",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/031656382X?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780316563826?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-proving-ground-michael-connelly%2F1147425306%3Fean%3D9780316563826"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FProving-Ground%2FMichael-Connelly%2F9780316563826"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780316563826"
+        }
+      ],
+      "contributor": "by Michael Connelly",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780316563826.jpg"
+      },
+      "dagger": 0,
+      "description": "The eighth book in the Lincoln Lawyer series. Mickey Haller enlists a journalist to help his lawsuit against an A.I. company.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780316563826"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780316563826",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780316563826",
+      "publisher": "Little, Brown",
+      "rank": 5,
+      "rank_last_week": 2,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780316563826",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE PROVING GROUND",
+      "weeks_on_list": 2
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1464223335?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Ana Huang",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+      "book_image_height": 500,
+      "book_image_width": 324,
+      "book_review_link": "",
+      "book_uri": "nyt://book/fdfee028-8ada-5b4f-b380-4f0ab8aee897",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1464223335?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781464223334?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-defender-ana-huang%2F1146807813%3Fean%3D9781464223334"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FDefender-Deluxe%2FAna-Huang%2F9781464223334"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781464223334"
+        }
+      ],
+      "contributor": "by Ana Huang",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781464223334.jpg"
+      },
+      "dagger": 0,
+      "description": "The second book in the Gods of the Game series. A professional athlete and the coach’s daughter, who is a sports nutritionist, share a flat.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781464223334"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781464223334",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781464223334",
+      "publisher": "Bloom",
+      "rank": 6,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781464223334",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE DEFENDER",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/B0DV6L9C9J?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Nelson DeMille and Alex DeMille",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/508ddd35-6731-5342-b9ab-761a2266f82c",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/B0DV6L9C9J?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781501101892?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-tin-men-nelson-demille%2F1146889895%3Fean%3D9781501101892"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DTHE%2520TIN%2520MEN%2520by%2520Nelson%2520DeMille%2520and%2520Alex%2520DeMille"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781501101892"
+        }
+      ],
+      "contributor": "by Nelson DeMille and Alex DeMille",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781501101892.jpg"
+      },
+      "dagger": 0,
+      "description": "The third book in the Scott Brodie & Maggie Taylor series. An investigation into the death of a military scientist surfaces troubling technology.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781501101892"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781501101892",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781501101892",
+      "publisher": "Simon & Schuster",
+      "rank": 7,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781501101892",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE TIN MEN",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1538774704?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Reese Witherspoon and Harlan Coben",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/9b7486f1-4174-5974-85d4-6f3642a46e51",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1538774704?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781538774700?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fgone-before-goodbye-harlan-coben%2F1147449181%3Fean%3D9781538774700"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FGone-Before-Goodbye%2FHarlan-Coben%2F9781538774700"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781538774700"
+        }
+      ],
+      "contributor": "by Reese Witherspoon and Harlan Coben",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781538774700.jpg"
+      },
+      "dagger": 0,
+      "description": "When a mysterious man disappears, the former combat surgeon giving him medical assistance goes on the lam.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781538774700"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781538774700",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781538774700",
+      "publisher": "Grand Central",
+      "rank": 8,
+      "rank_last_week": 5,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781538774700",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "GONE BEFORE GOODBYE",
+      "weeks_on_list": 3
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0593972708?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "SenLinYu",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+      "book_image_height": 500,
+      "book_image_width": 330,
+      "book_review_link": "",
+      "book_uri": "nyt://book/e9c567d8-7c38-5cb8-88e5-ba46078e2144",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0593972708?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780593972700?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Falchemised-senlinyu%2F1146838848%3Fean%3D9780593972700"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FAlchemised%2FSenLinYu%2F9780593972700"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780593972700"
+        }
+      ],
+      "contributor": "by SenLinYu",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780593972700.jpg"
+      },
+      "dagger": 0,
+      "description": "After the war, an imprisoned alchemist is sent to a necromancer to recover her lost memories.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780593972700"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780593972700",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780593972700",
+      "publisher": "Del Rey",
+      "rank": 9,
+      "rank_last_week": 6,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780593972700",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "ALCHEMISED",
+      "weeks_on_list": 6
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/B0DZ5FPM6L?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Nicholas Sparks with M. Night Shyamalan",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+      "book_image_height": 500,
+      "book_image_width": 332,
+      "book_review_link": "",
+      "book_uri": "nyt://book/59f872d7-f5c3-5542-8473-f93b993d23c7",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/B0DZ5FPM6L?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9798217154043?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fremain-nicholas-sparks%2F1147568387%3Fean%3D9798217154043"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRemain%2FNicholas-Sparks%2F9798217154043"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9798217154043"
+        }
+      ],
+      "contributor": "by Nicholas Sparks with M. Night Shyamalan",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9798217154043.jpg"
+      },
+      "dagger": 0,
+      "description": "A New York architect moves to Cape Cod, where he enters a relationship that brings up a lot of questions.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9798217154043"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9798217154043",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9798217154043",
+      "publisher": "Random House",
+      "rank": 10,
+      "rank_last_week": 7,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9798217154043",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "REMAIN",
+      "weeks_on_list": 3
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0593952588?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Ali Hazelwood",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+      "book_image_height": 500,
+      "book_image_width": 333,
+      "book_review_link": "",
+      "book_uri": "nyt://book/1ebff77f-1937-506b-9d41-deb5c87ae102",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0593952588?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780593952580?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fmate-ali-hazelwood%2F1147034474%3Fean%3D9780593952580"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FMate%2FAli-Hazelwood%2F9780593952580"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780593952580"
+        }
+      ],
+      "contributor": "by Ali Hazelwood",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780593952580.jpg"
+      },
+      "dagger": 0,
+      "description": "To help stave off her enemies, Serena Paris, a Human-Were hybrid, forms a partnership with Koen Alexander.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780593952580"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780593952580",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780593952580",
+      "publisher": "Berkley",
+      "rank": 11,
+      "rank_last_week": 8,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780593952580",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "MATE",
+      "weeks_on_list": 4
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/006240668X?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Mitch Albom",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+      "book_image_height": 500,
+      "book_image_width": 340,
+      "book_review_link": "",
+      "book_uri": "nyt://book/c29f65eb-1196-5749-bbf1-7dff2b35022e",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/006240668X?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780062406682?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Ftwice-mitch-albom%2F1146840194%3Fean%3D9780062406682"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTwice%2FMitch-Albom%2F9780062406682"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780062406682"
+        }
+      ],
+      "contributor": "by Mitch Albom",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780062406682.jpg"
+      },
+      "dagger": 0,
+      "description": "Alfie Logan, who was gifted with the ability to live any moment a second time but must accept the outcomes, makes a risky love decision.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780062406682"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780062406682",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780062406682",
+      "publisher": "Harper",
+      "rank": 12,
+      "rank_last_week": 11,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780062406682",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "TWICE",
+      "weeks_on_list": 4
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1538742578?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Freida McFadden",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+      "book_image_height": 500,
+      "book_image_width": 333,
+      "book_review_link": "",
+      "book_uri": "nyt://book/34b29640-4b8c-59a9-8cf8-470356da1e2f",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1538742578?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781538742570?at=10lIEQ"
+        },
+        {
+          "name": "Barnes and Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9781538742570"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTHE%2BHOUSEMAID%2FFreida%2BMcFadden%2F9781538742570"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781538742570"
+        }
+      ],
+      "contributor": "by Freida McFadden",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781538742570.jpg"
+      },
+      "dagger": 0,
+      "description": "Troubles surface when a woman looking to make a fresh start takes a job in the home of the Winchesters.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781538742570"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781538742570",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781538742570",
+      "publisher": "Grand Central",
+      "rank": 13,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781538742570",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE HOUSEMAID",
+      "weeks_on_list": 103
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1464260915?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Freida McFadden",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+      "book_image_height": 500,
+      "book_image_width": 394,
+      "book_review_link": "",
+      "book_uri": "nyt://book/65d085aa-5926-5741-8006-1cd6cb90849e",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1464260915?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781464260919?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-intruder-freida-mcfadden%2F1147331363%3Fean%3D9781464260919"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FIntruder%2FFreida-McFadden%2F9781464260919"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781464260919"
+        }
+      ],
+      "contributor": "by Freida McFadden",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781464260919.jpg"
+      },
+      "dagger": 0,
+      "description": "During a rough storm, Casey puts herself in danger when she lets a girl, who is covered in blood, into her cabin.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781464260919"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781464260919",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781464260919",
+      "publisher": "Poisoned Pen",
+      "rank": 14,
+      "rank_last_week": 12,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781464260919",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE INTRUDER",
+      "weeks_on_list": 4
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0063453916?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Catherine Newman",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+      "book_image_height": 500,
+      "book_image_width": 329,
+      "book_review_link": "",
+      "book_uri": "nyt://book/23d34ad6-954a-5689-9a06-060332ae2b26",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0063453916?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780063453913?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fwreck-catherine-newman%2F1146989805%3Fean%3D9780063453913"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FWreck%2FCatherine-Newman%2F9780063453913"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780063453913"
+        }
+      ],
+      "contributor": "by Catherine Newman",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780063453913.jpg"
+      },
+      "dagger": 0,
+      "description": "Shifts in circumstances affect Rocky and her family.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780063453913"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780063453913",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780063453913",
+      "publisher": "Harper",
+      "rank": 15,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780063453913",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "WRECK",
+      "weeks_on_list": 1
+    }
+  ],
+  "status": "OK",
+  "status_code": 200,
+  "total_results": 15
+}

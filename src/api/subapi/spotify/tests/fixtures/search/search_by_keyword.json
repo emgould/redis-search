@@ -1,0 +1,2906 @@
+{
+  "results": [
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2n2RSaZqBuUUukhbLlpnE6",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2n2RSaZqBuUUukhbLlpnE6",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2n2RSaZqBuUUukhbLlpnE6",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebd00c2ff422829437e6b5f1e0",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174d00c2ff422829437e6b5f1e0",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178d00c2ff422829437e6b5f1e0",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 78,
+        "followers": 2831665
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2n2RSaZqBuUUukhbLlpnE6",
+      "name": "Sleep Token",
+      "spotify_url": "https://open.spotify.com/artist/2n2RSaZqBuUUukhbLlpnE6",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2n2RSaZqBuUUukhbLlpnE6",
+        "key": "artist",
+        "description": "Sleep Token"
+      },
+      "popularity": 78,
+      "followers": 2831665,
+      "genres": [
+        "progressive metal",
+        "metalcore"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178d00c2ff422829437e6b5f1e0",
+      "artist": "Sleep Token",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2Hkut4rAAyrQxRdof7FVJq",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2Hkut4rAAyrQxRdof7FVJq",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb896c4b043fb3063178afd716",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174896c4b043fb3063178afd716",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178896c4b043fb3063178afd716",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 65,
+        "followers": 2557352
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2Hkut4rAAyrQxRdof7FVJq",
+      "name": "Rush",
+      "spotify_url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+        "key": "artist",
+        "description": "Rush"
+      },
+      "popularity": 65,
+      "followers": 2557352,
+      "genres": [
+        "progressive rock",
+        "classic rock",
+        "hard rock",
+        "rock",
+        "aor"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178896c4b043fb3063178afd716",
+      "artist": "Rush",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6guC9FqvlVboSKTI77NG2k",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6guC9FqvlVboSKTI77NG2k",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6guC9FqvlVboSKTI77NG2k",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb82fc5e0ee0a525bfc037d4d7",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517482fc5e0ee0a525bfc037d4d7",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17882fc5e0ee0a525bfc037d4d7",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 64,
+        "followers": 810389
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6guC9FqvlVboSKTI77NG2k",
+      "name": "Dance Gavin Dance",
+      "spotify_url": "https://open.spotify.com/artist/6guC9FqvlVboSKTI77NG2k",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6guC9FqvlVboSKTI77NG2k",
+        "key": "artist",
+        "description": "Dance Gavin Dance"
+      },
+      "popularity": 64,
+      "followers": 810389,
+      "genres": [
+        "post-hardcore",
+        "screamo",
+        "metalcore",
+        "emo",
+        "math rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17882fc5e0ee0a525bfc037d4d7",
+      "artist": "Dance Gavin Dance",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_4AVFqumd2ogHFlRbKIjp1t",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/4AVFqumd2ogHFlRbKIjp1t",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/4AVFqumd2ogHFlRbKIjp1t",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2828484ea968409a0ea584a6",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051742828484ea968409a0ea584a6",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1782828484ea968409a0ea584a6",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 72,
+        "followers": 4034498
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4AVFqumd2ogHFlRbKIjp1t",
+      "name": "Alesso",
+      "spotify_url": "https://open.spotify.com/artist/4AVFqumd2ogHFlRbKIjp1t",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/4AVFqumd2ogHFlRbKIjp1t",
+        "key": "artist",
+        "description": "Alesso"
+      },
+      "popularity": 72,
+      "followers": 4034498,
+      "genres": [
+        "edm"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1782828484ea968409a0ea584a6",
+      "artist": "Alesso",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_60d24wfXkVzDSfLS6hyCjZ",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/60d24wfXkVzDSfLS6hyCjZ",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/60d24wfXkVzDSfLS6hyCjZ",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebf5b8ee60f1f4ee3453aba40b",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174f5b8ee60f1f4ee3453aba40b",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178f5b8ee60f1f4ee3453aba40b",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 75,
+        "followers": 15121152
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "60d24wfXkVzDSfLS6hyCjZ",
+      "name": "Martin Garrix",
+      "spotify_url": "https://open.spotify.com/artist/60d24wfXkVzDSfLS6hyCjZ",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/60d24wfXkVzDSfLS6hyCjZ",
+        "key": "artist",
+        "description": "Martin Garrix"
+      },
+      "popularity": 75,
+      "followers": 15121152,
+      "genres": [
+        "edm",
+        "progressive house",
+        "electronica"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178f5b8ee60f1f4ee3453aba40b",
+      "artist": "Martin Garrix",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2yEwvVSSSUkcLeSTNyHKh8",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2yEwvVSSSUkcLeSTNyHKh8",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2yEwvVSSSUkcLeSTNyHKh8",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb13f5472b709101616c87cba3",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517413f5472b709101616c87cba3",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17813f5472b709101616c87cba3",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 71,
+        "followers": 4524370
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2yEwvVSSSUkcLeSTNyHKh8",
+      "name": "TOOL",
+      "spotify_url": "https://open.spotify.com/artist/2yEwvVSSSUkcLeSTNyHKh8",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2yEwvVSSSUkcLeSTNyHKh8",
+        "key": "artist",
+        "description": "TOOL"
+      },
+      "popularity": 71,
+      "followers": 4524370,
+      "genres": [
+        "progressive metal",
+        "alternative metal",
+        "progressive rock",
+        "metal"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17813f5472b709101616c87cba3",
+      "artist": "TOOL",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_3CkvROUTQ6nRi9yQOcsB50",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/3CkvROUTQ6nRi9yQOcsB50",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/3CkvROUTQ6nRi9yQOcsB50",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eba6a5c327ebbc1131effef2e0",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174a6a5c327ebbc1131effef2e0",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178a6a5c327ebbc1131effef2e0",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 69,
+        "followers": 3741141
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3CkvROUTQ6nRi9yQOcsB50",
+      "name": "Genesis",
+      "spotify_url": "https://open.spotify.com/artist/3CkvROUTQ6nRi9yQOcsB50",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/3CkvROUTQ6nRi9yQOcsB50",
+        "key": "artist",
+        "description": "Genesis"
+      },
+      "popularity": 69,
+      "followers": 3741141,
+      "genres": [
+        "progressive rock",
+        "art rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178a6a5c327ebbc1131effef2e0",
+      "artist": "Genesis",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_3jAosRBCdrybxqTnrI4Sld",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/3jAosRBCdrybxqTnrI4Sld",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/3jAosRBCdrybxqTnrI4Sld",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb576638660c4f89a7a892975f",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174576638660c4f89a7a892975f",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178576638660c4f89a7a892975f",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 44,
+        "followers": 26798
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3jAosRBCdrybxqTnrI4Sld",
+      "name": "PROFF",
+      "spotify_url": "https://open.spotify.com/artist/3jAosRBCdrybxqTnrI4Sld",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/3jAosRBCdrybxqTnrI4Sld",
+        "key": "artist",
+        "description": "PROFF"
+      },
+      "popularity": 44,
+      "followers": 26798,
+      "genres": [
+        "progressive house",
+        "progressive trance",
+        "organic house",
+        "melodic house",
+        "trance"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178576638660c4f89a7a892975f",
+      "artist": "PROFF",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_1h6Cn3P4NGzXbaXidqURXs",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/1h6Cn3P4NGzXbaXidqURXs",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/1h6Cn3P4NGzXbaXidqURXs",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2a69903cac5dbe1f233ffb79",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051742a69903cac5dbe1f233ffb79",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1782a69903cac5dbe1f233ffb79",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 76,
+        "followers": 3951671
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1h6Cn3P4NGzXbaXidqURXs",
+      "name": "Swedish House Mafia",
+      "spotify_url": "https://open.spotify.com/artist/1h6Cn3P4NGzXbaXidqURXs",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/1h6Cn3P4NGzXbaXidqURXs",
+        "key": "artist",
+        "description": "Swedish House Mafia"
+      },
+      "popularity": 76,
+      "followers": 3951671,
+      "genres": [
+        "edm"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1782a69903cac5dbe1f233ffb79",
+      "artist": "Swedish House Mafia",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0k17h0D3J5VfsdmQ1iZtE9",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0k17h0D3J5VfsdmQ1iZtE9",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb97885ce689d644c91dfba05c",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517497885ce689d644c91dfba05c",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17897885ce689d644c91dfba05c",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 79,
+        "followers": 22734622
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "name": "Pink Floyd",
+      "spotify_url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+        "key": "artist",
+        "description": "Pink Floyd"
+      },
+      "popularity": 79,
+      "followers": 22734622,
+      "genres": [
+        "progressive rock",
+        "psychedelic rock",
+        "classic rock",
+        "art rock",
+        "rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17897885ce689d644c91dfba05c",
+      "artist": "Pink Floyd",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2J80qXI4NHKpq5RT3xUF7V",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2J80qXI4NHKpq5RT3xUF7V",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2J80qXI4NHKpq5RT3xUF7V",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb8babc9c5a2e0b373e2483d5e",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051748babc9c5a2e0b373e2483d5e",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1788babc9c5a2e0b373e2483d5e",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 52,
+        "followers": 145344
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2J80qXI4NHKpq5RT3xUF7V",
+      "name": "Third Party",
+      "spotify_url": "https://open.spotify.com/artist/2J80qXI4NHKpq5RT3xUF7V",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2J80qXI4NHKpq5RT3xUF7V",
+        "key": "artist",
+        "description": "Third Party"
+      },
+      "popularity": 52,
+      "followers": 145344,
+      "genres": [
+        "progressive house",
+        "edm",
+        "big room"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1788babc9c5a2e0b373e2483d5e",
+      "artist": "Third Party",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_1XcPIHqirx1Jaxm2bAxMeV",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/1XcPIHqirx1Jaxm2bAxMeV",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/1XcPIHqirx1Jaxm2bAxMeV",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb9b38b8ed7dab672ac0fd1702",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051749b38b8ed7dab672ac0fd1702",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1789b38b8ed7dab672ac0fd1702",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 45,
+        "followers": 21823
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1XcPIHqirx1Jaxm2bAxMeV",
+      "name": "gardenstate",
+      "spotify_url": "https://open.spotify.com/artist/1XcPIHqirx1Jaxm2bAxMeV",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/1XcPIHqirx1Jaxm2bAxMeV",
+        "key": "artist",
+        "description": "gardenstate"
+      },
+      "popularity": 45,
+      "followers": 21823,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1789b38b8ed7dab672ac0fd1702",
+      "artist": "gardenstate",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_64MoFdq8ORI3V98AR5SPWL",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/64MoFdq8ORI3V98AR5SPWL",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/64MoFdq8ORI3V98AR5SPWL",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb59c8174b18944f9feb9dd3c2",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517459c8174b18944f9feb9dd3c2",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17859c8174b18944f9feb9dd3c2",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 46,
+        "followers": 105971
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "64MoFdq8ORI3V98AR5SPWL",
+      "name": "BT",
+      "spotify_url": "https://open.spotify.com/artist/64MoFdq8ORI3V98AR5SPWL",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/64MoFdq8ORI3V98AR5SPWL",
+        "key": "artist",
+        "description": "BT"
+      },
+      "popularity": 46,
+      "followers": 105971,
+      "genres": [
+        "trance",
+        "progressive trance",
+        "progressive house"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17859c8174b18944f9feb9dd3c2",
+      "artist": "BT",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_5Dyfxq0ZrFjjeFBdSNxDbo",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/5Dyfxq0ZrFjjeFBdSNxDbo",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/5Dyfxq0ZrFjjeFBdSNxDbo",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb59637fd7dbb6f078545d08da",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517459637fd7dbb6f078545d08da",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17859637fd7dbb6f078545d08da",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 53,
+        "followers": 190593
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5Dyfxq0ZrFjjeFBdSNxDbo",
+      "name": "YOTTO",
+      "spotify_url": "https://open.spotify.com/artist/5Dyfxq0ZrFjjeFBdSNxDbo",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/5Dyfxq0ZrFjjeFBdSNxDbo",
+        "key": "artist",
+        "description": "YOTTO"
+      },
+      "popularity": 53,
+      "followers": 190593,
+      "genres": [
+        "melodic house",
+        "progressive house",
+        "melodic techno",
+        "deep house"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17859637fd7dbb6f078545d08da",
+      "artist": "YOTTO",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0hprEC0nsWuQPSHag1O2Vi",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0hprEC0nsWuQPSHag1O2Vi",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0hprEC0nsWuQPSHag1O2Vi",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebab8b3e2e7218ed4714d64d2f",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174ab8b3e2e7218ed4714d64d2f",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178ab8b3e2e7218ed4714d64d2f",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 57,
+        "followers": 345050
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0hprEC0nsWuQPSHag1O2Vi",
+      "name": "Gareth Emery",
+      "spotify_url": "https://open.spotify.com/artist/0hprEC0nsWuQPSHag1O2Vi",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0hprEC0nsWuQPSHag1O2Vi",
+        "key": "artist",
+        "description": "Gareth Emery"
+      },
+      "popularity": 57,
+      "followers": 345050,
+      "genres": [
+        "trance",
+        "progressive trance",
+        "progressive house"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178ab8b3e2e7218ed4714d64d2f",
+      "artist": "Gareth Emery",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_1WHFu22zN1C6F11Z1rt12K",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/1WHFu22zN1C6F11Z1rt12K",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/1WHFu22zN1C6F11Z1rt12K",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebd7e2416ca7c55557fcc0a974",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174d7e2416ca7c55557fcc0a974",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178d7e2416ca7c55557fcc0a974",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 50,
+        "followers": 46734
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1WHFu22zN1C6F11Z1rt12K",
+      "name": "Jerro",
+      "spotify_url": "https://open.spotify.com/artist/1WHFu22zN1C6F11Z1rt12K",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/1WHFu22zN1C6F11Z1rt12K",
+        "key": "artist",
+        "description": "Jerro"
+      },
+      "popularity": 50,
+      "followers": 46734,
+      "genres": [
+        "melodic house"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178d7e2416ca7c55557fcc0a974",
+      "artist": "Jerro",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2OfVmmK8omvMuJqZHxhQa6",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2OfVmmK8omvMuJqZHxhQa6",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2OfVmmK8omvMuJqZHxhQa6",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273acc8e33d0f640326c26c03f3",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02acc8e33d0f640326c26c03f3",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851acc8e33d0f640326c26c03f3",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 48,
+        "followers": 8905
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2OfVmmK8omvMuJqZHxhQa6",
+      "name": "Adam K & Soha",
+      "spotify_url": "https://open.spotify.com/artist/2OfVmmK8omvMuJqZHxhQa6",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2OfVmmK8omvMuJqZHxhQa6",
+        "key": "artist",
+        "description": "Adam K & Soha"
+      },
+      "popularity": 48,
+      "followers": 8905,
+      "genres": [
+        "trance"
+      ],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851acc8e33d0f640326c26c03f3",
+      "artist": "Adam K & Soha",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_64KEffDW9EtZ1y2vBYgq8T",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/64KEffDW9EtZ1y2vBYgq8T",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/64KEffDW9EtZ1y2vBYgq8T",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb3b2498dc8a8c6eceed0a2db3",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051743b2498dc8a8c6eceed0a2db3",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1783b2498dc8a8c6eceed0a2db3",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 80,
+        "followers": 34483461
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "64KEffDW9EtZ1y2vBYgq8T",
+      "name": "Marshmello",
+      "spotify_url": "https://open.spotify.com/artist/64KEffDW9EtZ1y2vBYgq8T",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/64KEffDW9EtZ1y2vBYgq8T",
+        "key": "artist",
+        "description": "Marshmello"
+      },
+      "popularity": 80,
+      "followers": 34483461,
+      "genres": [
+        "edm"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1783b2498dc8a8c6eceed0a2db3",
+      "artist": "Marshmello",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2avRYQUWQpIkzJOEkf0MdY",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2avRYQUWQpIkzJOEkf0MdY",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2avRYQUWQpIkzJOEkf0MdY",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb16bc0e61912361e0880f17a2",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517416bc0e61912361e0880f17a2",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17816bc0e61912361e0880f17a2",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 52,
+        "followers": 94257
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2avRYQUWQpIkzJOEkf0MdY",
+      "name": "Kx5",
+      "spotify_url": "https://open.spotify.com/artist/2avRYQUWQpIkzJOEkf0MdY",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2avRYQUWQpIkzJOEkf0MdY",
+        "key": "artist",
+        "description": "Kx5"
+      },
+      "popularity": 52,
+      "followers": 94257,
+      "genres": [
+        "melodic house"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17816bc0e61912361e0880f17a2",
+      "artist": "Kx5",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0XqFDQJjqW5PfhfBCb53LR",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0XqFDQJjqW5PfhfBCb53LR",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0XqFDQJjqW5PfhfBCb53LR",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4e09d8bdf816a0a5a59c6cf9",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051744e09d8bdf816a0a5a59c6cf9",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1784e09d8bdf816a0a5a59c6cf9",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 51,
+        "followers": 197416
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0XqFDQJjqW5PfhfBCb53LR",
+      "name": "Sick Individuals",
+      "spotify_url": "https://open.spotify.com/artist/0XqFDQJjqW5PfhfBCb53LR",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0XqFDQJjqW5PfhfBCb53LR",
+        "key": "artist",
+        "description": "Sick Individuals"
+      },
+      "popularity": 51,
+      "followers": 197416,
+      "genres": [
+        "big room",
+        "progressive house",
+        "edm"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1784e09d8bdf816a0a5a59c6cf9",
+      "artist": "Sick Individuals",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_2yfQvBqdTi54cxaBpTkhHA",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/2yfQvBqdTi54cxaBpTkhHA",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/2yfQvBqdTi54cxaBpTkhHA",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2739da9d09e742fc514168c0b69",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e029da9d09e742fc514168c0b69",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048519da9d09e742fc514168c0b69",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2yfQvBqdTi54cxaBpTkhHA",
+      "title": "Progressive Essentials, Vol. 3",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/2yfQvBqdTi54cxaBpTkhHA",
+      "default_image": "https://i.scdn.co/image/ab67616d000048519da9d09e742fc514168c0b69",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2012-06-28",
+      "release_date_precision": "day",
+      "total_tracks": 20
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_1XwFDHCqZQ7WKKXhWpCIYM",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/1XwFDHCqZQ7WKKXhWpCIYM",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/1XwFDHCqZQ7WKKXhWpCIYM",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27329cb71adeac6c8d5ea606662",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0229cb71adeac6c8d5ea606662",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485129cb71adeac6c8d5ea606662",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1XwFDHCqZQ7WKKXhWpCIYM",
+      "title": "Progressive House Essentials 2021",
+      "artist": "Monstercat Silk",
+      "artist_id": "2WzwfYJDvyqHLVvIGOwI60",
+      "spotify_url": "https://open.spotify.com/album/1XwFDHCqZQ7WKKXhWpCIYM",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485129cb71adeac6c8d5ea606662",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2020-12-25",
+      "release_date_precision": "day",
+      "total_tracks": 25
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_32tUlPXHUgfqeUJMpBmkiR",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/32tUlPXHUgfqeUJMpBmkiR",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/32tUlPXHUgfqeUJMpBmkiR",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273a8d577fcc6b6da958b148e08",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02a8d577fcc6b6da958b148e08",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851a8d577fcc6b6da958b148e08",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "32tUlPXHUgfqeUJMpBmkiR",
+      "title": "Progressive House Essentials 2018",
+      "artist": "Monstercat Silk",
+      "artist_id": "2WzwfYJDvyqHLVvIGOwI60",
+      "spotify_url": "https://open.spotify.com/album/32tUlPXHUgfqeUJMpBmkiR",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851a8d577fcc6b6da958b148e08",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2018-01-03",
+      "release_date_precision": "day",
+      "total_tracks": 22
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5cj29254yBqrNSeF5fDSlL",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5cj29254yBqrNSeF5fDSlL",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5cj29254yBqrNSeF5fDSlL",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2735389501d3da59bfb0c7c2ad7",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e025389501d3da59bfb0c7c2ad7",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048515389501d3da59bfb0c7c2ad7",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5cj29254yBqrNSeF5fDSlL",
+      "title": "Progressive Blues Experiment",
+      "artist": "Johnny Winter",
+      "artist_id": "2ODUxmFxJSyvGiimNhMHbO",
+      "spotify_url": "https://open.spotify.com/album/5cj29254yBqrNSeF5fDSlL",
+      "default_image": "https://i.scdn.co/image/ab67616d000048515389501d3da59bfb0c7c2ad7",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2005-01-01",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5KcY5VouJpaGlb4FZ383gl",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5KcY5VouJpaGlb4FZ383gl",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5KcY5VouJpaGlb4FZ383gl",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27316e5a32c30dd9597293717c6",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0216e5a32c30dd9597293717c6",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485116e5a32c30dd9597293717c6",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5KcY5VouJpaGlb4FZ383gl",
+      "title": "Progressive",
+      "artist": "Mrs. GREEN APPLE",
+      "artist_id": "4QvgGvpgzgyUOo8Yp8LDm9",
+      "spotify_url": "https://open.spotify.com/album/5KcY5VouJpaGlb4FZ383gl",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485116e5a32c30dd9597293717c6",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2015-02-18",
+      "release_date_precision": "day",
+      "total_tracks": 6
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_52RU0jEZCxpMkQqBOgvWdt",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/52RU0jEZCxpMkQqBOgvWdt",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/52RU0jEZCxpMkQqBOgvWdt",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2735b8bf4bab270d7dd1a9c52bb",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e025b8bf4bab270d7dd1a9c52bb",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048515b8bf4bab270d7dd1a9c52bb",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "52RU0jEZCxpMkQqBOgvWdt",
+      "title": "Progressive Deep House Work Focus Beats",
+      "artist": "EDM Focus Music For Work",
+      "artist_id": "7bvCH9O9dY3lADZcYdqHr3",
+      "spotify_url": "https://open.spotify.com/album/52RU0jEZCxpMkQqBOgvWdt",
+      "default_image": "https://i.scdn.co/image/ab67616d000048515b8bf4bab270d7dd1a9c52bb",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2024-02-19",
+      "release_date_precision": "day",
+      "total_tracks": 15
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_7KoqrkvzTgGF07M3Vmcofe",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/7KoqrkvzTgGF07M3Vmcofe",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/7KoqrkvzTgGF07M3Vmcofe",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273de5d69a3ea065abacba71c31",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02de5d69a3ea065abacba71c31",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851de5d69a3ea065abacba71c31",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "7KoqrkvzTgGF07M3Vmcofe",
+      "title": "Progressive House Essentials 2019",
+      "artist": "Jacob Henry",
+      "artist_id": "2gjPMizz2O02yDhxg9HcQ2",
+      "spotify_url": "https://open.spotify.com/album/7KoqrkvzTgGF07M3Vmcofe",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851de5d69a3ea065abacba71c31",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2019-02-06",
+      "release_date_precision": "day",
+      "total_tracks": 23
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_4O6SlsPe15JWIBmrDkoNQw",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/4O6SlsPe15JWIBmrDkoNQw",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/4O6SlsPe15JWIBmrDkoNQw",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2731b5db8bd3b05181b05ab57c2",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e021b5db8bd3b05181b05ab57c2",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048511b5db8bd3b05181b05ab57c2",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4O6SlsPe15JWIBmrDkoNQw",
+      "title": "Progressive C. C.",
+      "artist": "Jimmy C. Newman",
+      "artist_id": "4I2LAvm6wV4SY7sp3qpdDH",
+      "spotify_url": "https://open.spotify.com/album/4O6SlsPe15JWIBmrDkoNQw",
+      "default_image": "https://i.scdn.co/image/ab67616d000048511b5db8bd3b05181b05ab57c2",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "1977-01-01",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_1TyklP0agPn3hQK7NQ42jW",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/1TyklP0agPn3hQK7NQ42jW",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/1TyklP0agPn3hQK7NQ42jW",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2730701ab56b7c3eeae37f52df1",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e020701ab56b7c3eeae37f52df1",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048510701ab56b7c3eeae37f52df1",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1TyklP0agPn3hQK7NQ42jW",
+      "title": "Progressive House Festival Anthems Vol. 4 (Mixed by Pavoire)",
+      "artist": "Pavoire",
+      "artist_id": "5iHEfS0zJZAIXmS93DU0jq",
+      "spotify_url": "https://open.spotify.com/album/1TyklP0agPn3hQK7NQ42jW",
+      "default_image": "https://i.scdn.co/image/ab67616d000048510701ab56b7c3eeae37f52df1",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2025-09-12",
+      "release_date_precision": "day",
+      "total_tracks": 10
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5awXeavaagXQYzB4DgMqPi",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5awXeavaagXQYzB4DgMqPi",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5awXeavaagXQYzB4DgMqPi",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2734265b62458da88ee7682bc8c",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e024265b62458da88ee7682bc8c",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048514265b62458da88ee7682bc8c",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5awXeavaagXQYzB4DgMqPi",
+      "title": "Progressive Sensations, Vol. 1",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/5awXeavaagXQYzB4DgMqPi",
+      "default_image": "https://i.scdn.co/image/ab67616d000048514265b62458da88ee7682bc8c",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2019-09-30",
+      "release_date_precision": "day",
+      "total_tracks": 20
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_4wlUNegdeHyE94m7W1TvG6",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/4wlUNegdeHyE94m7W1TvG6",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/4wlUNegdeHyE94m7W1TvG6",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2731454d6ed991862c9e8f3fe5b",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e021454d6ed991862c9e8f3fe5b",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048511454d6ed991862c9e8f3fe5b",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4wlUNegdeHyE94m7W1TvG6",
+      "title": "\u50b2\u97f3\u30d7\u30ed\u30b0\u30ec\u30c3\u30b7\u30f4",
+      "artist": "HIGH and MIGHTY COLOR",
+      "artist_id": "68vPeaQOlnY1aA3iBKCEpG",
+      "spotify_url": "https://open.spotify.com/album/4wlUNegdeHyE94m7W1TvG6",
+      "default_image": "https://i.scdn.co/image/ab67616d000048511454d6ed991862c9e8f3fe5b",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2006-04-05",
+      "release_date_precision": "day",
+      "total_tracks": 14
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_6U803HjuYDhefzd8suMyMg",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/6U803HjuYDhefzd8suMyMg",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/6U803HjuYDhefzd8suMyMg",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27377102a76ba66ea04144463f7",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0277102a76ba66ea04144463f7",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485177102a76ba66ea04144463f7",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6U803HjuYDhefzd8suMyMg",
+      "title": "FLCL Progressive / Alternative (Music from the Series)",
+      "artist": "the pillows",
+      "artist_id": "6ilYV5oF8whllOnm4VZlYR",
+      "spotify_url": "https://open.spotify.com/album/6U803HjuYDhefzd8suMyMg",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485177102a76ba66ea04144463f7",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2019-11-08",
+      "release_date_precision": "day",
+      "total_tracks": 14
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_15jgohxZ0wg4A5UC28QAeW",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/15jgohxZ0wg4A5UC28QAeW",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/15jgohxZ0wg4A5UC28QAeW",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2733dddb65f541934ae203169c8",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e023dddb65f541934ae203169c8",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048513dddb65f541934ae203169c8",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "15jgohxZ0wg4A5UC28QAeW",
+      "title": "Progressive Alliance 2025",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/15jgohxZ0wg4A5UC28QAeW",
+      "default_image": "https://i.scdn.co/image/ab67616d000048513dddb65f541934ae203169c8",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2025-07-04",
+      "release_date_precision": "day",
+      "total_tracks": 11
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_6saeUDMyWZdwt6ZOhKhhEe",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/6saeUDMyWZdwt6ZOhKhhEe",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/6saeUDMyWZdwt6ZOhKhhEe",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273819b927df552cd58f1b7ab88",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02819b927df552cd58f1b7ab88",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851819b927df552cd58f1b7ab88",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 60
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6saeUDMyWZdwt6ZOhKhhEe",
+      "title": "Progresivo",
+      "artist": "Magnate",
+      "artist_id": "0adUZVrjlyffZEwp9bCj4V",
+      "spotify_url": "https://open.spotify.com/album/6saeUDMyWZdwt6ZOhKhhEe",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851819b927df552cd58f1b7ab88",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2007-01-01",
+      "release_date_precision": "day",
+      "total_tracks": 13
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5hdht42foeE5LPhsZCeTau",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5hdht42foeE5LPhsZCeTau",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5hdht42foeE5LPhsZCeTau",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27386b85f38ddaf8903442ec0cb",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0286b85f38ddaf8903442ec0cb",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485186b85f38ddaf8903442ec0cb",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 171
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5hdht42foeE5LPhsZCeTau",
+      "title": "Progression",
+      "artist": "Sleepless",
+      "artist_id": "3mlxr1apLgSjYCeHIIdlHf",
+      "spotify_url": "https://open.spotify.com/album/5hdht42foeE5LPhsZCeTau",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485186b85f38ddaf8903442ec0cb",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2016-07-15",
+      "release_date_precision": "day",
+      "total_tracks": 15
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_0OBIfjraQqckIpY9Z9gn4i",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/0OBIfjraQqckIpY9Z9gn4i",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/0OBIfjraQqckIpY9Z9gn4i",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27308b8dff84b991cbcebd9bb28",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0208b8dff84b991cbcebd9bb28",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485108b8dff84b991cbcebd9bb28",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0OBIfjraQqckIpY9Z9gn4i",
+      "title": "Progression Sessions 1",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/0OBIfjraQqckIpY9Z9gn4i",
+      "default_image": "https://i.scdn.co/image/ab67616d0000485108b8dff84b991cbcebd9bb28",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2013-01-28",
+      "release_date_precision": "day",
+      "total_tracks": 13
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_5j8MggTNion75dLjGGhewO",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/5j8MggTNion75dLjGGhewO",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/5j8MggTNion75dLjGGhewO",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2739c69a232b51f818d0bdb68a8",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e029c69a232b51f818d0bdb68a8",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048519c69a232b51f818d0bdb68a8",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5j8MggTNion75dLjGGhewO",
+      "title": "Progression Sessions 2",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/5j8MggTNion75dLjGGhewO",
+      "default_image": "https://i.scdn.co/image/ab67616d000048519c69a232b51f818d0bdb68a8",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2013-01-28",
+      "release_date_precision": "day",
+      "total_tracks": 11
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_4i2sPrxOsHqCMQYLxfqz7Z",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/4i2sPrxOsHqCMQYLxfqz7Z",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/4i2sPrxOsHqCMQYLxfqz7Z",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273b024de95a57318af33128d85",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02b024de95a57318af33128d85",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851b024de95a57318af33128d85",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 185
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4i2sPrxOsHqCMQYLxfqz7Z",
+      "title": "Progress 2",
+      "artist": "Rob Viktum",
+      "artist_id": "4vHZSsKMp1MTw2uQlsrxkz",
+      "spotify_url": "https://open.spotify.com/album/4i2sPrxOsHqCMQYLxfqz7Z",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851b024de95a57318af33128d85",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2010-01-12",
+      "release_date_precision": "day",
+      "total_tracks": 16
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_7LtcehQ4aWsv3iy4v9c9jw",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/7LtcehQ4aWsv3iy4v9c9jw",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/7LtcehQ4aWsv3iy4v9c9jw",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273c6d9efb18e2eb2008a2ab054",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02c6d9efb18e2eb2008a2ab054",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851c6d9efb18e2eb2008a2ab054",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 168
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "7LtcehQ4aWsv3iy4v9c9jw",
+      "title": "Born Into The 90's - The Best Of Progressive R&B",
+      "artist": "Various Artists",
+      "artist_id": "0LyfQWJT6nXafLPZqxe9Of",
+      "spotify_url": "https://open.spotify.com/album/7LtcehQ4aWsv3iy4v9c9jw",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851c6d9efb18e2eb2008a2ab054",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2017-07-21",
+      "release_date_precision": "day",
+      "total_tracks": 25
+    },
+    {
+      "mc_type": "music_album",
+      "mc_id": "album_321AuW5KKIzgmf58nmnE3L",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/album/321AuW5KKIzgmf58nmnE3L",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/albums/321AuW5KKIzgmf58nmnE3L",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273111634f6810f75892eb75651",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02111634f6810f75892eb75651",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851111634f6810f75892eb75651",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "num_available_markets": 184
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "321AuW5KKIzgmf58nmnE3L",
+      "title": "progression breaks",
+      "artist": "disctr4k",
+      "artist_id": "05ksHwXiCA9qt1bV1nN8F7",
+      "spotify_url": "https://open.spotify.com/album/321AuW5KKIzgmf58nmnE3L",
+      "default_image": "https://i.scdn.co/image/ab67616d00004851111634f6810f75892eb75651",
+      "mbid": "",
+      "artist_url": null,
+      "release_date": "2021-12-10",
+      "release_date_precision": "day",
+      "total_tracks": 9
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_5CMvAWTlDPdZnkleiTHyyo",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/5CMvAWTlDPdZnkleiTHyyo",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/5CMvAWTlDPdZnkleiTHyyo",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72cfbd05c2dceb67bf16d96e16a",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "5CMvAWTlDPdZnkleiTHyyo",
+      "name": "Progressive House 2025",
+      "spotify_url": "https://open.spotify.com/playlist/5CMvAWTlDPdZnkleiTHyyo",
+      "collaborative": false,
+      "description": "updated weekly. the best melodic deep house, melodic techno music, deep electronic, techno house, melodic house, best progressive house playlist",
+      "owner": "Soave",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72cfbd05c2dceb67bf16d96e16a"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_2nvqJCHqXnvY1dXt1OReyk",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/2nvqJCHqXnvY1dXt1OReyk",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/2nvqJCHqXnvY1dXt1OReyk",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e025070b25872d0db10607a61cdab67616d00001e025ee6fd5abf17bab05a1bffa3ab67616d00001e0280c23aba3e018f5463bdf191ab67616d00001e02966ee66d723744788a24dfcc",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e025070b25872d0db10607a61cdab67616d00001e025ee6fd5abf17bab05a1bffa3ab67616d00001e0280c23aba3e018f5463bdf191ab67616d00001e02966ee66d723744788a24dfcc",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e025070b25872d0db10607a61cdab67616d00001e025ee6fd5abf17bab05a1bffa3ab67616d00001e0280c23aba3e018f5463bdf191ab67616d00001e02966ee66d723744788a24dfcc",
+          "key": "s",
+          "type": "url",
+          "description": "60x60"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "2nvqJCHqXnvY1dXt1OReyk",
+      "name": "Top EDM: Progressive House \ud83d\udcab",
+      "spotify_url": "https://open.spotify.com/playlist/2nvqJCHqXnvY1dXt1OReyk",
+      "collaborative": false,
+      "description": "The sound of the Golden Era. @_wonderli Top Picks for euphoric Progressive House music. Selections also include Electro Pop &amp; Progressive Trance music.",
+      "owner": "Wonderli",
+      "default_image": "https://mosaic.scdn.co/60/ab67616d00001e025070b25872d0db10607a61cdab67616d00001e025ee6fd5abf17bab05a1bffa3ab67616d00001e0280c23aba3e018f5463bdf191ab67616d00001e02966ee66d723744788a24dfcc"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_6U7YflqS9WyaJse5H7dyee",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/6U7YflqS9WyaJse5H7dyee",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/6U7YflqS9WyaJse5H7dyee",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e029f2179592d196f575b7a0ff5ab67616d00001e02be6e758fe8300a72eceddb8fab67616d00001e02e891ccd03f4722e86a682de8ab67616d00001e02fbe325d2c4cdff1416bd31ca",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e029f2179592d196f575b7a0ff5ab67616d00001e02be6e758fe8300a72eceddb8fab67616d00001e02e891ccd03f4722e86a682de8ab67616d00001e02fbe325d2c4cdff1416bd31ca",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e029f2179592d196f575b7a0ff5ab67616d00001e02be6e758fe8300a72eceddb8fab67616d00001e02e891ccd03f4722e86a682de8ab67616d00001e02fbe325d2c4cdff1416bd31ca",
+          "key": "s",
+          "type": "url",
+          "description": "60x60"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "6U7YflqS9WyaJse5H7dyee",
+      "name": "Best of Progressive Rock",
+      "spotify_url": "https://open.spotify.com/playlist/6U7YflqS9WyaJse5H7dyee",
+      "collaborative": false,
+      "description": "Subjective, non-exhaustive, and perpetually expanding",
+      "owner": "Niels N.",
+      "default_image": "https://mosaic.scdn.co/60/ab67616d00001e029f2179592d196f575b7a0ff5ab67616d00001e02be6e758fe8300a72eceddb8fab67616d00001e02e891ccd03f4722e86a682de8ab67616d00001e02fbe325d2c4cdff1416bd31ca"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_0dJiFK6hcSfrfj3bru4shF",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/0dJiFK6hcSfrfj3bru4shF",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/0dJiFK6hcSfrfj3bru4shF",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000d72c9df28b138b4c2761de2c92e2",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "0dJiFK6hcSfrfj3bru4shF",
+      "name": "Progressive Trance 2025",
+      "spotify_url": "https://open.spotify.com/playlist/0dJiFK6hcSfrfj3bru4shF",
+      "collaborative": false,
+      "description": "Playlist created for lovers of Progressive Trance. Follow our playlist",
+      "owner": "Hit Playlist & Hit Songs",
+      "default_image": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000d72c9df28b138b4c2761de2c92e2"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_6cKdPpXVGLTy3dA5tv0DbV",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/6cKdPpXVGLTy3dA5tv0DbV",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/6cKdPpXVGLTy3dA5tv0DbV",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84d71fa6293bc07d9f5e012d0b",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "6cKdPpXVGLTy3dA5tv0DbV",
+      "name": "Progressive House 2010-2015",
+      "spotify_url": "https://open.spotify.com/playlist/6cKdPpXVGLTy3dA5tv0DbV",
+      "collaborative": false,
+      "description": "",
+      "owner": "May Castillo",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84d71fa6293bc07d9f5e012d0b"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_0EC6H98LHbxSy9FVVUzGnX",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/0EC6H98LHbxSy9FVVUzGnX",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/0EC6H98LHbxSy9FVVUzGnX",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c73202c9254c23a51e36d21f8",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "0EC6H98LHbxSy9FVVUzGnX",
+      "name": "PROGRESSIVE ROCK: 100 best songs",
+      "spotify_url": "https://open.spotify.com/playlist/0EC6H98LHbxSy9FVVUzGnX",
+      "collaborative": false,
+      "description": "The best progressive rock and metal songs of all time. Check my playlist <a href=\"https://open.spotify.com/playlist/438RVnQAoIfwRSdbqOmoi7?si=PNz0LQv1Q2CYieMkKahqdw\">New Rock Hits</a>",
+      "owner": "Juan Ce\u00f1al",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c73202c9254c23a51e36d21f8"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_0ZMM0FcCKb5qoIUaDAnDne",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/0ZMM0FcCKb5qoIUaDAnDne",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/0ZMM0FcCKb5qoIUaDAnDne",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84864ba40529a8c27752eec723",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "0ZMM0FcCKb5qoIUaDAnDne",
+      "name": "Colorize: Morning Chill",
+      "spotify_url": "https://open.spotify.com/playlist/0ZMM0FcCKb5qoIUaDAnDne",
+      "collaborative": false,
+      "description": "Ease into your day with this chill-out mix of Deep, Melodic &amp; Progressive House. <a href=\"https://ffm.link/3vm9yzn/\">Instagram</a>, <a href=\"https://ffm.link/d1pgem0/\">Website</a>, <a href=\"https://ffm.link/m1lnnnr/\">Merch</a>",
+      "owner": "Enhanced Music",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84864ba40529a8c27752eec723"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_5n1zRXFeRONJoMdVw18M34",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/5n1zRXFeRONJoMdVw18M34",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/5n1zRXFeRONJoMdVw18M34",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84a8a2f7defd1dc9dd89e6adec",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "5n1zRXFeRONJoMdVw18M34",
+      "name": "Melodic House 2025   \ud83c\udf0a",
+      "spotify_url": "https://open.spotify.com/playlist/5n1zRXFeRONJoMdVw18M34",
+      "collaborative": false,
+      "description": "Best of Melodic House, Melodic Techno and Progressive house blend. Send your music: <a href=\"http://bit.ly/hmwlspo\">spotify@hmwl.org</a>",
+      "owner": "HMWL (House Music With Love)",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84a8a2f7defd1dc9dd89e6adec"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_6i0HGU6npcXakgBxocOKUo",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/6i0HGU6npcXakgBxocOKUo",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/6i0HGU6npcXakgBxocOKUo",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c225ba17f8cdb5b02f18d15ac",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "6i0HGU6npcXakgBxocOKUo",
+      "name": "HEAVY SHOEGAZE.",
+      "spotify_url": "https://open.spotify.com/playlist/6i0HGU6npcXakgBxocOKUo",
+      "collaborative": false,
+      "description": "Nu-gaze, post-grunge, dreamo, punk-gaze, post-alternative, progressive, you name it. Melt into the floor and headbang to these beautiful tracks of variance and vibrance.",
+      "owner": "josh.loaf",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c225ba17f8cdb5b02f18d15ac"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_6JcBwspcgUBohikbK8vSzn",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/6JcBwspcgUBohikbK8vSzn",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/6JcBwspcgUBohikbK8vSzn",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72ceeb91f9aa40a6ec0e0614b1c",
+          "key": "s",
+          "type": "url",
+          "description": "0x0"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "6JcBwspcgUBohikbK8vSzn",
+      "name": "Progressive House 2025 \u00b7 Relaxing Focus Music (Updated Weekly)",
+      "spotify_url": "https://open.spotify.com/playlist/6JcBwspcgUBohikbK8vSzn",
+      "collaborative": false,
+      "description": "The best undiscovered Progressive House music in 2025. More: <a href=\"https://open.spotify.com/user/thegrandsound/playlist/3twma0TUOi4YBP4xTbZbHo\">Deep House </a>, <a href=\"https://www.youtube.com/watch?v=6Q7tdD5lJxg\">24/7 Progressive House Live Stream</a>",
+      "owner": "The Grand Sound",
+      "default_image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72ceeb91f9aa40a6ec0e0614b1c"
+    },
+    {
+      "mc_type": "music_playlist",
+      "mc_id": "spotify_playlist_626UDFY53J9Fma3om0Jkx8",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/playlist/626UDFY53J9Fma3om0Jkx8",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/playlists/626UDFY53J9Fma3om0Jkx8",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0230104db91937440fb32090a7ab67616d00001e029cfe80c0c05ce104f7bab18eab67616d00001e02ea1e8b42c066eaf4fe37f181ab67616d00001e02ffb343926530168be4724dd4",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0230104db91937440fb32090a7ab67616d00001e029cfe80c0c05ce104f7bab18eab67616d00001e02ea1e8b42c066eaf4fe37f181ab67616d00001e02ffb343926530168be4724dd4",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0230104db91937440fb32090a7ab67616d00001e029cfe80c0c05ce104f7bab18eab67616d00001e02ea1e8b42c066eaf4fe37f181ab67616d00001e02ffb343926530168be4724dd4",
+          "key": "s",
+          "type": "url",
+          "description": "60x60"
+        }
+      ],
+      "metrics": {},
+      "external_ids": {},
+      "error": null,
+      "id": "626UDFY53J9Fma3om0Jkx8",
+      "name": "Progressive House All Time Favorites",
+      "spotify_url": "https://open.spotify.com/playlist/626UDFY53J9Fma3om0Jkx8",
+      "collaborative": false,
+      "description": "THE BEST of Progressive House genre. (Daily-Updated) [NEWEST releases at bottom of the list] Instagram: smerttunay",
+      "owner": "Mert Tunay",
+      "default_image": "https://mosaic.scdn.co/60/ab67616d00001e0230104db91937440fb32090a7ab67616d00001e029cfe80c0c05ce104f7bab18eab67616d00001e02ea1e8b42c066eaf4fe37f181ab67616d00001e02ffb343926530168be4724dd4"
+    }
+  ],
+  "total_results": 51,
+  "artist_count": 20,
+  "album_count": 20,
+  "playlist_count": 11,
+  "query": "progressive",
+  "data_source": "Spotify Multi-Type Search",
+  "error": null
+}

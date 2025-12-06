@@ -1,0 +1,356 @@
+LastFM Mock Data Generation - Usage Guide
+==========================================
+
+This document explains how to generate and use mock data for LastFM service tests.
+
+## Overview
+
+The `generate_mock_data.py` script fetches real data from Last.fm and Spotify APIs
+and saves it as JSON fixtures for testing. This ensures test data matches actual
+API responses.
+
+## Prerequisites
+
+1. **Environment Variables**: Set the following in your `.env` file:
+   ```bash
+   LASTFM_API_KEY=your_lastfm_api_key
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   ```
+
+2. **Internet Connection**: Required to access Last.fm and Spotify APIs
+
+3. **Python Environment**: Ensure you're in the venv:
+   ```bash
+   cd firebase/python_functions
+   source venv/bin/activate
+   ```
+
+## Directory Structure
+
+The script generates fixtures in the following directories:
+
+```
+services/lastfm/tests/fixtures/
+├── generate_mock_data.py          # Generator script
+├── SEED_MOCK_DATA_USAGE.txt       # This file
+├── make_requests/                 # Raw API endpoint responses
+│   ├── lastfm_*.json             # Last.fm API responses
+│   └── spotify_*.json            # Spotify API responses
+├── core/                          # Core service method results
+│   └── process_album_item.json
+├── enrichment/                    # Enrichment service method results
+│   ├── spotify_token.json
+│   ├── search_spotify_track.json
+│   ├── search_spotify_album.json
+│   └── expand_with_odesli.json
+├── search/                        # Search service method results
+│   ├── trending_albums.json
+│   ├── search_albums.json
+│   ├── search_by_genre.json
+│   ├── search_by_keyword.json
+│   └── search_spotify_artist.json
+└── models/                        # Model validation data
+    ├── music_album.json
+    ├── music_artist.json
+    ├── spotify_token_response.json
+    ├── spotify_album_metadata.json
+    ├── odesli_platform_links.json
+    └── lastfm_track.json
+```
+
+## Usage
+
+### Generate All Mock Data (Basic Set)
+
+Generate the basic set of mock data files (backward compatible):
+
+```bash
+cd services/lastfm/tests/fixtures
+python generate_mock_data.py
+```
+
+This creates mock files in the `fixtures/` directory for backward compatibility.
+
+### Generate API Endpoint Responses
+
+Generate mock data for all API endpoints (make_requests/):
+
+```bash
+python generate_mock_data.py --endpoints
+```
+
+This creates files like:
+- `lastfm_album_getinfo.json` - Last.fm album.getinfo response
+- `lastfm_chart_gettoptracks.json` - Last.fm chart.gettoptracks response
+- `spotify_album_search.json` - Spotify album search response
+- `spotify_artist_search.json` - Spotify artist search response
+- etc.
+
+### Generate Core Method Results
+
+Generate mock data by executing core service methods (core/):
+
+```bash
+python generate_mock_data.py --core
+```
+
+This tests methods from `services/lastfm/core.py`:
+- `_process_album_item()` - Album data processing
+
+### Generate Enrichment Method Results
+
+Generate mock data by executing enrichment service methods (enrichment/):
+
+```bash
+python generate_mock_data.py --enrichment
+```
+
+This tests methods from `services/lastfm/enrichment.py`:
+- `_get_spotify_token()` - Spotify authentication
+- `_search_spotify_track()` - Spotify track search
+- `_search_spotify_album()` - Spotify album search
+- `_expand_with_odesli()` - Odesli platform link expansion
+
+### Generate Search Method Results
+
+Generate mock data by executing search service methods (search/):
+
+```bash
+python generate_mock_data.py --search
+```
+
+This tests methods from `services/lastfm/search.py`:
+- `get_trending_albums()` - Trending albums from Last.fm
+- `search_albums()` - Album search via Spotify
+- `search_by_genre()` - Genre-based artist search
+- `search_by_keyword()` - Keyword-based multi-type search
+- `search_spotify_artist()` - Artist search with top tracks
+
+### Generate Model Validation Data
+
+Generate mock data for Pydantic model validation (models/):
+
+```bash
+python generate_mock_data.py --models
+```
+
+This creates data for validating models in `services/lastfm/models.py`:
+- `MCMusicAlbum` - Album data structure
+- `MCMusicArtist` - Artist data structure
+- `SpotifyTokenResponse` - Spotify token response
+- `SpotifyAlbumMetadata` - Spotify album metadata
+- `OdesliPlatformLinks` - Odesli platform links
+- `LastFMTrack` - Last.fm track data
+
+## Test Data Configuration
+
+The script uses well-known, stable content for consistency:
+
+```python
+TEST_DATA_CONFIG = {
+    "album": {
+        "name": "The Dark Side of the Moon",
+        "artist": "Pink Floyd",
+    },
+    "track": {
+        "name": "Comfortably Numb",
+        "artist": "Pink Floyd",
+    },
+    "artist": {
+        "name": "Pink Floyd",
+        "spotify_id": "0k17h0D3J5VfsdmQ1iZtE9",
+    },
+    "genre": "rock",
+    "keyword": "progressive",
+}
+```
+
+## Using Mock Data in Tests
+
+### Example: Testing Core Methods
+
+```python
+import json
+from pathlib import Path
+
+def test_process_album_item():
+    # Load mock data
+    fixture_path = Path(__file__).parent / "fixtures/core/process_album_item.json"
+    with open(fixture_path) as f:
+        expected = json.load(f)
+    
+    # Test your code
+    service = LastFMService(api_key="test")
+    result = service._process_album_item(album_data)
+    
+    # Compare with expected
+    assert result["title"] == expected["title"]
+    assert result["artist"] == expected["artist"]
+```
+
+### Example: Testing Search Methods
+
+```python
+import json
+from pathlib import Path
+
+def test_trending_albums():
+    # Load mock data
+    fixture_path = Path(__file__).parent / "fixtures/search/trending_albums.json"
+    with open(fixture_path) as f:
+        expected = json.load(f)
+    
+    # Test your code
+    service = LastFMSearchService(api_key="test")
+    result = await service.get_trending_albums(limit=10)
+    
+    # Verify structure matches
+    assert len(result) <= 10
+    assert all("mc_id" in album for album in result)
+    assert all("mc_type" in album for album in result)
+```
+
+### Example: Mocking API Responses
+
+```python
+import json
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+async def test_search_albums_with_mock():
+    # Load mock Spotify response
+    fixture_path = Path(__file__).parent / "fixtures/make_requests/spotify_album_search.json"
+    with open(fixture_path) as f:
+        mock_response = json.load(f)
+    
+    # Mock the API call
+    with patch('aiohttp.ClientSession.get') as mock_get:
+        mock_get.return_value.__aenter__.return_value.json = AsyncMock(return_value=mock_response)
+        mock_get.return_value.__aenter__.return_value.status = 200
+        
+        # Test your code
+        service = LastFMSearchService(api_key="test")
+        result = await service.search_albums("Dark Side of the Moon", limit=20)
+        
+        # Verify results
+        assert len(result) > 0
+        assert result[0]["title"] == "The Dark Side of the Moon"
+```
+
+## Cache Behavior
+
+The script automatically disables caching by:
+1. Setting `ENVIRONMENT=test` environment variable
+2. Calling `disable_cache()` from `utils.cache`
+
+This ensures fresh data is fetched from APIs every time.
+
+## Troubleshooting
+
+### Missing Environment Variables
+
+If you see:
+```
+ERROR: Missing required environment variables:
+  - LASTFM_API_KEY
+  - SPOTIFY_CLIENT_ID
+  - SPOTIFY_CLIENT_SECRET
+```
+
+Solution: Set the required environment variables in your `.env` file.
+
+### API Rate Limiting
+
+If you encounter rate limiting errors:
+- Wait a few minutes before retrying
+- Consider reducing the number of requests
+- Check your API quotas
+
+### Network Errors
+
+If you see network errors:
+- Check your internet connection
+- Verify API endpoints are accessible
+- Check if APIs are experiencing downtime
+
+### Invalid API Keys
+
+If authentication fails:
+- Verify your API keys are correct
+- Check if keys have expired
+- Ensure keys have proper permissions
+
+## Maintenance
+
+### When to Regenerate Mock Data
+
+Regenerate mock data when:
+1. API response structures change
+2. New methods are added to services
+3. Test data becomes outdated
+4. New fields are added to models
+
+### Updating Test Data
+
+To use different test data, modify `TEST_DATA_CONFIG` in `generate_mock_data.py`:
+
+```python
+TEST_DATA_CONFIG = {
+    "album": {
+        "name": "Your Album Name",
+        "artist": "Your Artist Name",
+    },
+    # ... etc
+}
+```
+
+## Best Practices
+
+1. **Keep Mock Data Fresh**: Regenerate periodically to match current API responses
+2. **Version Control**: Commit mock data to git for consistent test results
+3. **Minimal Data**: Only include necessary fields in test data
+4. **Real Data**: Use real API responses, not hand-crafted data
+5. **Documentation**: Update this file when adding new test scenarios
+
+## Related Files
+
+- `services/lastfm/core.py` - Core service implementation
+- `services/lastfm/enrichment.py` - Enrichment service implementation
+- `services/lastfm/search.py` - Search service implementation
+- `services/lastfm/models.py` - Pydantic models
+- `services/lastfm/tests/test_*.py` - Test files using these fixtures
+- `services/lastfm/tests/conftest.py` - Test configuration and fixtures
+
+## Comparison with TMDB
+
+This test infrastructure follows the same pattern as TMDB:
+
+**TMDB Structure:**
+```
+services/tmdb/tests/fixtures/
+├── generate_mock_data.py
+├── make_requests/  # Raw API responses
+├── core/           # Core method results
+├── person/         # Person method results
+└── search/         # Search method results
+```
+
+**LastFM Structure:**
+```
+services/lastfm/tests/fixtures/
+├── generate_mock_data.py
+├── make_requests/  # Raw API responses
+├── core/           # Core method results
+├── enrichment/     # Enrichment method results
+├── search/         # Search method results
+└── models/         # Model validation data
+```
+
+Both use:
+- Real API data for fixtures
+- Organized directory structure
+- Command-line options for selective generation
+- Automatic cache disabling
+- Comprehensive test coverage
+

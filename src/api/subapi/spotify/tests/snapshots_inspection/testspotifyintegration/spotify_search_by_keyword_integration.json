@@ -1,0 +1,1000 @@
+{
+  "album_count": 10,
+  "artist_count": 10,
+  "data_source": "Spotify Multi-Type Search",
+  "error": null,
+  "playlist_count": 2,
+  "query": "jazz",
+  "results": [
+    {
+      "artist": "Laufey",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 8512682,
+      "genres": [],
+      "id": "7gW0r5CkdEUMm42w9XpyZO",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb98c2527b85500f68f53084f2",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_7gW0r5CkdEUMm42w9XpyZO",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Laufey",
+      "popularity": 82,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb98c2527b85500f68f53084f2",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517498c2527b85500f68f53084f2",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17898c2527b85500f68f53084f2",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/7gW0r5CkdEUMm42w9XpyZO",
+      "title": "Laufey",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Mac Miller",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 12181245,
+      "genres": [],
+      "id": "4LLpKhyESsyAXpc4laK94U",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebed3b89aa602145fde71a163a",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_4LLpKhyESsyAXpc4laK94U",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Mac Miller",
+      "popularity": 81,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebed3b89aa602145fde71a163a",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174ed3b89aa602145fde71a163a",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178ed3b89aa602145fde71a163a",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/4LLpKhyESsyAXpc4laK94U",
+      "title": "Mac Miller",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Jazzy",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 140926,
+      "genres": [],
+      "id": "7zAAwgV5Wqmvpb4GzvlRkP",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebf699f2fc79ef96504740297e",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_7zAAwgV5Wqmvpb4GzvlRkP",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Jazzy",
+      "popularity": 69,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebf699f2fc79ef96504740297e",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174f699f2fc79ef96504740297e",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178f699f2fc79ef96504740297e",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/7zAAwgV5Wqmvpb4GzvlRkP",
+      "title": "Jazzy",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "JAZZWRLD",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 263899,
+      "genres": [
+        "3 step",
+        "amapiano",
+        "private school piano",
+        "gqom",
+        "afro house",
+        "afro tech",
+        "afropiano"
+      ],
+      "id": "3idyOn3lhSxgV2qdDQNfhz",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb8665a17f908fbe85342b16b5",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_3idyOn3lhSxgV2qdDQNfhz",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "JAZZWRLD",
+      "popularity": 67,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb8665a17f908fbe85342b16b5",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051748665a17f908fbe85342b16b5",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1788665a17f908fbe85342b16b5",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/3idyOn3lhSxgV2qdDQNfhz",
+      "title": "JAZZWRLD",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "berlioz",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 847662,
+      "genres": [
+        "jazz house",
+        "jazz"
+      ],
+      "id": "3k3RY7kR8f0vp8Cq27P141",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb3a9ab7733c4e6f95251a806b",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_3k3RY7kR8f0vp8Cq27P141",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "berlioz",
+      "popularity": 64,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb3a9ab7733c4e6f95251a806b",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051743a9ab7733c4e6f95251a806b",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1783a9ab7733c4e6f95251a806b",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/3k3RY7kR8f0vp8Cq27P141",
+      "title": "berlioz",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Jazzy Coffee",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 13138,
+      "genres": [
+        "jazz"
+      ],
+      "id": "2b9qemp1Y8NuEbY4RMYHY1",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebe2850af480173596cefd48c1",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_2b9qemp1Y8NuEbY4RMYHY1",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Jazzy Coffee",
+      "popularity": 63,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe2850af480173596cefd48c1",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174e2850af480173596cefd48c1",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178e2850af480173596cefd48c1",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/2b9qemp1Y8NuEbY4RMYHY1",
+      "title": "Jazzy Coffee",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Miles Davis",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 2737187,
+      "genres": [
+        "jazz",
+        "cool jazz",
+        "hard bop",
+        "bebop",
+        "jazz fusion",
+        "free jazz",
+        "jazz blues"
+      ],
+      "id": "0kbYTNQb4Pb1rPbbaF0pT4",
+      "image": "https://i.scdn.co/image/423e826b3c1b23930a255d7cbc2daf733f795507",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_0kbYTNQb4Pb1rPbbaF0pT4",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Miles Davis",
+      "popularity": 62,
+      "raw_images": [
+        {
+          "height": 1000,
+          "url": "https://i.scdn.co/image/423e826b3c1b23930a255d7cbc2daf733f795507",
+          "width": 1000
+        },
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/a318c54208af38364d131a54ced2416423696018",
+          "width": 640
+        },
+        {
+          "height": 200,
+          "url": "https://i.scdn.co/image/8496e6ea230dd47311d85dcf860015792f5ada42",
+          "width": 200
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/b1af952a7fb8ac2c4467868d61b5752fc1a01cf0",
+          "width": 64
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/0kbYTNQb4Pb1rPbbaF0pT4",
+      "title": "Miles Davis",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Jazzy B",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 1703883,
+      "genres": [
+        "bhangra",
+        "punjabi pop",
+        "punjabi hip hop",
+        "desi"
+      ],
+      "id": "25bvyjHJAszeSV3q0TmEhY",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb74484b56cf47e2ceb1e78586",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_25bvyjHJAszeSV3q0TmEhY",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Jazzy B",
+      "popularity": 55,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb74484b56cf47e2ceb1e78586",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab6761610000517474484b56cf47e2ceb1e78586",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f17874484b56cf47e2ceb1e78586",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/25bvyjHJAszeSV3q0TmEhY",
+      "title": "Jazzy B",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Jazz Fruits Music",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 69297,
+      "genres": [
+        "jazz",
+        "jazz beats",
+        "lo-fi"
+      ],
+      "id": "23Ht8xXhnKJozHsOBDehZw",
+      "image": "https://i.scdn.co/image/ab6761610000e5ebe15cee336d5d15a1e276826b",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_23Ht8xXhnKJozHsOBDehZw",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Jazz Fruits Music",
+      "popularity": 48,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe15cee336d5d15a1e276826b",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab67616100005174e15cee336d5d15a1e276826b",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f178e15cee336d5d15a1e276826b",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/23Ht8xXhnKJozHsOBDehZw",
+      "title": "Jazz Fruits Music",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "artist": "Jazz Emu",
+      "content_type": null,
+      "error": null,
+      "external_ids": {},
+      "followers": 51112,
+      "genres": [],
+      "id": "69W52X4tUONDDDb6FmGtl6",
+      "image": "https://i.scdn.co/image/ab6761610000e5eb4262450f017658423c1b9565",
+      "images": [],
+      "known_for": null,
+      "known_for_department": null,
+      "links": [],
+      "mc_id": "spotify_artist_69W52X4tUONDDDb6FmGtl6",
+      "mc_subtype": null,
+      "mc_type": "music_artist",
+      "media_type": null,
+      "metrics": {},
+      "name": "Jazz Emu",
+      "popularity": 35,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4262450f017658423c1b9565",
+          "width": 640
+        },
+        {
+          "height": 320,
+          "url": "https://i.scdn.co/image/ab676161000051744262450f017658423c1b9565",
+          "width": 320
+        },
+        {
+          "height": 160,
+          "url": "https://i.scdn.co/image/ab6761610000f1784262450f017658423c1b9565",
+          "width": 160
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/artist/69W52X4tUONDDDb6FmGtl6",
+      "title": "Jazz Emu",
+      "top_track_album": null,
+      "top_track_album_image": null,
+      "top_track_release_date": null,
+      "top_track_track": null
+    },
+    {
+      "album_type": "album",
+      "artist": "Guru",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "64J8girYqmK86ebqBayrjQ",
+      "image": "https://i.scdn.co/image/ab67616d0000b273423fc787b53e081679cfc4c0",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "64J8girYqmK86ebqBayrjQ",
+      "mc_id": "album_64J8girYqmK86ebqBayrjQ",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273423fc787b53e081679cfc4c0",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02423fc787b53e081679cfc4c0",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851423fc787b53e081679cfc4c0",
+          "width": 64
+        }
+      ],
+      "release_date": "1993-01-01",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/64J8girYqmK86ebqBayrjQ",
+      "streamable": null,
+      "title": "Jazzmatazz Volume 1",
+      "total_tracks": 12
+    },
+    {
+      "album_type": "album",
+      "artist": "Cafe Music BGM channel",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "1dQDdZKvdJ5gNhUF56S8Qu",
+      "image": "https://i.scdn.co/image/ab67616d0000b2732fe5b60b4b22c93bac6eaafc",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "1dQDdZKvdJ5gNhUF56S8Qu",
+      "mc_id": "album_1dQDdZKvdJ5gNhUF56S8Qu",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2732fe5b60b4b22c93bac6eaafc",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e022fe5b60b4b22c93bac6eaafc",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048512fe5b60b4b22c93bac6eaafc",
+          "width": 64
+        }
+      ],
+      "release_date": "2018-11-09",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/1dQDdZKvdJ5gNhUF56S8Qu",
+      "streamable": null,
+      "title": "Coffee & Jazz",
+      "total_tracks": 40
+    },
+    {
+      "album_type": "album",
+      "artist": "Neil Diamond",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "3NDwrDoBKwmBQYz4emr9P7",
+      "image": "https://i.scdn.co/image/ab67616d0000b273573be00e9a6fb65ded4e8863",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "3NDwrDoBKwmBQYz4emr9P7",
+      "mc_id": "album_3NDwrDoBKwmBQYz4emr9P7",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273573be00e9a6fb65ded4e8863",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02573be00e9a6fb65ded4e8863",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851573be00e9a6fb65ded4e8863",
+          "width": 64
+        }
+      ],
+      "release_date": "1980-11-10",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/3NDwrDoBKwmBQYz4emr9P7",
+      "streamable": null,
+      "title": "The Jazz Singer (Original Songs From The Motion Picture)",
+      "total_tracks": 14
+    },
+    {
+      "album_type": "album",
+      "artist": "Stan Getz",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "1JDkIxq4xRW7ySH89sGflc",
+      "image": "https://i.scdn.co/image/ab67616d0000b273efece5a77521bdc11757a423",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "1JDkIxq4xRW7ySH89sGflc",
+      "mc_id": "album_1JDkIxq4xRW7ySH89sGflc",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273efece5a77521bdc11757a423",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02efece5a77521bdc11757a423",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851efece5a77521bdc11757a423",
+          "width": 64
+        }
+      ],
+      "release_date": "1963",
+      "release_date_precision": "year",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/1JDkIxq4xRW7ySH89sGflc",
+      "streamable": null,
+      "title": "Jazz Samba Encore!",
+      "total_tracks": 11
+    },
+    {
+      "album_type": "single",
+      "artist": "berlioz",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "5itYNW6UW1VvJO7j9dRn2S",
+      "image": "https://i.scdn.co/image/ab67616d0000b2738ca839da6f057d13cd3881f2",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "5itYNW6UW1VvJO7j9dRn2S",
+      "mc_id": "album_5itYNW6UW1VvJO7j9dRn2S",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2738ca839da6f057d13cd3881f2",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e028ca839da6f057d13cd3881f2",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048518ca839da6f057d13cd3881f2",
+          "width": 64
+        }
+      ],
+      "release_date": "2023-04-07",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/5itYNW6UW1VvJO7j9dRn2S",
+      "streamable": null,
+      "title": "jazz is for ordinary people",
+      "total_tracks": 1
+    },
+    {
+      "album_type": "album",
+      "artist": "Miles Davis",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "4sb0eMpDn3upAFfyi4q2rw",
+      "image": "https://i.scdn.co/image/ab67616d0000b2730ebc17239b6b18ba88cfb8ca",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "4sb0eMpDn3upAFfyi4q2rw",
+      "mc_id": "album_4sb0eMpDn3upAFfyi4q2rw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2730ebc17239b6b18ba88cfb8ca",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e020ebc17239b6b18ba88cfb8ca",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048510ebc17239b6b18ba88cfb8ca",
+          "width": 64
+        }
+      ],
+      "release_date": "1959-08-17",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/4sb0eMpDn3upAFfyi4q2rw",
+      "streamable": null,
+      "title": "Kind Of Blue (Legacy Edition)",
+      "total_tracks": 21
+    },
+    {
+      "album_type": "album",
+      "artist": "Queen",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "21HMAUrbbYSj9NiPPlGumy",
+      "image": "https://i.scdn.co/image/ab67616d0000b273008b06ec71019afd70153889",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "21HMAUrbbYSj9NiPPlGumy",
+      "mc_id": "album_21HMAUrbbYSj9NiPPlGumy",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273008b06ec71019afd70153889",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02008b06ec71019afd70153889",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851008b06ec71019afd70153889",
+          "width": 64
+        }
+      ],
+      "release_date": "1978-11-10",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/21HMAUrbbYSj9NiPPlGumy",
+      "streamable": null,
+      "title": "Jazz (Deluxe Remastered Version)",
+      "total_tracks": 18
+    },
+    {
+      "album_type": "album",
+      "artist": "Queen",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "4mbkkOGZS6inHP2di2jaqS",
+      "image": "https://i.scdn.co/image/ab67616d0000b27361b719cc3813cccb3ad4d90b",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "4mbkkOGZS6inHP2di2jaqS",
+      "mc_id": "album_4mbkkOGZS6inHP2di2jaqS",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b27361b719cc3813cccb3ad4d90b",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e0261b719cc3813cccb3ad4d90b",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d0000485161b719cc3813cccb3ad4d90b",
+          "width": 64
+        }
+      ],
+      "release_date": "1978-11-10",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/4mbkkOGZS6inHP2di2jaqS",
+      "streamable": null,
+      "title": "Jazz",
+      "total_tracks": 15
+    },
+    {
+      "album_type": "compilation",
+      "artist": "Various Artists",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "7nSS8VKmoybBNCGTzUAbYp",
+      "image": "https://i.scdn.co/image/ab67616d0000b273b5244771e8bfed2ddd75e443",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "7nSS8VKmoybBNCGTzUAbYp",
+      "mc_id": "album_7nSS8VKmoybBNCGTzUAbYp",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273b5244771e8bfed2ddd75e443",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02b5244771e8bfed2ddd75e443",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851b5244771e8bfed2ddd75e443",
+          "width": 64
+        }
+      ],
+      "release_date": "2017-05-26",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/7nSS8VKmoybBNCGTzUAbYp",
+      "streamable": null,
+      "title": "Jazz",
+      "total_tracks": 27
+    },
+    {
+      "album_type": "album",
+      "artist": "Louie Zong",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "1okVYV2KKwSNnQeSgdAW3S",
+      "image": "https://i.scdn.co/image/ab67616d0000b273370cdcf5de9659a08aee5495",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "1okVYV2KKwSNnQeSgdAW3S",
+      "mc_id": "album_1okVYV2KKwSNnQeSgdAW3S",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273370cdcf5de9659a08aee5495",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02370cdcf5de9659a08aee5495",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851370cdcf5de9659a08aee5495",
+          "width": 64
+        }
+      ],
+      "release_date": "2020-02-28",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/1okVYV2KKwSNnQeSgdAW3S",
+      "streamable": null,
+      "title": "Jazz",
+      "total_tracks": 8
+    },
+    {
+      "artist": "autumn vintage jazz",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "4qrHzwnOhHzU0YRtnEMSi0",
+      "image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c859a8bd0bcf814227f9500af",
+      "images": [],
+      "links": [],
+      "mc_id": "spotify_playlist_4qrHzwnOhHzU0YRtnEMSi0",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "autumn vintage jazz",
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000d72c859a8bd0bcf814227f9500af",
+          "width": null
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/playlist/4qrHzwnOhHzU0YRtnEMSi0",
+      "title": "autumn vintage jazz"
+    },
+    {
+      "artist": "jazz bar in nyc🎷",
+      "error": null,
+      "external_ids": {},
+      "followers": 0,
+      "id": "26Zi3qLKC9cAWDs7wbbSzc",
+      "image": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da844124e97ec5159a5b4058a7f1",
+      "images": [],
+      "links": [],
+      "mc_id": "spotify_playlist_26Zi3qLKC9cAWDs7wbbSzc",
+      "mc_subtype": null,
+      "mc_type": "music_playlist",
+      "metrics": {},
+      "name": "jazz bar in nyc🎷",
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da844124e97ec5159a5b4058a7f1",
+          "width": null
+        }
+      ],
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/playlist/26Zi3qLKC9cAWDs7wbbSzc",
+      "title": "jazz bar in nyc🎷"
+    }
+  ],
+  "total_results": 22
+}

@@ -1,0 +1,138 @@
+# TMDB Service Tests Guide
+
+## Quick Start
+
+1. Generate fixtures:
+   cd ../../  # services directory
+   ./seed_mock_data.sh tmdb
+
+2. Run tests:
+   cd ../../..  # python_functions directory
+   source venv/bin/activate
+   pytest services/tmdb/tests/ -v
+
+## Async Test Support
+
+Tests use pytest-asyncio for async test support.
+This is configured in pytest.ini:
+
+  [pytest]
+  asyncio_mode = auto
+
+All async tests are marked with @pytest.mark.asyncio
+
+## Running Tests
+
+All tests:
+  pytest services/tmdb/tests/ -v
+
+Specific file:
+  pytest services/tmdb/tests/test_core.py -v
+  pytest services/tmdb/tests/test_search.py -v
+
+Specific test:
+  pytest services/tmdb/tests/test_core.py::TestProcessMediaItem::test_process_movie_item -v
+
+Stop on first failure:
+  pytest services/tmdb/tests/ -x
+
+Show print statements:
+  pytest services/tmdb/tests/ -v -s
+
+## Requirements
+
+- pytest (test framework)
+- pytest-asyncio (async test support)
+- aiohttp (async HTTP client)
+- python-dotenv (load .env files)
+- pydantic (data validation)
+
+Install: pip install -r requirements-dev.txt
+
+## Test Files
+
+- test_core.py (25 tests) - Core TMDB service
+- test_search.py (19 tests) - Search and discovery
+- test_models.py - Data model validation
+- test_person.py - Person/cast functionality
+- test_wrappers.py - High-level wrappers
+
+## Fixtures
+
+Located in fixtures/ (gitignored):
+- mock_movie_data.json (Fight Club)
+- mock_tv_data.json (Breaking Bad)
+- mock_person_data.json (Brad Pitt)
+- mock_cast_data.json (Cast and crew)
+- mock_videos_data.json (Trailers)
+- mock_watch_providers_data.json (Streaming)
+- mock_keywords_data.json (Keywords)
+- mock_search_results.json (Search results)
+
+## Regenerating Fixtures
+
+When to regenerate:
+- TMDB API changes
+- Want updated data
+- Monthly maintenance
+
+How:
+  cd ../../
+  ./seed_mock_data.sh tmdb
+
+Takes ~30 seconds
+
+## Troubleshooting
+
+"Fixture file not found"
+→ Run: ./seed_mock_data.sh tmdb
+
+"ModuleNotFoundError: No module named 'pydantic'"
+→ Run: source venv/bin/activate
+→ Run: pip install -r requirements-dev.txt
+
+"TMDB_READ_TOKEN not set"
+→ Run: export TMDB_READ_TOKEN='your_token'
+→ Or add to .env file
+
+Tests fail with real data
+→ Expected! Real API data differs from hardcoded mocks
+→ Update tests to check structure, not exact values
+
+## Test Philosophy
+
+Test structure and types, not exact values:
+
+Good:
+  assert len(result["cast"]) > 0
+  assert "name" in result["cast"][0]
+
+Bad:
+  assert result["cast"][0]["name"] == "Brad Pitt"  # May change
+
+## Performance
+
+- test_core.py: ~12-20 seconds (25 tests)
+- test_search.py: ~80-90 seconds (19 tests)
+- All tests: ~2-3 minutes
+
+## Best Practices
+
+1. Always activate venv before running tests
+2. Regenerate fixtures monthly
+3. Run tests before committing
+4. Use -v flag for verbose output
+5. Use -x flag to stop on first failure
+6. Keep fixtures gitignored
+
+## Related Files
+
+- conftest.py - Pytest fixtures
+- generate_mock_data.py - Fixture generation
+- ../../seed_mock_data.sh - Setup script
+- SETUP.txt - Quick reference
+- fixtures/.gitignore - Git ignore rules
+
+For more details, see SETUP.txt
+
+

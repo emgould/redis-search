@@ -1,0 +1,13 @@
+
+fastapi
+uvicorn
+redis
+pydantic
+httpx
+python-dotenv
+jinja2
+pytest
+ruff
+mypy
+dotenv
+google-cloud-storage

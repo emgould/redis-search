@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Media Search{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["DM Sans", "system-ui", "sans-serif"],
+            },
+            colors: {
+              brand: {
+                50: "#fef3e9",
+                100: "#fde4cc",
+                200: "#fbc999",
+                300: "#f9ad66",
+                400: "#f79233",
+                500: "#f57600",
+                600: "#c45e00",
+                700: "#934700",
+                800: "#622f00",
+                900: "#311800",
+              },
+              surface: {
+                50: "#f8fafc",
+                100: "#f1f5f9",
+                200: "#e2e8f0",
+                300: "#cbd5e1",
+                400: "#94a3b8",
+                500: "#64748b",
+                600: "#475569",
+                700: "#334155",
+                800: "#1e293b",
+                900: "#0f172a",
+                950: "#020617",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .search-results-enter {
+        animation: slideDown 0.2s ease-out;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .poster-shimmer {
+        background: linear-gradient(
+          90deg,
+          #1e293b 0%,
+          #334155 50%,
+          #1e293b 100%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="h-full bg-surface-950 text-white font-sans antialiased">
+    {% block body %}{% endblock %}
+  </body>
+</html>

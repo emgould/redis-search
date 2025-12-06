@@ -1,0 +1,228 @@
+{
+  "data_source": "Spotify Album Search",
+  "error": null,
+  "query": "Pink Floyd",
+  "results": [
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "4LH4d3cOWNNsVw41Gqt2kv",
+      "image": "https://i.scdn.co/image/ab67616d0000b27317cb878012a0c769091e8045",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "4LH4d3cOWNNsVw41Gqt2kv",
+      "mc_id": "album_4LH4d3cOWNNsVw41Gqt2kv",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b27317cb878012a0c769091e8045",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e0217cb878012a0c769091e8045",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d0000485117cb878012a0c769091e8045",
+          "width": 64
+        }
+      ],
+      "release_date": "1973-03-01",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/4LH4d3cOWNNsVw41Gqt2kv",
+      "streamable": null,
+      "title": "The Dark Side of the Moon",
+      "total_tracks": 10
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "0bCAjiUamIFqKJsekOYuRw",
+      "image": "https://i.scdn.co/image/ab67616d0000b273e895ebededd1f73a2c875ce6",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "0bCAjiUamIFqKJsekOYuRw",
+      "mc_id": "album_0bCAjiUamIFqKJsekOYuRw",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273e895ebededd1f73a2c875ce6",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02e895ebededd1f73a2c875ce6",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851e895ebededd1f73a2c875ce6",
+          "width": 64
+        }
+      ],
+      "release_date": "1975-09-12",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/0bCAjiUamIFqKJsekOYuRw",
+      "streamable": null,
+      "title": "Wish You Were Here",
+      "total_tracks": 5
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "5Dbax7G8SWrP9xyzkOvy2F",
+      "image": "https://i.scdn.co/image/ab67616d0000b273cbf8b2cd89b54a021db51e75",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "5Dbax7G8SWrP9xyzkOvy2F",
+      "mc_id": "album_5Dbax7G8SWrP9xyzkOvy2F",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273cbf8b2cd89b54a021db51e75",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02cbf8b2cd89b54a021db51e75",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851cbf8b2cd89b54a021db51e75",
+          "width": 64
+        }
+      ],
+      "release_date": "1979-11-30",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/5Dbax7G8SWrP9xyzkOvy2F",
+      "streamable": null,
+      "title": "The Wall",
+      "total_tracks": 26
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "3b4E89rxzZQ9zkhgKpj8N4",
+      "image": "https://i.scdn.co/image/ab67616d0000b273e07634e78604fd896f72a5fb",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "3b4E89rxzZQ9zkhgKpj8N4",
+      "mc_id": "album_3b4E89rxzZQ9zkhgKpj8N4",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b273e07634e78604fd896f72a5fb",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e02e07634e78604fd896f72a5fb",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d00004851e07634e78604fd896f72a5fb",
+          "width": 64
+        }
+      ],
+      "release_date": "1977-01-23",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/3b4E89rxzZQ9zkhgKpj8N4",
+      "streamable": null,
+      "title": "Animals",
+      "total_tracks": 5
+    },
+    {
+      "album_type": "album",
+      "artist": "Pink Floyd",
+      "artist_url": null,
+      "error": null,
+      "external_ids": {},
+      "id": "0ptvgHrZARlAZFmbg0WvDI",
+      "image": "https://i.scdn.co/image/ab67616d0000b2732a0659701eb92ad12e512f6e",
+      "images": [],
+      "links": [],
+      "listeners": 0,
+      "mbid": "0ptvgHrZARlAZFmbg0WvDI",
+      "mc_id": "album_0ptvgHrZARlAZFmbg0WvDI",
+      "mc_subtype": null,
+      "mc_type": "music_album",
+      "metrics": {},
+      "playcount": 0,
+      "popularity": 0,
+      "raw_images": [
+        {
+          "height": 640,
+          "url": "https://i.scdn.co/image/ab67616d0000b2732a0659701eb92ad12e512f6e",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://i.scdn.co/image/ab67616d00001e022a0659701eb92ad12e512f6e",
+          "width": 300
+        },
+        {
+          "height": 64,
+          "url": "https://i.scdn.co/image/ab67616d000048512a0659701eb92ad12e512f6e",
+          "width": 64
+        }
+      ],
+      "release_date": "2025-05-02",
+      "release_date_precision": "day",
+      "source": "spotify",
+      "source_id": null,
+      "spotify_url": "https://open.spotify.com/album/0ptvgHrZARlAZFmbg0WvDI",
+      "streamable": null,
+      "title": "Pink Floyd at Pompeii - MCMLXXII (2025 Mix)",
+      "total_tracks": 11
+    }
+  ],
+  "total_results": 5
+}

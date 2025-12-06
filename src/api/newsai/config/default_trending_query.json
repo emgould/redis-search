@@ -1,0 +1,42 @@
+{
+  "$comment": "Default trending news query for Event Registry API",
+  "$comment2": "This query fetches trending entertainment/TV/movie news from quality sources",
+  "$comment3": "Used when get_trending_news() is called without a query parameter",
+  "$query": {
+    "$and": [
+      {
+        "$or": [
+          {
+            "categoryUri": "dmoz/Arts/Television/Programs"
+          },
+          {
+            "categoryUri": "dmoz/Arts/Television/Schedule_and_Programming"
+          },
+          {
+            "categoryUri": "dmoz/Arts/Television/Networks"
+          },
+          {
+            "categoryUri": "dmoz/Arts/Television/Awards"
+          },
+          {
+            "categoryUri": "dmoz/Arts/Movies/Characters"
+          }
+        ]
+      },
+      {
+        "$or": [
+          {
+            "sourceUri": "nytimes.com"
+          },
+          {
+            "sourceUri": "variety.com"
+          },
+          {
+            "sourceUri": "theatlantic.com"
+          }
+        ]
+      }
+    ]
+  }
+}
+

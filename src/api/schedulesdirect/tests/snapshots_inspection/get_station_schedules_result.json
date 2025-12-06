@@ -1,0 +1,561 @@
+[
+  {
+    "metadata": {
+      "hash": "8b8e64fad08a7cdf1eae57d861922cdd",
+      "md5": "i45k+tCKfN8erlfYYZIs3Q",
+      "modified": "2025-12-02T16:31:57Z",
+      "modifiedEpoch": 1764693117,
+      "startDate": "2025-12-02"
+    },
+    "programs": [
+      {
+        "airDateTime": "2025-12-02T00:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "73c6ccd749f792eae936c0a7608992bb",
+        "md5": "c8bM10n3kurpNsCnYImSuw",
+        "new": true,
+        "programID": "SH021699630000",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T00:30:00Z",
+        "duration": 1800,
+        "hash": "ab91a7a4b530f7f976bb9ad7c6267a17",
+        "md5": "q5GnpLUw9/l2u5rXxiZ6Fw",
+        "new": true,
+        "programID": "SH061354950000",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T01:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo",
+          "DD 5.1"
+        ],
+        "duration": 7200,
+        "hash": "4081193028f81fc72e77220b29628d85",
+        "md5": "QIEZMCj4H8cudyILKWKNhQ",
+        "new": true,
+        "programID": "SH061435340000",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T03:00:00Z",
+        "audioProperties": [
+          "dvs",
+          "cc",
+          "stereo",
+          "DD 5.1"
+        ],
+        "duration": 3600,
+        "hash": "e33defe8c6209faa5d4a446bded57760",
+        "md5": "4z3v6MYgn6pdSkRr3tV3YA",
+        "programID": "EP032034470062",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T04:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 2100,
+        "hash": "f8e1ea9854e0e925cc2779bbbaf7059e",
+        "md5": "+OHqmFTg6SXMJ3m7uvcFng",
+        "new": true,
+        "programID": "SH024984850000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T04:35:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo",
+          "DD 5.1"
+        ],
+        "duration": 3720,
+        "hash": "d4d82a95a500908cd05abb9a24c2cb15",
+        "md5": "1NgqlaUAkIzQWruaJMLLFQ",
+        "new": true,
+        "programID": "EP005455794158",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TV14",
+            "subRating": "Language|Dialog"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T05:37:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1740,
+        "hash": "769f0bc4b4fec6bbf03cc44ee104a11d",
+        "md5": "dp8LxLT+xrvwPMRO4QShHQ",
+        "new": true,
+        "programID": "EP000031387128",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T06:06:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 2100,
+        "hash": "f8e1ea9854e0e925cc2779bbbaf7059e",
+        "md5": "+OHqmFTg6SXMJ3m7uvcFng",
+        "programID": "SH024984850000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T06:41:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "8ed59f5f5393961b5b234400a959337d",
+        "md5": "jtWfX1OTlhtbI0QAqVkzfQ",
+        "new": true,
+        "programID": "EP000191908403",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T07:11:00Z",
+        "duration": 1800,
+        "hash": "d06364af5a61a6f7fd4f8f71b565cc01",
+        "md5": "0GNkr1phpvf9T49xtWXMAQ",
+        "programID": "SH057719190000",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T07:41:00Z",
+        "duration": 1800,
+        "hash": "525404d94eb51189f785f31d835e2062",
+        "md5": "UlQE2U61EYn3hfMdg14gYg",
+        "programID": "SH056294180000",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T08:11:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "4ab83cbe1081131438478184dd4d45db",
+        "md5": "Srg8vhCBExQ4R4GE3U1F2w",
+        "programID": "EP012957890440",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T08:41:00Z",
+        "audioProperties": [
+          "cc"
+        ],
+        "duration": 1800,
+        "hash": "79de582495e877c927c91a2bdb058bff",
+        "md5": "ed5YJJXod8knyRor2wWL/w",
+        "programID": "EP019494163824",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T09:11:00Z",
+        "audioProperties": [
+          "cc"
+        ],
+        "duration": 2940,
+        "hash": "7ec2d36e8360378b2a738bf0f89a17ce",
+        "md5": "fsLTboNgN4sqc4vw+JoXzg",
+        "new": true,
+        "programID": "SH000191160000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T10:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "c8e16c1f4a7d9a007474fe909ffe1b22",
+        "md5": "yOFsH0p9mgB0dP6Qn/4bIg",
+        "new": true,
+        "programID": "SH052931410000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T10:30:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "c8e16c1f4a7d9a007474fe909ffe1b22",
+        "md5": "yOFsH0p9mgB0dP6Qn/4bIg",
+        "new": true,
+        "programID": "SH052931410000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T11:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "f93b7b476df251e810de9259eb8b28aa",
+        "md5": "+Tt7R23yUegQ3pJZ64soqg",
+        "new": true,
+        "programID": "SH024984360000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T11:30:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "d9214561f417ea5829fdba9451e4c5ac",
+        "md5": "2SFFYfQX6lgp/bqUUeTFrA",
+        "new": true,
+        "programID": "SH024984380000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T12:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "dd1d5e7a4284204b5f3848c22ac30966",
+        "md5": "3R1eekKEIEtfOEjCKsMJZg",
+        "new": true,
+        "programID": "SH024984410000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T13:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 7200,
+        "hash": "17577086f1ca44f07daebf3cfb1f589c",
+        "md5": "F1dwhvHKRPB9rr88+x9YnA",
+        "new": true,
+        "programID": "EP039440321734",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T15:00:00Z",
+        "audioProperties": [
+          "cc"
+        ],
+        "duration": 3600,
+        "hash": "210b1195a8569b173e18f90847c5f80a",
+        "md5": "IQsRlahWmxc+GPkIR8X4Cg",
+        "new": true,
+        "programID": "SH025433190000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T16:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "b038f35dae0d384c5d9ca8ca04e5d9ca",
+        "md5": "sDjzXa4NOExdnKjKBOXZyg",
+        "new": true,
+        "programID": "EP002253956604",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TV14"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T17:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "ea3136c4deef8146e744c3dc42a43727",
+        "md5": "6jE2xN7vgUbnRMPcQqQ3Jw",
+        "new": true,
+        "programID": "SH018915630000",
+        "videoProperties": [
+          "HD 1080i",
+          "hdtv"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T18:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo",
+          "DD 5.1"
+        ],
+        "duration": 3600,
+        "hash": "ebd79cebe4c0a38cc5d7d90729d687d9",
+        "md5": "69ec6+TAo4zF19kHKdaH2Q",
+        "new": true,
+        "programID": "EP059182660121",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T19:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "22b20760d1c182f723c6d5dde50bba83",
+        "md5": "IrIHYNHBgvcjxtXd5Qu6gw",
+        "new": true,
+        "programID": "EP000018078537",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TV14",
+            "subRating": "Language"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T20:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "76814ec18da6cab853adc0cb34319f7e",
+        "md5": "doFOwY2myrhTrcDLNDGffg",
+        "programID": "EP003242303256",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T21:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "546fe39f7fa49083c7044084dbe53206",
+        "md5": "VG/jn3+kkIPHBECE2+UyBg",
+        "new": true,
+        "programID": "EP042235111103",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T21:30:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "c032ddd76cbc4354a502c701b4500124",
+        "md5": "wDLd12y8Q1SlAscBtFABJA",
+        "new": true,
+        "programID": "EP000191908404",
+        "ratings": [
+          {
+            "body": "USA Parental Rating",
+            "code": "TVPG"
+          }
+        ],
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T22:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 3600,
+        "hash": "8d018d5d756b9da2a1f0ba1b8aceeb19",
+        "md5": "jQGNXXVrnaKh8Lobis7rGQ",
+        "new": true,
+        "programID": "SH024984470000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T23:00:00Z",
+        "audioProperties": [
+          "cc",
+          "stereo"
+        ],
+        "duration": 1800,
+        "hash": "d5cbcd76384a0f980a207fa034a9c321",
+        "md5": "1cvNdjhKD5gKIH+gNKnDIQ",
+        "new": true,
+        "programID": "SH024984630000",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      },
+      {
+        "airDateTime": "2025-12-02T23:30:00Z",
+        "audioProperties": [
+          "cc"
+        ],
+        "duration": 1800,
+        "hash": "6619654191f8ad6e1b28ac02053296cc",
+        "md5": "ZhllQZH4rW4bKKwCBTKWzA",
+        "new": true,
+        "programID": "EP019494163825",
+        "videoProperties": [
+          "hdtv",
+          "HD 1080i"
+        ]
+      }
+    ],
+    "stationID": "19626"
+  },
+  {
+    "code": 7000,
+    "message": "The schedule you requested should be available. Post message to http://forums.schedulesdirect.org/viewforum.php?f=6",
+    "response": "SCHEDULE_NOT_FOUND",
+    "serverID": "20141201.web",
+    "stationID": "19626"
+  }
+]

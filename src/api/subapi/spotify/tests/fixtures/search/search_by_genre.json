@@ -1,0 +1,1278 @@
+{
+  "results": [
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6XyY86QOPPrYVGvF9ch6wz",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6XyY86QOPPrYVGvF9ch6wz",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6XyY86QOPPrYVGvF9ch6wz",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb527d95dabbe8b8b527e8136f",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174527d95dabbe8b8b527e8136f",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178527d95dabbe8b8b527e8136f",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 88,
+        "followers": 31830642
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6XyY86QOPPrYVGvF9ch6wz",
+      "name": "Linkin Park",
+      "spotify_url": "https://open.spotify.com/artist/6XyY86QOPPrYVGvF9ch6wz",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6XyY86QOPPrYVGvF9ch6wz",
+        "key": "artist",
+        "description": "Linkin Park"
+      },
+      "popularity": 88,
+      "followers": 31830642,
+      "genres": [
+        "nu metal",
+        "rap metal",
+        "rock",
+        "alternative metal"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178527d95dabbe8b8b527e8136f",
+      "artist": "Linkin Park",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_5INjqkS1o8h1imAzPqGZBb",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/5INjqkS1o8h1imAzPqGZBb",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/5INjqkS1o8h1imAzPqGZBb",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe412a782245eb20d9626c601",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174e412a782245eb20d9626c601",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178e412a782245eb20d9626c601",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 85,
+        "followers": 9537600
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5INjqkS1o8h1imAzPqGZBb",
+      "name": "Tame Impala",
+      "spotify_url": "https://open.spotify.com/artist/5INjqkS1o8h1imAzPqGZBb",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/5INjqkS1o8h1imAzPqGZBb",
+        "key": "artist",
+        "description": "Tame Impala"
+      },
+      "popularity": 85,
+      "followers": 9537600,
+      "genres": [
+        "neo-psychedelic",
+        "indie"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178e412a782245eb20d9626c601",
+      "artist": "Tame Impala",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_13ubrt8QOOCPljQ2FL1Kca",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/13ubrt8QOOCPljQ2FL1Kca",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/13ubrt8QOOCPljQ2FL1Kca",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb5c58c41a506a0d6b32cc6cad",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051745c58c41a506a0d6b32cc6cad",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1785c58c41a506a0d6b32cc6cad",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 82,
+        "followers": 17341355
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "13ubrt8QOOCPljQ2FL1Kca",
+      "name": "A$AP Rocky",
+      "spotify_url": "https://open.spotify.com/artist/13ubrt8QOOCPljQ2FL1Kca",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/13ubrt8QOOCPljQ2FL1Kca",
+        "key": "artist",
+        "description": "A$AP Rocky"
+      },
+      "popularity": 82,
+      "followers": 17341355,
+      "genres": [
+        "rap"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1785c58c41a506a0d6b32cc6cad",
+      "artist": "A$AP Rocky",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_28ExwzUQsvgJooOI0X1mr3",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/28ExwzUQsvgJooOI0X1mr3",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/28ExwzUQsvgJooOI0X1mr3",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb9c48431caf52a2d0f38433ff",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051749c48431caf52a2d0f38433ff",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1789c48431caf52a2d0f38433ff",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 69,
+        "followers": 1633727
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "28ExwzUQsvgJooOI0X1mr3",
+      "name": "Jay Rock",
+      "spotify_url": "https://open.spotify.com/artist/28ExwzUQsvgJooOI0X1mr3",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/28ExwzUQsvgJooOI0X1mr3",
+        "key": "artist",
+        "description": "Jay Rock"
+      },
+      "popularity": 69,
+      "followers": 1633727,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1789c48431caf52a2d0f38433ff",
+      "artist": "Jay Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_3xs0LEzcPXtgNfMNcHzLIP",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/3xs0LEzcPXtgNfMNcHzLIP",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/3xs0LEzcPXtgNfMNcHzLIP",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6772690000c46c38e130e4a87d0d8a46912426",
+          "key": "l",
+          "type": "url",
+          "description": "1000x1000"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6772690000dd2238e130e4a87d0d8a46912426",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6772690000bac338e130e4a87d0d8a46912426",
+          "key": "m",
+          "type": "url",
+          "description": "200x200"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67726900008f7438e130e4a87d0d8a46912426",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 67,
+        "followers": 119438
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3xs0LEzcPXtgNfMNcHzLIP",
+      "name": "Rockwell",
+      "spotify_url": "https://open.spotify.com/artist/3xs0LEzcPXtgNfMNcHzLIP",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/3xs0LEzcPXtgNfMNcHzLIP",
+        "key": "artist",
+        "description": "Rockwell"
+      },
+      "popularity": 67,
+      "followers": 119438,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67726900008f7438e130e4a87d0d8a46912426",
+      "artist": "Rockwell",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_21WS9wngs9AqFckK7yYJPM",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/21WS9wngs9AqFckK7yYJPM",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/21WS9wngs9AqFckK7yYJPM",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4962230cc9649e2083ac1665",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051744962230cc9649e2083ac1665",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1784962230cc9649e2083ac1665",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 66,
+        "followers": 4288585
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "21WS9wngs9AqFckK7yYJPM",
+      "name": "PnB Rock",
+      "spotify_url": "https://open.spotify.com/artist/21WS9wngs9AqFckK7yYJPM",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/21WS9wngs9AqFckK7yYJPM",
+        "key": "artist",
+        "description": "PnB Rock"
+      },
+      "popularity": 66,
+      "followers": 4288585,
+      "genres": [
+        "melodic rap"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1784962230cc9649e2083ac1665",
+      "artist": "PnB Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_7dOBabd5O4CvKrg4iriHTM",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/7dOBabd5O4CvKrg4iriHTM",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/7dOBabd5O4CvKrg4iriHTM",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb2306846cafba63385008dc21",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051742306846cafba63385008dc21",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1782306846cafba63385008dc21",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 65,
+        "followers": 2996725
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "7dOBabd5O4CvKrg4iriHTM",
+      "name": "Kid Rock",
+      "spotify_url": "https://open.spotify.com/artist/7dOBabd5O4CvKrg4iriHTM",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/7dOBabd5O4CvKrg4iriHTM",
+        "key": "artist",
+        "description": "Kid Rock"
+      },
+      "popularity": 65,
+      "followers": 2996725,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1782306846cafba63385008dc21",
+      "artist": "Kid Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_5bHjVR4F2Tfq4Ha6x7K6wU",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/5bHjVR4F2Tfq4Ha6x7K6wU",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/5bHjVR4F2Tfq4Ha6x7K6wU",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb293c187c0da77de5a304b5bd",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174293c187c0da77de5a304b5bd",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178293c187c0da77de5a304b5bd",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 58,
+        "followers": 345118
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5bHjVR4F2Tfq4Ha6x7K6wU",
+      "name": "Rockabye Baby!",
+      "spotify_url": "https://open.spotify.com/artist/5bHjVR4F2Tfq4Ha6x7K6wU",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/5bHjVR4F2Tfq4Ha6x7K6wU",
+        "key": "artist",
+        "description": "Rockabye Baby!"
+      },
+      "popularity": 58,
+      "followers": 345118,
+      "genres": [
+        "lullaby"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178293c187c0da77de5a304b5bd",
+      "artist": "Rockabye Baby!",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6zeQl72GknqjTGCbrzvSbc",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6zeQl72GknqjTGCbrzvSbc",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6zeQl72GknqjTGCbrzvSbc",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb182221b64c512112f8c20582",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174182221b64c512112f8c20582",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178182221b64c512112f8c20582",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 56,
+        "followers": 74454
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6zeQl72GknqjTGCbrzvSbc",
+      "name": "Rockout Danny",
+      "spotify_url": "https://open.spotify.com/artist/6zeQl72GknqjTGCbrzvSbc",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6zeQl72GknqjTGCbrzvSbc",
+        "key": "artist",
+        "description": "Rockout Danny"
+      },
+      "popularity": 56,
+      "followers": 74454,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178182221b64c512112f8c20582",
+      "artist": "Rockout Danny",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0pPN4tp51uXAhkDux1Mmn4",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0pPN4tp51uXAhkDux1Mmn4",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0pPN4tp51uXAhkDux1Mmn4",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebe6060ac232ab808f452f3358",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174e6060ac232ab808f452f3358",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178e6060ac232ab808f452f3358",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 53,
+        "followers": 361806
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0pPN4tp51uXAhkDux1Mmn4",
+      "name": "Rockit Music",
+      "spotify_url": "https://open.spotify.com/artist/0pPN4tp51uXAhkDux1Mmn4",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0pPN4tp51uXAhkDux1Mmn4",
+        "key": "artist",
+        "description": "Rockit Music"
+      },
+      "popularity": 53,
+      "followers": 361806,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178e6060ac232ab808f452f3358",
+      "artist": "Rockit Music",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0T5OJgMVjKIX3b3W3ekqOl",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0T5OJgMVjKIX3b3W3ekqOl",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0T5OJgMVjKIX3b3W3ekqOl",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/97467afd63b54a8c7b334fc5b12d3b498f3f4c9e",
+          "key": "m",
+          "type": "url",
+          "description": "267x400"
+        },
+        {
+          "url": "https://i.scdn.co/image/7b1555d3d8ec53ed03c9137d5b371f09aeaceeb4",
+          "key": "m",
+          "type": "url",
+          "description": "200x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/44eeadbc6dad06ed97e94d983c6402a134bfac63",
+          "key": "s",
+          "type": "url",
+          "description": "64x96"
+        }
+      ],
+      "metrics": {
+        "popularity": 49,
+        "followers": 568836
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0T5OJgMVjKIX3b3W3ekqOl",
+      "name": "Rocko",
+      "spotify_url": "https://open.spotify.com/artist/0T5OJgMVjKIX3b3W3ekqOl",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0T5OJgMVjKIX3b3W3ekqOl",
+        "key": "artist",
+        "description": "Rocko"
+      },
+      "popularity": 49,
+      "followers": 568836,
+      "genres": [
+        "southern hip hop"
+      ],
+      "default_image": "https://i.scdn.co/image/44eeadbc6dad06ed97e94d983c6402a134bfac63",
+      "artist": "Rocko",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6TMJgSdBIPPtQJbAB8yPpO",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6TMJgSdBIPPtQJbAB8yPpO",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6TMJgSdBIPPtQJbAB8yPpO",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb354d6312e5a12c86622e294d",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174354d6312e5a12c86622e294d",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178354d6312e5a12c86622e294d",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 40,
+        "followers": 26524
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6TMJgSdBIPPtQJbAB8yPpO",
+      "name": "Rocket",
+      "spotify_url": "https://open.spotify.com/artist/6TMJgSdBIPPtQJbAB8yPpO",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6TMJgSdBIPPtQJbAB8yPpO",
+        "key": "artist",
+        "description": "Rocket"
+      },
+      "popularity": 40,
+      "followers": 26524,
+      "genres": [
+        "shoegaze"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178354d6312e5a12c86622e294d",
+      "artist": "Rocket",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_7vKlWZCVYQIdYzo6anAGkE",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/7vKlWZCVYQIdYzo6anAGkE",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/7vKlWZCVYQIdYzo6anAGkE",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273e1451e3f6635149376a742cb",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02e1451e3f6635149376a742cb",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851e1451e3f6635149376a742cb",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 29,
+        "followers": 1327
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "7vKlWZCVYQIdYzo6anAGkE",
+      "name": "rock",
+      "spotify_url": "https://open.spotify.com/artist/7vKlWZCVYQIdYzo6anAGkE",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/7vKlWZCVYQIdYzo6anAGkE",
+        "key": "artist",
+        "description": "rock"
+      },
+      "popularity": 29,
+      "followers": 1327,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851e1451e3f6635149376a742cb",
+      "artist": "rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2KTDVOTp2crzV4KBe16SgW",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2KTDVOTp2crzV4KBe16SgW",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2KTDVOTp2crzV4KBe16SgW",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb3be664b0e571500cc7722fd5",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051743be664b0e571500cc7722fd5",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1783be664b0e571500cc7722fd5",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 16,
+        "followers": 4321
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2KTDVOTp2crzV4KBe16SgW",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/2KTDVOTp2crzV4KBe16SgW",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2KTDVOTp2crzV4KBe16SgW",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 16,
+      "followers": 4321,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1783be664b0e571500cc7722fd5",
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2VVFy42xhI7yfomKFAxlCA",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2VVFy42xhI7yfomKFAxlCA",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2VVFy42xhI7yfomKFAxlCA",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb29eb012c01dabf6f68d1de19",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517429eb012c01dabf6f68d1de19",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17829eb012c01dabf6f68d1de19",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 14,
+        "followers": 1824
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2VVFy42xhI7yfomKFAxlCA",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/2VVFy42xhI7yfomKFAxlCA",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2VVFy42xhI7yfomKFAxlCA",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 14,
+      "followers": 1824,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17829eb012c01dabf6f68d1de19",
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6JDmbR90UIGFaZcVsbmBWe",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6JDmbR90UIGFaZcVsbmBWe",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6JDmbR90UIGFaZcVsbmBWe",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2731298a37825bcb72c82773a8b",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e021298a37825bcb72c82773a8b",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048511298a37825bcb72c82773a8b",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 7,
+        "followers": 1887
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6JDmbR90UIGFaZcVsbmBWe",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/6JDmbR90UIGFaZcVsbmBWe",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6JDmbR90UIGFaZcVsbmBWe",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 7,
+      "followers": 1887,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d000048511298a37825bcb72c82773a8b",
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2WtzprkWeq1YQZsniLzKUY",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2WtzprkWeq1YQZsniLzKUY",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2WtzprkWeq1YQZsniLzKUY",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [],
+      "metrics": {
+        "popularity": 3,
+        "followers": 262
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2WtzprkWeq1YQZsniLzKUY",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/2WtzprkWeq1YQZsniLzKUY",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2WtzprkWeq1YQZsniLzKUY",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 3,
+      "followers": 262,
+      "genres": [
+        "boom bap"
+      ],
+      "default_image": null,
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_3eCElW1X5SA87sV9fM1wpQ",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/3eCElW1X5SA87sV9fM1wpQ",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/3eCElW1X5SA87sV9fM1wpQ",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273535c4fd87b72300432afd29b",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02535c4fd87b72300432afd29b",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851535c4fd87b72300432afd29b",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 2,
+        "followers": 757
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "3eCElW1X5SA87sV9fM1wpQ",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/3eCElW1X5SA87sV9fM1wpQ",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/3eCElW1X5SA87sV9fM1wpQ",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 2,
+      "followers": 757,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851535c4fd87b72300432afd29b",
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_5YQ2oxTa1E2kaDX5tiDVzo",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/5YQ2oxTa1E2kaDX5tiDVzo",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/5YQ2oxTa1E2kaDX5tiDVzo",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [],
+      "metrics": {
+        "popularity": 2,
+        "followers": 104
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5YQ2oxTa1E2kaDX5tiDVzo",
+      "name": "Rock",
+      "spotify_url": "https://open.spotify.com/artist/5YQ2oxTa1E2kaDX5tiDVzo",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/5YQ2oxTa1E2kaDX5tiDVzo",
+        "key": "artist",
+        "description": "Rock"
+      },
+      "popularity": 2,
+      "followers": 104,
+      "genres": [],
+      "default_image": null,
+      "artist": "Rock",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_5LlbAkA33C6DxVln0Wczps",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/5LlbAkA33C6DxVln0Wczps",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/5LlbAkA33C6DxVln0Wczps",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2730d32531b7bf9cb37657a3559",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e020d32531b7bf9cb37657a3559",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048510d32531b7bf9cb37657a3559",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 0,
+        "followers": 65
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "5LlbAkA33C6DxVln0Wczps",
+      "name": "ROCK",
+      "spotify_url": "https://open.spotify.com/artist/5LlbAkA33C6DxVln0Wczps",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/5LlbAkA33C6DxVln0Wczps",
+        "key": "artist",
+        "description": "ROCK"
+      },
+      "popularity": 0,
+      "followers": 65,
+      "genres": [
+        "slowcore"
+      ],
+      "default_image": "https://i.scdn.co/image/ab67616d000048510d32531b7bf9cb37657a3559",
+      "artist": "ROCK",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    }
+  ],
+  "total_results": 20,
+  "query": "rock",
+  "data_source": "Spotify Artist Search",
+  "error": null
+}

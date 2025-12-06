@@ -1,0 +1,2226 @@
+{
+  "copyright": "Copyright (c) 2025 The New York Times Company. All Rights Reserved.",
+  "data_source": "NYTimes Bestseller List",
+  "data_type": "book",
+  "error": null,
+  "list_results": {
+    "bestsellers_date": "2025-11-01",
+    "books": [
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0593493125?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Virginia Roberts Giuffre",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "https://www.nytimes.com/2025/10/16/books/review/virginia-roberts-giuffre-nobodys-girl-memoir.html",
+        "book_uri": "nyt://book/ef231b83-dd7d-5beb-add6-ec274e904a82",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0593493125?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780593493120?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fnobodys-girl-virginia-roberts-giuffre%2F1148108744%3Fean%3D9780593493120"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FNobodys-Girl%2FVirginia-Roberts-Giuffre%2F9780593493120"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780593493120"
+          }
+        ],
+        "contributor": "by Virginia Roberts Giuffre",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg"
+        },
+        "dagger": 0,
+        "description": "The late activist and advocate for sex-trafficking survivors describes her time with Jeffrey Epstein and Ghislaine Maxwell.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780593493120"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780593493120",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780593493120",
+        "publisher": "Knopf",
+        "rank": 1,
+        "rank_last_week": 1,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780593493120",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "NOBODY'S GIRL",
+        "weeks_on_list": 2
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0063428164?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "John Kennedy",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/62e9ab90-fd39-5bc3-b01d-6aa678595027",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0063428164?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780063428164?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fhow-to-test-negative-for-stupid-john-kennedy%2F1146773939%3Fean%3D9780063428164"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DHOW%2520TO%2520TEST%2520NEGATIVE%2520FOR%2520STUPID%2520by%2520John%2520Kennedy"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780063428164"
+          }
+        ],
+        "contributor": "by John Kennedy",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg"
+        },
+        "dagger": 0,
+        "description": "The Republican senator from Louisiana shares stories about politics in Washington, D.C., and in his home state.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780063428164"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780063428164",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780063428164",
+        "publisher": "Broadside",
+        "rank": 2,
+        "rank_last_week": 6,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780063428164",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "HOW TO TEST NEGATIVE FOR STUPID",
+        "weeks_on_list": 4
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0593296966?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Andrew Ross Sorkin",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "https://www.nytimes.com/2025/10/14/books/review/1929-andrew-ross-sorkin.html",
+        "book_uri": "nyt://book/90977171-d8dc-57d5-b3a0-acf8445743c7",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0593296966?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780593296967?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F1929-andrew-ross-sorkin%2F1147761884%3Fean%3D9780593296967"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FAndrew-Ross-Sorkin%2F9780593296967"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780593296967"
+          }
+        ],
+        "contributor": "by Andrew Ross Sorkin",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg"
+        },
+        "dagger": 0,
+        "description": "The New York Times journalist and CNBC host looks at the fight between Washington and Wall Street that fueled a historic crash of the stock market.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780593296967"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780593296967",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780593296967",
+        "publisher": "Viking",
+        "rank": 3,
+        "rank_last_week": 3,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780593296967",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "1929",
+        "weeks_on_list": 3
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0593236599?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Peter Attia with Bill Gifford",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+        "book_image_height": 500,
+        "book_image_width": 385,
+        "book_review_link": "",
+        "book_uri": "nyt://book/69f6e624-4f30-59d6-8103-816d17ae5ec1",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0593236599?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780593236598?at=10lIEQ"
+          },
+          {
+            "name": "Barnes and Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9780593236598"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FOUTLIVE%2FPeter%2BAttia%2Bwith%2BBill%2BGifford%2F9780593236598"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780593236598"
+          }
+        ],
+        "contributor": "by Peter Attia with Bill Gifford",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg"
+        },
+        "dagger": 0,
+        "description": "A look at recent scientific research on aging and longevity.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780593236598"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780593236598",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780593236598",
+        "publisher": "Harmony",
+        "rank": 4,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780593236598",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "OUTLIVE",
+        "weeks_on_list": 101
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1668059436?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Cameron Crowe",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+        "book_image_height": 500,
+        "book_image_width": 327,
+        "book_review_link": "https://www.nytimes.com/2025/10/27/books/review/cameron-crowe-uncool-memoir.html",
+        "book_uri": "nyt://book/b83d8929-592e-5679-9649-0dd78847a775",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1668059436?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781668059432?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-uncool-cameron-crowe%2F1147294789%3Fean%3D9781668059432"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FUncool%2FCameron-Crowe%2F9781668059432"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781668059432"
+          }
+        ],
+        "contributor": "by Cameron Crowe",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg"
+        },
+        "dagger": 0,
+        "description": "The journalist and Academy Award-winning filmmaker shares real-life events that inspired “Almost Famous.”",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781668059432"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781668059432",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781668059432",
+        "publisher": "Avid Reader",
+        "rank": 5,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781668059432",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE UNCOOL",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0063381303?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Elyse Myers",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+        "book_image_height": 500,
+        "book_image_width": 333,
+        "book_review_link": "",
+        "book_uri": "nyt://book/2c25d0ad-6734-53e5-886f-4e87fca79df5",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0063381303?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780063381308?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthats-a-great-question-id-love-to-tell-you-elyse-myers%2F1146851907%3Fean%3D9780063381308"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FThats-Great-Question-Id-Love%2FElyse-Myers%2F9780063381308"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780063381308"
+          }
+        ],
+        "contributor": "by Elyse Myers",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg"
+        },
+        "dagger": 0,
+        "description": "A collection of stories and illustrations by the comedian and content creator.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780063381308"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780063381308",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780063381308",
+        "publisher": "Morrow",
+        "rank": 6,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780063381308",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THAT'S A GREAT QUESTION, I'D LOVE TO TELL YOU",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/0063360756?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Bret Baier with Catherine Whitney",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+        "book_image_height": 500,
+        "book_image_width": 329,
+        "book_review_link": "",
+        "book_uri": "nyt://book/f9fcd575-4135-50c2-9a77-f3f50f58f54c",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/0063360756?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780063360754?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fto-rescue-the-american-spirit-bret-baier%2F1147018379%3Fean%3D9780063360754"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRescue-American-Spirit%2FBret-Baier%2F9780063360754"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780063360754"
+          }
+        ],
+        "contributor": "by Bret Baier with Catherine Whitney",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg"
+        },
+        "dagger": 0,
+        "description": "The Fox News Channel’s chief political anchor chronicles the life and times of Theodore Roosevelt.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780063360754"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780063360754",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780063360754",
+        "publisher": "Mariner",
+        "rank": 7,
+        "rank_last_week": 2,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780063360754",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "TO RESCUE THE AMERICAN SPIRIT",
+        "weeks_on_list": 2
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/B0F25R1VXJ?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Jonathan Karl",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/0ed4a3f3-e7d5-5594-9706-001997453a46",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/B0F25R1VXJ?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9798217047000?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fretribution-jonathan-karl%2F1147175117%3Fean%3D9798217047000"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRetribution%2FJonathan-Karl%2F9798217047000"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9798217047000"
+          }
+        ],
+        "contributor": "by Jonathan Karl",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg"
+        },
+        "dagger": 0,
+        "description": "The chief Washington correspondent for ABC News and author of “Tired of Winning” chronicles President Trump’s return to the White House.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9798217047000"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9798217047000",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9798217047000",
+        "publisher": "Dutton",
+        "rank": 8,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9798217047000",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "RETRIBUTION",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1668211653?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Kamala Harris",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+        "book_image_height": 500,
+        "book_image_width": 329,
+        "book_review_link": "https://www.nytimes.com/2025/09/18/books/review/107-days-kamala-harris.html",
+        "book_uri": "nyt://book/4aa0a025-e322-5257-835e-c1bbf4ef1bac",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1668211653?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F107-days-kamala-harris%2F1147932213%3Fean%3D9781668211656"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FDays%2FKamala-Harris%2F9781668211656"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781668211656"
+          }
+        ],
+        "contributor": "by Kamala Harris",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg"
+        },
+        "dagger": 0,
+        "description": "The former vice president recounts her abbreviated campaign to become president in 2024.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781668211656"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781668211656",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781668211656",
+        "publisher": "Simon & Schuster",
+        "rank": 9,
+        "rank_last_week": 11,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781668211656",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "107 DAYS",
+        "weeks_on_list": 6
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1668205874?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Eric Trump",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/6cbcd519-4609-5b75-be6b-7c21d58ee082",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1668205874?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781668205877?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Funder-siege-eric-trump%2F1148206970%3Fean%3D9781668205877"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FUnder-Siege%2FEric-Trump%2F9781668205877"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781668205877"
+          }
+        ],
+        "contributor": "by Eric Trump",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg"
+        },
+        "dagger": 0,
+        "description": "The executive vice president of the Trump Organization shares his belief that attacks on his family are attacks on America.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781668205877"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781668205877",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781668205877",
+        "publisher": "Threshold Editions",
+        "rank": 10,
+        "rank_last_week": 5,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781668205877",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "UNDER SIEGE",
+        "weeks_on_list": 3
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1984862103?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Matthew McConaughey",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+        "book_image_height": 500,
+        "book_image_width": 331,
+        "book_review_link": "",
+        "book_uri": "nyt://book/4c065d69-f160-58de-8310-467805ba6fec",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1984862103?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fpoems-prayers-matthew-mcconaughey%2F1147717698%3Fean%3D9781984862105"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FPoems-Prayers%2FMatthew-McConaughey%2F9781984862105"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781984862105"
+          }
+        ],
+        "contributor": "by Matthew McConaughey",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg"
+        },
+        "dagger": 0,
+        "description": "The actor and author of “Greenlights” explores elements of belief and reason that make up our lives.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781984862105"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781984862105",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781984862105",
+        "publisher": "Crown",
+        "rank": 11,
+        "rank_last_week": 13,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781984862105",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "POEMS & PRAYERS",
+        "weeks_on_list": 7
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/1735503797?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Charlie Kirk",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+        "book_image_height": 500,
+        "book_image_width": 334,
+        "book_review_link": "",
+        "book_uri": "nyt://book/74cf4bed-61a4-5514-8ada-4d7bbc3a5b47",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/1735503797?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781735503790?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fright-wing-revolution-charlie-kirk%2F1144945371%3Fean%3D9781735503790"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRight-Wing-Revolution%2FCharlie-Kirk%2F9781735503790"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781735503790"
+          }
+        ],
+        "contributor": "by Charlie Kirk",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg"
+        },
+        "dagger": 0,
+        "description": "The late founder of Turning Point USA prescribes ways to defeat woke ideology.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781735503790"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781735503790",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781735503790",
+        "publisher": "Winning Team",
+        "rank": 12,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781735503790",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "RIGHT WING REVOLUTION",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/153875522X?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Shea Serrano",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+        "book_image_height": 498,
+        "book_image_width": 500,
+        "book_review_link": "",
+        "book_uri": "nyt://book/c8894dbd-1feb-5b07-bff3-f7ccf5c4e663",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/153875522X?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9781538755228?at=10lIEQ"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fexpensive-basketball-shea-serrano%2F1147010417%3Fean%3D9781538755228"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FExpensive-Basketball%2FShea-Serrano%2F9781538755228"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781538755228"
+          }
+        ],
+        "contributor": "by Shea Serrano",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg"
+        },
+        "dagger": 0,
+        "description": "The author of “Hip-Hop (and Other Things)” celebrates moments in basketball that are hard to quantify; illustrated by Ian Klarer.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781538755228"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781538755228",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781538755228",
+        "publisher": "Grand Central",
+        "rank": 13,
+        "rank_last_week": 0,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781538755228",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "EXPENSIVE BASKETBALL",
+        "weeks_on_list": 1
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "http://www.amazon.com/The-Body-Keeps-Score-Healing/dp/0670785938?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Bessel van der Kolk",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+        "book_image_height": 193,
+        "book_image_width": 128,
+        "book_review_link": "https://www.nytimes.com/2018/10/18/books/review/how-to-rewire-your-traumatized-brain.html",
+        "book_uri": "nyt://book/e3e33e9d-0e67-5fec-b0d2-2ecddc38ce0e",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "http://www.amazon.com/The-Body-Keeps-Score-Healing/dp/0670785938?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Apple Books",
+            "url": "https://goto.applebooks.apple/9780143127741?at=10lIEQ"
+          },
+          {
+            "name": "Barnes and Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9780143127741"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTHE%2BBODY%2BKEEPS%2BTHE%2BSCORE%2FBessel%2Bvan%2Bder%2BKolk%2F9780143127741"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9780143127741"
+          }
+        ],
+        "contributor": "by Bessel van der Kolk",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg"
+        },
+        "dagger": 0,
+        "description": "How trauma affects the body and mind, and innovative treatments for recovery.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9780143127741"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9780143127741",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9780143127741",
+        "publisher": "Penguin",
+        "rank": 14,
+        "rank_last_week": 15,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9780143127741",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "THE BODY KEEPS THE SCORE",
+        "weeks_on_list": 267
+      },
+      {
+        "age_group": "",
+        "amazon_product_url": "https://www.amazon.com/dp/B0DVQY1CC8?tag=thenewyorktim-20",
+        "article_chapter_link": "",
+        "asterisk": 0,
+        "author": "Bill O'Reilly and Josh Hammer",
+        "book_image": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+        "book_image_height": 500,
+        "book_image_width": 329,
+        "book_review_link": "",
+        "book_uri": "nyt://book/c69bb5f9-b2ed-5946-8cc8-73c9081912b5",
+        "buy_links": [
+          {
+            "name": "Amazon",
+            "url": "https://www.amazon.com/dp/B0DVQY1CC8?tag=thenewyorktim-20"
+          },
+          {
+            "name": "Barnes & Noble",
+            "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fconfronting-evil-bill-oreilly%2F1146923767%3Fean%3D9781250374042"
+          },
+          {
+            "name": "Books-A-Million",
+            "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FConfronting-Evil%2FBill-OReilly%2F9781250374042"
+          },
+          {
+            "name": "Bookshop.org",
+            "url": "https://bookshop.org/a/3546/9781250374042"
+          }
+        ],
+        "contributor": "by Bill O'Reilly and Josh Hammer",
+        "contributor_note": "",
+        "cover_available": true,
+        "cover_source": "nytimes",
+        "cover_urls": {
+          "large": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+          "medium": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+          "nyt_original": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+          "small": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg"
+        },
+        "dagger": 0,
+        "description": "O'Reilly and Hammer profile some of history’s nefarious characters.",
+        "error": null,
+        "external_ids": {},
+        "first_chapter_link": "",
+        "images": [],
+        "isbns": [
+          {
+            "isbn10": "",
+            "isbn13": "9781250374042"
+          }
+        ],
+        "links": [],
+        "mc_id": "book_9781250374042",
+        "mc_subtype": null,
+        "mc_type": "book",
+        "metrics": {},
+        "price": "0.00",
+        "primary_isbn10": "",
+        "primary_isbn13": "9781250374042",
+        "publisher": "St. Martin's",
+        "rank": 15,
+        "rank_last_week": 14,
+        "sort_order": 0.0,
+        "source": "nytimes",
+        "source_id": "9781250374042",
+        "status_code": 200,
+        "sunday_review_link": "",
+        "title": "CONFRONTING EVIL",
+        "weeks_on_list": 8
+      }
+    ],
+    "corrections": [],
+    "display_name": "Combined Print & E-Book Nonfiction",
+    "list_name": "Combined Print & E-Book Nonfiction",
+    "list_name_encoded": "combined-print-and-e-book-nonfiction",
+    "next_published_date": null,
+    "normal_list_ends_at": 15,
+    "previous_published_date": "2025-11-09",
+    "published_date": "2025-11-16",
+    "published_date_description": "",
+    "updated": "WEEKLY"
+  },
+  "metrics": {},
+  "num_results": 15,
+  "page": 1,
+  "query": null,
+  "results": [
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0593493125?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Virginia Roberts Giuffre",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "https://www.nytimes.com/2025/10/16/books/review/virginia-roberts-giuffre-nobodys-girl-memoir.html",
+      "book_uri": "nyt://book/ef231b83-dd7d-5beb-add6-ec274e904a82",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0593493125?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780593493120?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fnobodys-girl-virginia-roberts-giuffre%2F1148108744%3Fean%3D9780593493120"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FNobodys-Girl%2FVirginia-Roberts-Giuffre%2F9780593493120"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780593493120"
+        }
+      ],
+      "contributor": "by Virginia Roberts Giuffre",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780593493120.jpg"
+      },
+      "dagger": 0,
+      "description": "The late activist and advocate for sex-trafficking survivors describes her time with Jeffrey Epstein and Ghislaine Maxwell.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780593493120"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780593493120",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780593493120",
+      "publisher": "Knopf",
+      "rank": 1,
+      "rank_last_week": 1,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780593493120",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "NOBODY'S GIRL",
+      "weeks_on_list": 2
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0063428164?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "John Kennedy",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/62e9ab90-fd39-5bc3-b01d-6aa678595027",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0063428164?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780063428164?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fhow-to-test-negative-for-stupid-john-kennedy%2F1146773939%3Fean%3D9780063428164"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fsearch%3Fquery%3DHOW%2520TO%2520TEST%2520NEGATIVE%2520FOR%2520STUPID%2520by%2520John%2520Kennedy"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780063428164"
+        }
+      ],
+      "contributor": "by John Kennedy",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780063428164.jpg"
+      },
+      "dagger": 0,
+      "description": "The Republican senator from Louisiana shares stories about politics in Washington, D.C., and in his home state.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780063428164"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780063428164",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780063428164",
+      "publisher": "Broadside",
+      "rank": 2,
+      "rank_last_week": 6,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780063428164",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "HOW TO TEST NEGATIVE FOR STUPID",
+      "weeks_on_list": 4
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0593296966?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Andrew Ross Sorkin",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "https://www.nytimes.com/2025/10/14/books/review/1929-andrew-ross-sorkin.html",
+      "book_uri": "nyt://book/90977171-d8dc-57d5-b3a0-acf8445743c7",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0593296966?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780593296967?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F1929-andrew-ross-sorkin%2F1147761884%3Fean%3D9780593296967"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FAndrew-Ross-Sorkin%2F9780593296967"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780593296967"
+        }
+      ],
+      "contributor": "by Andrew Ross Sorkin",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780593296967.jpg"
+      },
+      "dagger": 0,
+      "description": "The New York Times journalist and CNBC host looks at the fight between Washington and Wall Street that fueled a historic crash of the stock market.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780593296967"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780593296967",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780593296967",
+      "publisher": "Viking",
+      "rank": 3,
+      "rank_last_week": 3,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780593296967",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "1929",
+      "weeks_on_list": 3
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0593236599?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Peter Attia with Bill Gifford",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+      "book_image_height": 500,
+      "book_image_width": 385,
+      "book_review_link": "",
+      "book_uri": "nyt://book/69f6e624-4f30-59d6-8103-816d17ae5ec1",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0593236599?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780593236598?at=10lIEQ"
+        },
+        {
+          "name": "Barnes and Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9780593236598"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FOUTLIVE%2FPeter%2BAttia%2Bwith%2BBill%2BGifford%2F9780593236598"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780593236598"
+        }
+      ],
+      "contributor": "by Peter Attia with Bill Gifford",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780593236598.jpg"
+      },
+      "dagger": 0,
+      "description": "A look at recent scientific research on aging and longevity.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780593236598"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780593236598",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780593236598",
+      "publisher": "Harmony",
+      "rank": 4,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780593236598",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "OUTLIVE",
+      "weeks_on_list": 101
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1668059436?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Cameron Crowe",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+      "book_image_height": 500,
+      "book_image_width": 327,
+      "book_review_link": "https://www.nytimes.com/2025/10/27/books/review/cameron-crowe-uncool-memoir.html",
+      "book_uri": "nyt://book/b83d8929-592e-5679-9649-0dd78847a775",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1668059436?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781668059432?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthe-uncool-cameron-crowe%2F1147294789%3Fean%3D9781668059432"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FUncool%2FCameron-Crowe%2F9781668059432"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781668059432"
+        }
+      ],
+      "contributor": "by Cameron Crowe",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781668059432.jpg"
+      },
+      "dagger": 0,
+      "description": "The journalist and Academy Award-winning filmmaker shares real-life events that inspired “Almost Famous.”",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781668059432"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781668059432",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781668059432",
+      "publisher": "Avid Reader",
+      "rank": 5,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781668059432",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE UNCOOL",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0063381303?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Elyse Myers",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+      "book_image_height": 500,
+      "book_image_width": 333,
+      "book_review_link": "",
+      "book_uri": "nyt://book/2c25d0ad-6734-53e5-886f-4e87fca79df5",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0063381303?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780063381308?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fthats-a-great-question-id-love-to-tell-you-elyse-myers%2F1146851907%3Fean%3D9780063381308"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FThats-Great-Question-Id-Love%2FElyse-Myers%2F9780063381308"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780063381308"
+        }
+      ],
+      "contributor": "by Elyse Myers",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780063381308.jpg"
+      },
+      "dagger": 0,
+      "description": "A collection of stories and illustrations by the comedian and content creator.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780063381308"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780063381308",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780063381308",
+      "publisher": "Morrow",
+      "rank": 6,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780063381308",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THAT'S A GREAT QUESTION, I'D LOVE TO TELL YOU",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/0063360756?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Bret Baier with Catherine Whitney",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+      "book_image_height": 500,
+      "book_image_width": 329,
+      "book_review_link": "",
+      "book_uri": "nyt://book/f9fcd575-4135-50c2-9a77-f3f50f58f54c",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/0063360756?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780063360754?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fto-rescue-the-american-spirit-bret-baier%2F1147018379%3Fean%3D9780063360754"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRescue-American-Spirit%2FBret-Baier%2F9780063360754"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780063360754"
+        }
+      ],
+      "contributor": "by Bret Baier with Catherine Whitney",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780063360754.jpg"
+      },
+      "dagger": 0,
+      "description": "The Fox News Channel’s chief political anchor chronicles the life and times of Theodore Roosevelt.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780063360754"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780063360754",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780063360754",
+      "publisher": "Mariner",
+      "rank": 7,
+      "rank_last_week": 2,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780063360754",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "TO RESCUE THE AMERICAN SPIRIT",
+      "weeks_on_list": 2
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/B0F25R1VXJ?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Jonathan Karl",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/0ed4a3f3-e7d5-5594-9706-001997453a46",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/B0F25R1VXJ?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9798217047000?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fretribution-jonathan-karl%2F1147175117%3Fean%3D9798217047000"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRetribution%2FJonathan-Karl%2F9798217047000"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9798217047000"
+        }
+      ],
+      "contributor": "by Jonathan Karl",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9798217047000.jpg"
+      },
+      "dagger": 0,
+      "description": "The chief Washington correspondent for ABC News and author of “Tired of Winning” chronicles President Trump’s return to the White House.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9798217047000"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9798217047000",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9798217047000",
+      "publisher": "Dutton",
+      "rank": 8,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9798217047000",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "RETRIBUTION",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1668211653?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Kamala Harris",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+      "book_image_height": 500,
+      "book_image_width": 329,
+      "book_review_link": "https://www.nytimes.com/2025/09/18/books/review/107-days-kamala-harris.html",
+      "book_uri": "nyt://book/4aa0a025-e322-5257-835e-c1bbf4ef1bac",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1668211653?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F107-days-kamala-harris%2F1147932213%3Fean%3D9781668211656"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FDays%2FKamala-Harris%2F9781668211656"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781668211656"
+        }
+      ],
+      "contributor": "by Kamala Harris",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781668211656.jpg"
+      },
+      "dagger": 0,
+      "description": "The former vice president recounts her abbreviated campaign to become president in 2024.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781668211656"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781668211656",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781668211656",
+      "publisher": "Simon & Schuster",
+      "rank": 9,
+      "rank_last_week": 11,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781668211656",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "107 DAYS",
+      "weeks_on_list": 6
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1668205874?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Eric Trump",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/6cbcd519-4609-5b75-be6b-7c21d58ee082",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1668205874?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781668205877?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Funder-siege-eric-trump%2F1148206970%3Fean%3D9781668205877"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FUnder-Siege%2FEric-Trump%2F9781668205877"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781668205877"
+        }
+      ],
+      "contributor": "by Eric Trump",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781668205877.jpg"
+      },
+      "dagger": 0,
+      "description": "The executive vice president of the Trump Organization shares his belief that attacks on his family are attacks on America.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781668205877"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781668205877",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781668205877",
+      "publisher": "Threshold Editions",
+      "rank": 10,
+      "rank_last_week": 5,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781668205877",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "UNDER SIEGE",
+      "weeks_on_list": 3
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1984862103?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Matthew McConaughey",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+      "book_image_height": 500,
+      "book_image_width": 331,
+      "book_review_link": "",
+      "book_uri": "nyt://book/4c065d69-f160-58de-8310-467805ba6fec",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1984862103?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fpoems-prayers-matthew-mcconaughey%2F1147717698%3Fean%3D9781984862105"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FPoems-Prayers%2FMatthew-McConaughey%2F9781984862105"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781984862105"
+        }
+      ],
+      "contributor": "by Matthew McConaughey",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781984862105.jpg"
+      },
+      "dagger": 0,
+      "description": "The actor and author of “Greenlights” explores elements of belief and reason that make up our lives.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781984862105"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781984862105",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781984862105",
+      "publisher": "Crown",
+      "rank": 11,
+      "rank_last_week": 13,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781984862105",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "POEMS & PRAYERS",
+      "weeks_on_list": 7
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/1735503797?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Charlie Kirk",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+      "book_image_height": 500,
+      "book_image_width": 334,
+      "book_review_link": "",
+      "book_uri": "nyt://book/74cf4bed-61a4-5514-8ada-4d7bbc3a5b47",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/1735503797?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781735503790?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fright-wing-revolution-charlie-kirk%2F1144945371%3Fean%3D9781735503790"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FRight-Wing-Revolution%2FCharlie-Kirk%2F9781735503790"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781735503790"
+        }
+      ],
+      "contributor": "by Charlie Kirk",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781735503790.jpg"
+      },
+      "dagger": 0,
+      "description": "The late founder of Turning Point USA prescribes ways to defeat woke ideology.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781735503790"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781735503790",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781735503790",
+      "publisher": "Winning Team",
+      "rank": 12,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781735503790",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "RIGHT WING REVOLUTION",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/153875522X?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Shea Serrano",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+      "book_image_height": 498,
+      "book_image_width": 500,
+      "book_review_link": "",
+      "book_uri": "nyt://book/c8894dbd-1feb-5b07-bff3-f7ccf5c4e663",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/153875522X?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9781538755228?at=10lIEQ"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fexpensive-basketball-shea-serrano%2F1147010417%3Fean%3D9781538755228"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FExpensive-Basketball%2FShea-Serrano%2F9781538755228"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781538755228"
+        }
+      ],
+      "contributor": "by Shea Serrano",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781538755228.jpg"
+      },
+      "dagger": 0,
+      "description": "The author of “Hip-Hop (and Other Things)” celebrates moments in basketball that are hard to quantify; illustrated by Ian Klarer.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781538755228"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781538755228",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781538755228",
+      "publisher": "Grand Central",
+      "rank": 13,
+      "rank_last_week": 0,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781538755228",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "EXPENSIVE BASKETBALL",
+      "weeks_on_list": 1
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "http://www.amazon.com/The-Body-Keeps-Score-Healing/dp/0670785938?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Bessel van der Kolk",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+      "book_image_height": 193,
+      "book_image_width": 128,
+      "book_review_link": "https://www.nytimes.com/2018/10/18/books/review/how-to-rewire-your-traumatized-brain.html",
+      "book_uri": "nyt://book/e3e33e9d-0e67-5fec-b0d2-2ecddc38ce0e",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "http://www.amazon.com/The-Body-Keeps-Score-Healing/dp/0670785938?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Apple Books",
+          "url": "https://goto.applebooks.apple/9780143127741?at=10lIEQ"
+        },
+        {
+          "name": "Barnes and Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2F%3Fean%3D9780143127741"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FTHE%2BBODY%2BKEEPS%2BTHE%2BSCORE%2FBessel%2Bvan%2Bder%2BKolk%2F9780143127741"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9780143127741"
+        }
+      ],
+      "contributor": "by Bessel van der Kolk",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9780143127741.jpg"
+      },
+      "dagger": 0,
+      "description": "How trauma affects the body and mind, and innovative treatments for recovery.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9780143127741"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9780143127741",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9780143127741",
+      "publisher": "Penguin",
+      "rank": 14,
+      "rank_last_week": 15,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9780143127741",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "THE BODY KEEPS THE SCORE",
+      "weeks_on_list": 267
+    },
+    {
+      "age_group": "",
+      "amazon_product_url": "https://www.amazon.com/dp/B0DVQY1CC8?tag=thenewyorktim-20",
+      "article_chapter_link": "",
+      "asterisk": 0,
+      "author": "Bill O'Reilly and Josh Hammer",
+      "book_image": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+      "book_image_height": 500,
+      "book_image_width": 329,
+      "book_review_link": "",
+      "book_uri": "nyt://book/c69bb5f9-b2ed-5946-8cc8-73c9081912b5",
+      "buy_links": [
+        {
+          "name": "Amazon",
+          "url": "https://www.amazon.com/dp/B0DVQY1CC8?tag=thenewyorktim-20"
+        },
+        {
+          "name": "Barnes & Noble",
+          "url": "https://www.anrdoezrs.net/click-7990613-11819508?url=https%3A%2F%2Fwww.barnesandnoble.com%2Fw%2Fconfronting-evil-bill-oreilly%2F1146923767%3Fean%3D9781250374042"
+        },
+        {
+          "name": "Books-A-Million",
+          "url": "https://www.anrdoezrs.net/click-7990613-35140?url=https%3A%2F%2Fwww.booksamillion.com%2Fp%2FConfronting-Evil%2FBill-OReilly%2F9781250374042"
+        },
+        {
+          "name": "Bookshop.org",
+          "url": "https://bookshop.org/a/3546/9781250374042"
+        }
+      ],
+      "contributor": "by Bill O'Reilly and Josh Hammer",
+      "contributor_note": "",
+      "cover_available": true,
+      "cover_source": "nytimes",
+      "cover_urls": {
+        "large": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+        "medium": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+        "nyt_original": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg",
+        "small": "https://static01.nyt.com/bestsellers/images/9781250374042.jpg"
+      },
+      "dagger": 0,
+      "description": "O'Reilly and Hammer profile some of history’s nefarious characters.",
+      "error": null,
+      "external_ids": {},
+      "first_chapter_link": "",
+      "images": [],
+      "isbns": [
+        {
+          "isbn10": "",
+          "isbn13": "9781250374042"
+        }
+      ],
+      "links": [],
+      "mc_id": "book_9781250374042",
+      "mc_subtype": null,
+      "mc_type": "book",
+      "metrics": {},
+      "price": "0.00",
+      "primary_isbn10": "",
+      "primary_isbn13": "9781250374042",
+      "publisher": "St. Martin's",
+      "rank": 15,
+      "rank_last_week": 14,
+      "sort_order": 0.0,
+      "source": "nytimes",
+      "source_id": "9781250374042",
+      "status_code": 200,
+      "sunday_review_link": "",
+      "title": "CONFRONTING EVIL",
+      "weeks_on_list": 8
+    }
+  ],
+  "status": "OK",
+  "status_code": 200,
+  "total_results": 15
+}

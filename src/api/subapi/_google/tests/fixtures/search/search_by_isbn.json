@@ -1,0 +1,53 @@
+{
+  "google_id": "DeD6nQEACAAJ",
+  "title": "harry potter and the sorcerer's stone",
+  "key": "/works/GOOGLE_DeD6nQEACAAJ",
+  "author_name": [
+    "j.k. rowling"
+  ],
+  "author": "j.k. rowling",
+  "isbn": [],
+  "primary_isbn13": null,
+  "primary_isbn10": null,
+  "publisher": "",
+  "first_publish_year": 2002,
+  "published_date": "2002",
+  "description": "",
+  "google_description": "",
+  "subtitle": null,
+  "cover_available": true,
+  "cover_urls": {
+    "small": "https://books.google.com/books/content?id=DeD6nQEACAAJ&printsec=frontcover&img=1&zoom=0&source=gbs_api",
+    "medium": "https://books.google.com/books/content?id=DeD6nQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+    "large": "https://books.google.com/books/content?id=DeD6nQEACAAJ&printsec=frontcover&img=1&zoom=2&source=gbs_api"
+  },
+  "book_image": "https://books.google.com/books/content?id=DeD6nQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+  "subjects": [],
+  "categories": [],
+  "language": "en",
+  "google_ratings_average": null,
+  "google_ratings_count": null,
+  "readinglog_count": 0,
+  "number_of_pages": 309,
+  "google_info_link": "http://books.google.com/books?id=DeD6nQEACAAJ&dq=isbn:9780439708180&hl=&source=gbs_api",
+  "google_preview_link": "http://books.google.com/books?id=DeD6nQEACAAJ&dq=isbn:9780439708180&hl=&cd=1&source=gbs_api",
+  "google_canonical_link": "https://books.google.com/books/about/harry_potter_and_the_sorcerer_s_stone.html?hl=&id=DeD6nQEACAAJ",
+  "purchase_links": [
+    {
+      "retailer": "Google Books (Info)",
+      "url": "http://books.google.com/books?id=DeD6nQEACAAJ&dq=isbn:9780439708180&hl=&source=gbs_api",
+      "format": "info"
+    }
+  ],
+  "google_buy_link": null,
+  "google_country": "US",
+  "google_saleability": "NOT_FOR_SALE",
+  "google_retail_price": {},
+  "openlibrary_key": "/works/GOOGLE_DeD6nQEACAAJ",
+  "rank": 0,
+  "rank_last_week": 0,
+  "weeks_on_list": 0,
+  "price": "0.00",
+  "mc_id": null,
+  "mc_type": "book"
+}

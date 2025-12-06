@@ -1,0 +1,15 @@
+{
+  "details": null,
+  "error": "Podcaster not found",
+  "input": {
+    "mc_id": "podcaster_eric_gould",
+    "mc_subtype": "podcaster",
+    "mc_type": "person",
+    "name": "Eric Gould",
+    "source": "podcastindex",
+    "source_id": "123"
+  },
+  "related": [],
+  "status_code": 404,
+  "works": []
+}

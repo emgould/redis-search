@@ -1,0 +1,5 @@
+# Ignore generated mock data JSON files
+search/*.json
+
+# Keep directory structure
+!.gitkeep

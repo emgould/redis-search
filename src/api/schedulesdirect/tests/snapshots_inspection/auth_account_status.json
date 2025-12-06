@@ -1,0 +1,48 @@
+{
+  "account": {
+    "accountExpiration": 1770076667,
+    "expires": "2026-02-02T23:57:47Z",
+    "maxLineups": 4,
+    "messages": []
+  },
+  "code": 0,
+  "datetime": "2025-12-03T12:14:35Z",
+  "lastDataUpdate": "2025-12-03T12:10:07Z",
+  "lineups": [
+    {
+      "lineup": "USA-0000001-CUSTOM",
+      "modified": "2023-09-03T02:13:49Z",
+      "name": "ChannelsDVR TV-Everywhere",
+      "uri": "/20141201/lineups/USA-0000001-CUSTOM"
+    },
+    {
+      "lineup": "USA-FRNDLY-X",
+      "modified": "2025-12-02T19:41:28Z",
+      "name": "frndly",
+      "uri": "/20141201/lineups/USA-FRNDLY-X"
+    },
+    {
+      "lineup": "USA-YOUTUBE-X",
+      "modified": "2025-12-03T09:26:58Z",
+      "name": "You Tube TV",
+      "uri": "/20141201/lineups/USA-YOUTUBE-X"
+    },
+    {
+      "lineup": "USA-YTBE501-X",
+      "modified": "2025-12-03T09:26:58Z",
+      "name": "You Tube New York",
+      "uri": "/20141201/lineups/USA-YTBE501-X"
+    }
+  ],
+  "notifications": [],
+  "serverID": "20141201.web",
+  "serverTime": 1764764075,
+  "systemStatus": [
+    {
+      "date": "2023-08-01T16:00:00Z",
+      "message": "No known issues.",
+      "status": "Online"
+    }
+  ],
+  "tokenExpires": 1764779489
+}

@@ -1,0 +1,129 @@
+================================================================================
+QUICK START - Real API Data for Test Fixtures
+================================================================================
+
+WHAT THIS IS
+------------
+A system to generate test fixtures from REAL API responses instead of
+hardcoded mock data. This ensures your tests match actual API behavior.
+
+WHY IT MATTERS
+--------------
+✓ Tests use real API response structures
+✓ Catches API changes before they break production
+✓ More confidence in test coverage
+✓ Easy to update when APIs change
+
+QUICK START (3 STEPS)
+---------------------
+
+1. SET ENVIRONMENT VARIABLES
+
+   export TMDB_READ_TOKEN='your_tmdb_token'
+   export LASTFM_API_KEY='your_lastfm_key'
+   export SPOTIFY_CLIENT_ID='your_spotify_id'
+   export SPOTIFY_CLIENT_SECRET='your_spotify_secret'
+
+   (Or add to firebase/python_functions/.secret.local)
+
+2. GENERATE FIXTURES
+
+   cd firebase/python_functions/services
+   ./setup_test_fixtures.sh
+
+3. RUN TESTS
+
+   cd firebase/python_functions
+   pytest services/tmdb/tests/ -v
+   pytest services/lastfm/tests/ -v
+
+THAT'S IT!
+----------
+
+For more details, see:
+- REAL_API_FIXTURES_IMPLEMENTATION.txt (comprehensive guide)
+- services/tmdb/tests/SETUP.txt (TMDB-specific)
+- services/tmdb/tests/generate_mock_data.py (implementation)
+
+MIGRATION FROM OLD FIXTURES
+----------------------------
+
+If you want to switch from hardcoded mocks to real API fixtures:
+
+1. Generate fixtures (see step 2 above)
+
+2. Backup and swap conftest:
+   cd services/tmdb/tests
+   mv conftest.py conftest_old.py
+   mv conftest_new.py conftest.py
+
+3. Run tests and fix any issues
+
+4. Do the same for lastfm/tests
+
+TROUBLESHOOTING
+---------------
+
+"Fixture file not found"
+→ Run: ./setup_test_fixtures.sh
+
+"Environment variable not set"
+→ Export the required variables (see step 1)
+
+"API request failed"
+→ Check internet connection and API credentials
+
+Tests fail after migration
+→ Real API data might have different structure than hardcoded mocks
+→ Update tests to handle real data (see main guide)
+
+GET API CREDENTIALS
+-------------------
+
+TMDB: https://www.themoviedb.org/settings/api
+LastFM: https://www.last.fm/api/account/create
+Spotify: https://developer.spotify.com/dashboard
+
+WHAT GETS GENERATED
+-------------------
+
+TMDB Fixtures (8 files):
+- Movie data (Fight Club)
+- TV data (Breaking Bad)
+- Person data (Brad Pitt)
+- Cast, videos, watch providers, keywords, search results
+
+LastFM Fixtures (10 files):
+- Album data (Dark Side of the Moon)
+- Track data (Comfortably Numb)
+- Artist data (Pink Floyd)
+- Spotify searches and integrations
+
+All saved as JSON in fixtures/ directories (gitignored)
+
+REGENERATING FIXTURES
+---------------------
+
+To update fixtures with latest API data:
+
+./setup_test_fixtures.sh
+
+Recommended: Monthly or when API changes announced
+
+BENEFITS
+--------
+
+✓ Tests match real API responses exactly
+✓ All API fields included (not just subset)
+✓ Catches API changes early
+✓ Easy to regenerate
+✓ Better test confidence
+✓ Serves as API documentation
+
+QUESTIONS?
+----------
+
+See REAL_API_FIXTURES_IMPLEMENTATION.txt for comprehensive guide
+
+================================================================================
+

@@ -1,0 +1,1307 @@
+{
+  "results": [
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0k17h0D3J5VfsdmQ1iZtE9",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0k17h0D3J5VfsdmQ1iZtE9",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb97885ce689d644c91dfba05c",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000517497885ce689d644c91dfba05c",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f17897885ce689d644c91dfba05c",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 79,
+        "followers": 22734622
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0k17h0D3J5VfsdmQ1iZtE9",
+      "name": "Pink Floyd",
+      "spotify_url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0k17h0D3J5VfsdmQ1iZtE9",
+        "key": "artist",
+        "description": "Pink Floyd"
+      },
+      "popularity": 79,
+      "followers": 22734622,
+      "genres": [
+        "progressive rock",
+        "psychedelic rock",
+        "classic rock",
+        "art rock",
+        "rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f17897885ce689d644c91dfba05c",
+      "artist": "Pink Floyd",
+      "title": null,
+      "known_for": "Wish You Were Here",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Wish You Were Here"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6HzE5kSIfyuHSQhjhjKRMF",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6HzE5kSIfyuHSQhjhjKRMF",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6HzE5kSIfyuHSQhjhjKRMF",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b27310d395b15e3cbecf5acf9a27",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e0210d395b15e3cbecf5acf9a27",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000485110d395b15e3cbecf5acf9a27",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 20,
+        "followers": 13
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6HzE5kSIfyuHSQhjhjKRMF",
+      "name": "Pink blood",
+      "spotify_url": "https://open.spotify.com/artist/6HzE5kSIfyuHSQhjhjKRMF",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6HzE5kSIfyuHSQhjhjKRMF",
+        "key": "artist",
+        "description": "Pink blood"
+      },
+      "popularity": 20,
+      "followers": 13,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d0000485110d395b15e3cbecf5acf9a27",
+      "artist": "Pink blood",
+      "title": null,
+      "known_for": "Symphony",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Symphony"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_1KCSPY1glIKqW2TotWuXOR",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/1KCSPY1glIKqW2TotWuXOR",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/1KCSPY1glIKqW2TotWuXOR",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb7bbad89a61061304ec842588",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051747bbad89a61061304ec842588",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1787bbad89a61061304ec842588",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 78,
+        "followers": 18210519
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1KCSPY1glIKqW2TotWuXOR",
+      "name": "P!nk",
+      "spotify_url": "https://open.spotify.com/artist/1KCSPY1glIKqW2TotWuXOR",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/1KCSPY1glIKqW2TotWuXOR",
+        "key": "artist",
+        "description": "P!nk"
+      },
+      "popularity": 78,
+      "followers": 18210519,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1787bbad89a61061304ec842588",
+      "artist": "P!nk",
+      "title": null,
+      "known_for": "Just Give Me a Reason (feat. Nate Ruess)",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Just Give Me a Reason (feat. Nate Ruess)"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_36QJpDe2go2KgaRleHCDTp",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/36QJpDe2go2KgaRleHCDTp",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/36QJpDe2go2KgaRleHCDTp",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/207803ce008388d3427a685254f9de6a8f61dc2e",
+          "key": "l",
+          "type": "url",
+          "description": "600x600"
+        },
+        {
+          "url": "https://i.scdn.co/image/b0248a44865493e6a03832aa89854ada16ff07a8",
+          "key": "m",
+          "type": "url",
+          "description": "200x200"
+        },
+        {
+          "url": "https://i.scdn.co/image/16eb3cdae0d824b520ac17710e943a99d3ef6602",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 76,
+        "followers": 15983071
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "36QJpDe2go2KgaRleHCDTp",
+      "name": "Led Zeppelin",
+      "spotify_url": "https://open.spotify.com/artist/36QJpDe2go2KgaRleHCDTp",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/36QJpDe2go2KgaRleHCDTp",
+        "key": "artist",
+        "description": "Led Zeppelin"
+      },
+      "popularity": 76,
+      "followers": 15983071,
+      "genres": [
+        "classic rock",
+        "rock",
+        "hard rock",
+        "rock and roll"
+      ],
+      "default_image": "https://i.scdn.co/image/16eb3cdae0d824b520ac17710e943a99d3ef6602",
+      "artist": "Led Zeppelin",
+      "title": null,
+      "known_for": "Stairway to Heaven - Remaster",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Stairway to Heaven - Remaster"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2Hkut4rAAyrQxRdof7FVJq",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2Hkut4rAAyrQxRdof7FVJq",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb896c4b043fb3063178afd716",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174896c4b043fb3063178afd716",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178896c4b043fb3063178afd716",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 65,
+        "followers": 2557352
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2Hkut4rAAyrQxRdof7FVJq",
+      "name": "Rush",
+      "spotify_url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2Hkut4rAAyrQxRdof7FVJq",
+        "key": "artist",
+        "description": "Rush"
+      },
+      "popularity": 65,
+      "followers": 2557352,
+      "genres": [
+        "progressive rock",
+        "classic rock",
+        "hard rock",
+        "rock",
+        "aor"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178896c4b043fb3063178afd716",
+      "artist": "Rush",
+      "title": null,
+      "known_for": "Tom Sawyer",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Tom Sawyer"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2FcC4sDMXme2ziI7tGKMK8",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2FcC4sDMXme2ziI7tGKMK8",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2FcC4sDMXme2ziI7tGKMK8",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb4ab2cbce7e4f8f2c9be48a71",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051744ab2cbce7e4f8f2c9be48a71",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1784ab2cbce7e4f8f2c9be48a71",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 59,
+        "followers": 2015626
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2FcC4sDMXme2ziI7tGKMK8",
+      "name": "David Gilmour",
+      "spotify_url": "https://open.spotify.com/artist/2FcC4sDMXme2ziI7tGKMK8",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2FcC4sDMXme2ziI7tGKMK8",
+        "key": "artist",
+        "description": "David Gilmour"
+      },
+      "popularity": 59,
+      "followers": 2015626,
+      "genres": [
+        "progressive rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1784ab2cbce7e4f8f2c9be48a71",
+      "artist": "David Gilmour",
+      "title": null,
+      "known_for": "Between Two Points",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Between Two Points"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_70BYFdaZbEKbeauJ670ysI",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/70BYFdaZbEKbeauJ670ysI",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/70BYFdaZbEKbeauJ670ysI",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb5c83ee58ebb4cfeed8a528e2",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051745c83ee58ebb4cfeed8a528e2",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1785c83ee58ebb4cfeed8a528e2",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 71,
+        "followers": 4541929
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "70BYFdaZbEKbeauJ670ysI",
+      "name": "Shinedown",
+      "spotify_url": "https://open.spotify.com/artist/70BYFdaZbEKbeauJ670ysI",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/70BYFdaZbEKbeauJ670ysI",
+        "key": "artist",
+        "description": "Shinedown"
+      },
+      "popularity": 71,
+      "followers": 4541929,
+      "genres": [
+        "post-grunge",
+        "alternative metal",
+        "rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1785c83ee58ebb4cfeed8a528e2",
+      "artist": "Shinedown",
+      "title": null,
+      "known_for": "Second Chance",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Second Chance"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0ECwFtbIWEVNwjlrfc6xoL",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0ECwFtbIWEVNwjlrfc6xoL",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0ECwFtbIWEVNwjlrfc6xoL",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5eb0767e116a2307495e37cd7fb",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab676161000051740767e116a2307495e37cd7fb",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f1780767e116a2307495e37cd7fb",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 75,
+        "followers": 12162278
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0ECwFtbIWEVNwjlrfc6xoL",
+      "name": "Eagles",
+      "spotify_url": "https://open.spotify.com/artist/0ECwFtbIWEVNwjlrfc6xoL",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0ECwFtbIWEVNwjlrfc6xoL",
+        "key": "artist",
+        "description": "Eagles"
+      },
+      "popularity": 75,
+      "followers": 12162278,
+      "genres": [
+        "classic rock",
+        "yacht rock",
+        "soft rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f1780767e116a2307495e37cd7fb",
+      "artist": "Eagles",
+      "title": null,
+      "known_for": "Hotel California - 2013 Remaster",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Hotel California - 2013 Remaster"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_34jw2BbxjoYalTp8cJFCPv",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/34jw2BbxjoYalTp8cJFCPv",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/34jw2BbxjoYalTp8cJFCPv",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6772690000c46c469d216a8920e0df099e4621",
+          "key": "l",
+          "type": "url",
+          "description": "1000x1000"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6772690000dd22469d216a8920e0df099e4621",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6772690000bac3469d216a8920e0df099e4621",
+          "key": "m",
+          "type": "url",
+          "description": "200x200"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67726900008f74469d216a8920e0df099e4621",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 67,
+        "followers": 3006879
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "34jw2BbxjoYalTp8cJFCPv",
+      "name": "Heart",
+      "spotify_url": "https://open.spotify.com/artist/34jw2BbxjoYalTp8cJFCPv",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/34jw2BbxjoYalTp8cJFCPv",
+        "key": "artist",
+        "description": "Heart"
+      },
+      "popularity": 67,
+      "followers": 3006879,
+      "genres": [
+        "classic rock",
+        "aor",
+        "rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab67726900008f74469d216a8920e0df099e4621",
+      "artist": "Heart",
+      "title": null,
+      "known_for": "Alone",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Alone"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6ZLTlhejhndI4Rh53vYhrY",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6ZLTlhejhndI4Rh53vYhrY",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6ZLTlhejhndI4Rh53vYhrY",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebb5b52f7e13f720c7a4856306",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174b5b52f7e13f720c7a4856306",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178b5b52f7e13f720c7a4856306",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 75,
+        "followers": 7585020
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6ZLTlhejhndI4Rh53vYhrY",
+      "name": "Ozzy Osbourne",
+      "spotify_url": "https://open.spotify.com/artist/6ZLTlhejhndI4Rh53vYhrY",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6ZLTlhejhndI4Rh53vYhrY",
+        "key": "artist",
+        "description": "Ozzy Osbourne"
+      },
+      "popularity": 75,
+      "followers": 7585020,
+      "genres": [
+        "metal",
+        "glam metal",
+        "heavy metal",
+        "hard rock"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178b5b52f7e13f720c7a4856306",
+      "artist": "Ozzy Osbourne",
+      "title": null,
+      "known_for": "Crazy Train",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Crazy Train"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_711MCceyCBcFnzjGY4Q7Un",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/711MCceyCBcFnzjGY4Q7Un",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/711MCceyCBcFnzjGY4Q7Un",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab6761610000e5ebc4c77549095c86acb4e77b37",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616100005174c4c77549095c86acb4e77b37",
+          "key": "m",
+          "type": "url",
+          "description": "320x320"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab6761610000f178c4c77549095c86acb4e77b37",
+          "key": "s",
+          "type": "url",
+          "description": "160x160"
+        }
+      ],
+      "metrics": {
+        "popularity": 80,
+        "followers": 32321289
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "711MCceyCBcFnzjGY4Q7Un",
+      "name": "AC/DC",
+      "spotify_url": "https://open.spotify.com/artist/711MCceyCBcFnzjGY4Q7Un",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/711MCceyCBcFnzjGY4Q7Un",
+        "key": "artist",
+        "description": "AC/DC"
+      },
+      "popularity": 80,
+      "followers": 32321289,
+      "genres": [
+        "rock",
+        "hard rock",
+        "classic rock",
+        "rock and roll"
+      ],
+      "default_image": "https://i.scdn.co/image/ab6761610000f178c4c77549095c86acb4e77b37",
+      "artist": "AC/DC",
+      "title": null,
+      "known_for": "Thunderstruck",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Thunderstruck"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_1dfeR4HaWDbWqFHLkxsg1d",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/1dfeR4HaWDbWqFHLkxsg1d",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/1dfeR4HaWDbWqFHLkxsg1d",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/b040846ceba13c3e9c125d68389491094e7f2982",
+          "key": "l",
+          "type": "url",
+          "description": "999x806"
+        },
+        {
+          "url": "https://i.scdn.co/image/af2b8e57f6d7b5d43a616bd1e27ba552cd8bfd42",
+          "key": "l",
+          "type": "url",
+          "description": "640x516"
+        },
+        {
+          "url": "https://i.scdn.co/image/c06971e9ff81696699b829484e3be165f4e64368",
+          "key": "m",
+          "type": "url",
+          "description": "200x161"
+        },
+        {
+          "url": "https://i.scdn.co/image/6dd0ffd270903d1884edf9058c49f58b03db893d",
+          "key": "s",
+          "type": "url",
+          "description": "64x52"
+        }
+      ],
+      "metrics": {
+        "popularity": 82,
+        "followers": 55229056
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "1dfeR4HaWDbWqFHLkxsg1d",
+      "name": "Queen",
+      "spotify_url": "https://open.spotify.com/artist/1dfeR4HaWDbWqFHLkxsg1d",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/1dfeR4HaWDbWqFHLkxsg1d",
+        "key": "artist",
+        "description": "Queen"
+      },
+      "popularity": 82,
+      "followers": 55229056,
+      "genres": [
+        "classic rock",
+        "rock",
+        "glam rock"
+      ],
+      "default_image": "https://i.scdn.co/image/6dd0ffd270903d1884edf9058c49f58b03db893d",
+      "artist": "Queen",
+      "title": null,
+      "known_for": "Bohemian Rhapsody - Remastered 2011",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Bohemian Rhapsody - Remastered 2011"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0hioiM0MDloPdLjTE86zz8",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0hioiM0MDloPdLjTE86zz8",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0hioiM0MDloPdLjTE86zz8",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2738269828d84f07707b6fa5c59",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e028269828d84f07707b6fa5c59",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048518269828d84f07707b6fa5c59",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 1,
+        "followers": 5124
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0hioiM0MDloPdLjTE86zz8",
+      "name": "Pink Floyd Redux",
+      "spotify_url": "https://open.spotify.com/artist/0hioiM0MDloPdLjTE86zz8",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0hioiM0MDloPdLjTE86zz8",
+        "key": "artist",
+        "description": "Pink Floyd Redux"
+      },
+      "popularity": 1,
+      "followers": 5124,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d000048518269828d84f07707b6fa5c59",
+      "artist": "Pink Floyd Redux",
+      "title": null,
+      "known_for": "Mammagamma",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Mammagamma"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_0hdBO1QbB63ixZNRBFD0K9",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/0hdBO1QbB63ixZNRBFD0K9",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/0hdBO1QbB63ixZNRBFD0K9",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273f22dce385a0cb9369d196c25",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02f22dce385a0cb9369d196c25",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851f22dce385a0cb9369d196c25",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 5,
+        "followers": 1590
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "0hdBO1QbB63ixZNRBFD0K9",
+      "name": "Pink Floyd Project",
+      "spotify_url": "https://open.spotify.com/artist/0hdBO1QbB63ixZNRBFD0K9",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/0hdBO1QbB63ixZNRBFD0K9",
+        "key": "artist",
+        "description": "Pink Floyd Project"
+      },
+      "popularity": 5,
+      "followers": 1590,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851f22dce385a0cb9369d196c25",
+      "artist": "Pink Floyd Project",
+      "title": null,
+      "known_for": "Wish You Were Here - Live Jelling Musikfestival 2012",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Wish You Were Here - Live Jelling Musikfestival 2012"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_4KGRdjEaSxyYVQ9EqOdOKl",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/4KGRdjEaSxyYVQ9EqOdOKl",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/4KGRdjEaSxyYVQ9EqOdOKl",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [],
+      "metrics": {
+        "popularity": 0,
+        "followers": 53
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4KGRdjEaSxyYVQ9EqOdOKl",
+      "name": "PINK FLOYD MAYWEATHER",
+      "spotify_url": "https://open.spotify.com/artist/4KGRdjEaSxyYVQ9EqOdOKl",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/4KGRdjEaSxyYVQ9EqOdOKl",
+        "key": "artist",
+        "description": "PINK FLOYD MAYWEATHER"
+      },
+      "popularity": 0,
+      "followers": 53,
+      "genres": [],
+      "default_image": null,
+      "artist": "PINK FLOYD MAYWEATHER",
+      "title": null,
+      "known_for": null,
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": null
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_64RD6VVE6aXfoVFSJ2k06x",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/64RD6VVE6aXfoVFSJ2k06x",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/64RD6VVE6aXfoVFSJ2k06x",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b2732506ac4fb94c7016dd828956",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e022506ac4fb94c7016dd828956",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d000048512506ac4fb94c7016dd828956",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 8,
+        "followers": 118
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "64RD6VVE6aXfoVFSJ2k06x",
+      "name": "pink floyd tribute",
+      "spotify_url": "https://open.spotify.com/artist/64RD6VVE6aXfoVFSJ2k06x",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/64RD6VVE6aXfoVFSJ2k06x",
+        "key": "artist",
+        "description": "pink floyd tribute"
+      },
+      "popularity": 8,
+      "followers": 118,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d000048512506ac4fb94c7016dd828956",
+      "artist": "pink floyd tribute",
+      "title": null,
+      "known_for": "Another Brick in the Wall Part 2 - Live",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Another Brick in the Wall Part 2 - Live"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_2tDvdcTW7H4vYW7S18MA2e",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/2tDvdcTW7H4vYW7S18MA2e",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/2tDvdcTW7H4vYW7S18MA2e",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273e5fda56f522e2e88befc20d5",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02e5fda56f522e2e88befc20d5",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851e5fda56f522e2e88befc20d5",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 5,
+        "followers": 3383
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "2tDvdcTW7H4vYW7S18MA2e",
+      "name": "The Pink Floyd Story",
+      "spotify_url": "https://open.spotify.com/artist/2tDvdcTW7H4vYW7S18MA2e",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/2tDvdcTW7H4vYW7S18MA2e",
+        "key": "artist",
+        "description": "The Pink Floyd Story"
+      },
+      "popularity": 5,
+      "followers": 3383,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851e5fda56f522e2e88befc20d5",
+      "artist": "The Pink Floyd Story",
+      "title": null,
+      "known_for": "The Great Gig In the Sky",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "The Great Gig In the Sky"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_4Kqp4AtoCDoCotN7KjrLKL",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/4Kqp4AtoCDoCotN7KjrLKL",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/4Kqp4AtoCDoCotN7KjrLKL",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273c53cafd11f6fe338cf5ea13e",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02c53cafd11f6fe338cf5ea13e",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851c53cafd11f6fe338cf5ea13e",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 12,
+        "followers": 2773
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "4Kqp4AtoCDoCotN7KjrLKL",
+      "name": "Pink Floyd History",
+      "spotify_url": "https://open.spotify.com/artist/4Kqp4AtoCDoCotN7KjrLKL",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/4Kqp4AtoCDoCotN7KjrLKL",
+        "key": "artist",
+        "description": "Pink Floyd History"
+      },
+      "popularity": 12,
+      "followers": 2773,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851c53cafd11f6fe338cf5ea13e",
+      "artist": "Pink Floyd History",
+      "title": null,
+      "known_for": "The Happiest Days of Our Lives / Another Brick in the Wall, Pt. 2 - Live",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "The Happiest Days of Our Lives / Another Brick in the Wall, Pt. 2 - Live"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_77hVxSyFhrS6zEzSuk7TQI",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/77hVxSyFhrS6zEzSuk7TQI",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/77hVxSyFhrS6zEzSuk7TQI",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [],
+      "metrics": {
+        "popularity": 21,
+        "followers": 938
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "77hVxSyFhrS6zEzSuk7TQI",
+      "name": "Pink Floyd Tribute Band",
+      "spotify_url": "https://open.spotify.com/artist/77hVxSyFhrS6zEzSuk7TQI",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/77hVxSyFhrS6zEzSuk7TQI",
+        "key": "artist",
+        "description": "Pink Floyd Tribute Band"
+      },
+      "popularity": 21,
+      "followers": 938,
+      "genres": [],
+      "default_image": null,
+      "artist": "Pink Floyd Tribute Band",
+      "title": null,
+      "known_for": "Another Brick in the Wall",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Another Brick in the Wall"
+    },
+    {
+      "mc_type": "music_artist",
+      "mc_id": "spotify_artist_6QvBTZOpVhDqw3qFeBagCa",
+      "mc_subtype": null,
+      "source_id": null,
+      "source": "spotify",
+      "links": [
+        {
+          "url": "https://open.spotify.com/artist/6QvBTZOpVhDqw3qFeBagCa",
+          "key": "spotify",
+          "description": "spotify"
+        },
+        {
+          "url": "https://api.spotify.com/v1/artists/6QvBTZOpVhDqw3qFeBagCa",
+          "key": "href",
+          "description": "Spotify Href"
+        }
+      ],
+      "images": [
+        {
+          "url": "https://i.scdn.co/image/ab67616d0000b273b6c1178d7f41f48160729c88",
+          "key": "l",
+          "type": "url",
+          "description": "640x640"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00001e02b6c1178d7f41f48160729c88",
+          "key": "m",
+          "type": "url",
+          "description": "300x300"
+        },
+        {
+          "url": "https://i.scdn.co/image/ab67616d00004851b6c1178d7f41f48160729c88",
+          "key": "s",
+          "type": "url",
+          "description": "64x64"
+        }
+      ],
+      "metrics": {
+        "popularity": 13,
+        "followers": 7836
+      },
+      "external_ids": {},
+      "error": null,
+      "id": "6QvBTZOpVhDqw3qFeBagCa",
+      "name": "The Australian Pink Floyd Show",
+      "spotify_url": "https://open.spotify.com/artist/6QvBTZOpVhDqw3qFeBagCa",
+      "artist_link": {
+        "url": "https://open.spotify.com/artist/6QvBTZOpVhDqw3qFeBagCa",
+        "key": "artist",
+        "description": "The Australian Pink Floyd Show"
+      },
+      "popularity": 13,
+      "followers": 7836,
+      "genres": [],
+      "default_image": "https://i.scdn.co/image/ab67616d00004851b6c1178d7f41f48160729c88",
+      "artist": "The Australian Pink Floyd Show",
+      "title": null,
+      "known_for": "Comfortably Numb - Live",
+      "top_track_album": null,
+      "top_track_release_date": null,
+      "top_track_album_image": null,
+      "top_track_track": "Comfortably Numb - Live"
+    }
+  ],
+  "total_results": 20,
+  "query": "Pink Floyd",
+  "data_source": "Spotify Artist Search",
+  "error": null
+}

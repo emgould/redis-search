@@ -1,0 +1,18 @@
+{
+  "category": null,
+  "country": null,
+  "language": null,
+  "sources": [
+    {
+      "category": null,
+      "country": null,
+      "description": null,
+      "id": "bbc-news",
+      "language": null,
+      "name": "BBC News",
+      "url": null
+    }
+  ],
+  "status": "ok",
+  "total_sources": 1
+}

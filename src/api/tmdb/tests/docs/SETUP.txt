@@ -1,0 +1,41 @@
+TMDB Test Fixtures Setup
+========================
+
+1. Set environment variable:
+   export TMDB_READ_TOKEN='your_token_here'
+
+2. Generate fixtures from real API:
+   cd ../../  # Go to services directory
+   ./seed_mock_data.sh tmdb
+
+   Or directly:
+   python generate_mock_data.py
+
+3. Run tests:
+   cd ../../..  # Go to python_functions directory
+   source venv/bin/activate  # Activate virtual environment
+   pytest services/tmdb/tests/ -v
+
+   Note: Tests use pytest-asyncio for async test support.
+   This is already configured in pytest.ini
+
+4. Run specific test file:
+   pytest services/tmdb/tests/test_core.py -v -n auto
+   pytest services/tmdb/tests/test_search.py -v -n auto
+
+5. Run specific test:
+   pytest services/tmdb/tests/test_core.py::TestProcessMediaItem::test_process_movie_item -v
+
+Requirements:
+-------------
+- pytest
+- pytest-asyncio (for async test support)
+- aiohttp (for API calls)
+- python-dotenv (for loading .env files)
+
+All dependencies are in requirements-dev.txt
+
+Fixtures are generated from real TMDB API responses to ensure
+tests accurately reflect actual API behavior.
+
+See generate_mock_data.py for implementation details.

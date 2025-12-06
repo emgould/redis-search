@@ -1,0 +1,2 @@
+### Rate limiting
+Event Registry has rate limits in place to ensure that the service is available to all users. The rate limits are based on the number of simultaneous requests that the user is making at the same time. The maximum allowed number of simultaneous requests that the user can be executing at the same time is 5. If more requests are made, the user will receive a 503 status code in the response and the request will not be executed. The suggested approach is to not even make the code parallel but instead make requests sequentially, one after the other.
