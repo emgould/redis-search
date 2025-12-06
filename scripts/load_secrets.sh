@@ -3,44 +3,45 @@
 # Load secrets from GCP Secret Manager or local env files
 #
 # Usage: 
-#   source scripts/load_secrets.sh [dev|prod] [etl|search_api]
+#   source scripts/load_secrets.sh [dev|prod|local] [etl|search_api]
 #
 # Environment Variables:
-#   GCP_PROJECT_ID  - Required for GCP Secret Manager (unless LOCAL_DEV=true)
-#   LOCAL_DEV       - Set to "true" to use local env files instead of Secret Manager
+#   GCP_PROJECT_ID  - Required for GCP Secret Manager (not needed when ENV=local)
 
 set -e
 
 ENV=${1:-dev}
 SERVICE=${2:-etl}
+PROJECT_ID=${GCP_PROJECT_ID:-"media-circle"}
 
 echo "🔐 Loading secrets for ${SERVICE} in ${ENV} environment..."
 
 # =============================================================================
-# LOCAL DEVELOPMENT SHORTCUT
+# LOCAL DEVELOPMENT MODE
 # =============================================================================
-# If LOCAL_DEV is set and local env file exists, use it directly
+# If ENV is "local", use local env file instead of GCP Secret Manager
 # This allows faster iteration without hitting Secret Manager
 
-if [ "$LOCAL_DEV" = "true" ]; then
-    LOCAL_ENV_FILE="config/${ENV}.env"
+if [ "$ENV" = "local" ]; then
+    LOCAL_ENV_FILE="config/local.env"
     
     # Try relative path first, then absolute from script location
     if [ ! -f "$LOCAL_ENV_FILE" ]; then
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        LOCAL_ENV_FILE="${SCRIPT_DIR}/../config/${ENV}.env"
+        LOCAL_ENV_FILE="${SCRIPT_DIR}/../config/local.env"
     fi
     
     if [ -f "$LOCAL_ENV_FILE" ]; then
-        echo "📁 Using local env file (LOCAL_DEV mode): ${LOCAL_ENV_FILE}"
+        echo "📁 Using local env file: ${LOCAL_ENV_FILE}"
         set -a  # auto-export all variables
         source "$LOCAL_ENV_FILE"
         set +a
         echo "✅ Loaded secrets from local file"
         return 0 2>/dev/null || exit 0
     else
-        echo "⚠️  LOCAL_DEV=true but no local env file found at ${LOCAL_ENV_FILE}"
-        echo "    Falling back to GCP Secret Manager..."
+        echo "⚠️  ENV=local but no local env file found at ${LOCAL_ENV_FILE}"
+        echo "    Please create ${LOCAL_ENV_FILE} or use a different environment"
+        return 1 2>/dev/null || exit 1
     fi
 fi
 
@@ -49,7 +50,7 @@ fi
 # =============================================================================
 
 # Validate GCP_PROJECT_ID
-if [ -z "$GCP_PROJECT_ID" ]; then
+if [ -z "$PROJECT_ID" ]; then
     echo "❌ Error: GCP_PROJECT_ID environment variable is required"
     echo "   Set it with: export GCP_PROJECT_ID=your-project-id"
     return 1 2>/dev/null || exit 1
@@ -72,7 +73,13 @@ if ! gcloud auth print-identity-token &>/dev/null 2>&1; then
     fi
 fi
 
-echo "🔑 Fetching secrets from GCP Secret Manager (project: ${GCP_PROJECT_ID})..."
+echo "🔑 Fetching secrets from GCP Secret Manager (project: ${PROJECT_ID})..."
+
+# Determine config file path (relative to repo root)
+CONFIG_FILE="config/${SERVICE}.${ENV}.env"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+CONFIG_FILE_ABS="${REPO_ROOT}/${CONFIG_FILE}"
 
 # -----------------------------------------------------------------------------
 # ETL Service - needs all secrets (full env bundle)
@@ -88,12 +95,17 @@ if [ "$SERVICE" = "etl" ]; then
     
     if ! gcloud secrets versions access latest \
         --secret="${SECRET_NAME}" \
-        --project="${GCP_PROJECT_ID}" > "$TEMP_ENV" 2>/dev/null; then
+        --project="${PROJECT_ID}" > "$TEMP_ENV" 2>/dev/null; then
         echo "❌ Failed to fetch secret: ${SECRET_NAME}"
         echo "   Ensure the secret exists and you have access:"
-        echo "   gcloud secrets describe ${SECRET_NAME} --project=${GCP_PROJECT_ID}"
+        echo "   gcloud secrets describe ${SECRET_NAME} --project=${PROJECT_ID}"
         return 1 2>/dev/null || exit 1
     fi
+    
+    # Save to config file
+    mkdir -p "$(dirname "$CONFIG_FILE_ABS")"
+    cp "$TEMP_ENV" "$CONFIG_FILE_ABS"
+    echo "💾 Saved secrets to: ${CONFIG_FILE}"
     
     # Source the env file
     set -a
@@ -105,35 +117,42 @@ if [ "$SERVICE" = "etl" ]; then
 # -----------------------------------------------------------------------------
 # Search API - needs minimal secrets
 # -----------------------------------------------------------------------------
-elif [ "$SERVICE" = "search_api" ]; then
-    echo "   Fetching individual secrets for search_api..."
+elif [ "$SERVICE" = "api" ] || [ "$SERVICE" = "search_api" ]; then
+    SECRET_NAME="redis-search-${ENV}-api-env"
     
-    # Redis Host
-    export REDIS_HOST=$(gcloud secrets versions access latest \
-        --secret="redis-search-${ENV}-redis-host" \
-        --project="${GCP_PROJECT_ID}" 2>/dev/null) || {
-        echo "❌ Failed to fetch redis-search-${ENV}-redis-host"
+    echo "   Fetching full environment bundle: ${SECRET_NAME}"
+    
+    # Create temp file for the env
+    TEMP_ENV=$(mktemp)
+    trap "rm -f $TEMP_ENV" EXIT
+    
+    if ! gcloud secrets versions access latest \
+        --secret="${SECRET_NAME}" \
+        --project="${PROJECT_ID}" > "$TEMP_ENV" 2>/dev/null; then
+        echo "❌ Failed to fetch secret: ${SECRET_NAME}"
+        echo "   Ensure the secret exists and you have access:"
+        echo "   gcloud secrets describe ${SECRET_NAME} --project=${PROJECT_ID}"
         return 1 2>/dev/null || exit 1
-    }
+    fi
     
-    # Redis Port
-    export REDIS_PORT=$(gcloud secrets versions access latest \
-        --secret="redis-search-${ENV}-redis-port" \
-        --project="${GCP_PROJECT_ID}" 2>/dev/null) || {
-        echo "❌ Failed to fetch redis-search-${ENV}-redis-port"
-        return 1 2>/dev/null || exit 1
-    }
+    # Save to config file
+    mkdir -p "$(dirname "$CONFIG_FILE_ABS")"
+    cp "$TEMP_ENV" "$CONFIG_FILE_ABS"
+    echo "💾 Saved secrets to: ${CONFIG_FILE}"
     
-    echo "✅ Loaded minimal secrets for Search API"
-    echo "   REDIS_HOST=${REDIS_HOST}"
-    echo "   REDIS_PORT=${REDIS_PORT}"
+    # Source the env file
+    set -a
+    source "$TEMP_ENV"
+    set +a
+    
+    echo "✅ Loaded full environment bundle for Search API ($(wc -l < "$TEMP_ENV" | tr -d ' ') variables)"
 
 # -----------------------------------------------------------------------------
 # Unknown service
 # -----------------------------------------------------------------------------
 else
     echo "❌ Unknown service: ${SERVICE}"
-    echo "   Supported services: etl, search_api"
+    echo "   Supported services: etl, api, search_api"
     return 1 2>/dev/null || exit 1
 fi
 

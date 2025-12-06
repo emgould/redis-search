@@ -216,7 +216,7 @@ class WatchmodeMockDataGenerator:
                 print("  Skipping title details and streaming sources endpoints\n")
                 endpoints_to_test = [
                     [
-                        f"search/?search_field=name&search_value={{parameter}}&types=movie,tv",
+                        "search/?search_field=name&search_value={parameter}&types=movie,tv",
                         SEARCH_QUERY,
                         "search_titles",
                         "search_titles",
@@ -252,7 +252,7 @@ class WatchmodeMockDataGenerator:
                         "get_streaming_sources_tv",
                     ],
                     [
-                        f"search/?search_field=name&search_value={{parameter}}&types=movie,tv",
+                        "search/?search_field=name&search_value={parameter}&types=movie,tv",
                         SEARCH_QUERY,
                         "search_titles",
                         "search_titles",

@@ -8,10 +8,10 @@ Run with: pytest api/lastfm/tests/test_u2_albums.py -v
 import os
 
 import pytest
+from contracts.models import MCPersonSearchRequest, MCSources, MCSubType, MCType
 
 from api.lastfm.models import MCMusicAlbum, MCMusicArtist
 from api.lastfm.wrappers import lastfm_wrapper
-from contracts.models import MCPersonSearchRequest, MCSources, MCSubType, MCType
 
 pytestmark = pytest.mark.integration
 

@@ -16,6 +16,7 @@ import json
 import os
 
 import pytest
+from contracts.models import MCSources, MCSubType, MCType
 
 from api.lastfm.core import LastFMService
 from api.lastfm.enrichment import LastFMEnrichmentService
@@ -32,7 +33,6 @@ from api.lastfm.models import (
 from api.lastfm.search import LastFMSearchService
 from api.lastfm.tests.timing_utils import time_operation
 from api.lastfm.wrappers import lastfm_wrapper
-from contracts.models import MCSources, MCSubType, MCType
 
 pytestmark = pytest.mark.integration
 
@@ -795,6 +795,7 @@ class TestLastFMPersonSearchWorks:
     ):
         """Test search_person_async with invalid ID but valid name - should fallback to name search."""
         from contracts.models import MCPersonSearchRequest
+
         from utils.pytest_utils import write_snapshot
 
         monkeypatch.setenv("LASTFM_API_KEY", real_lastfm_api_key)
@@ -956,6 +957,7 @@ class TestLastFMPersonSearchWorks:
     async def test_search_person_async_valid_id(self, real_lastfm_api_key, monkeypatch):
         """Test search_person_async with valid Spotify ID - should succeed regardless of name."""
         from contracts.models import MCPersonSearchRequest
+
         from utils.pytest_utils import write_snapshot
 
         monkeypatch.setenv("LASTFM_API_KEY", real_lastfm_api_key)

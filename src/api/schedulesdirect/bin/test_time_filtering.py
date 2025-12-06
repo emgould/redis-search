@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 config_path = (
-    Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "firebase.dev.env"
+    Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "api.dev.env"
 )
 if config_path.exists():
     load_dotenv(config_path, override=True)

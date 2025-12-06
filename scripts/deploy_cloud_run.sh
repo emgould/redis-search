@@ -5,12 +5,10 @@
 #   - gcloud CLI installed and authenticated
 #   - VPC connector 'mc-vpc-connector' exists in us-central1
 #   - Redis Stack VM created (run scripts/create_redis_vm.sh first)
-#   - REDIS_HOST set to the VM's internal IP
+#   - Secrets created with setup_gcp_secrets.sh (contains REDIS_HOST, etc.)
 #
 # Usage:
-#   REDIS_HOST=10.x.x.x ./scripts/deploy_cloud_run.sh [api|etl] [prod|dev]
-#
-# Or set REDIS_HOST in your environment before running.
+#   ./scripts/deploy_cloud_run.sh [api|etl] [prod|dev]
 
 set -e
 
@@ -21,31 +19,47 @@ PROJECT_ID=${GCP_PROJECT_ID:-"media-circle"}
 REGION="us-central1"
 VPC_CONNECTOR="mc-vpc-connector"
 
-# Redis Stack VM - get from create_redis_vm.sh output
-REDIS_HOST=${REDIS_HOST:-""}
-REDIS_PORT=${REDIS_PORT:-"6379"}
-REDIS_PASSWORD=${REDIS_PASSWORD:-""}
-
 # Optional: GCS bucket for ETL reads
 GCS_BUCKET=${GCS_BUCKET:-""}
+
+# Secret bundle for ETL env (created by setup_gcp_secrets.sh)
+ETL_SECRET_NAME=${ETL_SECRET_NAME:-"redis-search-${ENVIRONMENT}-etl-env"}
+# Secret bundle for API env
+API_SECRET_NAME=${API_SECRET_NAME:-"redis-search-${ENVIRONMENT}-api-env"}
 
 # Service account (Cloud Run default compute SA unless overridden)
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 SERVICE_ACCOUNT=${SERVICE_ACCOUNT:-"${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"}
 
-if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PASSWORD" ]; then
-    echo "❌ REDIS_HOST and REDIS_PASSWORD must be set."
-    echo ""
-    echo "   First, create the Redis Stack VM:"
-    echo "     ./scripts/create_redis_vm.sh"
-    echo ""
-    echo "   Then deploy with the VM's internal IP and password:"
-    echo "     REDIS_HOST=10.x.x.x REDIS_PASSWORD=xxx ./scripts/deploy_cloud_run.sh ${SERVICE_TYPE} ${ENVIRONMENT}"
-    echo ""
-    exit 1
+echo "Service Account: ${SERVICE_ACCOUNT}"
+echo "ETL Secret:      ${ETL_SECRET_NAME}"
+echo "API Secret:      ${API_SECRET_NAME}"
+
+# Ensure service account has access to the appropriate secret
+grant_secret_access() {
+    local secret_name=$1
+    local sa=$2
+    
+    # Check if SA already has access
+    if gcloud secrets get-iam-policy "${secret_name}" --project="${PROJECT_ID}" 2>/dev/null | grep -q "${sa}"; then
+        echo "   ✅ ${sa} already has access to ${secret_name}"
+    else
+        echo "   🔐 Granting secret access to ${sa} for ${secret_name}..."
+        gcloud secrets add-iam-policy-binding "${secret_name}" \
+            --member="serviceAccount:${sa}" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project="${PROJECT_ID}" --quiet || {
+            echo "   ⚠️  Failed to grant secret access. You may need to do this manually."
+        }
+    fi
+}
+
+if [ "$SERVICE_TYPE" = "api" ]; then
+    grant_secret_access "${API_SECRET_NAME}" "${SERVICE_ACCOUNT}"
+elif [ "$SERVICE_TYPE" = "etl" ]; then
+    grant_secret_access "${ETL_SECRET_NAME}" "${SERVICE_ACCOUNT}"
 fi
 
-echo "Service Account: ${SERVICE_ACCOUNT}"
 if [ -n "$GCS_BUCKET" ]; then
     echo "GCS Bucket:      ${GCS_BUCKET}"
     echo "Granting objectViewer on gs://${GCS_BUCKET} to ${SERVICE_ACCOUNT}..."
@@ -81,8 +95,12 @@ gcloud config set project "$PROJECT_ID" 2>/dev/null
 
 case "$SERVICE_TYPE" in
     api)
+        # Redis connection info is in the secret bundle (API_ENV)
         echo "📦 Building ${API_IMAGE}..."
-        gcloud builds submit --tag "${API_IMAGE}" .
+        gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --substitutions=_IMAGE="${API_IMAGE}",_DOCKERFILE="src/search_api/Dockerfile" \
+            .
 
         echo "🚀 Deploying ${API_SERVICE}..."
         gcloud run deploy "${API_SERVICE}" \
@@ -91,7 +109,7 @@ case "$SERVICE_TYPE" in
             --platform managed \
             --vpc-connector "${VPC_CONNECTOR}" \
             --vpc-egress all-traffic \
-            --set-env-vars "REDIS_HOST=${REDIS_HOST},REDIS_PORT=${REDIS_PORT},REDIS_PASSWORD=${REDIS_PASSWORD},GCS_BUCKET=${GCS_BUCKET}" \
+            --set-secrets "API_ENV=${API_SECRET_NAME}:latest" \
             --allow-unauthenticated \
             --memory 512Mi \
             --min-instances 0 \
@@ -106,7 +124,10 @@ case "$SERVICE_TYPE" in
 
     etl)
         echo "📦 Building ${ETL_IMAGE}..."
-        gcloud builds submit --tag "${ETL_IMAGE}" .
+        gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --substitutions=_IMAGE="${ETL_IMAGE}",_DOCKERFILE="src/etl/Dockerfile" \
+            .
 
         echo "🚀 Creating Cloud Run Job ${ETL_SERVICE}..."
         gcloud run jobs deploy "${ETL_SERVICE}" \
@@ -114,7 +135,7 @@ case "$SERVICE_TYPE" in
             --region "${REGION}" \
             --vpc-connector "${VPC_CONNECTOR}" \
             --vpc-egress all-traffic \
-            --set-env-vars "REDIS_HOST=${REDIS_HOST},REDIS_PORT=${REDIS_PORT},REDIS_PASSWORD=${REDIS_PASSWORD},GCS_BUCKET=${GCS_BUCKET}" \
+            --set-secrets "ETL_ENV=${ETL_SECRET_NAME}:latest" \
             --memory 1Gi \
             --task-timeout 30m
 

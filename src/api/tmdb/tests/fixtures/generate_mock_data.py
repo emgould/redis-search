@@ -36,13 +36,13 @@ python_functions_dir = Path(__file__).resolve().parent.parent.parent.parent.pare
 sys.path.insert(0, str(python_functions_dir))
 
 import aiohttp  # noqa: E402
+from contracts.models import MCType  # noqa: E402
 from dotenv import find_dotenv, load_dotenv  # noqa: E402
 
 from api.tmdb.core import TMDBService  # noqa: E402
 from api.tmdb.person import TMDBPersonService  # noqa: E402
 from api.tmdb.search import TMDBSearchService  # noqa: E402
 from api.tmdb.trending import get_trending_movies, get_trending_tv_shows  # noqa: E402
-from contracts.models import MCType  # noqa: E402
 
 python_functions_dir = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
 sys.path.insert(0, str(python_functions_dir))

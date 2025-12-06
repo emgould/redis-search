@@ -36,7 +36,7 @@ ERRORS=0
 
 # Run Ruff linter
 echo -e "\n${YELLOW}=== Running Ruff Linter ===${NC}"
-if ruff check . --exclude venv --exclude __pycache__ --exclude tests --exclude .pytest_cache; then
+if ruff check . --exclude venv --exclude __pycache__ --exclude tests --exclude .pytest_cache --fix; then
     echo -e "${GREEN}✓ Ruff linting passed${NC}"
 else
     echo -e "${RED}✗ Ruff linting failed${NC}"

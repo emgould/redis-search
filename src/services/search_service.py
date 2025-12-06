@@ -17,6 +17,12 @@ def get_repo():
     return _repo
 
 
+def reset_repo():
+    """Reset the repository to pick up new Redis connection."""
+    global _repo
+    _repo = None
+
+
 def parse_doc(doc):
     """Parse Redis Search document, handling JSON documents."""
     result = {"id": doc.id}

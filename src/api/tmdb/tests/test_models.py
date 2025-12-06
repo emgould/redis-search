@@ -4,6 +4,7 @@ Tests model validation, field generation, and serialization.
 """
 
 import pytest
+from contracts.models import MCSearchResponse, MCSubType, MCType
 
 from api.tmdb.models import (
     MCBaseMediaItem,
@@ -28,7 +29,6 @@ from api.tmdb.tmdb_models import (
     TMDBVideo,
     TMDBWatchProvider,
 )
-from contracts.models import MCSearchResponse, MCSubType, MCType
 
 pytestmark = pytest.mark.unit
 

@@ -6,6 +6,7 @@ Tests trending.py functions for getting trending movies and TV shows.
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from contracts.models import MCType
 
 from api.subapi.flixpatrol.models import FlixPatrolMediaItem, FlixPatrolResponse
 from api.tmdb.models import (
@@ -22,7 +23,6 @@ from api.tmdb.trending import (
     get_trending_movies,
     get_trending_tv_shows,
 )
-from contracts.models import MCType
 
 pytestmark = pytest.mark.unit
 
