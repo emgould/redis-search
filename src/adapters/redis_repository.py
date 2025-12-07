@@ -39,4 +39,44 @@ class RedisRepository:
     async def stats(self):
         info = await self.redis.info()
         dbsize = await self.redis.dbsize()
-        return {"info": info, "dbsize": dbsize}
+
+        # Get index document count
+        try:
+            index_info = await self.idx.info()
+            # index_info is a dict with 'num_docs' key
+            num_docs = int(index_info.get("num_docs", 0))
+        except Exception:
+            num_docs = 0
+
+        # Count keys by prefix using optimized SCAN with pattern matching
+        cache_breakdown = {}
+
+        # Count each prefix separately (more efficient than scanning all keys)
+        prefix_patterns = [
+            ("media", "media:*"),
+            ("tmdb_request", "tmdb_request:*"),
+            ("tmdb", "tmdb:*"),
+        ]
+
+        for prefix_name, pattern in prefix_patterns:
+            count = 0
+            cursor = 0
+            while True:
+                cursor, keys = await self.redis.scan(
+                    cursor=cursor, match=pattern, count=10000
+                )
+                count += len(keys)
+                if cursor == 0:
+                    break
+            cache_breakdown[prefix_name] = count
+
+        # Calculate 'other' as the remainder
+        total_counted = sum(cache_breakdown.values())
+        cache_breakdown["other"] = dbsize - total_counted
+
+        return {
+            "info": info,
+            "dbsize": dbsize,
+            "num_docs": num_docs,
+            "cache_breakdown": cache_breakdown,
+        }

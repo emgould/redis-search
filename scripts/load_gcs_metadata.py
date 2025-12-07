@@ -23,6 +23,7 @@ from redis.asyncio import Redis
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.adapters.config import load_env
+from src.contracts.models import MCSources
 from src.core.normalize import document_to_redis, normalize_document
 
 # GCS configuration
@@ -107,7 +108,7 @@ async def load_metadata_to_redis(
 
     for _i, item in enumerate(items):
         # Normalize the document using the existing abstraction layer
-        search_doc = normalize_document(item, source="tmdb")
+        search_doc = normalize_document(item, source=MCSources.TMDB)
 
         if search_doc is None:
             skipped_count += 1
@@ -226,10 +227,13 @@ async def load_from_gcs(media_types: list[str]) -> None:
             print()
             print(f"📝 Sample document ({sample_keys[0]}):")
             print(f"   Title: {sample.get('search_title')}")
-            print(f"   Type: {sample.get('type')}")
+            print(f"   Type: {sample.get('mc_type')}")
+            print(f"   Subtype: {sample.get('mc_subtype')}")
             print(f"   Year: {sample.get('year')}")
             print(f"   Popularity: {sample.get('popularity')}")
             print(f"   Rating: {sample.get('rating')}")
+            print(f"   Image: {sample.get('image')}")
+            print(f"   Cast: {sample.get('cast')}")
 
     await redis_client.aclose()
     print()

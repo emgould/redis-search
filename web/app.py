@@ -1,10 +1,13 @@
 import os
 import subprocess
 import sys
+from typing import cast
 
 from fastapi import BackgroundTasks, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from redis.commands.search.field import Field, NumericField, TagField, TextField
+from redis.commands.search.index_definition import IndexDefinition, IndexType
 
 from src.adapters.redis_client import get_redis
 from src.adapters.redis_manager import RedisEnvironment, RedisManager
@@ -14,13 +17,23 @@ from src.services.search_service import autocomplete, reset_repo
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")
 
-# Track background task status
+# Track background task status (ETL)
 _task_status = {"running": False, "output": "", "error": ""}
+
+# Track promote task status (separate from ETL task)
+_promote_status = {"running": False, "output": "", "error": ""}
+
+# Track ETL task status
+_etl_status = {"running": False, "output": "", "error": ""}
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("home.html", {"request": request})
+    current_env = RedisManager.get_current_env()
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "current_env": current_env.value,
+    })
 
 
 @app.get("/api/autocomplete")
@@ -98,6 +111,24 @@ async def redis_status():
         "local": local_status,
         "public": public_status,
     })
+
+
+@app.get("/api/redis-stats")
+async def redis_stats():
+    """Get current Redis stats for the active connection."""
+    try:
+        repo = RedisRepository()
+        stats = await repo.stats()
+        return JSONResponse(content={
+            "success": True,
+            "num_docs": stats.get("num_docs", 0),
+            "dbsize": stats.get("dbsize", 0),
+            "cache_breakdown": stats.get("cache_breakdown", {}),
+            "memory_used": stats.get("info", {}).get("used_memory", 0),
+            "memory_peak": stats.get("info", {}).get("used_memory_peak", 0),
+        })
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)})
 
 
 def run_gcs_load_task(media_type: str, redis_host: str, redis_port: int, redis_password: str | None):
@@ -197,6 +228,233 @@ async def task_status():
     return JSONResponse(content=_task_status)
 
 
+def run_promote_task():
+    """Run promote to dev in background."""
+    global _promote_status
+    _promote_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Set up environment
+        env = os.environ.copy()
+        # Force unbuffered Python output for real-time progress
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Use Popen for real-time output streaming
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-u",  # Unbuffered output
+                "scripts/promote_to_dev.py",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+
+        # Read output in real-time
+        output_lines = []
+        assert process.stdout is not None  # For type checker
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _promote_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        # Get any remaining output and errors
+        remaining_stdout, stderr = process.communicate()
+        if remaining_stdout:
+            output_lines.append(remaining_stdout)
+            _promote_status["output"] = "".join(output_lines)
+        if stderr:
+            _promote_status["error"] = stderr
+
+    except Exception as e:
+        _promote_status["error"] = str(e)
+    finally:
+        _promote_status["running"] = False
+
+
+@app.post("/api/promote-to-dev")
+async def promote_to_dev(background_tasks: BackgroundTasks):
+    """Promote local Redis documents to public Redis."""
+    global _promote_status
+
+    if _promote_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A promote task is already running"}
+        )
+
+    background_tasks.add_task(run_promote_task)
+
+    return JSONResponse(content={
+        "success": True,
+        "message": "Started promoting local Redis to dev",
+    })
+
+
+@app.get("/api/promote-status")
+async def promote_status():
+    """Get status of promote background task."""
+    return JSONResponse(content=_promote_status)
+
+
+def run_etl_task(
+    media_type: str,
+    load_all: bool = False,
+    year: int | None = None,
+    month: int | None = None,
+    year_gte: int | None = None,
+    year_lte: int | None = None,
+    skip_gcs: bool = False,
+    redis_host: str = "localhost",
+    redis_port: int = 6380,
+    redis_password: str | None = None,
+):
+    """Run ETL in background with specified parameters."""
+    global _etl_status
+    _etl_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command args
+        cmd = [
+            sys.executable,
+            "-u",  # Unbuffered output
+            "-m", "src.etl.run_etl",
+            "--type", media_type,
+        ]
+
+        if load_all:
+            cmd.append("--all")
+        else:
+            if year:
+                cmd.extend(["--year", str(year)])
+            if month:
+                cmd.extend(["--month", str(month)])
+            if year_gte:
+                cmd.extend(["--year-gte", str(year_gte)])
+            if year_lte:
+                cmd.extend(["--year-lte", str(year_lte)])
+
+        if skip_gcs:
+            cmd.append("--no-gcs")
+
+        # Set up environment with the selected Redis connection
+        env = os.environ.copy()
+        env["REDIS_HOST"] = redis_host
+        env["REDIS_PORT"] = str(redis_port)
+        env["REDIS_PASSWORD"] = redis_password or ""
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Use Popen for real-time output streaming
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+
+        # Read output in real-time
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _etl_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        # Get any remaining output and errors
+        remaining_stdout, stderr = process.communicate()
+        if remaining_stdout:
+            output_lines.append(remaining_stdout)
+            _etl_status["output"] = "".join(output_lines)
+        if stderr:
+            _etl_status["error"] = stderr
+
+    except Exception as e:
+        _etl_status["error"] = str(e)
+    finally:
+        _etl_status["running"] = False
+
+
+@app.post("/api/run-etl")
+async def api_run_etl(
+    background_tasks: BackgroundTasks,
+    media_type: str = Query(...),
+    load_all: bool = Query(default=False),
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None),
+    year_gte: int | None = Query(default=None),
+    year_lte: int | None = Query(default=None),
+    skip_gcs: bool = Query(default=False),
+):
+    """Run ETL to load data into the currently selected Redis."""
+    global _etl_status
+
+    if _etl_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "An ETL task is already running"}
+        )
+
+    if media_type not in ["movie", "tv"]:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Invalid media type: {media_type}"}
+        )
+
+    # Get the currently selected Redis connection
+    current_env = RedisManager.get_current_env()
+    config = RedisManager.get_config(current_env)
+
+    background_tasks.add_task(
+        run_etl_task,
+        media_type,
+        load_all,
+        year,
+        month,
+        year_gte,
+        year_lte,
+        skip_gcs,
+        config.host,
+        config.port,
+        config.password,
+    )
+
+    # Build description of what's being loaded
+    desc_parts = [media_type]
+    if load_all:
+        desc_parts.append("all files")
+    elif year:
+        desc_parts.append(f"year {year}")
+        if month:
+            desc_parts.append(f"month {month}")
+    elif year_gte or year_lte:
+        if year_gte and year_lte:
+            desc_parts.append(f"years {year_gte}-{year_lte}")
+        elif year_gte:
+            desc_parts.append(f"year >= {year_gte}")
+        else:
+            desc_parts.append(f"year <= {year_lte}")
+
+    return JSONResponse(content={
+        "success": True,
+        "message": f"Started ETL for {' '.join(desc_parts)} into {config.name}",
+    })
+
+
+@app.get("/api/etl-status")
+async def etl_status():
+    """Get status of ETL background task."""
+    return JSONResponse(content=_etl_status)
+
+
 @app.get("/api/media/{media_id}")
 async def get_media(media_id: str):
     """Get a single media item by ID."""
@@ -210,6 +468,96 @@ async def get_media(media_id: str):
         return JSONResponse(status_code=404, content={"error": "Media not found"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# Index configurations - maps index name to (redis_index_name, prefix, schema)
+INDEX_CONFIGS = {
+    "media": {
+        "redis_name": "idx:media",
+        "prefix": "media:",
+        "schema": (
+            # Primary search field with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            # Content type filters (MCType and MCSubType)
+            TagField("$.mc_type", as_name="mc_type"),
+            TagField("$.mc_subtype", as_name="mc_subtype"),
+            # Source filter
+            TagField("$.source", as_name="source"),
+            # Sortable numeric fields for ranking
+            NumericField("$.popularity", as_name="popularity", sortable=True),
+            NumericField("$.rating", as_name="rating", sortable=True),
+            NumericField("$.year", as_name="year", sortable=True),
+        ),
+    },
+}
+
+
+@app.delete("/api/index/{index_name}")
+async def delete_index(index_name: str):
+    """Delete a Redis search index (keeps the data documents)."""
+    if index_name not in INDEX_CONFIGS:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Unknown index: {index_name}"}
+        )
+
+    config = INDEX_CONFIGS[index_name]
+    redis_index_name = config["redis_name"]
+    redis = get_redis()
+
+    try:
+        await redis.ft(redis_index_name).dropindex(delete_documents=False)
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Index '{redis_index_name}' deleted successfully",
+        })
+    except Exception as e:
+        error_msg = str(e)
+        if "Unknown index name" in error_msg or "Unknown Index name" in error_msg:
+            return JSONResponse(content={
+                "success": True,
+                "message": f"Index '{redis_index_name}' does not exist (already deleted)",
+            })
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": error_msg}
+        )
+
+
+@app.post("/api/index/{index_name}")
+async def create_index(index_name: str):
+    """Create a Redis search index."""
+    if index_name not in INDEX_CONFIGS:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Unknown index: {index_name}"}
+        )
+
+    config = INDEX_CONFIGS[index_name]
+    redis_index_name = config["redis_name"]
+    prefix = config["prefix"]
+    schema: list[Field] = cast(list[Field], list(config["schema"]))
+    redis = get_redis()
+
+    definition = IndexDefinition(prefix=[prefix], index_type=IndexType.JSON)
+
+    try:
+        await redis.ft(redis_index_name).create_index(schema, definition=definition)
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Index '{redis_index_name}' created successfully",
+        })
+    except Exception as e:
+        error_msg = str(e)
+        if "Index already exists" in error_msg:
+            return JSONResponse(content={
+                "success": True,
+                "message": f"Index '{redis_index_name}' already exists",
+            })
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": error_msg}
+        )
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
