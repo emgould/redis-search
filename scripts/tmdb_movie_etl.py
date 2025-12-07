@@ -76,6 +76,8 @@ class TMDBMovieETL(TMDBService):
             "language": language,
             "region": region,
             "sort_by": "popularity.desc",
+            "vote_average.gte": "1",
+            "with_runtime.gte": "50",
             "with_release_type": "2|3|4|5|6",
             "page": 1,
         }
