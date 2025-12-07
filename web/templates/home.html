@@ -304,17 +304,72 @@ Shows{% endblock %} {% block body %}
     );
   }
 
+  // Track expanded state for each category
+  const expandedCategories = { tv: false, movie: false, person: false };
+
+  function toggleCategoryExpand(category) {
+    expandedCategories[category] = !expandedCategories[category];
+    // Re-render with current results
+    if (window._lastResults && window._lastQuery) {
+      renderResults(window._lastResults, window._lastQuery);
+    }
+  }
+
+  // Make toggleCategoryExpand globally accessible
+  window.toggleCategoryExpand = toggleCategoryExpand;
+
   function renderResults(results, query) {
+    // Store for re-render on expand/collapse
+    window._lastResults = results;
+    window._lastQuery = query;
+
     // Handle categorized results format: {tv: [], movie: [], person: []}
-    let items = [];
+    const categories = [];
+    
     if (results && typeof results === 'object' && !Array.isArray(results)) {
-      // Combine all categories, prioritizing tv and movie over person
-      items = [...(results.tv || []), ...(results.movie || []), ...(results.person || [])];
-    } else if (Array.isArray(results)) {
-      items = results;
+      // Build category objects with items and top popularity
+      if (results.tv && results.tv.length > 0) {
+        categories.push({
+          key: 'tv',
+          label: '📺 TV Shows',
+          items: results.tv,
+          topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
+          color: 'blue'
+        });
+      }
+      if (results.movie && results.movie.length > 0) {
+        categories.push({
+          key: 'movie', 
+          label: '🎬 Movies',
+          items: results.movie,
+          topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
+          color: 'purple'
+        });
+      }
+      if (results.person && results.person.length > 0) {
+        categories.push({
+          key: 'person',
+          label: '👤 People', 
+          items: results.person,
+          topPopularity: parseFloat(results.person[0]?.popularity) || 0,
+          color: 'green'
+        });
+      }
+      
+      // Sort categories by top popularity (highest first)
+      categories.sort((a, b) => b.topPopularity - a.topPopularity);
+    } else if (Array.isArray(results) && results.length > 0) {
+      // Fallback for flat array format
+      categories.push({
+        key: 'all',
+        label: '🔍 Results',
+        items: results,
+        topPopularity: 0,
+        color: 'brand'
+      });
     }
 
-    if (!items || items.length === 0) {
+    if (categories.length === 0) {
       resultsList.innerHTML = `
             <div class="p-8 text-center text-surface-500">
                 <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,97 +381,109 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
-    resultsList.innerHTML = items
-      .map((item, index) => {
-        const title = item.search_title || "Unknown";
-        const year = formatYear(item);
-        const poster = getPosterUrl(item);
-        const rating = getRating(item);
-        const overview = item.overview || "";
-        // Cast is stored as array of strings directly
-        const cast = (item.cast || []).slice(0, 3).join(", ");
+    // Render each category section
+    resultsList.innerHTML = categories.map((category, catIndex) => {
+      const isExpanded = expandedCategories[category.key] || false;
+      const displayItems = isExpanded ? category.items : category.items.slice(0, 3);
+      const hasMore = category.items.length > 3;
+      const hiddenCount = category.items.length - 3;
+      
+      const itemsHtml = displayItems.map((item, index) => renderResultItem(item, index, query)).join('');
+      
+      return `
+        ${catIndex > 0 ? '<div class="border-t border-surface-700 my-2"></div>' : ''}
+        <div class="category-section" data-category="${category.key}">
+          <div class="flex items-center justify-between px-4 py-2 bg-surface-800/50">
+            <h4 class="text-sm font-medium text-surface-300">${category.label}</h4>
+            <span class="text-xs text-surface-500">${category.items.length} result${category.items.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="category-items">
+            ${itemsHtml}
+          </div>
+          ${hasMore ? `
+            <button onclick="toggleCategoryExpand('${category.key}')" 
+                    class="w-full py-2 text-sm text-${category.color}-400 hover:text-${category.color}-300 hover:bg-surface-800/50 transition-colors flex items-center justify-center gap-1">
+              ${isExpanded 
+                ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg> Show less'
+                : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Show ${hiddenCount} more`}
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
 
-        return `
-            <div class="group flex gap-4 p-4 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800 last:border-b-0"
-                 data-media-id="${item.id}"
-                 style="animation-delay: ${index * 30}ms">
-                <!-- Poster -->
-                <div class="flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden bg-surface-800">
-                    ${
-                      poster
-                        ? `<img src="${poster}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600\\'><svg class=\\'w-8 h-8\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
-                        : `<div class="w-full h-full flex items-center justify-center text-surface-600">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
-                            </svg>
-                        </div>`
-                    }
-                </div>
-                
-                <!-- Content -->
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <h3 class="font-semibold text-white group-hover:text-brand-400 transition-colors truncate">
-                                ${highlightMatch(title, query)}
-                            </h3>
-                            <div class="flex items-center gap-2 mt-1 text-sm">
-                                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
-                                  item
-                                )}">
-                                    ${getTypeLabel(item)}
+  function renderResultItem(item, index, query) {
+    const title = item.search_title || "Unknown";
+    const year = formatYear(item);
+    const poster = getPosterUrl(item);
+    const rating = getRating(item);
+    const overview = item.overview || "";
+    // Cast is stored as array of strings directly
+    const cast = (item.cast || []).slice(0, 3).join(", ");
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.id}"
+             style="animation-delay: ${index * 30}ms">
+            <!-- Poster -->
+            <div class="flex-shrink-0 w-12 h-18 rounded-lg overflow-hidden bg-surface-800">
+                ${
+                  poster
+                    ? `<img src="${poster}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
+                    : `<div class="w-full h-full flex items-center justify-center text-surface-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                        </svg>
+                    </div>`
+                }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-brand-400 transition-colors truncate text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs">
+                            ${
+                              year
+                                ? `<span class="text-surface-500">${year}</span>`
+                                : ""
+                            }
+                            ${
+                              rating > 0
+                                ? `
+                                <span class="flex items-center gap-1 text-surface-400">
+                                    <svg class="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                    ${rating.toFixed(1)}
                                 </span>
-                                ${
-                                  year
-                                    ? `<span class="text-surface-500">${year}</span>`
-                                    : ""
-                                }
-                                ${
-                                  rating > 0
-                                    ? `
-                                    <span class="flex items-center gap-1 text-surface-400">
-                                        <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                        </svg>
-                                        ${rating.toFixed(1)}
-                                    </span>
-                                `
-                                    : ""
-                                }
-                            </div>
+                            `
+                                : ""
+                            }
                         </div>
                     </div>
-                    ${
-                      overview
-                        ? `
-                        <p class="mt-2 text-sm text-surface-400 line-clamp-2">${overview.substring(
-                          0,
-                          120
-                        )}${overview.length > 120 ? "..." : ""}</p>
-                    `
-                        : ""
-                    }
-                    ${
-                      cast
-                        ? `
-                        <p class="mt-1 text-xs text-surface-500 truncate">
-                            <span class="text-surface-600">Cast:</span> ${cast}
-                        </p>
-                    `
-                        : ""
-                    }
                 </div>
-                
-                <!-- Arrow -->
-                <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </div>
+                ${
+                  cast
+                    ? `
+                    <p class="mt-0.5 text-xs text-surface-500 truncate">${cast}</p>
+                `
+                    : ""
+                }
             </div>
-        `;
-      })
-      .join("");
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </div>
+        </div>
+    `;
   }
 
   async function performSearch(query) {
