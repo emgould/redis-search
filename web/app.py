@@ -2,6 +2,8 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
 from typing import cast
 
 from fastapi import BackgroundTasks, FastAPI, Query, Request
@@ -14,6 +16,35 @@ from src.adapters.redis_client import get_redis
 from src.adapters.redis_manager import RedisEnvironment, RedisManager
 from src.adapters.redis_repository import RedisRepository
 from src.services.search_service import autocomplete, reset_repo
+
+
+def get_latest_person_ids_file() -> dict | None:
+    """Get info about the latest person IDs file in data/person/."""
+    project_root = Path(__file__).parent.parent
+    person_dir = project_root / "data" / "person"
+
+    if not person_dir.exists():
+        return None
+
+    # Find all person_ids_*.json files
+    files = list(person_dir.glob("person_ids_*.json"))
+    if not files:
+        return None
+
+    # Get the most recent file by modification time
+    latest_file = max(files, key=lambda f: f.stat().st_mtime)
+    stat = latest_file.stat()
+
+    # Format the modification time
+    mod_time = datetime.fromtimestamp(stat.st_mtime)
+
+    return {
+        "filename": latest_file.name,
+        "path": str(latest_file),
+        "size_mb": round(stat.st_size / (1024 * 1024), 1),
+        "modified": mod_time.strftime("%Y-%m-%d %H:%M"),
+        "modified_date": mod_time.strftime("%Y-%m-%d"),
+    }
 
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")
@@ -32,6 +63,11 @@ _extract_status: dict[str, dict] = {
     "tv": {"running": False, "output": "", "error": "", "progress": {}},
     "movie": {"running": False, "output": "", "error": "", "progress": {}},
 }
+
+# Track Person ETL task status
+_person_download_status = {"running": False, "output": "", "error": ""}
+_person_extract_status = {"running": False, "output": "", "error": "", "progress": {}}
+_person_load_status = {"running": False, "output": "", "error": ""}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -74,6 +110,9 @@ async def management(request: Request):
     except Exception as e:
         stats = {"error": str(e)}
 
+    # Get latest person IDs file info
+    person_ids_info = get_latest_person_ids_file()
+
     return templates.TemplateResponse("management.html", {
         "request": request,
         "current_env": current_env.value,
@@ -81,6 +120,7 @@ async def management(request: Request):
         "public_status": public_status,
         "stats": stats,
         "task_status": _task_status,
+        "person_ids_info": person_ids_info,
     })
 
 
@@ -134,6 +174,8 @@ async def redis_stats():
             "memory_used": stats.get("info", {}).get("used_memory", 0),
             "memory_peak": stats.get("info", {}).get("used_memory_peak", 0),
             "index_stats": stats.get("index_stats", {}),
+            "people_num_docs": stats.get("people_num_docs", 0),
+            "people_index_stats": stats.get("people_index_stats", {}),
         })
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})
@@ -657,6 +699,318 @@ async def extract_status(media_type: str):
     return JSONResponse(content=_extract_status[media_type])
 
 
+# ============================================================
+# Person ETL Endpoints
+# ============================================================
+
+def run_person_download_task(date_str: str | None = None):
+    """Run person ID bulk download in background."""
+    global _person_download_status
+    _person_download_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command
+        cmd = [sys.executable, "-u", "scripts/download_tmdb_person_ids.py"]
+        if date_str:
+            cmd.extend(["--date", date_str])
+
+        # Set up environment
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _person_download_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            _person_download_status["output"] = "".join(output_lines)
+
+        if process.returncode != 0:
+            _person_download_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_download_status["error"] = str(e)
+    finally:
+        _person_download_status["running"] = False
+
+
+@app.post("/api/person/download")
+async def api_person_download(
+    background_tasks: BackgroundTasks,
+    date: str | None = Query(default=None),
+):
+    """Download person IDs from TMDB daily export."""
+    global _person_download_status
+
+    if _person_download_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A download task is already running"}
+        )
+
+    background_tasks.add_task(run_person_download_task, date)
+
+    return JSONResponse(content={
+        "success": True,
+        "message": f"Started person ID download{' for ' + date if date else ''}",
+    })
+
+
+@app.get("/api/person/download-status")
+async def person_download_status():
+    """Get status of person download task."""
+    return JSONResponse(content=_person_download_status)
+
+
+def run_person_extract_task(source_file: str | None, limit: int | None):
+    """Run person extract (enrich) in background."""
+    global _person_extract_status
+    _person_extract_status = {"running": True, "output": "", "error": "", "progress": {}}
+
+    try:
+        # Build command
+        cmd = [sys.executable, "-u", "-c", f"""
+import asyncio
+import sys
+sys.path.insert(0, '.')
+from src.services.person_etl_service import run_person_extract
+
+async def main():
+    source = {source_file!r} if {source_file!r} else None
+    limit = {limit!r}
+    await run_person_extract(source_file=source, limit=limit)
+
+asyncio.run(main())
+"""]
+
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                output = "".join(output_lines)
+                _person_extract_status["output"] = output
+                # Parse progress from output
+                _person_extract_status["progress"] = parse_person_extract_progress(output)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            output = "".join(output_lines)
+            _person_extract_status["output"] = output
+            _person_extract_status["progress"] = parse_person_extract_progress(output)
+
+        if process.returncode != 0:
+            _person_extract_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_extract_status["error"] = str(e)
+    finally:
+        _person_extract_status["running"] = False
+
+
+def parse_person_extract_progress(output: str) -> dict:
+    """Parse person extract output to extract progress information."""
+    progress: dict = {
+        "batch_current": 0,
+        "batch_total": 0,
+        "status_message": "",
+    }
+
+    # Find batch progress: "Processing batch X/Y"
+    batch_matches = list(re.finditer(r"Processing batch (\d+)/(\d+)", output))
+    if batch_matches:
+        last_match = batch_matches[-1]
+        progress["batch_current"] = int(last_match.group(1))
+        progress["batch_total"] = int(last_match.group(2))
+        progress["status_message"] = f"Batch {progress['batch_current']}/{progress['batch_total']}"
+
+    if "Extract Summary" in output:
+        progress["status_message"] = "Complete"
+
+    return progress
+
+
+@app.post("/api/person/extract")
+async def api_person_extract(
+    background_tasks: BackgroundTasks,
+    source_file: str | None = Query(default=None),
+    limit: int | None = Query(default=None),
+):
+    """Extract and enrich person data from TMDB."""
+    global _person_extract_status
+
+    if _person_extract_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "An extract task is already running"}
+        )
+
+    background_tasks.add_task(run_person_extract_task, source_file, limit)
+
+    return JSONResponse(content={
+        "success": True,
+        "message": "Started person extract and enrich",
+    })
+
+
+@app.get("/api/person/extract-status")
+async def person_extract_status():
+    """Get status of person extract task."""
+    return JSONResponse(content=_person_extract_status)
+
+
+def run_person_load_task(
+    source_file: str | None,
+    redis_host: str,
+    redis_port: int,
+    redis_password: str | None,
+):
+    """Run person load into Redis in background."""
+    global _person_load_status
+    _person_load_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command
+        cmd = [sys.executable, "-u", "-c", f"""
+import asyncio
+import sys
+sys.path.insert(0, '.')
+from src.services.person_etl_service import run_person_load
+
+async def main():
+    source = {source_file!r} if {source_file!r} else None
+    await run_person_load(
+        source_file=source,
+        redis_host={redis_host!r},
+        redis_port={redis_port!r},
+        redis_password={redis_password!r},
+    )
+
+asyncio.run(main())
+"""]
+
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _person_load_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            _person_load_status["output"] = "".join(output_lines)
+
+        if process.returncode != 0:
+            _person_load_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_load_status["error"] = str(e)
+    finally:
+        _person_load_status["running"] = False
+
+
+@app.post("/api/person/load")
+async def api_person_load(
+    background_tasks: BackgroundTasks,
+    source_file: str | None = Query(default=None),
+):
+    """Load enriched person data into Redis."""
+    global _person_load_status
+
+    if _person_load_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A load task is already running"}
+        )
+
+    # Get the currently selected Redis connection
+    current_env = RedisManager.get_current_env()
+    config = RedisManager.get_config(current_env)
+
+    background_tasks.add_task(
+        run_person_load_task,
+        source_file,
+        config.host,
+        config.port,
+        config.password,
+    )
+
+    return JSONResponse(content={
+        "success": True,
+        "message": f"Started person load into {config.name}",
+    })
+
+
+@app.get("/api/person/load-status")
+async def person_load_status():
+    """Get status of person load task."""
+    return JSONResponse(content=_person_load_status)
+
+
+@app.get("/api/person/files")
+async def list_person_files():
+    """List available person data files."""
+    from pathlib import Path
+
+    data_dir = Path("data/person")
+    if not data_dir.exists():
+        return JSONResponse(content={"id_files": [], "enriched_files": []})
+
+    id_files = sorted(data_dir.glob("person_ids_*.json"), reverse=True)
+    enriched_files = sorted(data_dir.glob("enriched_person_*.json"), reverse=True)
+
+    return JSONResponse(content={
+        "id_files": [{"name": f.name, "size": f.stat().st_size} for f in id_files],
+        "enriched_files": [{"name": f.name, "size": f.stat().st_size} for f in enriched_files],
+    })
+
+
 @app.get("/api/media/{media_id}")
 async def get_media(media_id: str):
     """Get a single media item by ID."""
@@ -689,6 +1043,23 @@ INDEX_CONFIGS = {
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),
             NumericField("$.year", as_name="year", sortable=True),
+        ),
+    },
+    "people": {
+        "redis_name": "idx:people",
+        "prefix": "person:",
+        "schema": (
+            # Primary search field (name) with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            # Also known as (alternate names) - searchable
+            TextField("$.also_known_as", as_name="also_known_as", weight=3.0),
+            # Content type filters (MCType and MCSubType)
+            TagField("$.mc_type", as_name="mc_type"),
+            TagField("$.mc_subtype", as_name="mc_subtype"),
+            # Source filter
+            TagField("$.source", as_name="source"),
+            # Sortable numeric fields for ranking
+            NumericField("$.popularity", as_name="popularity", sortable=True),
         ),
     },
 }

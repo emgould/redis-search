@@ -185,6 +185,128 @@
         </div>
       </div>
       
+      <!-- Person Data Subsection -->
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>👤</span> Person Data
+        </h3>
+        
+        <p class="text-sm text-surface-400 mb-4">
+          Three-step process: (1) Download person IDs from TMDB, (2) Extract & enrich with details, (3) Load into Redis index.
+        </p>
+        
+        <!-- Step 1: Bulk Download -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📥</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 1: Bulk Download</p>
+              <p class="text-sm text-surface-500">
+                Download person IDs from TMDB daily export
+                {% if person_ids_info %}
+                <span class="text-surface-400 ml-2">• Last download: <span class="text-green-400">{{ person_ids_info.modified }}</span> ({{ person_ids_info.size_mb }} MB)</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          <button onclick="runPersonDownload()" 
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-person-download">
+            📥 Bulk Download
+          </button>
+        </div>
+        
+        <!-- Step 2: Extract -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🔍</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 2: Extract & Enrich</p>
+              <p class="text-sm text-surface-500">Filter by popularity, call TMDB API for details</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runPersonExtract()" 
+              class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-person-extract">
+              🔍 Extract
+            </button>
+            <button onclick="openPersonExtractModal()"
+              class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
+              id="btn-person-extract-custom">
+              Options...
+            </button>
+          </div>
+        </div>
+        
+        <!-- Step 3: Load -->
+        <div class="flex items-center justify-between py-3">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📤</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 3: Load</p>
+              <p class="text-sm text-surface-500">enriched_person_*.json → <span class="text-brand-400">index:people</span></p>
+            </div>
+          </div>
+          <button onclick="runPersonLoad()" 
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-person-load">
+            📤 Load
+          </button>
+        </div>
+      </div>
+      
+      <!-- Person Download Status -->
+      <div id="person-download-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-blue-500/30 relative">
+          <button onclick="dismissPersonDownloadStatus()" id="person-download-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">📥</span>
+            <span id="person-download-indicator" class="animate-spin">⏳</span>
+            <span id="person-download-label" class="font-medium text-blue-400">Downloading...</span>
+          </div>
+          <pre id="person-download-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+      
+      <!-- Person Extract Status -->
+      <div id="person-extract-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissPersonExtractStatus()" id="person-extract-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🔍</span>
+            <span id="person-extract-indicator" class="animate-spin">⏳</span>
+            <span id="person-extract-label" class="font-medium text-amber-400">Extracting...</span>
+          </div>
+          
+          <!-- Progress Bar -->
+          <div class="mb-3">
+            <div class="flex justify-between text-xs text-surface-400 mb-1">
+              <span>Batch Progress</span>
+              <span id="person-extract-batch-label">0 / 0</span>
+            </div>
+            <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+              <div id="person-extract-batch-bar" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <pre id="person-extract-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+      
+      <!-- Person Load Status -->
+      <div id="person-load-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
+          <button onclick="dismissPersonLoadStatus()" id="person-load-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">📤</span>
+            <span id="person-load-indicator" class="animate-spin">⏳</span>
+            <span id="person-load-label" class="font-medium text-brand-400">Loading...</span>
+          </div>
+          <pre id="person-load-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+      
       <!-- Extract Task Status -->
       <div id="extract-status-tv" class="hidden mb-4">
         <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
@@ -517,6 +639,45 @@
         </div>
       </div>
       
+      <!-- People Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">Index: <span class="text-brand-400">people</span></h3>
+            <p class="text-sm text-surface-500">idx:people • Prefix: person:*</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('people')" 
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-people">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('people')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-people">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+        
+        {% if not stats.error %}
+        <!-- Index Stats -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-people-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.people_num_docs | default(0)) }}</p>
+          </div>
+          
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-people-index-memory" class="text-3xl font-bold text-brand-400">
+              {{ ((stats.people_index_stats.index_memory_bytes | default(0)) / 1024 / 1024) | round(2) }} MB
+            </p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      
       <!-- Index Operation Status -->
       <div id="index-status" class="hidden">
         <div class="bg-surface-800 rounded-lg p-4">
@@ -558,11 +719,17 @@
       
       <!-- Cache Breakdown -->
       <h3 class="text-lg font-medium mb-3 text-surface-300">🔑 Key Breakdown</h3>
-      <div class="grid md:grid-cols-4 gap-4 mb-6">
+      <div class="grid md:grid-cols-5 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
           <p id="stat-media-keys" class="text-2xl font-bold text-green-400">{{ "{:,}".format(stats.cache_breakdown.media | default(0)) }}</p>
           <p class="text-xs text-surface-500">media:*</p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Person Keys</p>
+          <p id="stat-person-keys" class="text-2xl font-bold text-purple-400">{{ "{:,}".format(stats.cache_breakdown.person | default(0)) }}</p>
+          <p class="text-xs text-surface-500">person:*</p>
         </div>
         
         <div class="bg-surface-800 rounded-lg p-4">
@@ -615,11 +782,21 @@ async function refreshStats() {
     const data = await res.json();
     
     if (data.success) {
-      // Update index stats
+      // Update media index stats
       document.getElementById('stat-num-docs').textContent = formatNumber(data.num_docs);
       const indexMemoryEl = document.getElementById('stat-index-memory');
       if (indexMemoryEl && data.index_stats) {
         indexMemoryEl.textContent = formatMB(data.index_stats.index_memory_bytes || 0);
+      }
+      
+      // Update people index stats
+      const peopleNumDocsEl = document.getElementById('stat-people-num-docs');
+      if (peopleNumDocsEl) {
+        peopleNumDocsEl.textContent = formatNumber(data.people_num_docs || 0);
+      }
+      const peopleIndexMemoryEl = document.getElementById('stat-people-index-memory');
+      if (peopleIndexMemoryEl && data.people_index_stats) {
+        peopleIndexMemoryEl.textContent = formatMB(data.people_index_stats.index_memory_bytes || 0);
       }
       
       // Update overall Redis memory stats
@@ -628,6 +805,10 @@ async function refreshStats() {
       
       // Update cache breakdown
       document.getElementById('stat-media-keys').textContent = formatNumber(data.cache_breakdown.media || 0);
+      const personKeysEl = document.getElementById('stat-person-keys');
+      if (personKeysEl) {
+        personKeysEl.textContent = formatNumber(data.cache_breakdown.person || 0);
+      }
       document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
       document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
       document.getElementById('stat-other-keys').textContent = formatNumber(data.cache_breakdown.other || 0);
@@ -1260,6 +1441,280 @@ async function pollExtractStatus(mediaType) {
   } catch (e) {
     setTimeout(() => pollExtractStatus(mediaType), 1000);
   }
+}
+
+// ============================================================
+// Person ETL Functions
+// ============================================================
+
+function setPersonButtonsDisabled(disabled) {
+  const btns = ['btn-person-download', 'btn-person-extract', 'btn-person-extract-custom', 'btn-person-load'];
+  btns.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
+// Step 1: Bulk Download
+async function runPersonDownload() {
+  document.getElementById('btn-person-download').disabled = true;
+  
+  const statusEl = document.getElementById('person-download-status');
+  const indicatorEl = document.getElementById('person-download-indicator');
+  const labelEl = document.getElementById('person-download-label');
+  const outputEl = document.getElementById('person-download-output');
+  const dismissBtn = document.getElementById('person-download-dismiss');
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Downloading person IDs...';
+  labelEl.className = 'font-medium text-blue-400';
+  outputEl.textContent = '';
+  if (dismissBtn) dismissBtn.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/person/download', { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollPersonDownloadStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent = e.message;
+    document.getElementById('btn-person-download').disabled = false;
+  }
+}
+
+async function pollPersonDownloadStatus() {
+  const indicatorEl = document.getElementById('person-download-indicator');
+  const labelEl = document.getElementById('person-download-label');
+  const outputEl = document.getElementById('person-download-output');
+  const dismissBtn = document.getElementById('person-download-dismiss');
+  
+  try {
+    const res = await fetch('/api/person/download-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output;
+    outputEl.scrollTop = outputEl.scrollHeight;
+    
+    if (data.running) {
+      setTimeout(pollPersonDownloadStatus, 1000);
+    } else {
+      indicatorEl.className = '';
+      if (dismissBtn) dismissBtn.classList.remove('hidden');
+      
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error';
+        labelEl.className = 'font-medium text-red-400';
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'Download Complete!';
+        labelEl.className = 'font-medium text-green-400';
+      }
+      document.getElementById('btn-person-download').disabled = false;
+    }
+  } catch (e) {
+    setTimeout(pollPersonDownloadStatus, 1000);
+  }
+}
+
+function dismissPersonDownloadStatus() {
+  document.getElementById('person-download-status').classList.add('hidden');
+}
+
+// Step 2: Extract
+async function runPersonExtract(limit = null) {
+  document.getElementById('btn-person-extract').disabled = true;
+  document.getElementById('btn-person-extract-custom').disabled = true;
+  
+  const statusEl = document.getElementById('person-extract-status');
+  const indicatorEl = document.getElementById('person-extract-indicator');
+  const labelEl = document.getElementById('person-extract-label');
+  const outputEl = document.getElementById('person-extract-output');
+  const dismissBtn = document.getElementById('person-extract-dismiss');
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Extracting and enriching...';
+  labelEl.className = 'font-medium text-amber-400';
+  outputEl.textContent = '';
+  if (dismissBtn) dismissBtn.classList.add('hidden');
+  
+  // Reset progress
+  document.getElementById('person-extract-batch-label').textContent = '0 / 0';
+  document.getElementById('person-extract-batch-bar').style.width = '0%';
+  
+  try {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit);
+    
+    const res = await fetch(`/api/person/extract?${params.toString()}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollPersonExtractStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent = e.message;
+    document.getElementById('btn-person-extract').disabled = false;
+    document.getElementById('btn-person-extract-custom').disabled = false;
+  }
+}
+
+async function pollPersonExtractStatus() {
+  const indicatorEl = document.getElementById('person-extract-indicator');
+  const labelEl = document.getElementById('person-extract-label');
+  const outputEl = document.getElementById('person-extract-output');
+  const dismissBtn = document.getElementById('person-extract-dismiss');
+  const batchLabel = document.getElementById('person-extract-batch-label');
+  const batchBar = document.getElementById('person-extract-batch-bar');
+  
+  try {
+    const res = await fetch('/api/person/extract-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output;
+    outputEl.scrollTop = outputEl.scrollHeight;
+    
+    // Update progress
+    if (data.progress) {
+      const current = data.progress.batch_current || 0;
+      const total = data.progress.batch_total || 0;
+      batchLabel.textContent = `${current} / ${total}`;
+      const percent = total > 0 ? (current / total) * 100 : 0;
+      batchBar.style.width = `${percent}%`;
+      
+      if (data.progress.status_message) {
+        labelEl.textContent = data.progress.status_message;
+      }
+    }
+    
+    if (data.running) {
+      setTimeout(pollPersonExtractStatus, 1000);
+    } else {
+      indicatorEl.className = '';
+      if (dismissBtn) dismissBtn.classList.remove('hidden');
+      
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error';
+        labelEl.className = 'font-medium text-red-400';
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'Extract Complete!';
+        labelEl.className = 'font-medium text-green-400';
+        batchBar.style.width = '100%';
+      }
+      document.getElementById('btn-person-extract').disabled = false;
+      document.getElementById('btn-person-extract-custom').disabled = false;
+    }
+  } catch (e) {
+    setTimeout(pollPersonExtractStatus, 1000);
+  }
+}
+
+function dismissPersonExtractStatus() {
+  document.getElementById('person-extract-status').classList.add('hidden');
+}
+
+function openPersonExtractModal() {
+  const limit = prompt('Enter a limit for testing (leave empty for all):', '');
+  if (limit === null) return; // User cancelled
+  runPersonExtract(limit ? parseInt(limit) : null);
+}
+
+// Step 3: Load
+async function runPersonLoad() {
+  document.getElementById('btn-person-load').disabled = true;
+  
+  const statusEl = document.getElementById('person-load-status');
+  const indicatorEl = document.getElementById('person-load-indicator');
+  const labelEl = document.getElementById('person-load-label');
+  const outputEl = document.getElementById('person-load-output');
+  const dismissBtn = document.getElementById('person-load-dismiss');
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Loading into Redis...';
+  labelEl.className = 'font-medium text-brand-400';
+  outputEl.textContent = '';
+  if (dismissBtn) dismissBtn.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/person/load', { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollPersonLoadStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent = e.message;
+    document.getElementById('btn-person-load').disabled = false;
+  }
+}
+
+async function pollPersonLoadStatus() {
+  const indicatorEl = document.getElementById('person-load-indicator');
+  const labelEl = document.getElementById('person-load-label');
+  const outputEl = document.getElementById('person-load-output');
+  const dismissBtn = document.getElementById('person-load-dismiss');
+  
+  try {
+    const res = await fetch('/api/person/load-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output;
+    outputEl.scrollTop = outputEl.scrollHeight;
+    
+    if (data.running) {
+      setTimeout(pollPersonLoadStatus, 1000);
+    } else {
+      indicatorEl.className = '';
+      if (dismissBtn) dismissBtn.classList.remove('hidden');
+      
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error';
+        labelEl.className = 'font-medium text-red-400';
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'Load Complete!';
+        labelEl.className = 'font-medium text-green-400';
+        // Refresh stats to show new document counts
+        await refreshStats();
+      }
+      document.getElementById('btn-person-load').disabled = false;
+    }
+  } catch (e) {
+    setTimeout(pollPersonLoadStatus, 1000);
+  }
+}
+
+function dismissPersonLoadStatus() {
+  document.getElementById('person-load-status').classList.add('hidden');
 }
 </script>
 {% endblock %}
