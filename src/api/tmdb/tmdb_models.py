@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCType
 from pydantic import BaseModel, Field, model_validator
 
+from contracts.models import MCBaseItem, MCSearchResponse, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 # ============================================================================

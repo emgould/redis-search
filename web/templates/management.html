@@ -22,7 +22,7 @@
         <span class="text-2xl">🔌</span> Redis Connection
       </h2>
       
-      <div class="grid md:grid-cols-2 gap-6">
+      <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
         <!-- Local Redis -->
         <div id="local-card" class="relative rounded-lg border-2 p-5 transition-all cursor-pointer
           {% if current_env == 'local' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
@@ -48,11 +48,23 @@
           <p class="text-sm text-red-400">{{ local_status.error }}</p>
           {% endif %}
           
-          {% if current_env == 'local' %}
-          <div class="absolute top-3 right-3">
+          <div id="local-active" class="absolute bottom-3 right-3 {% if current_env != 'local' %}hidden{% endif %}">
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
-          {% endif %}
+        </div>
+        
+        <!-- Promote Button -->
+        <div class="flex flex-col items-center gap-2">
+          <button id="btn-promote" 
+            onclick="promoteToDev()"
+            class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Promote local documents to public Redis"
+            {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
+            <span class="flex items-center gap-2">
+              <span id="promote-icon" class="text-xl">⟹</span>
+            </span>
+          </button>
+          <span class="text-xs text-surface-500">Promote to Dev</span>
         </div>
         
         <!-- Public Redis -->
@@ -80,15 +92,24 @@
           <p class="text-sm text-red-400">{{ public_status.error }}</p>
           {% endif %}
           
-          {% if current_env == 'public' %}
-          <div class="absolute top-3 right-3">
+          <div id="public-active" class="absolute bottom-3 right-3 {% if current_env != 'public' %}hidden{% endif %}">
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
-          {% endif %}
         </div>
       </div>
       
       <div id="switch-message" class="mt-4 text-center text-sm hidden"></div>
+      
+      <!-- Promote Status -->
+      <div id="promote-status" class="mt-4 hidden">
+        <div class="bg-surface-800 rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <span id="promote-indicator" class="animate-spin">⏳</span>
+            <span id="promote-label" class="font-medium text-surface-300">Promoting...</span>
+          </div>
+          <pre id="promote-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
     </section>
     
     <!-- Data Loading -->
@@ -136,33 +157,123 @@
       </div>
     </section>
     
-    <!-- Current Stats -->
+    <!-- Index Management -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-        <span class="text-2xl">📊</span> Current Redis Stats
+        <span class="text-2xl">🗂️</span> Index Management
       </h2>
+      
+      <p class="text-surface-400 mb-6">
+        Manage Redis Search indexes. Deleting an index does not delete the underlying data documents.
+      </p>
+      
+      <!-- Media Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">Index: <span class="text-brand-400">media</span></h3>
+            <p class="text-sm text-surface-500">idx:media • Prefix: media:*</p>
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-3">
+          <button onclick="deleteIndex('media')" 
+            class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+            id="btn-delete-index-media">
+            🗑️ Delete Index
+          </button>
+          <button onclick="createIndex('media')"
+            class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+            id="btn-create-index-media">
+            ➕ Create Index
+          </button>
+        </div>
+      </div>
+      
+      <!-- Index Operation Status -->
+      <div id="index-status" class="hidden">
+        <div class="bg-surface-800 rounded-lg p-4">
+          <div class="flex items-center gap-2">
+            <span id="index-indicator">⏳</span>
+            <span id="index-message" class="font-medium text-surface-300"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Current Stats -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <span class="text-2xl">📊</span> Current Redis Stats
+        </h2>
+        <button onclick="refreshStatsWithFeedback()" 
+          id="btn-refresh-stats"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <span id="refresh-icon">🔄</span> Refresh
+        </button>
+      </div>
       
       {% if stats.error %}
       <p class="text-red-400">{{ stats.error }}</p>
       {% else %}
-      <div class="grid md:grid-cols-3 gap-6">
+      
+      <!-- Search Index -->
+      <h3 class="text-lg font-medium mb-3 text-surface-300">🔍 Search Index</h3>
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Total Documents</p>
-          <p class="text-3xl font-bold text-brand-400">{{ stats.dbsize }}</p>
+          <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+          <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.num_docs | default(0)) }}</p>
         </div>
         
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Memory Used</p>
-          <p class="text-3xl font-bold text-brand-400">
+          <p id="stat-memory-used" class="text-3xl font-bold text-brand-400">
             {{ ((stats.info.used_memory | default(0)) / 1024 / 1024) | round(1) }} MB
           </p>
         </div>
         
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Peak Memory</p>
-          <p class="text-3xl font-bold text-surface-300">
+          <p id="stat-memory-peak" class="text-3xl font-bold text-surface-300">
             {{ ((stats.info.used_memory_peak | default(0)) / 1024 / 1024) | round(1) }} MB
           </p>
+        </div>
+      </div>
+      
+      <!-- Cache Breakdown -->
+      <h3 class="text-lg font-medium mb-3 text-surface-300">💾 Cache Breakdown</h3>
+      <div class="grid md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Media Keys</p>
+          <p id="stat-media-keys" class="text-2xl font-bold text-green-400">{{ "{:,}".format(stats.cache_breakdown.media | default(0)) }}</p>
+          <p class="text-xs text-surface-500">media:*</p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">API Response Cache</p>
+          <p id="stat-tmdb-request" class="text-2xl font-bold text-yellow-400">{{ "{:,}".format(stats.cache_breakdown.tmdb_request | default(0)) }}</p>
+          <p class="text-xs text-surface-500">tmdb_request:*</p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Enrichment Cache</p>
+          <p id="stat-tmdb-cache" class="text-2xl font-bold text-orange-400">{{ "{:,}".format(stats.cache_breakdown.tmdb | default(0)) }}</p>
+          <p class="text-xs text-surface-500">tmdb:*</p>
+        </div>
+        
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Other Keys</p>
+          <p id="stat-other-keys" class="text-2xl font-bold text-surface-400">{{ "{:,}".format(stats.cache_breakdown.other | default(0)) }}</p>
+          <p class="text-xs text-surface-500">misc</p>
+        </div>
+      </div>
+      
+      <!-- Total -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
+        <div class="flex items-center justify-between">
+          <p class="text-surface-400">Total Keys in Redis</p>
+          <p id="stat-dbsize" class="text-2xl font-bold text-surface-300">{{ "{:,}".format(stats.dbsize | default(0)) }}</p>
         </div>
       </div>
       {% endif %}
@@ -178,6 +289,94 @@
 </div>
 
 <script>
+// Format number with commas
+function formatNumber(num) {
+  return num.toLocaleString();
+}
+
+// Format bytes to MB
+function formatMB(bytes) {
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// Refresh stats from the current Redis connection
+async function refreshStats() {
+  try {
+    const res = await fetch('/api/redis-stats');
+    const data = await res.json();
+    
+    if (data.success) {
+      // Update search index stats
+      document.getElementById('stat-num-docs').textContent = formatNumber(data.num_docs);
+      document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
+      document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
+      
+      // Update cache breakdown
+      document.getElementById('stat-media-keys').textContent = formatNumber(data.cache_breakdown.media || 0);
+      document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
+      document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
+      document.getElementById('stat-other-keys').textContent = formatNumber(data.cache_breakdown.other || 0);
+      
+      // Update total
+      document.getElementById('stat-dbsize').textContent = formatNumber(data.dbsize);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.error('Failed to refresh stats:', e);
+    return false;
+  }
+}
+
+// Refresh stats with visual feedback
+async function refreshStatsWithFeedback() {
+  const btn = document.getElementById('btn-refresh-stats');
+  const icon = document.getElementById('refresh-icon');
+  
+  btn.disabled = true;
+  icon.classList.add('animate-spin');
+  
+  const success = await refreshStats();
+  
+  icon.classList.remove('animate-spin');
+  icon.textContent = success ? '✅' : '❌';
+  
+  setTimeout(() => {
+    icon.textContent = '🔄';
+    btn.disabled = false;
+  }, 1000);
+}
+
+// Update card styling to show active environment
+function updateCardStyles(activeEnv) {
+  const localCard = document.getElementById('local-card');
+  const publicCard = document.getElementById('public-card');
+  const localActive = document.getElementById('local-active');
+  const publicActive = document.getElementById('public-active');
+  
+  if (activeEnv === 'local') {
+    // Activate local
+    localCard.classList.remove('border-surface-700', 'hover:border-surface-600');
+    localCard.classList.add('border-brand-500', 'bg-brand-500/10');
+    localActive.classList.remove('hidden');
+    
+    // Deactivate public
+    publicCard.classList.remove('border-brand-500', 'bg-brand-500/10');
+    publicCard.classList.add('border-surface-700', 'hover:border-surface-600');
+    publicActive.classList.add('hidden');
+  } else {
+    // Activate public
+    publicCard.classList.remove('border-surface-700', 'hover:border-surface-600');
+    publicCard.classList.add('border-brand-500', 'bg-brand-500/10');
+    publicActive.classList.remove('hidden');
+    
+    // Deactivate local
+    localCard.classList.remove('border-brand-500', 'bg-brand-500/10');
+    localCard.classList.add('border-surface-700', 'hover:border-surface-600');
+    localActive.classList.add('hidden');
+  }
+}
+
 async function switchRedis(env) {
   const msgEl = document.getElementById('switch-message');
   msgEl.textContent = 'Switching...';
@@ -189,10 +388,17 @@ async function switchRedis(env) {
     const data = await res.json();
     
     if (data.success) {
-      msgEl.textContent = `Switched to ${env} Redis`;
+      msgEl.textContent = `Switched to ${env} Redis - loading stats...`;
       msgEl.className = 'mt-4 text-center text-sm text-green-400';
-      // Reload page to show updated stats
-      setTimeout(() => location.reload(), 500);
+      
+      // Update card styles
+      updateCardStyles(env);
+      
+      // Refresh stats without page reload
+      await refreshStats();
+      
+      msgEl.textContent = `Switched to ${env} Redis`;
+      setTimeout(() => msgEl.classList.add('hidden'), 2000);
     } else {
       msgEl.textContent = data.error;
       msgEl.className = 'mt-4 text-center text-sm text-red-400';
@@ -271,5 +477,168 @@ async function pollTaskStatus() {
 {% if task_status.running %}
 pollTaskStatus();
 {% endif %}
+
+// Promote to Dev functionality
+async function promoteToDev() {
+  const btn = document.getElementById('btn-promote');
+  const icon = document.getElementById('promote-icon');
+  const statusEl = document.getElementById('promote-status');
+  const indicatorEl = document.getElementById('promote-indicator');
+  const labelEl = document.getElementById('promote-label');
+  const outputEl = document.getElementById('promote-output');
+  
+  btn.disabled = true;
+  icon.textContent = '⏳';
+  icon.classList.add('animate-spin');
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Starting promote...';
+  outputEl.textContent = '';
+  
+  try {
+    const res = await fetch('/api/promote-to-dev', { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    // Poll for status
+    pollPromoteStatus();
+  } catch (e) {
+    icon.textContent = '❌';
+    icon.classList.remove('animate-spin');
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    outputEl.textContent = e.message;
+    btn.disabled = false;
+  }
+}
+
+async function pollPromoteStatus() {
+  const btn = document.getElementById('btn-promote');
+  const icon = document.getElementById('promote-icon');
+  const indicatorEl = document.getElementById('promote-indicator');
+  const labelEl = document.getElementById('promote-label');
+  const outputEl = document.getElementById('promote-output');
+  
+  try {
+    const res = await fetch('/api/promote-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output + data.error;
+    
+    if (data.running) {
+      setTimeout(pollPromoteStatus, 1000);
+    } else {
+      indicatorEl.className = '';
+      icon.classList.remove('animate-spin');
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        icon.textContent = '❌';
+        labelEl.textContent = 'Error';
+      } else {
+        indicatorEl.textContent = '✅';
+        icon.textContent = '✅';
+        labelEl.textContent = 'Complete';
+        // Refresh stats to show updated document counts
+        await refreshStats();
+        // Refresh page to update Redis card document counts
+        setTimeout(() => location.reload(), 2000);
+      }
+      btn.disabled = false;
+      setTimeout(() => {
+        icon.textContent = '⟹';
+      }, 3000);
+    }
+  } catch (e) {
+    setTimeout(pollPromoteStatus, 1000);
+  }
+}
+
+// Index management functions
+async function deleteIndex(indexName) {
+  if (!confirm(`Are you sure you want to delete the "${indexName}" index? This will not delete the data documents, but search will be unavailable until the index is recreated.`)) {
+    return;
+  }
+  
+  const statusEl = document.getElementById('index-status');
+  const indicatorEl = document.getElementById('index-indicator');
+  const messageEl = document.getElementById('index-message');
+  const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
+  const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
+  
+  btnDelete.disabled = true;
+  btnCreate.disabled = true;
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  messageEl.textContent = `Deleting ${indexName} index...`;
+  messageEl.className = 'font-medium text-surface-300';
+  
+  try {
+    const res = await fetch(`/api/index/${indexName}`, { method: 'DELETE' });
+    const data = await res.json();
+    
+    if (data.success) {
+      indicatorEl.textContent = '✅';
+      messageEl.textContent = data.message;
+      messageEl.className = 'font-medium text-green-400';
+      // Refresh stats to show updated index count
+      await refreshStats();
+    } else {
+      indicatorEl.textContent = '❌';
+      messageEl.textContent = data.error;
+      messageEl.className = 'font-medium text-red-400';
+    }
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    messageEl.textContent = 'Failed: ' + e.message;
+    messageEl.className = 'font-medium text-red-400';
+  } finally {
+    btnDelete.disabled = false;
+    btnCreate.disabled = false;
+  }
+}
+
+async function createIndex(indexName) {
+  const statusEl = document.getElementById('index-status');
+  const indicatorEl = document.getElementById('index-indicator');
+  const messageEl = document.getElementById('index-message');
+  const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
+  const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
+  
+  btnDelete.disabled = true;
+  btnCreate.disabled = true;
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  messageEl.textContent = `Creating ${indexName} index...`;
+  messageEl.className = 'font-medium text-surface-300';
+  
+  try {
+    const res = await fetch(`/api/index/${indexName}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (data.success) {
+      indicatorEl.textContent = '✅';
+      messageEl.textContent = data.message;
+      messageEl.className = 'font-medium text-green-400';
+      // Refresh stats to show updated index count
+      await refreshStats();
+    } else {
+      indicatorEl.textContent = '❌';
+      messageEl.textContent = data.error;
+      messageEl.className = 'font-medium text-red-400';
+    }
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    messageEl.textContent = 'Failed: ' + e.message;
+    messageEl.className = 'font-medium text-red-400';
+  } finally {
+    btnDelete.disabled = false;
+    btnCreate.disabled = false;
+  }
+}
 </script>
 {% endblock %}

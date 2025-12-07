@@ -49,6 +49,14 @@ Shows{% endblock %} {% block body %}
     </div>
   </header>
 
+  <!-- Redis Connection Indicator -->
+  <div class="px-4 py-1.5 flex justify-end">
+    <div class="flex items-center gap-1.5 text-xs text-surface-500">
+      <span class="w-1.5 h-1.5 rounded-full {% if current_env == 'local' %}bg-green-500{% else %}bg-blue-500{% endif %}"></span>
+      <span>{{ current_env | capitalize }} Redis</span>
+    </div>
+  </div>
+
   <!-- Main Content -->
   <main
     class="flex-1 flex flex-col items-center justify-start pt-16 md:pt-24 px-4"
@@ -246,49 +254,41 @@ Shows{% endblock %} {% block body %}
   }
 
   function formatYear(item) {
-    const date = item.original?.first_air_date || item.original?.release_date;
-    if (date) {
-      return date.split("-")[0];
+    // Use the normalized year field directly
+    if (item.year) {
+      return String(item.year);
     }
     return "";
   }
 
   function getPosterUrl(item) {
-    // Check for images array format first
-    const images = item.original?.images || [];
-    const poster = images.find(
-      (img) => img.description === "poster" && img.key === "medium"
-    );
-    if (poster?.url) return poster.url;
-
-    // Fall back to TMDB poster_path format
-    const posterPath = item.original?.poster_path;
-    if (posterPath) {
-      return `https://image.tmdb.org/t/p/w185${posterPath}`;
+    // Use the normalized image field directly
+    if (item.image) {
+      return item.image;
     }
-
     return null;
   }
 
   function getRating(item) {
-    return (
-      item.original?.metrics?.vote_average || item.original?.vote_average || 0
-    );
+    // Use the normalized rating field directly
+    return item.rating || 0;
   }
 
   function getTypeLabel(item) {
-    const type =
-      item.type || item.original?.content_type || item.original?.mc_type;
+    // Use the normalized mc_type field (values: "tv", "movie", "person")
+    const type = item.mc_type;
     if (type === "tv") return "TV Series";
     if (type === "movie") return "Movie";
+    if (type === "person") return "Person";
     return type || "Media";
   }
 
   function getTypeColor(item) {
-    const type =
-      item.type || item.original?.content_type || item.original?.mc_type;
+    // Use the normalized mc_type field (values: "tv", "movie", "person")
+    const type = item.mc_type;
     if (type === "tv") return "bg-blue-500/20 text-blue-400";
     if (type === "movie") return "bg-purple-500/20 text-purple-400";
+    if (type === "person") return "bg-green-500/20 text-green-400";
     return "bg-surface-500/20 text-surface-400";
   }
 
@@ -319,19 +319,13 @@ Shows{% endblock %} {% block body %}
 
     resultsList.innerHTML = results
       .map((item, index) => {
-        const title =
-          item.search_title ||
-          item.original?.title ||
-          item.original?.name ||
-          "Unknown";
+        const title = item.search_title || "Unknown";
         const year = formatYear(item);
         const poster = getPosterUrl(item);
         const rating = getRating(item);
-        const overview = item.original?.overview || "";
-        const cast = (item.original?.main_cast || [])
-          .slice(0, 3)
-          .map((c) => c.name)
-          .join(", ");
+        const overview = item.overview || "";
+        // Cast is stored as array of strings directly
+        const cast = (item.cast || []).slice(0, 3).join(", ");
 
         return `
             <div class="group flex gap-4 p-4 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800 last:border-b-0"
@@ -551,35 +545,29 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderMediaDetail(data) {
-    const original = data.original || {};
-    const title =
-      data.search_title || original.title || original.name || "Unknown";
-    const overview = original.overview || "No description available.";
-    const posterPath = original.poster_path;
-    const backdropPath = original.backdrop_path;
-    const releaseDate = original.release_date || original.first_air_date;
-    const rating = original.vote_average || original.metrics?.vote_average || 0;
-    const voteCount = original.vote_count || original.metrics?.vote_count || 0;
-    const genres = original.genres || [];
-    const cast = original.main_cast || original.cast || [];
-    const crew = original.crew || [];
-    const type = data.type || original.content_type || original.mc_type;
-    const runtime = original.runtime;
-    const seasons = original.number_of_seasons;
-    const episodes = original.number_of_episodes;
-    const status = original.status;
-    const tagline = original.tagline;
-    const popularity = data.popularity || original.popularity;
+    const title = data.search_title || "Unknown";
+    const overview = data.overview || "No description available.";
+    const type = data.mc_type;
+    const rating = data.rating || 0;
+    const popularity = data.popularity || 0;
+    const year = data.year;
+    // Cast is stored as array of strings in normalized format
+    const castNames = data.cast || [];
+    // For the detail modal, we don't have the full original data anymore,
+    // so we work with what's available in the normalized format
+    const posterUrl = data.image;
+    const backdropUrl = null; // Not available in normalized format
+    const genres = []; // Not available in normalized format
+    const voteCount = 0; // Not available in normalized format
+    const runtime = null; // Not available in normalized format
+    const seasons = null; // Not available in normalized format
+    const episodes = null; // Not available in normalized format
+    const status = null; // Not available in normalized format
+    const tagline = null; // Not available in normalized format
+    const director = null; // Not available in normalized format
 
-    const posterUrl = posterPath
-      ? `https://image.tmdb.org/t/p/w342${posterPath}`
-      : null;
-    const backdropUrl = backdropPath
-      ? `https://image.tmdb.org/t/p/w1280${backdropPath}`
-      : null;
-
-    const director = crew.find((c) => c.job === "Director")?.name;
-    const castList = cast.slice(0, 8);
+    // Create cast display list from string array
+    const castList = castNames.map(name => ({ name, character: "" }));
 
     modalBody.innerHTML = `
       <!-- Backdrop -->
@@ -629,15 +617,15 @@ Shows{% endblock %} {% block body %}
               <span class="px-3 py-1 rounded-full text-sm font-medium ${
                 type === "tv"
                   ? "bg-blue-500/20 text-blue-400"
-                  : "bg-purple-500/20 text-purple-400"
+                  : type === "person"
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-purple-500/20 text-purple-400"
               }">
-                ${type === "tv" ? "TV Series" : "Movie"}
+                ${type === "tv" ? "TV Series" : type === "person" ? "Person" : "Movie"}
               </span>
               ${
-                releaseDate
-                  ? `<span class="text-surface-400">${formatDate(
-                      releaseDate
-                    )}</span>`
+                year
+                  ? `<span class="text-surface-400">${year}</span>`
                   : ""
               }
               ${
@@ -728,22 +716,11 @@ Shows{% endblock %} {% block body %}
                 .map(
                   (c) => `
                 <div class="flex items-center gap-3 p-2 bg-surface-800/50 rounded-lg">
-                  ${
-                    c.profile_path
-                      ? `
-                    <img src="https://image.tmdb.org/t/p/w92${c.profile_path}" alt="${c.name}" class="w-10 h-10 rounded-full object-cover">
-                  `
-                      : `
-                    <div class="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center text-surface-500 text-sm font-medium">
-                      ${(c.name || "?").charAt(0)}
-                    </div>
-                  `
-                  }
+                  <div class="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center text-surface-500 text-sm font-medium">
+                    ${(c.name || "?").charAt(0)}
+                  </div>
                   <div class="min-w-0">
                     <p class="text-sm text-white truncate">${c.name}</p>
-                    <p class="text-xs text-surface-500 truncate">${
-                      c.character || c.role || ""
-                    }</p>
                   </div>
                 </div>
               `

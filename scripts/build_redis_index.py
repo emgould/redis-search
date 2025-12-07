@@ -1,3 +1,10 @@
+"""
+Build the Redis Search index for the media search application.
+
+Schema matches the SearchDocument dataclass from src/core/normalize.py:
+- Indexed fields: search_title, mc_type, mc_subtype, year, popularity, rating, source
+- Display fields (stored, not indexed): image, cast, overview
+"""
 
 import asyncio
 import os
@@ -26,13 +33,17 @@ async def build_index():
     schema = (
         # Primary search field with high weight
         TextField("$.search_title", as_name="search_title", weight=5.0),
-        # Filterable fields
-        TagField("$.type", as_name="type"),
+        # Content type filters (MCType and MCSubType)
+        TagField("$.mc_type", as_name="mc_type"),
+        TagField("$.mc_subtype", as_name="mc_subtype"),
+        # Source filter
         TagField("$.source", as_name="source"),
         # Sortable numeric fields for ranking
         NumericField("$.popularity", as_name="popularity", sortable=True),
         NumericField("$.rating", as_name="rating", sortable=True),
         NumericField("$.year", as_name="year", sortable=True),
+        # Note: image, cast, overview are stored in JSON but NOT indexed
+        # They are display-only fields returned with search results
     )
 
     definition = IndexDefinition(prefix=["media:"], index_type=IndexType.JSON)
@@ -40,7 +51,8 @@ async def build_index():
     try:
         await r.ft(INDEX_NAME).create_index(schema, definition=definition)
         print(f"Index '{INDEX_NAME}' created successfully")
-        print("Schema includes: search_title, type, source, popularity, rating, year")
+        print("Indexed fields: search_title, mc_type, mc_subtype, source, popularity, rating, year")
+        print("Display fields (stored, not indexed): image, cast, overview")
     except Exception as e:
         if "Index already exists" in str(e):
             print(f"Index '{INDEX_NAME}' already exists")
