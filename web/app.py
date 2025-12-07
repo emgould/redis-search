@@ -753,7 +753,6 @@ def run_person_download_task(date_str: str | None = None):
 
 @app.post("/api/person/download")
 async def api_person_download(
-    background_tasks: BackgroundTasks,
     date: str | None = Query(default=None),
 ):
     """Download person IDs from TMDB daily export."""
@@ -765,7 +764,13 @@ async def api_person_download(
             content={"success": False, "error": "A download task is already running"}
         )
 
-    background_tasks.add_task(run_person_download_task, date)
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_download_task,
+        args=(date,),
+        daemon=True,
+    )
+    thread.start()
 
     return JSONResponse(content={
         "success": True,
@@ -864,7 +869,6 @@ def parse_person_extract_progress(output: str) -> dict:
 
 @app.post("/api/person/extract")
 async def api_person_extract(
-    background_tasks: BackgroundTasks,
     source_file: str | None = Query(default=None),
     limit: int | None = Query(default=None),
 ):
@@ -877,7 +881,13 @@ async def api_person_extract(
             content={"success": False, "error": "An extract task is already running"}
         )
 
-    background_tasks.add_task(run_person_extract_task, source_file, limit)
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_extract_task,
+        args=(source_file, limit),
+        daemon=True,
+    )
+    thread.start()
 
     return JSONResponse(content={
         "success": True,
@@ -958,7 +968,6 @@ asyncio.run(main())
 
 @app.post("/api/person/load")
 async def api_person_load(
-    background_tasks: BackgroundTasks,
     source_file: str | None = Query(default=None),
 ):
     """Load enriched person data into Redis."""
@@ -974,13 +983,13 @@ async def api_person_load(
     current_env = RedisManager.get_current_env()
     config = RedisManager.get_config(current_env)
 
-    background_tasks.add_task(
-        run_person_load_task,
-        source_file,
-        config.host,
-        config.port,
-        config.password,
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_load_task,
+        args=(source_file, config.host, config.port, config.password),
+        daemon=True,
     )
+    thread.start()
 
     return JSONResponse(content={
         "success": True,
