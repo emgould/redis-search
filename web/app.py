@@ -126,6 +126,7 @@ async def redis_stats():
             "cache_breakdown": stats.get("cache_breakdown", {}),
             "memory_used": stats.get("info", {}).get("used_memory", 0),
             "memory_peak": stats.get("info", {}).get("used_memory_peak", 0),
+            "index_stats": stats.get("index_stats", {}),
         })
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})

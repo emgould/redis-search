@@ -40,13 +40,43 @@ class RedisRepository:
         info = await self.redis.info()
         dbsize = await self.redis.dbsize()
 
-        # Get index document count
+        # Get index document count and memory stats
+        index_stats = {}
         try:
             index_info = await self.idx.info()
-            # index_info is a dict with 'num_docs' key
+            # index_info is a dict with various stats
             num_docs = int(index_info.get("num_docs", 0))
+            # Get index memory usage in bytes (convert from MB if needed)
+            inverted_sz_mb = float(index_info.get("inverted_sz_mb", 0))
+            offset_vectors_sz_mb = float(index_info.get("offset_vectors_sz_mb", 0))
+            doc_table_size_mb = float(index_info.get("doc_table_size_mb", 0))
+            sortable_values_size_mb = float(
+                index_info.get("sortable_values_size_mb", 0)
+            )
+            key_table_size_mb = float(index_info.get("key_table_size_mb", 0))
+
+            # Calculate total index memory in bytes
+            total_index_mb = (
+                inverted_sz_mb
+                + offset_vectors_sz_mb
+                + doc_table_size_mb
+                + sortable_values_size_mb
+                + key_table_size_mb
+            )
+            index_memory_bytes = int(total_index_mb * 1024 * 1024)
+
+            index_stats = {
+                "num_docs": num_docs,
+                "index_memory_bytes": index_memory_bytes,
+                "inverted_sz_mb": inverted_sz_mb,
+                "offset_vectors_sz_mb": offset_vectors_sz_mb,
+                "doc_table_size_mb": doc_table_size_mb,
+                "sortable_values_size_mb": sortable_values_size_mb,
+                "key_table_size_mb": key_table_size_mb,
+            }
         except Exception:
             num_docs = 0
+            index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
         # Count keys by prefix using optimized SCAN with pattern matching
         cache_breakdown = {}
@@ -78,5 +108,6 @@ class RedisRepository:
             "info": info,
             "dbsize": dbsize,
             "num_docs": num_docs,
+            "index_stats": index_stats,
             "cache_breakdown": cache_breakdown,
         }

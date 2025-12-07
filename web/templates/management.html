@@ -311,9 +311,16 @@
     
     <!-- Index Management -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
-      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-        <span class="text-2xl">🗂️</span> Index Management
-      </h2>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <span class="text-2xl">🗂️</span> Index Management
+        </h2>
+        <button onclick="refreshStatsWithFeedback()" 
+          id="btn-refresh-stats"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <span id="refresh-icon">🔄</span> Refresh
+        </button>
+      </div>
       
       <p class="text-surface-400 mb-6">
         Manage Redis Search indexes. Deleting an index does not delete the underlying data documents.
@@ -321,24 +328,46 @@
       
       <!-- Media Index -->
       <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-4">
           <div>
             <h3 class="font-semibold text-lg text-surface-200">Index: <span class="text-brand-400">media</span></h3>
             <p class="text-sm text-surface-500">idx:media • Prefix: media:*</p>
           </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('media')" 
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-media">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('media')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-media">
+              ➕ Create Index
+            </button>
+          </div>
         </div>
         
-        <div class="flex flex-wrap gap-3">
-          <button onclick="deleteIndex('media')" 
-            class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-            id="btn-delete-index-media">
-            🗑️ Delete Index
-          </button>
-          <button onclick="createIndex('media')"
-            class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-            id="btn-create-index-media">
-            ➕ Create Index
-          </button>
+        {% if not stats.error %}
+        <!-- Index Stats -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.num_docs | default(0)) }}</p>
+          </div>
+          
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-index-memory" class="text-3xl font-bold text-brand-400">
+              {{ ((stats.index_stats.index_memory_bytes | default(0)) / 1024 / 1024) | round(2) }} MB
+            </p>
+          </div>
+        </div>
+        {% endif %}
+        
+        <div class="mt-4">
+          <a href="/admin/index_info" class="text-brand-400 hover:text-brand-300 text-sm">
+            View Full Index Info →
+          </a>
         </div>
       </div>
       
@@ -353,33 +382,21 @@
       </div>
     </section>
     
-    <!-- Current Stats -->
+    <!-- Redis Cache -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-semibold flex items-center gap-2">
-          <span class="text-2xl">📊</span> Current Redis Stats
-        </h2>
-        <button onclick="refreshStatsWithFeedback()" 
-          id="btn-refresh-stats"
-          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-          <span id="refresh-icon">🔄</span> Refresh
-        </button>
-      </div>
+      <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+        <span class="text-2xl">💾</span> Redis Cache
+      </h2>
       
       {% if stats.error %}
       <p class="text-red-400">{{ stats.error }}</p>
       {% else %}
       
-      <!-- Search Index -->
-      <h3 class="text-lg font-medium mb-3 text-surface-300">🔍 Index: <span class="text-brand-400">media</span></h3>
-      <div class="grid md:grid-cols-3 gap-4 mb-6">
+      <!-- Overall Memory Stats -->
+      <h3 class="text-lg font-medium mb-3 text-surface-300">📊 Memory</h3>
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
-          <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.num_docs | default(0)) }}</p>
-        </div>
-        
-        <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Memory Used</p>
+          <p class="text-sm text-surface-400 mb-1">Total Memory Used</p>
           <p id="stat-memory-used" class="text-3xl font-bold text-brand-400">
             {{ ((stats.info.used_memory | default(0)) / 1024 / 1024) | round(1) }} MB
           </p>
@@ -394,7 +411,7 @@
       </div>
       
       <!-- Cache Breakdown -->
-      <h3 class="text-lg font-medium mb-3 text-surface-300">💾 Cache Breakdown</h3>
+      <h3 class="text-lg font-medium mb-3 text-surface-300">🔑 Key Breakdown</h3>
       <div class="grid md:grid-cols-4 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
@@ -429,12 +446,6 @@
         </div>
       </div>
       {% endif %}
-      
-      <div class="mt-4">
-        <a href="/admin/index_info" class="text-brand-400 hover:text-brand-300 text-sm">
-          View Search Index Info →
-        </a>
-      </div>
     </section>
     
   </main>
@@ -458,8 +469,14 @@ async function refreshStats() {
     const data = await res.json();
     
     if (data.success) {
-      // Update search index stats
+      // Update index stats
       document.getElementById('stat-num-docs').textContent = formatNumber(data.num_docs);
+      const indexMemoryEl = document.getElementById('stat-index-memory');
+      if (indexMemoryEl && data.index_stats) {
+        indexMemoryEl.textContent = formatMB(data.index_stats.index_memory_bytes || 0);
+      }
+      
+      // Update overall Redis memory stats
       document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
       document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
       
