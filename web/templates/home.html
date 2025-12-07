@@ -305,7 +305,16 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderResults(results, query) {
-    if (!results || results.length === 0) {
+    // Handle categorized results format: {tv: [], movie: [], person: []}
+    let items = [];
+    if (results && typeof results === 'object' && !Array.isArray(results)) {
+      // Combine all categories, prioritizing tv and movie over person
+      items = [...(results.tv || []), ...(results.movie || []), ...(results.person || [])];
+    } else if (Array.isArray(results)) {
+      items = results;
+    }
+
+    if (!items || items.length === 0) {
       resultsList.innerHTML = `
             <div class="p-8 text-center text-surface-500">
                 <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,7 +326,7 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
-    resultsList.innerHTML = results
+    resultsList.innerHTML = items
       .map((item, index) => {
         const title = item.search_title || "Unknown";
         const year = formatYear(item);
