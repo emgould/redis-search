@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -642,7 +643,6 @@ def run_extract_task(
 
 @app.post("/api/run-extract")
 async def api_run_extract(
-    background_tasks: BackgroundTasks,
     media_type: str = Query(...),
     start_date: str = Query(...),
     months_back: int = Query(...),
@@ -675,12 +675,13 @@ async def api_run_extract(
             content={"success": False, "error": "months_back must be between 1 and 60"}
         )
 
-    background_tasks.add_task(
-        run_extract_task,
-        media_type,
-        start_date,
-        months_back,
+    # Use a dedicated thread instead of BackgroundTasks to avoid blocking the server
+    thread = threading.Thread(
+        target=run_extract_task,
+        args=(media_type, start_date, months_back),
+        daemon=True,
     )
+    thread.start()
 
     return JSONResponse(content={
         "success": True,
