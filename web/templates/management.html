@@ -138,6 +138,11 @@
             </div>
           </div>
           <div class="flex gap-2">
+            <button onclick="openExtractModal('tv')"
+              class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-extract-tv">
+              🔍 Extract
+            </button>
             <button onclick="runEtl('tv', true)" 
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
               id="btn-etl-tv-all">
@@ -161,6 +166,11 @@
             </div>
           </div>
           <div class="flex gap-2">
+            <button onclick="openExtractModal('movie')"
+              class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-extract-movie">
+              🔍 Extract
+            </button>
             <button onclick="runEtl('movie', true)" 
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
               id="btn-etl-movie-all">
@@ -172,6 +182,83 @@
               Load Custom...
             </button>
           </div>
+        </div>
+      </div>
+      
+      <!-- Extract Task Status -->
+      <div id="extract-status-tv" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissExtractStatus('tv')" id="extract-dismiss-tv" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">📺</span>
+            <span id="extract-indicator-tv" class="animate-spin">⏳</span>
+            <span id="extract-label-tv" class="font-medium text-amber-400">Extracting TV Shows...</span>
+          </div>
+          
+          <!-- Progress Bars -->
+          <div class="space-y-3 mb-3">
+            <!-- Month Progress -->
+            <div>
+              <div class="flex justify-between text-xs text-surface-400 mb-1">
+                <span>Month Progress</span>
+                <span id="extract-month-label-tv">0 / 0</span>
+              </div>
+              <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+                <div id="extract-month-bar-tv" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <!-- Batch Progress -->
+            <div>
+              <div class="flex justify-between text-xs text-surface-400 mb-1">
+                <span>Current Month Batch Progress</span>
+                <span id="extract-batch-label-tv">0 / 0</span>
+              </div>
+              <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+                <div id="extract-batch-bar-tv" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <pre id="extract-output-tv" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+      
+      <div id="extract-status-movie" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissExtractStatus('movie')" id="extract-dismiss-movie" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🎥</span>
+            <span id="extract-indicator-movie" class="animate-spin">⏳</span>
+            <span id="extract-label-movie" class="font-medium text-amber-400">Extracting Movies...</span>
+          </div>
+          
+          <!-- Progress Bars -->
+          <div class="space-y-3 mb-3">
+            <!-- Month Progress -->
+            <div>
+              <div class="flex justify-between text-xs text-surface-400 mb-1">
+                <span>Month Progress</span>
+                <span id="extract-month-label-movie">0 / 0</span>
+              </div>
+              <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+                <div id="extract-month-bar-movie" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            
+            <!-- Batch Progress -->
+            <div>
+              <div class="flex justify-between text-xs text-surface-400 mb-1">
+                <span>Current Month Batch Progress</span>
+                <span id="extract-batch-label-movie">0 / 0</span>
+              </div>
+              <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+                <div id="extract-batch-bar-movie" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <pre id="extract-output-movie" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
       
@@ -193,7 +280,7 @@
     </section>
     
     <!-- ETL Custom Modal -->
-    <div id="etl-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div id="etl-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
       <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
         <!-- Modal Header -->
         <div class="flex items-center justify-between p-4 border-b border-surface-700">
@@ -304,6 +391,65 @@
           <button onclick="runCustomEtl()" id="btn-run-custom-etl"
             class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
             Run ETL
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Extract Modal -->
+    <div id="extract-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span id="extract-modal-icon">📺</span>
+            <span>Extract <span id="extract-modal-type-label">TV</span> Data from TMDB</span>
+          </h3>
+          <button onclick="closeExtractModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <input type="hidden" id="extract-modal-media-type" value="">
+          
+          <p class="text-sm text-surface-400">
+            Extract and enrich data from the TMDB API. This will discover media items and save enriched JSON files to the data directory.
+          </p>
+          
+          <!-- Start Date -->
+          <div>
+            <label class="block text-sm font-medium text-surface-300 mb-1">Start Date (YYYY-MM)</label>
+            <input type="month" id="extract-start-date"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+            <p class="text-xs text-surface-500 mt-1">The month to start extracting from</p>
+          </div>
+          
+          <!-- Months Back -->
+          <div>
+            <label class="block text-sm font-medium text-surface-300 mb-1">Months Back</label>
+            <input type="number" id="extract-months-back" value="1" min="1" max="60"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+            <p class="text-xs text-surface-500 mt-1">Number of months to process (going backwards from start date)</p>
+          </div>
+          
+          <!-- Preview -->
+          <div id="extract-preview" class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+            <p class="text-xs text-surface-400 mb-1">Will extract data for:</p>
+            <p id="extract-preview-text" class="text-sm text-surface-200 font-medium">-</p>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closeExtractModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="runExtract()" id="btn-run-extract"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
+            🔍 Start Extraction
           </button>
         </div>
       </div>
@@ -682,11 +828,11 @@ function openEtlModal(mediaType) {
   document.getElementById('etl-year-lte').value = '';
   document.getElementById('etl-skip-gcs').checked = false;
   
-  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
 }
 
 function closeEtlModal() {
-  document.getElementById('etl-modal').classList.add('hidden');
+  document.getElementById('etl-modal').style.display = 'none';
 }
 
 function setFilterMode(mode) {
@@ -899,6 +1045,220 @@ async function createIndex(indexName) {
   } finally {
     btnDelete.disabled = false;
     btnCreate.disabled = false;
+  }
+}
+
+// ============================================================
+// Extract Functions (TMDB API extraction)
+// ============================================================
+
+function getMonthName(monthNum) {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return months[monthNum - 1] || '';
+}
+
+function updateExtractPreview() {
+  const startDateInput = document.getElementById('extract-start-date');
+  const monthsBackInput = document.getElementById('extract-months-back');
+  const previewText = document.getElementById('extract-preview-text');
+  
+  const startDate = startDateInput.value;
+  const monthsBack = parseInt(monthsBackInput.value) || 1;
+  
+  if (!startDate) {
+    previewText.textContent = '-';
+    return;
+  }
+  
+  // Parse YYYY-MM
+  const [year, month] = startDate.split('-').map(Number);
+  
+  if (monthsBack === 1) {
+    previewText.textContent = `${getMonthName(month)} ${year}`;
+  } else {
+    // Calculate end date
+    let endYear = year;
+    let endMonth = month - monthsBack + 1;
+    while (endMonth < 1) {
+      endMonth += 12;
+      endYear--;
+    }
+    previewText.textContent = `${getMonthName(endMonth)} ${endYear} → ${getMonthName(month)} ${year} (${monthsBack} months)`;
+  }
+}
+
+function openExtractModal(mediaType) {
+  const modal = document.getElementById('extract-modal');
+  const typeLabel = document.getElementById('extract-modal-type-label');
+  const icon = document.getElementById('extract-modal-icon');
+  const mediaTypeInput = document.getElementById('extract-modal-media-type');
+  const startDateInput = document.getElementById('extract-start-date');
+  const monthsBackInput = document.getElementById('extract-months-back');
+  
+  mediaTypeInput.value = mediaType;
+  typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
+  icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
+  
+  // Set default start date to current month
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  startDateInput.value = currentYearMonth;
+  monthsBackInput.value = '1';
+  
+  // Add event listeners for preview updates
+  startDateInput.removeEventListener('change', updateExtractPreview);
+  monthsBackInput.removeEventListener('input', updateExtractPreview);
+  startDateInput.addEventListener('change', updateExtractPreview);
+  monthsBackInput.addEventListener('input', updateExtractPreview);
+  
+  updateExtractPreview();
+  modal.style.display = 'flex';
+}
+
+function closeExtractModal() {
+  document.getElementById('extract-modal').style.display = 'none';
+}
+
+function setExtractButtonDisabled(mediaType, disabled) {
+  const btn = document.getElementById(`btn-extract-${mediaType}`);
+  if (btn) btn.disabled = disabled;
+}
+
+function dismissExtractStatus(mediaType) {
+  const statusEl = document.getElementById(`extract-status-${mediaType}`);
+  if (statusEl) statusEl.classList.add('hidden');
+}
+
+async function runExtract() {
+  const mediaType = document.getElementById('extract-modal-media-type').value;
+  const startDateInput = document.getElementById('extract-start-date');
+  const monthsBack = document.getElementById('extract-months-back').value;
+  
+  if (!startDateInput.value) {
+    alert('Please select a start date');
+    return;
+  }
+  
+  // Convert from YYYY-MM format (from input) to our format
+  const startDate = startDateInput.value;
+  
+  closeExtractModal();
+  setExtractButtonDisabled(mediaType, true);
+  
+  const statusEl = document.getElementById(`extract-status-${mediaType}`);
+  const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
+  const labelEl = document.getElementById(`extract-label-${mediaType}`);
+  const outputEl = document.getElementById(`extract-output-${mediaType}`);
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = `Extracting ${mediaType === 'tv' ? 'TV Shows' : 'Movies'}...`;
+  labelEl.className = 'font-medium text-amber-400';
+  outputEl.textContent = '';
+  
+  // Hide dismiss button while running
+  const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
+  if (dismissBtn) dismissBtn.classList.add('hidden');
+  
+  // Reset progress bars
+  updateExtractProgress(mediaType, { month_current: 0, month_total: 0, batch_current: 0, batch_total: 0 });
+  
+  try {
+    const params = new URLSearchParams();
+    params.set('media_type', mediaType);
+    params.set('start_date', startDate);
+    params.set('months_back', monthsBack);
+    
+    const res = await fetch(`/api/run-extract?${params.toString()}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    // Poll for status
+    pollExtractStatus(mediaType);
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    outputEl.textContent = e.message;
+    setExtractButtonDisabled(mediaType, false);
+  }
+}
+
+function updateExtractProgress(mediaType, progress) {
+  const monthLabel = document.getElementById(`extract-month-label-${mediaType}`);
+  const monthBar = document.getElementById(`extract-month-bar-${mediaType}`);
+  const batchLabel = document.getElementById(`extract-batch-label-${mediaType}`);
+  const batchBar = document.getElementById(`extract-batch-bar-${mediaType}`);
+  
+  // Update month progress
+  const monthCurrent = progress.month_current || 0;
+  const monthTotal = progress.month_total || 0;
+  monthLabel.textContent = `${monthCurrent} / ${monthTotal}`;
+  const monthPercent = monthTotal > 0 ? (monthCurrent / monthTotal) * 100 : 0;
+  monthBar.style.width = `${monthPercent}%`;
+  
+  // Update batch progress
+  const batchCurrent = progress.batch_current || 0;
+  const batchTotal = progress.batch_total || 0;
+  batchLabel.textContent = `${batchCurrent} / ${batchTotal}`;
+  const batchPercent = batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0;
+  batchBar.style.width = `${batchPercent}%`;
+}
+
+async function pollExtractStatus(mediaType) {
+  const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
+  const labelEl = document.getElementById(`extract-label-${mediaType}`);
+  const outputEl = document.getElementById(`extract-output-${mediaType}`);
+  
+  try {
+    const res = await fetch(`/api/extract-status/${mediaType}`);
+    const data = await res.json();
+    
+    // Update output and auto-scroll to bottom
+    outputEl.textContent = data.output;
+    outputEl.scrollTop = outputEl.scrollHeight;
+    
+    // Update progress bars
+    if (data.progress) {
+      updateExtractProgress(mediaType, data.progress);
+      if (data.progress.status_message) {
+        labelEl.textContent = data.progress.status_message;
+      }
+    }
+    
+    if (data.running) {
+      setTimeout(() => pollExtractStatus(mediaType), 1000);
+    } else {
+      indicatorEl.className = '';
+      // Show dismiss button when complete
+      const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
+      if (dismissBtn) dismissBtn.classList.remove('hidden');
+      
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error: ' + data.error;
+        labelEl.className = 'font-medium text-red-400';
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'Extraction Complete!';
+        labelEl.className = 'font-medium text-green-400';
+        // Set progress to 100%
+        updateExtractProgress(mediaType, {
+          month_current: data.progress?.month_total || 1,
+          month_total: data.progress?.month_total || 1,
+          batch_current: data.progress?.batch_total || 1,
+          batch_total: data.progress?.batch_total || 1,
+        });
+      }
+      setExtractButtonDisabled(mediaType, false);
+    }
+  } catch (e) {
+    setTimeout(() => pollExtractStatus(mediaType), 1000);
   }
 }
 </script>
