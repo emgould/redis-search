@@ -72,7 +72,7 @@ echo ""
 echo "✅ ETL complete!"
 echo ""
 
-# Show output files
+# Show output files (sorted by date, newest first)
 echo "📁 Output files:"
-ls -lh "$OUTPUT_DIR"/*.json 2>/dev/null || echo "   No JSON files found in $OUTPUT_DIR"
+ls -lht "$OUTPUT_DIR"/*.json 2>/dev/null || echo "   No JSON files found in $OUTPUT_DIR"
 

@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 from typing import cast
@@ -25,6 +26,12 @@ _promote_status = {"running": False, "output": "", "error": ""}
 
 # Track ETL task status
 _etl_status = {"running": False, "output": "", "error": ""}
+
+# Track TMDB Extract task status (for running the extract scripts)
+_extract_status: dict[str, dict] = {
+    "tv": {"running": False, "output": "", "error": "", "progress": {}},
+    "movie": {"running": False, "output": "", "error": "", "progress": {}},
+}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -454,6 +461,200 @@ async def api_run_etl(
 async def etl_status():
     """Get status of ETL background task."""
     return JSONResponse(content=_etl_status)
+
+
+def parse_extract_progress(output: str) -> dict[str, int | str]:
+    """Parse ETL script output to extract progress information."""
+    progress: dict[str, int | str] = {
+        "month_current": 0,
+        "month_total": 0,
+        "batch_current": 0,
+        "batch_total": 0,
+        "current_month_label": "",
+        "status_message": "",
+    }
+
+    # Find all month progress lines: "Processing month X/Y: YYYY-MM"
+    month_matches = list(re.finditer(
+        r"Processing month (\d+)/(\d+): (\d{4}-\d{2})",
+        output
+    ))
+    if month_matches:
+        last_match = month_matches[-1]
+        progress["month_current"] = int(last_match.group(1))
+        progress["month_total"] = int(last_match.group(2))
+        progress["current_month_label"] = last_match.group(3)
+
+    # Find all batch progress lines: "Processing batch X/Y (N items)"
+    batch_matches = list(re.finditer(
+        r"Processing batch (\d+)/(\d+)",
+        output
+    ))
+    if batch_matches:
+        last_match = batch_matches[-1]
+        progress["batch_current"] = int(last_match.group(1))
+        progress["batch_total"] = int(last_match.group(2))
+
+    # Determine status message based on output
+    month_current = cast(int, progress["month_current"])
+    month_total = cast(int, progress["month_total"])
+    batch_current = cast(int, progress["batch_current"])
+    batch_total = cast(int, progress["batch_total"])
+    current_month_label = cast(str, progress["current_month_label"])
+
+    if "ETL process complete!" in output:
+        progress["status_message"] = "Complete"
+    elif month_current > 0:
+        if batch_current > 0:
+            progress["status_message"] = (
+                f"Month {month_current}/{month_total}: "
+                f"{current_month_label} - "
+                f"Batch {batch_current}/{batch_total}"
+            )
+        else:
+            progress["status_message"] = (
+                f"Discovering shows for {current_month_label}..."
+            )
+    elif "Starting" in output:
+        progress["status_message"] = "Starting extraction..."
+    else:
+        progress["status_message"] = "Initializing..."
+
+    return progress
+
+
+def run_extract_task(
+    media_type: str,
+    start_date: str,
+    months_back: int,
+):
+    """Run TMDB extract ETL script in background."""
+    global _extract_status
+    _extract_status[media_type] = {
+        "running": True,
+        "output": "",
+        "error": "",
+        "progress": {},
+    }
+
+    try:
+        # Get project root directory (parent of web/)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        # Determine which script to run
+        script_name = f"run_tmdb_{media_type}_etl.sh"
+        script_path = os.path.join(project_root, "scripts", script_name)
+
+        # Set up environment
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Build command - the script takes: start_date, months_back, [output_dir]
+        cmd = ["bash", script_path, start_date, str(months_back)]
+
+        # Use Popen for real-time output streaming
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout
+            text=True,
+            env=env,
+            bufsize=1,  # Line buffered
+            cwd=project_root,  # Run from project root
+        )
+
+        # Read output in real-time
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                output = "".join(output_lines)
+                _extract_status[media_type]["output"] = output
+                _extract_status[media_type]["progress"] = parse_extract_progress(output)
+            elif process.poll() is not None:
+                break
+
+        # Get any remaining output
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            output = "".join(output_lines)
+            _extract_status[media_type]["output"] = output
+            _extract_status[media_type]["progress"] = parse_extract_progress(output)
+
+        # Check for errors
+        if process.returncode != 0:
+            _extract_status[media_type]["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _extract_status[media_type]["error"] = str(e)
+    finally:
+        _extract_status[media_type]["running"] = False
+        # Final progress parse
+        _extract_status[media_type]["progress"] = parse_extract_progress(
+            _extract_status[media_type]["output"]
+        )
+
+
+@app.post("/api/run-extract")
+async def api_run_extract(
+    background_tasks: BackgroundTasks,
+    media_type: str = Query(...),
+    start_date: str = Query(...),
+    months_back: int = Query(...),
+):
+    """Run TMDB extract ETL to discover and enrich media from TMDB API."""
+    global _extract_status
+
+    if media_type not in ["movie", "tv"]:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Invalid media type: {media_type}"}
+        )
+
+    if _extract_status[media_type]["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": f"An extract task for {media_type} is already running"}
+        )
+
+    # Validate start_date format (YYYY-MM)
+    if not re.match(r"^\d{4}-\d{2}$", start_date):
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": "Invalid start_date format. Expected YYYY-MM"}
+        )
+
+    if months_back < 1 or months_back > 60:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": "months_back must be between 1 and 60"}
+        )
+
+    background_tasks.add_task(
+        run_extract_task,
+        media_type,
+        start_date,
+        months_back,
+    )
+
+    return JSONResponse(content={
+        "success": True,
+        "message": f"Started {media_type} extraction from {start_date} for {months_back} month(s)",
+    })
+
+
+@app.get("/api/extract-status/{media_type}")
+async def extract_status(media_type: str):
+    """Get status of TMDB extract background task."""
+    if media_type not in ["movie", "tv"]:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Invalid media type: {media_type}"}
+        )
+    return JSONResponse(content=_extract_status[media_type])
 
 
 @app.get("/api/media/{media_id}")
