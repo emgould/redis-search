@@ -3,10 +3,8 @@ TMDB Services - Modular TMDB API services
 Provides organized access to TMDB functionality through specialized api.
 """
 
-from contracts.models import MCSearchResponse
-
-import api.tmdb.wrappers as tmdb_wrapper
-from api.tmdb.models import (
+import src.api.tmdb.wrappers as tmdb_wrapper
+from src.api.tmdb.models import (
     MCBaseMediaItem,
     MCDiscoverResponse,
     MCGetTrendingMovieResult,
@@ -22,7 +20,8 @@ from api.tmdb.models import (
     MCTvCreditMediaItem,
     MCTvItem,
 )
-from api.tmdb.person import TMDBPersonService
+from src.api.tmdb.person import TMDBPersonService
+from src.contracts.models import MCSearchResponse
 
 __all__ = [
     # Wrappers

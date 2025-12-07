@@ -18,6 +18,9 @@ from src.adapters.redis_manager import RedisEnvironment, RedisManager
 from src.adapters.redis_repository import RedisRepository
 from src.services.search_service import autocomplete, reset_repo
 
+# Project root directory for subprocess cwd
+PROJECT_ROOT = str(Path(__file__).parent.parent)
+
 
 def get_latest_person_ids_file() -> dict | None:
     """Get info about the latest person IDs file in data/person/."""
@@ -725,6 +728,7 @@ def run_person_download_task(date_str: str | None = None):
             stderr=subprocess.STDOUT,
             text=True,
             env=env,
+            cwd=PROJECT_ROOT,
         )
 
         output_lines = []
@@ -795,6 +799,7 @@ def run_person_extract_task(source_file: str | None, limit: int | None):
 import asyncio
 import sys
 sys.path.insert(0, '.')
+sys.path.insert(0, 'src')
 from src.services.person_etl_service import run_person_extract
 
 async def main():
@@ -814,6 +819,7 @@ asyncio.run(main())
             stderr=subprocess.STDOUT,
             text=True,
             env=env,
+            cwd=PROJECT_ROOT,
         )
 
         output_lines = []
@@ -917,6 +923,7 @@ def run_person_load_task(
 import asyncio
 import sys
 sys.path.insert(0, '.')
+sys.path.insert(0, 'src')
 from src.services.person_etl_service import run_person_load
 
 async def main():
@@ -940,6 +947,7 @@ asyncio.run(main())
             stderr=subprocess.STDOUT,
             text=True,
             env=env,
+            cwd=PROJECT_ROOT,
         )
 
         output_lines = []
