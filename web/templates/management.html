@@ -112,50 +112,202 @@
       </div>
     </section>
     
-    <!-- Data Loading -->
+    <!-- ETL Section -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-        <span class="text-2xl">📥</span> Load GCS Metadata
+        <span class="text-2xl">📥</span> ETL - Load Data into Redis
       </h2>
       
       <p class="text-surface-400 mb-6">
-        Load TMDB movie and TV metadata from Google Cloud Storage into the currently active Redis instance.
+        Load metadata from local JSON files into the currently active Redis instance.
       </p>
       
-      <div class="flex flex-wrap gap-3 mb-6">
-        <button onclick="loadMetadata('movie')" 
-          class="px-4 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg font-medium transition-colors disabled:opacity-50"
-          id="btn-movie">
-          🎬 Load Movies
-        </button>
-        <button onclick="loadMetadata('tv')"
-          class="px-4 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg font-medium transition-colors disabled:opacity-50"
-          id="btn-tv">
-          📺 Load TV Shows
-        </button>
-        <button onclick="loadMetadata('all')"
-          class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50"
-          id="btn-all">
-          🔄 Load All
-        </button>
+      <!-- TMDB Subsection -->
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>🎬</span> TMDB Data
+        </h3>
+        
+        <!-- TV Row -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📺</span>
+            <div>
+              <p class="font-medium text-surface-200">TV Shows</p>
+              <p class="text-sm text-surface-500">tmdb_tv_*.json → <span class="text-brand-400">index:media</span></p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runEtl('tv', true)" 
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-etl-tv-all">
+              Load All
+            </button>
+            <button onclick="openEtlModal('tv')"
+              class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
+              id="btn-etl-tv-custom">
+              Load Custom...
+            </button>
+          </div>
+        </div>
+        
+        <!-- Movie Row -->
+        <div class="flex items-center justify-between py-3">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🎥</span>
+            <div>
+              <p class="font-medium text-surface-200">Movies</p>
+              <p class="text-sm text-surface-500">tmdb_movie_*.json → <span class="text-brand-400">index:media</span></p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runEtl('movie', true)" 
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-etl-movie-all">
+              Load All
+            </button>
+            <button onclick="openEtlModal('movie')"
+              class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
+              id="btn-etl-movie-custom">
+              Load Custom...
+            </button>
+          </div>
+        </div>
       </div>
       
-      <!-- Task Status -->
-      <div id="task-status" class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}">
+      <!-- ETL Task Status -->
+      <div id="etl-status" class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}">
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-3">
-            <span id="task-indicator" class="{% if task_status.running %}animate-spin{% endif %}">
+            <span id="etl-indicator" class="{% if task_status.running %}animate-spin{% endif %}">
               {% if task_status.running %}⏳{% elif task_status.error %}❌{% else %}✅{% endif %}
             </span>
-            <span id="task-label" class="font-medium">
+            <span id="etl-label" class="font-medium">
               {% if task_status.running %}Loading...{% elif task_status.error %}Error{% else %}Complete{% endif %}
             </span>
           </div>
           
-          <pre id="task-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap">{{ task_status.output }}{{ task_status.error }}</pre>
+          <pre id="etl-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap">{{ task_status.output }}{{ task_status.error }}</pre>
         </div>
       </div>
     </section>
+    
+    <!-- ETL Custom Modal -->
+    <div id="etl-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span id="modal-icon">📺</span>
+            <span>Load <span id="modal-type-label">TV</span> Data</span>
+          </h3>
+          <button onclick="closeEtlModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <input type="hidden" id="modal-media-type" value="">
+          
+          <!-- Filter Mode -->
+          <div>
+            <label class="block text-sm font-medium text-surface-300 mb-2">Filter Mode</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="setFilterMode('exact')" id="filter-exact"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
+                data-active="true">
+                Exact Date
+              </button>
+              <button type="button" onclick="setFilterMode('range')" id="filter-range"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
+                Date Range
+              </button>
+              <button type="button" onclick="setFilterMode('all')" id="filter-all"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
+                All Files
+              </button>
+            </div>
+          </div>
+          
+          <!-- Exact Date Fields -->
+          <div id="exact-fields" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year</label>
+                <input type="number" id="etl-year" placeholder="e.g. 2025" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-surface-300 mb-1">Month (optional)</label>
+                <select id="etl-month" class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                  <option value="">All months</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Range Fields -->
+          <div id="range-fields" class="space-y-3 hidden">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year From (≥)</label>
+                <input type="number" id="etl-year-gte" placeholder="e.g. 2020" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year To (≤)</label>
+                <input type="number" id="etl-year-lte" placeholder="e.g. 2025" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              </div>
+            </div>
+            <p class="text-xs text-surface-500">Leave empty for open-ended range (e.g., only From = 2020 and earlier)</p>
+          </div>
+          
+          <!-- All Files Message -->
+          <div id="all-fields" class="hidden">
+            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+              <p class="text-sm text-yellow-400">
+                ⚠️ This will load <strong>all</strong> files for this media type. This may take a while.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Options -->
+          <div class="flex items-center gap-3 pt-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="etl-skip-gcs" 
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+              <span class="text-sm text-surface-300">Skip GCS upload</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closeEtlModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="runCustomEtl()" id="btn-run-custom-etl"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+            Run ETL
+          </button>
+        </div>
+      </div>
+    </div>
     
     <!-- Index Management -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
@@ -219,7 +371,7 @@
       {% else %}
       
       <!-- Search Index -->
-      <h3 class="text-lg font-medium mb-3 text-surface-300">🔍 Search Index</h3>
+      <h3 class="text-lg font-medium mb-3 text-surface-300">🔍 Index: <span class="text-brand-400">media</span></h3>
       <div class="grid md:grid-cols-3 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
@@ -409,23 +561,43 @@ async function switchRedis(env) {
   }
 }
 
-async function loadMetadata(type) {
-  const btns = ['btn-movie', 'btn-tv', 'btn-all'];
-  btns.forEach(id => document.getElementById(id).disabled = true);
+// ETL Functions
+let currentFilterMode = 'exact';
+
+function setEtlButtonsDisabled(disabled) {
+  const btns = ['btn-etl-tv-all', 'btn-etl-tv-custom', 'btn-etl-movie-all', 'btn-etl-movie-custom'];
+  btns.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
+async function runEtl(mediaType, loadAll = false, options = {}) {
+  setEtlButtonsDisabled(true);
   
-  const statusEl = document.getElementById('task-status');
-  const indicatorEl = document.getElementById('task-indicator');
-  const labelEl = document.getElementById('task-label');
-  const outputEl = document.getElementById('task-output');
+  const statusEl = document.getElementById('etl-status');
+  const indicatorEl = document.getElementById('etl-indicator');
+  const labelEl = document.getElementById('etl-label');
+  const outputEl = document.getElementById('etl-output');
   
   statusEl.classList.remove('hidden');
   indicatorEl.textContent = '⏳';
   indicatorEl.className = 'animate-spin';
-  labelEl.textContent = `Loading ${type} metadata...`;
+  labelEl.textContent = `Loading ${mediaType} data...`;
   outputEl.textContent = '';
   
+  // Build query params
+  const params = new URLSearchParams();
+  params.set('media_type', mediaType);
+  if (loadAll) params.set('load_all', 'true');
+  if (options.year) params.set('year', options.year);
+  if (options.month) params.set('month', options.month);
+  if (options.yearGte) params.set('year_gte', options.yearGte);
+  if (options.yearLte) params.set('year_lte', options.yearLte);
+  if (options.skipGcs) params.set('skip_gcs', 'true');
+  
   try {
-    const res = await fetch(`/api/load-gcs-metadata?media_type=${type}`, { method: 'POST' });
+    const res = await fetch(`/api/run-etl?${params.toString()}`, { method: 'POST' });
     const data = await res.json();
     
     if (!data.success) {
@@ -433,30 +605,29 @@ async function loadMetadata(type) {
     }
     
     // Poll for status
-    pollTaskStatus();
+    pollEtlStatus();
   } catch (e) {
     indicatorEl.textContent = '❌';
     indicatorEl.className = '';
     labelEl.textContent = 'Error';
     outputEl.textContent = e.message;
-    btns.forEach(id => document.getElementById(id).disabled = false);
+    setEtlButtonsDisabled(false);
   }
 }
 
-async function pollTaskStatus() {
-  const btns = ['btn-movie', 'btn-tv', 'btn-all'];
-  const indicatorEl = document.getElementById('task-indicator');
-  const labelEl = document.getElementById('task-label');
-  const outputEl = document.getElementById('task-output');
+async function pollEtlStatus() {
+  const indicatorEl = document.getElementById('etl-indicator');
+  const labelEl = document.getElementById('etl-label');
+  const outputEl = document.getElementById('etl-output');
   
   try {
-    const res = await fetch('/api/task-status');
+    const res = await fetch('/api/etl-status');
     const data = await res.json();
     
     outputEl.textContent = data.output + data.error;
     
     if (data.running) {
-      setTimeout(pollTaskStatus, 2000);
+      setTimeout(pollEtlStatus, 1000);
     } else {
       indicatorEl.className = '';
       if (data.error) {
@@ -465,17 +636,90 @@ async function pollTaskStatus() {
       } else {
         indicatorEl.textContent = '✅';
         labelEl.textContent = 'Complete';
+        // Refresh stats
+        await refreshStats();
       }
-      btns.forEach(id => document.getElementById(id).disabled = false);
+      setEtlButtonsDisabled(false);
     }
   } catch (e) {
-    setTimeout(pollTaskStatus, 2000);
+    setTimeout(pollEtlStatus, 1000);
   }
 }
 
-// Poll if task is running on page load
+// Modal Functions
+function openEtlModal(mediaType) {
+  const modal = document.getElementById('etl-modal');
+  const typeLabel = document.getElementById('modal-type-label');
+  const icon = document.getElementById('modal-icon');
+  const mediaTypeInput = document.getElementById('modal-media-type');
+  
+  mediaTypeInput.value = mediaType;
+  typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
+  icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
+  
+  // Reset form
+  setFilterMode('exact');
+  document.getElementById('etl-year').value = '';
+  document.getElementById('etl-month').value = '';
+  document.getElementById('etl-year-gte').value = '';
+  document.getElementById('etl-year-lte').value = '';
+  document.getElementById('etl-skip-gcs').checked = false;
+  
+  modal.classList.remove('hidden');
+}
+
+function closeEtlModal() {
+  document.getElementById('etl-modal').classList.add('hidden');
+}
+
+function setFilterMode(mode) {
+  currentFilterMode = mode;
+  
+  // Update button styles
+  ['exact', 'range', 'all'].forEach(m => {
+    document.getElementById(`filter-${m}`).dataset.active = (m === mode).toString();
+  });
+  
+  // Show/hide fields
+  document.getElementById('exact-fields').classList.toggle('hidden', mode !== 'exact');
+  document.getElementById('range-fields').classList.toggle('hidden', mode !== 'range');
+  document.getElementById('all-fields').classList.toggle('hidden', mode !== 'all');
+}
+
+function runCustomEtl() {
+  const mediaType = document.getElementById('modal-media-type').value;
+  const skipGcs = document.getElementById('etl-skip-gcs').checked;
+  
+  let options = { skipGcs };
+  
+  if (currentFilterMode === 'exact') {
+    const year = document.getElementById('etl-year').value;
+    const month = document.getElementById('etl-month').value;
+    if (!year) {
+      alert('Please enter a year');
+      return;
+    }
+    options.year = year;
+    if (month) options.month = month;
+  } else if (currentFilterMode === 'range') {
+    const yearGte = document.getElementById('etl-year-gte').value;
+    const yearLte = document.getElementById('etl-year-lte').value;
+    if (!yearGte && !yearLte) {
+      alert('Please enter at least one year bound');
+      return;
+    }
+    if (yearGte) options.yearGte = yearGte;
+    if (yearLte) options.yearLte = yearLte;
+  }
+  // For 'all' mode, no additional options needed
+  
+  closeEtlModal();
+  runEtl(mediaType, currentFilterMode === 'all', options);
+}
+
+// Poll if ETL task is running on page load
 {% if task_status.running %}
-pollTaskStatus();
+pollEtlStatus();
 {% endif %}
 
 // Promote to Dev functionality

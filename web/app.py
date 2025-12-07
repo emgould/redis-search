@@ -17,11 +17,14 @@ from src.services.search_service import autocomplete, reset_repo
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")
 
-# Track background task status
+# Track background task status (ETL)
 _task_status = {"running": False, "output": "", "error": ""}
 
-# Track promote task status (separate from GCS load task)
+# Track promote task status (separate from ETL task)
 _promote_status = {"running": False, "output": "", "error": ""}
+
+# Track ETL task status
+_etl_status = {"running": False, "output": "", "error": ""}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -297,6 +300,159 @@ async def promote_to_dev(background_tasks: BackgroundTasks):
 async def promote_status():
     """Get status of promote background task."""
     return JSONResponse(content=_promote_status)
+
+
+def run_etl_task(
+    media_type: str,
+    load_all: bool = False,
+    year: int | None = None,
+    month: int | None = None,
+    year_gte: int | None = None,
+    year_lte: int | None = None,
+    skip_gcs: bool = False,
+    redis_host: str = "localhost",
+    redis_port: int = 6380,
+    redis_password: str | None = None,
+):
+    """Run ETL in background with specified parameters."""
+    global _etl_status
+    _etl_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command args
+        cmd = [
+            sys.executable,
+            "-u",  # Unbuffered output
+            "-m", "src.etl.run_etl",
+            "--type", media_type,
+        ]
+
+        if load_all:
+            cmd.append("--all")
+        else:
+            if year:
+                cmd.extend(["--year", str(year)])
+            if month:
+                cmd.extend(["--month", str(month)])
+            if year_gte:
+                cmd.extend(["--year-gte", str(year_gte)])
+            if year_lte:
+                cmd.extend(["--year-lte", str(year_lte)])
+
+        if skip_gcs:
+            cmd.append("--no-gcs")
+
+        # Set up environment with the selected Redis connection
+        env = os.environ.copy()
+        env["REDIS_HOST"] = redis_host
+        env["REDIS_PORT"] = str(redis_port)
+        env["REDIS_PASSWORD"] = redis_password or ""
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Use Popen for real-time output streaming
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+
+        # Read output in real-time
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _etl_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        # Get any remaining output and errors
+        remaining_stdout, stderr = process.communicate()
+        if remaining_stdout:
+            output_lines.append(remaining_stdout)
+            _etl_status["output"] = "".join(output_lines)
+        if stderr:
+            _etl_status["error"] = stderr
+
+    except Exception as e:
+        _etl_status["error"] = str(e)
+    finally:
+        _etl_status["running"] = False
+
+
+@app.post("/api/run-etl")
+async def api_run_etl(
+    background_tasks: BackgroundTasks,
+    media_type: str = Query(...),
+    load_all: bool = Query(default=False),
+    year: int | None = Query(default=None),
+    month: int | None = Query(default=None),
+    year_gte: int | None = Query(default=None),
+    year_lte: int | None = Query(default=None),
+    skip_gcs: bool = Query(default=False),
+):
+    """Run ETL to load data into the currently selected Redis."""
+    global _etl_status
+
+    if _etl_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "An ETL task is already running"}
+        )
+
+    if media_type not in ["movie", "tv"]:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Invalid media type: {media_type}"}
+        )
+
+    # Get the currently selected Redis connection
+    current_env = RedisManager.get_current_env()
+    config = RedisManager.get_config(current_env)
+
+    background_tasks.add_task(
+        run_etl_task,
+        media_type,
+        load_all,
+        year,
+        month,
+        year_gte,
+        year_lte,
+        skip_gcs,
+        config.host,
+        config.port,
+        config.password,
+    )
+
+    # Build description of what's being loaded
+    desc_parts = [media_type]
+    if load_all:
+        desc_parts.append("all files")
+    elif year:
+        desc_parts.append(f"year {year}")
+        if month:
+            desc_parts.append(f"month {month}")
+    elif year_gte or year_lte:
+        if year_gte and year_lte:
+            desc_parts.append(f"years {year_gte}-{year_lte}")
+        elif year_gte:
+            desc_parts.append(f"year >= {year_gte}")
+        else:
+            desc_parts.append(f"year <= {year_lte}")
+
+    return JSONResponse(content={
+        "success": True,
+        "message": f"Started ETL for {' '.join(desc_parts)} into {config.name}",
+    })
+
+
+@app.get("/api/etl-status")
+async def etl_status():
+    """Get status of ETL background task."""
+    return JSONResponse(content=_etl_status)
 
 
 @app.get("/api/media/{media_id}")
