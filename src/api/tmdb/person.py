@@ -4,7 +4,6 @@ Handles person details, credits, and search operations.
 """
 
 import asyncio
-from typing import cast
 
 from api.tmdb.core import TMDBService
 from api.tmdb.models import (
@@ -203,10 +202,10 @@ class TMDBPersonService(TMDBService):
             character_significance = episode_count * 10
 
             # Calculate final score (higher is better)
-            final_score = (
+            final_score: float = (
                 recency_score  # More recent first
-                + character_significance  # More episodes = more significant role
-                + popularity * 0.1  # Popularity as tiebreaker
+                + float(character_significance)  # More episodes = more significant role
+                + float(popularity) * 0.1  # Popularity as tiebreaker
             )
 
             return final_score
@@ -221,7 +220,7 @@ class TMDBPersonService(TMDBService):
         return MCPersonCreditsResult(
             person=None,
             movies=[],
-            tv_shows=cast(list[MCTvItem | MCTvCreditMediaItem], processed_tv_shows),
+            tv_shows=processed_tv_shows,
             metadata=metadata,
         )
 
@@ -504,7 +503,7 @@ class TMDBPersonService(TMDBService):
 
         return MCPersonCreditsResult(
             person=None,
-            movies=cast(list[MCMovieItem | MCMovieCreditMediaItem], processed_movies),
+            movies=processed_movies,
             tv_shows=[],
             metadata=metadata,
         )
