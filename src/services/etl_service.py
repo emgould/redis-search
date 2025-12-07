@@ -13,7 +13,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from google.cloud import storage
@@ -22,6 +22,23 @@ from redis.asyncio import Redis
 from src.adapters.config import load_env
 from src.contracts.models import MCSources, MCType
 from src.core.normalize import document_to_redis, normalize_document
+
+# Major streaming platforms for filtering
+MAJOR_STREAMING_PROVIDERS = {
+    "Netflix",
+    "Amazon Prime Video",
+    "Amazon Video",
+    "Hulu",
+    "Max",  # HBO Max rebranded
+    "HBO Max",
+    "Disney Plus",
+    "Peacock",
+    "Peacock Premium",
+    "Apple TV Plus",
+    "Apple TV",
+    "Paramount Plus",
+    "Paramount+",
+}
 
 
 @dataclass
@@ -427,11 +444,75 @@ class TMDBETLService:
         loaded_in_file = 0
         skipped_in_file = 0
 
+        # Calculate cutoff date for "last 10 years" filter
+        ten_years_ago = datetime.now() - timedelta(days=365 * 10)
+        cutoff_year = ten_years_ago.year
+
         # Process each item
         pipeline = self.redis.pipeline()
         batch_count = 0
 
         for item in results:
+            # === FILTERING LOGIC ===
+
+            # 1. Poster must exist
+            if not item.get("poster_path"):
+                skipped_in_file += 1
+                continue
+
+            # 2. Popularity must be >= 1
+            metrics = item.get("metrics", {})
+            popularity = metrics.get("popularity") or item.get("popularity") or 0
+            if popularity < 1:
+                skipped_in_file += 1
+                continue
+
+            # 3. Vote count must be > 1
+            vote_count = metrics.get("vote_count") or item.get("vote_count") or 0
+            if vote_count <= 1:
+                skipped_in_file += 1
+                continue
+
+            # 4. Runtime < 50 only allowed if vote_count >= 10
+            runtime = item.get("runtime") or 0
+            if runtime < 50 and vote_count < 10:
+                skipped_in_file += 1
+                continue
+
+            # 5. Either released in last 10 years OR on major streaming platform
+            release_date = item.get("release_date") or item.get("first_air_date") or ""
+            release_year = int(release_date[:4]) if len(release_date) >= 4 else 0
+            is_recent = release_year >= cutoff_year
+
+            is_on_major_platform = False
+            watch_providers = item.get("watch_providers", {})
+            for provider_type in ["flatrate", "buy", "rent"]:
+                providers = watch_providers.get(provider_type, [])
+                for provider in providers:
+                    if provider.get("provider_name") in MAJOR_STREAMING_PROVIDERS:
+                        is_on_major_platform = True
+                        break
+                if is_on_major_platform:
+                    break
+
+            if not is_recent and not is_on_major_platform:
+                skipped_in_file += 1
+                continue
+
+            # === DATA CLEANUP ===
+
+            # 6. Remove tmdb_cast if main_cast exists (they're the same)
+            if item.get("main_cast") and item.get("tmdb_cast"):
+                del item["tmdb_cast"]
+
+            # 7. Filter cast members without profile images
+            if item.get("main_cast"):
+                item["main_cast"] = [
+                    cast_member
+                    for cast_member in item["main_cast"]
+                    if cast_member.get("profile_path") or cast_member.get("has_image")
+                ]
+
             # Normalize the document
             search_doc = normalize_document(item, source=MCSources.TMDB, mc_type=mc_type)
 
