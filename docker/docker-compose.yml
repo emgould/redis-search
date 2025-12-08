@@ -29,10 +29,18 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
     volumes:
       - ../config:/app/config:ro
+      # Mount source code for live reload
+      - ../src:/app/src:ro
+      - ../web:/app/web:ro
+      - ../scripts:/app/scripts:ro
+      # Mount data directory for ETL input/output (read-write)
+      - ../data:/app/data
     ports:
       - "9001:8080"
     depends_on:
       - redis
+    # Override CMD to enable live reload
+    command: sh -c "uvicorn web.app:app --host 0.0.0.0 --port 8080 --reload --reload-dir /app/web --reload-dir /app/src"
 
 volumes:
   redis_data:

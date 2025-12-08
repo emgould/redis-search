@@ -686,11 +686,13 @@ async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
                 info = await redis.ft(idx_name).info()
                 num_docs = int(info.get("num_docs", 0))
                 friendly_name = idx_name[4:] if idx_name.startswith("idx:") else idx_name
-                indices.append({
-                    "name": friendly_name,
-                    "redis_name": idx_name,
-                    "num_docs": num_docs,
-                })
+                indices.append(
+                    {
+                        "name": friendly_name,
+                        "redis_name": idx_name,
+                        "num_docs": num_docs,
+                    }
+                )
             except Exception:
                 pass
 

@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install api etl redis-mac redis-docker test web-local web-docker web-docker-down lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
+.PHONY: help install api etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
 
 help:
 	@echo "Available make commands:"
@@ -32,8 +32,10 @@ help:
 	@echo ""
 	@echo "  Web App:"
 	@echo "    make web-local        - Start web app locally on port 9001"
-	@echo "    make web-docker       - Start web app in Docker on port 9001"
-	@echo "    make web-docker-down  - Stop Docker containers"
+	@echo "    make web-docker       - Start web app in Docker on port 9001 (auto-starts Redis if needed)"
+	@echo "    make web-docker-down  - Stop web container only (Redis keeps running)"
+	@echo "    make redis-docker-down - Stop Redis container"
+	@echo "    make docker-down-all  - Stop all Docker containers"
 	@echo ""
 	@echo "  Cloud Run Deployment:"
 	@echo "    make deploy SERVICE=api ENV=dev  - Deploy Search API to Cloud Run (dev)"
@@ -140,10 +142,29 @@ web-docker:
 		echo "   ✅ Tunnel already running on port 6381"; \
 	fi
 	@echo ""
-	@echo "2️⃣  Starting Docker containers..."
-	cd docker && docker-compose up --build
+	@echo "2️⃣  Checking local Redis container..."
+	@if ! docker ps --format '{{.Names}}' | grep -q '^redis-search-redis-1$$' 2>/dev/null; then \
+		echo "   Redis not running, starting it..."; \
+		cd docker && docker-compose up -d redis; \
+		sleep 3; \
+	else \
+		echo "   ✅ Redis already running"; \
+	fi
+	@echo ""
+	@echo "3️⃣  Starting web container..."
+	cd docker && docker-compose up --build web
 
 web-docker-down:
+	@echo "🛑 Stopping web container (Redis will keep running)..."
+	cd docker && docker-compose stop web
+	cd docker && docker-compose rm -f web
+
+redis-docker-down:
+	@echo "🛑 Stopping Redis container..."
+	cd docker && docker-compose stop redis
+
+docker-down-all:
+	@echo "🛑 Stopping all Docker containers..."
 	cd docker && docker-compose down
 
 index:
