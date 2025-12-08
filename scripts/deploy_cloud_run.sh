@@ -90,8 +90,8 @@ gcloud run deploy "${SERVICE_NAME}" \
     --platform managed \
     --vpc-connector "${VPC_CONNECTOR}" \
     --vpc-egress all-traffic \
-    --set-secrets "ETL_ENV=${SECRET_NAME}:latest" \
-    --set-env-vars "DISABLE_WEB_UI=true" \
+    --set-secrets "/secrets/env=${SECRET_NAME}:latest" \
+    --set-env-vars "DISABLE_WEB_UI=true,ETL_ENV=/secrets/env" \
     --allow-unauthenticated \
     --memory 1Gi \
     --timeout 3600 \

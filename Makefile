@@ -108,6 +108,20 @@ test:
 	. venv/bin/activate && pytest -q
 
 web local:
+	@echo "🐳 Starting local environment..."
+	@echo ""
+	@echo "1️⃣  Checking IAP tunnel to public Redis..."
+	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
+		echo "   Tunnel not running, starting it in background..."; \
+		(nohup gcloud compute start-iap-tunnel redis-stack-vm 6379 \
+			--local-host-port=localhost:6381 \
+			--zone=us-central1-a \
+			--project=media-circle > /tmp/iap-tunnel.log 2>&1 &) && \
+		echo "   Tunnel started (logs: /tmp/iap-tunnel.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ Tunnel already running on port 6381"; \
+	fi
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
 web docker:
