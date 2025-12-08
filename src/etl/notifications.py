@@ -208,10 +208,20 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     """
     Send ETL run summary email.
 
-    Requires environment variables:
+    Supports SendGrid SMTP or standard Gmail SMTP.
+
+    SendGrid env vars:
+    - SENDGRID_PASSWORD: SendGrid API key
+    - SENDGRID_USERNAME: Usually "apikey" (literal)
+    - SENDGRID_SERVER: smtp.sendgrid.net (optional, default)
+    - SENDGRID_PORT: 587 (optional, default)
+
+    Gmail env vars (fallback):
+    - SMTP_USER: Gmail address
+    - SMTP_PASSWORD or SMTP_APP_PASSWORD: Gmail App Password
+
+    Common:
     - ETL_NOTIFICATION_EMAIL: Recipient email address
-    - SMTP_USER: Gmail address to send from
-    - SMTP_APP_PASSWORD: Gmail App Password (not regular password)
 
     Args:
         metadata: ETL run metadata with job results
@@ -224,12 +234,33 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
         logger.info("ETL_NOTIFICATION_EMAIL not set, skipping email notification")
         return False
 
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_APP_PASSWORD")
+    # Check for SendGrid first
+    sendgrid_password = os.getenv("SENDGRID_PASSWORD")
+    if sendgrid_password:
+        smtp_server = os.getenv("SENDGRID_SERVER", "smtp.sendgrid.net")
+        smtp_port = int(os.getenv("SENDGRID_PORT", "587"))
+        smtp_user = os.getenv("SENDGRID_USERNAME", "apikey")
+        smtp_password = sendgrid_password
+        from_email = os.getenv("SENDGRID_FROM_EMAIL", recipient)
+        use_tls = smtp_port == 587
+    else:
+        # Fall back to Gmail SMTP
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 465
+        gmail_user = os.getenv("SMTP_USER")
+        gmail_password = os.getenv("SMTP_APP_PASSWORD") or os.getenv("SMTP_PASSWORD")
+        use_tls = False
 
-    if not smtp_user or not smtp_password:
-        logger.warning("SMTP credentials not configured, skipping email notification")
-        return False
+        if not gmail_user or not gmail_password:
+            logger.warning(
+                "No email credentials configured (SENDGRID_PASSWORD or SMTP_USER), "
+                "skipping email notification"
+            )
+            return False
+
+        smtp_user = gmail_user
+        smtp_password = gmail_password
+        from_email = gmail_user
 
     # Build email
     status_prefix = {
@@ -246,7 +277,7 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
 
     # Create multipart message with both plain text and HTML
     msg = MIMEMultipart("alternative")
-    msg["From"] = smtp_user
+    msg["From"] = from_email
     msg["To"] = recipient
     msg["Subject"] = subject
 
@@ -258,10 +289,18 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     msg.attach(html_part)
 
     try:
-        logger.info(f"Sending ETL summary email to {recipient}")
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, recipient, msg.as_string())
+        logger.info(f"Sending ETL summary email to {recipient} via {smtp_server}")
+        if use_tls:
+            # TLS on port 587
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(from_email, recipient, msg.as_string())
+        else:
+            # SSL on port 465
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(smtp_user, smtp_password)
+                server.sendmail(from_email, recipient, msg.as_string())
         logger.info("ETL summary email sent successfully")
         return True
     except Exception as e:
