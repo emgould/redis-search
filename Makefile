@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
+.PHONY: help install api etl redis-mac redis-docker test docker-up docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
 
 help:
 	@echo "Available make commands:"
@@ -32,8 +32,7 @@ help:
 	@echo "    make seed          - Seed example data"
 	@echo ""
 	@echo "  Docker:"
-	@echo "    make docker-api    - Run API in Docker (uses LOCAL_DEV=true)"
-	@echo "    make docker-etl    - Run ETL in Docker (uses LOCAL_DEV=true)"
+	@echo "    make docker-up     - Start web app in Docker on port 9001"
 	@echo "    make docker-down   - Stop all Docker containers"
 	@echo ""
 	@echo "  Cloud Run Deployment:"
@@ -111,11 +110,24 @@ test:
 web:
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
-docker-api:
-	cd docker && docker-compose up search_api
-
-docker-etl:
-	cd docker && docker-compose run etl
+docker-up:
+	@echo "🐳 Starting Docker environment..."
+	@echo ""
+	@echo "1️⃣  Checking IAP tunnel to public Redis..."
+	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
+		echo "   Tunnel not running, starting it in background..."; \
+		(nohup gcloud compute start-iap-tunnel redis-stack-vm 6379 \
+			--local-host-port=localhost:6381 \
+			--zone=us-central1-a \
+			--project=media-circle > /tmp/iap-tunnel.log 2>&1 &) && \
+		echo "   Tunnel started (logs: /tmp/iap-tunnel.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ Tunnel already running on port 6381"; \
+	fi
+	@echo ""
+	@echo "2️⃣  Starting Docker containers..."
+	cd docker && docker-compose up --build
 
 docker-down:
 	cd docker && docker-compose down

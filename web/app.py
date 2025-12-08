@@ -28,6 +28,21 @@ from services.search_service import (
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
 
+# Check if web UI is disabled (for Cloud Run deployment without auth)
+WEB_UI_DISABLED = os.getenv("DISABLE_WEB_UI", "").lower() in ("true", "1", "yes")
+
+
+def require_web_ui_enabled() -> None:
+    """
+    FastAPI dependency that blocks access when web UI is disabled.
+
+    Use with: Depends(require_web_ui_enabled)
+
+    Set DISABLE_WEB_UI=true to disable web UI routes (for Cloud Run without auth).
+    """
+    if WEB_UI_DISABLED:
+        raise HTTPException(status_code=404, detail="Web UI is disabled in this environment")
+
 
 def verify_api_key(x_api_key: str | None = None) -> bool:
     """
@@ -65,10 +80,7 @@ def require_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> 
     Raises HTTPException 401 if not authorized.
     """
     if not verify_api_key(x_api_key):
-        raise HTTPException(
-            status_code=401,
-            detail="Unauthorized: X-API-Key header required"
-        )
+        raise HTTPException(status_code=401, detail="Unauthorized: X-API-Key header required")
 
 
 def verify_etl_auth(
@@ -170,7 +182,7 @@ _changes_job_live_stats: dict[str, Any] = {}
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     current_env = RedisManager.get_current_env()
     return templates.TemplateResponse(
         "home.html",
@@ -182,7 +194,11 @@ async def home(request: Request):
 
 
 @app.get("/etl", response_class=HTMLResponse)
-async def etl_page(request: Request, _: None = Depends(require_api_key)):
+async def etl_page(
+    request: Request,
+    _auth: None = Depends(require_api_key),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     """ETL Runner dashboard for monitoring and triggering ETL jobs."""
     current_env = RedisManager.get_current_env()
 
@@ -217,7 +233,9 @@ async def api_autocomplete(q: str = Query(default="")):
 
 
 @app.get("/autocomplete_test", response_class=HTMLResponse)
-async def autocomplete_test(request: Request, q: str = ""):
+async def autocomplete_test(
+    request: Request, q: str = "", _ui: None = Depends(require_web_ui_enabled)
+):
     results = await autocomplete(q) if q else []
     return templates.TemplateResponse(
         "autocomplete.html", {"request": request, "query": q, "results": results}
@@ -225,7 +243,11 @@ async def autocomplete_test(request: Request, q: str = ""):
 
 
 @app.get("/management", response_class=HTMLResponse)
-async def management(request: Request, _: None = Depends(require_api_key)):
+async def management(
+    request: Request,
+    _auth: None = Depends(require_api_key),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     """Management dashboard with Redis environment switcher and data loading."""
     current_env = RedisManager.get_current_env()
 
@@ -1868,7 +1890,7 @@ async def create_index(index_name: str):
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
-async def index_info(request: Request):
+async def index_info(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     redis = get_redis()
     try:
         raw = await redis.ft("idx:media").info()

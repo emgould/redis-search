@@ -7,57 +7,30 @@ services:
     volumes:
       - redis_data:/data
     environment:
-      # Auto-accept RedisInsight EULA
       - RIPROXYEULA=true
-      # Persistence: AOF + RDB snapshots (same as GCE VM)
       - REDIS_ARGS=--appendonly yes --save 60 1
 
-  search_api:
+  web:
     build:
       context: ..
       dockerfile: src/search_api/Dockerfile
+    env_file:
+      - ../config/local.env
     environment:
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - ENVIRONMENT=${ENVIRONMENT:-dev}
-      - LOCAL_DEV=${LOCAL_DEV:-true}
-      # For GCP authentication in local dev (mounted below)
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+      # Connect to Redis container via Docker network (service name)
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Public Redis still goes through host tunnel
+      PUBLIC_REDIS_HOST: host.docker.internal
+      PUBLIC_REDIS_PORT: "6381"
+      ENVIRONMENT: local
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
     volumes:
-      # Mount GCP credentials for local development
-      # Falls back gracefully if file doesn't exist when using LOCAL_DEV=true
-      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
-      # Mount local config for LOCAL_DEV mode
       - ../config:/app/config:ro
-    depends_on:
-      - redis
     ports:
-      - "8080:8080"
-    command: >
-      bash -c "
-        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} search_api &&
-        python -m src.search_api.main"
-
-  etl:
-    build:
-      context: ..
-      dockerfile: src/etl/Dockerfile
-    environment:
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - ENVIRONMENT=${ENVIRONMENT:-dev}
-      - LOCAL_DEV=${LOCAL_DEV:-true}
-      # For GCP authentication in local dev (mounted below)
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
-    volumes:
-      # Mount GCP credentials for local development
-      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
-      # Mount local config for LOCAL_DEV mode
-      - ../config:/app/config:ro
+      - "9001:8080"
     depends_on:
       - redis
-    command: >
-      bash -c "
-        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} etl &&
-        python -m src.etl.run_etl"
 
 volumes:
   redis_data:
