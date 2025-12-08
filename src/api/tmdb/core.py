@@ -9,8 +9,6 @@ import asyncio
 from datetime import datetime
 from typing import Any, Literal, cast
 
-from contracts.models import MCType
-
 from api.subapi.comscore import BoxOfficeData, comscore_wrapper
 from api.tmdb.auth import Auth
 from api.tmdb.models import MCBaseMediaItem, MCMovieItem, MCTvItem
@@ -21,6 +19,7 @@ from api.tmdb.tmdb_models import (
     TMDBProvidersResponse,
     TMDBTvDetailsResult,
 )
+from contracts.models import MCType
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
@@ -44,7 +43,7 @@ TMDBFunctionCache = RedisCache(
     prefix="tmdb_func",
     verbose=False,
     isClassMethod=False,  # For standalone functions
-    version="1.2.7",  # get_popular_tv now uses discover endpoint with US streaming filter
+    version="1.2.9",  # Fixed TV credits: sort by recency BEFORE applying limit
 )
 TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,

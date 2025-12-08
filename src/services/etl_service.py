@@ -9,6 +9,7 @@ This module handles:
 """
 
 import asyncio
+import gzip
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -106,16 +107,31 @@ class GCSUploader:
         self._pending_uploads: list[asyncio.Future] = []
 
     def _upload_file_sync(self, local_path: Path, gcs_path: str) -> str:
-        """Synchronous upload (runs in thread pool)."""
+        """Synchronous upload with gzip compression (runs in thread pool)."""
         if not self.bucket_name:
             return f"Skipped (no bucket configured): {gcs_path}"
 
         try:
+            # Read and compress the file
+            with open(local_path, "rb") as f:
+                original_data = f.read()
+            compressed_data = gzip.compress(original_data)
+
+            # Calculate compression ratio for logging
+            original_size = len(original_data)
+            compressed_size = len(compressed_data)
+            ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
+
+            # Upload compressed data with .gz extension
             client = storage.Client()
             bucket = client.bucket(self.bucket_name)
-            blob = bucket.blob(gcs_path)
-            blob.upload_from_filename(str(local_path))
-            return f"Uploaded: gs://{self.bucket_name}/{gcs_path}"
+            gcs_path_gz = f"{gcs_path}.gz"
+            blob = bucket.blob(gcs_path_gz)
+            blob.upload_from_string(
+                compressed_data,
+                content_type="application/gzip",
+            )
+            return f"Uploaded: gs://{self.bucket_name}/{gcs_path_gz} ({ratio:.1f}% smaller)"
         except Exception as e:
             return f"Upload failed for {gcs_path}: {e}"
 
@@ -126,23 +142,29 @@ class GCSUploader:
         self._pending_uploads.append(future)
 
     async def upload_json(self, data: dict, gcs_path: str) -> None:
-        """Queue a non-blocking JSON upload."""
+        """Queue a non-blocking JSON upload with gzip compression."""
         if not self.bucket_name:
             print(f"  ⏭️  GCS upload skipped (no bucket): {gcs_path}")
             return
 
         loop = asyncio.get_event_loop()
 
-        def upload_sync():
+        def upload_sync() -> str:
             try:
+                # Compress JSON data
+                json_bytes = json.dumps(data, default=str).encode("utf-8")
+                compressed_data = gzip.compress(json_bytes)
+
+                # Upload with .gz extension
                 client = storage.Client()
                 bucket = client.bucket(self.bucket_name)
-                blob = bucket.blob(gcs_path)
+                gcs_path_gz = f"{gcs_path}.gz"
+                blob = bucket.blob(gcs_path_gz)
                 blob.upload_from_string(
-                    json.dumps(data, default=str),
-                    content_type="application/json",
+                    compressed_data,
+                    content_type="application/gzip",
                 )
-                return f"Uploaded: gs://{self.bucket_name}/{gcs_path}"
+                return f"Uploaded: gs://{self.bucket_name}/{gcs_path_gz}"
             except Exception as e:
                 return f"Upload failed for {gcs_path}: {e}"
 

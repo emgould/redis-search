@@ -52,7 +52,9 @@ Shows{% endblock %} {% block body %}
   <!-- Redis Connection Indicator -->
   <div class="px-4 py-1.5 flex justify-end">
     <div class="flex items-center gap-1.5 text-xs text-surface-500">
-      <span class="w-1.5 h-1.5 rounded-full {% if current_env == 'local' %}bg-green-500{% else %}bg-blue-500{% endif %}"></span>
+      <span
+        class="w-1.5 h-1.5 rounded-full {% if current_env == 'local' %}bg-green-500{% else %}bg-blue-500{% endif %}"
+      ></span>
       <span>{{ current_env | capitalize }} Redis</span>
     </div>
   </div>
@@ -304,8 +306,72 @@ Shows{% endblock %} {% block body %}
     );
   }
 
+  // Track expanded state for each category
+  const expandedCategories = { tv: false, movie: false, person: false };
+
+  function toggleCategoryExpand(category) {
+    expandedCategories[category] = !expandedCategories[category];
+    // Re-render with current results
+    if (window._lastResults && window._lastQuery) {
+      renderResults(window._lastResults, window._lastQuery);
+    }
+  }
+
+  // Make toggleCategoryExpand globally accessible
+  window.toggleCategoryExpand = toggleCategoryExpand;
+
   function renderResults(results, query) {
-    if (!results || results.length === 0) {
+    // Store for re-render on expand/collapse
+    window._lastResults = results;
+    window._lastQuery = query;
+
+    // Handle categorized results format: {tv: [], movie: [], person: []}
+    const categories = [];
+
+    if (results && typeof results === "object" && !Array.isArray(results)) {
+      // Build category objects with items and top popularity
+      if (results.tv && results.tv.length > 0) {
+        categories.push({
+          key: "tv",
+          label: "📺 TV Shows",
+          items: results.tv,
+          topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
+          color: "blue",
+        });
+      }
+      if (results.movie && results.movie.length > 0) {
+        categories.push({
+          key: "movie",
+          label: "🎬 Movies",
+          items: results.movie,
+          topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
+          color: "purple",
+        });
+      }
+      if (results.person && results.person.length > 0) {
+        categories.push({
+          key: "person",
+          label: "👤 People",
+          items: results.person,
+          topPopularity: parseFloat(results.person[0]?.popularity) || 0,
+          color: "green",
+        });
+      }
+
+      // Sort categories by top popularity (highest first)
+      categories.sort((a, b) => b.topPopularity - a.topPopularity);
+    } else if (Array.isArray(results) && results.length > 0) {
+      // Fallback for flat array format
+      categories.push({
+        key: "all",
+        label: "🔍 Results",
+        items: results,
+        topPopularity: 0,
+        color: "brand",
+      });
+    }
+
+    if (categories.length === 0) {
       resultsList.innerHTML = `
             <div class="p-8 text-center text-surface-500">
                 <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,97 +383,250 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
-    resultsList.innerHTML = results
-      .map((item, index) => {
-        const title = item.search_title || "Unknown";
-        const year = formatYear(item);
-        const poster = getPosterUrl(item);
-        const rating = getRating(item);
-        const overview = item.overview || "";
-        // Cast is stored as array of strings directly
-        const cast = (item.cast || []).slice(0, 3).join(", ");
+    // Render each category section
+    resultsList.innerHTML = categories
+      .map((category, catIndex) => {
+        const isExpanded = expandedCategories[category.key] || false;
+        const displayItems = isExpanded
+          ? category.items
+          : category.items.slice(0, 3);
+        const hasMore = category.items.length > 3;
+        const hiddenCount = category.items.length - 3;
+
+        const itemsHtml = displayItems
+          .map((item, index) => renderResultItem(item, index, query))
+          .join("");
 
         return `
-            <div class="group flex gap-4 p-4 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800 last:border-b-0"
-                 data-media-id="${item.id}"
-                 style="animation-delay: ${index * 30}ms">
-                <!-- Poster -->
-                <div class="flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden bg-surface-800">
-                    ${
-                      poster
-                        ? `<img src="${poster}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600\\'><svg class=\\'w-8 h-8\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
-                        : `<div class="w-full h-full flex items-center justify-center text-surface-600">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
-                            </svg>
-                        </div>`
-                    }
-                </div>
-                
-                <!-- Content -->
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <h3 class="font-semibold text-white group-hover:text-brand-400 transition-colors truncate">
-                                ${highlightMatch(title, query)}
-                            </h3>
-                            <div class="flex items-center gap-2 mt-1 text-sm">
-                                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
-                                  item
-                                )}">
-                                    ${getTypeLabel(item)}
-                                </span>
-                                ${
-                                  year
-                                    ? `<span class="text-surface-500">${year}</span>`
-                                    : ""
-                                }
-                                ${
-                                  rating > 0
-                                    ? `
-                                    <span class="flex items-center gap-1 text-surface-400">
-                                        <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                        </svg>
-                                        ${rating.toFixed(1)}
-                                    </span>
-                                `
-                                    : ""
-                                }
-                            </div>
-                        </div>
-                    </div>
-                    ${
-                      overview
-                        ? `
-                        <p class="mt-2 text-sm text-surface-400 line-clamp-2">${overview.substring(
-                          0,
-                          120
-                        )}${overview.length > 120 ? "..." : ""}</p>
-                    `
-                        : ""
-                    }
-                    ${
-                      cast
-                        ? `
-                        <p class="mt-1 text-xs text-surface-500 truncate">
-                            <span class="text-surface-600">Cast:</span> ${cast}
-                        </p>
-                    `
-                        : ""
-                    }
-                </div>
-                
-                <!-- Arrow -->
-                <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </div>
-            </div>
-        `;
+        ${
+          catIndex > 0
+            ? '<div class="border-t border-surface-700 my-2"></div>'
+            : ""
+        }
+        <div class="category-section" data-category="${category.key}">
+          <div class="flex items-center justify-between px-4 py-2 bg-surface-800/50">
+            <h4 class="text-sm font-medium text-surface-300">${
+              category.label
+            }</h4>
+            <span class="text-xs text-surface-500">${
+              category.items.length
+            } result${category.items.length !== 1 ? "s" : ""}</span>
+          </div>
+          <div class="category-items">
+            ${itemsHtml}
+          </div>
+          ${
+            hasMore
+              ? `
+            <button onclick="toggleCategoryExpand('${category.key}')" 
+                    class="w-full py-2 text-sm text-${
+                      category.color
+                    }-400 hover:text-${
+                  category.color
+                }-300 hover:bg-surface-800/50 transition-colors flex items-center justify-center gap-1">
+              ${
+                isExpanded
+                  ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg> Show less'
+                  : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Show ${hiddenCount} more`
+              }
+            </button>
+          `
+              : ""
+          }
+        </div>
+      `;
       })
       .join("");
+  }
+
+  function renderResultItem(item, index, query) {
+    const title = item.search_title || "Unknown";
+    const year = formatYear(item);
+    const poster = getPosterUrl(item);
+    const rating = getRating(item);
+    const overview = item.overview || "";
+    const isPerson = item.mc_type === "person";
+
+    // For persons, show different info
+    if (isPerson) {
+      return renderPersonItem(item, index, query);
+    }
+
+    // Cast is stored as array of strings directly
+    const cast = (item.cast || []).slice(0, 3).join(", ");
+
+    // source_id is the numeric TMDB ID stored in the index
+    const sourceId = item.source_id || "";
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.id}"
+             data-source-id="${sourceId}"
+             data-mc-type="${item.mc_type || ""}"
+             data-mc-subtype="${item.mc_subtype || ""}"
+             style="animation-delay: ${index * 30}ms">
+            <!-- Poster -->
+            <div class="flex-shrink-0 w-12 h-18 rounded-lg overflow-hidden bg-surface-800">
+                ${
+                  poster
+                    ? `<img src="${poster}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
+                    : `<div class="w-full h-full flex items-center justify-center text-surface-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                        </svg>
+                    </div>`
+                }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-brand-400 transition-colors truncate text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs">
+                            ${
+                              year
+                                ? `<span class="text-surface-500">${year}</span>`
+                                : ""
+                            }
+                            ${
+                              rating > 0
+                                ? `
+                                <span class="flex items-center gap-1 text-surface-400">
+                                    <svg class="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                    ${rating.toFixed(1)}
+                                </span>
+                            `
+                                : ""
+                            }
+                        </div>
+                    </div>
+                </div>
+                ${
+                  cast
+                    ? `
+                    <p class="mt-0.5 text-xs text-surface-500 truncate">${cast}</p>
+                `
+                    : ""
+                }
+            </div>
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </div>
+        </div>
+    `;
+  }
+
+  function renderPersonItem(item, index, query) {
+    const name = item.search_title || "Unknown";
+    const poster = getPosterUrl(item);
+    const department = item.known_for_department || "";
+    const age = item.age;
+    const isDeceased = item.is_deceased;
+    const overview = item.overview || "";
+    const knownForTitles = item.known_for_titles || [];
+
+    // Format department display (capitalize first letter)
+    const departmentDisplay = department
+      ? department.charAt(0).toUpperCase() + department.slice(1).toLowerCase()
+      : "";
+
+    // Format age display
+    let ageDisplay = "";
+    if (age) {
+      if (isDeceased) {
+        ageDisplay = `Died at ${age}`;
+      } else {
+        ageDisplay = `Age ${age}`;
+      }
+    }
+
+    // Truncate biography to ~80 chars with ellipsis
+    let bioSnippet = "";
+    if (overview) {
+      if (overview.length > 80) {
+        bioSnippet = overview.substring(0, 80).trim() + "...";
+      } else {
+        bioSnippet = overview;
+      }
+    }
+
+    // Known for titles
+    const knownForDisplay =
+      knownForTitles.length > 0 ? knownForTitles.join(", ") : "";
+
+    // source_id is the numeric TMDB ID stored in the index
+    const sourceId = item.source_id || "";
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.id}"
+             data-source-id="${sourceId}"
+             data-mc-type="person"
+             data-mc-subtype="${item.mc_subtype || ""}"
+             style="animation-delay: ${index * 30}ms">
+            <!-- Profile Photo -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-surface-800">
+                ${
+                  poster
+                    ? `<img src="${poster}" alt="${name}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600 text-lg font-medium\\'>${name.charAt(
+                        0
+                      )}</div>'">`
+                    : `<div class="w-full h-full flex items-center justify-center text-surface-400 text-lg font-medium">
+                        ${name.charAt(0)}
+                    </div>`
+                }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-brand-400 transition-colors truncate text-sm">
+                            ${highlightMatch(name, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            ${
+                              departmentDisplay
+                                ? `<span class="text-green-400 font-medium">${departmentDisplay}</span>`
+                                : ""
+                            }
+                            ${
+                              ageDisplay
+                                ? `<span class="text-surface-500">${ageDisplay}</span>`
+                                : ""
+                            }
+                        </div>
+                    </div>
+                </div>
+                ${
+                  bioSnippet
+                    ? `<p class="mt-1 text-xs text-surface-400 line-clamp-2">${bioSnippet}</p>`
+                    : ""
+                }
+                ${
+                  knownForDisplay
+                    ? `<p class="mt-0.5 text-xs text-surface-500 truncate">Known for: ${knownForDisplay}</p>`
+                    : ""
+                }
+            </div>
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </div>
+        </div>
+    `;
   }
 
   async function performSearch(query) {
@@ -486,13 +705,13 @@ Shows{% endblock %} {% block body %}
   const modalLoading = document.getElementById("modal-loading");
   const modalBody = document.getElementById("modal-body");
 
-  function openModal(mediaId) {
+  function openModal(mediaId, sourceId, mcType, mcSubtype) {
     modal.classList.remove("hidden");
     modalLoading.classList.remove("hidden");
     modalBody.classList.add("hidden");
     document.body.style.overflow = "hidden";
 
-    fetchMediaDetail(mediaId);
+    fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype);
   }
 
   function closeModal() {
@@ -508,24 +727,39 @@ Shows{% endblock %} {% block body %}
     }
   });
 
-  async function fetchMediaDetail(mediaId) {
+  async function fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype) {
     try {
-      const response = await fetch(`/api/media/${encodeURIComponent(mediaId)}`);
+      // Use the /api/details endpoint with POST
+      const params = new URLSearchParams({
+        mc_id: mediaId,
+        source_id: sourceId,
+        mc_type: mcType || "movie",
+      });
+      if (mcSubtype) params.append("mc_subtype", mcSubtype);
+
+      const response = await fetch(`/api/details?${params.toString()}`, {
+        method: "POST",
+      });
       const data = await response.json();
 
       if (response.ok) {
-        renderMediaDetail(data);
+        if (mcType === "person") {
+          renderPersonDetail(data);
+        } else {
+          renderMediaDetail(data);
+        }
       } else {
         modalBody.innerHTML = `
           <div class="p-16 text-center text-red-400">
-            <p>Failed to load media details</p>
+            <p>Failed to load details: ${data.error || "Unknown error"}</p>
           </div>
         `;
       }
     } catch (error) {
+      console.error("Error fetching details:", error);
       modalBody.innerHTML = `
         <div class="p-16 text-center text-red-400">
-          <p>Error loading media details</p>
+          <p>Error loading details</p>
         </div>
       `;
     } finally {
@@ -545,29 +779,49 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderMediaDetail(data) {
-    const title = data.search_title || "Unknown";
-    const overview = data.overview || "No description available.";
+    const title = data.search_title || data.title || data.name || "Unknown";
+    const overview =
+      data.full_overview || data.overview || "No description available.";
     const type = data.mc_type;
-    const rating = data.rating || 0;
+    const rating = data.rating || data.vote_average || 0;
     const popularity = data.popularity || 0;
     const year = data.year;
-    // Cast is stored as array of strings in normalized format
-    const castNames = data.cast || [];
-    // For the detail modal, we don't have the full original data anymore,
-    // so we work with what's available in the normalized format
-    const posterUrl = data.image;
-    const backdropUrl = null; // Not available in normalized format
-    const genres = []; // Not available in normalized format
-    const voteCount = 0; // Not available in normalized format
-    const runtime = null; // Not available in normalized format
-    const seasons = null; // Not available in normalized format
-    const episodes = null; // Not available in normalized format
-    const status = null; // Not available in normalized format
-    const tagline = null; // Not available in normalized format
-    const director = null; // Not available in normalized format
 
-    // Create cast display list from string array
-    const castList = castNames.map(name => ({ name, character: "" }));
+    // Use enriched cast with images from TMDB
+    const mainCast = data.main_cast || [];
+    const tmdbCast = data.tmdb_cast?.cast || [];
+
+    // Use enriched data
+    const posterUrl =
+      data.image ||
+      (data.poster_path
+        ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
+        : null);
+    const backdropUrl = data.backdrop_path
+      ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}`
+      : null;
+    const genres = data.genres || [];
+    const voteCount = data.vote_count || 0;
+    const runtime = data.runtime;
+    const seasons = data.number_of_seasons;
+    const episodes = data.number_of_episodes;
+    const status = data.status;
+    const tagline = data.tagline;
+    const director = data.director?.name || null;
+
+    // Watch providers
+    const watchProviders = data.watch_providers || {};
+    const streamingPlatform = data.streaming_platform;
+    const flatrate = watchProviders.flatrate || [];
+    const rent = watchProviders.rent || [];
+    const buy = watchProviders.buy || [];
+
+    // Trailers
+    const primaryTrailer = data.primary_trailer;
+    const trailers = data.trailers || [];
+
+    // Get the best cast data available (prefer tmdbCast with images)
+    const castToShow = tmdbCast.length > 0 ? tmdbCast : mainCast;
 
     modalBody.innerHTML = `
       <!-- Backdrop -->
@@ -575,8 +829,8 @@ Shows{% endblock %} {% block body %}
         backdropUrl
           ? `
         <div class="relative h-48 md:h-64 overflow-hidden rounded-t-2xl">
-          <img src="${backdropUrl}" alt="" class="w-full h-full object-cover opacity-50">
-          <div class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"></div>
+          <img src="${backdropUrl}" alt="" class="w-full h-full object-cover opacity-60">
+          <div class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/60 to-transparent"></div>
         </div>
       `
           : `<div class="h-8"></div>`
@@ -617,17 +871,11 @@ Shows{% endblock %} {% block body %}
               <span class="px-3 py-1 rounded-full text-sm font-medium ${
                 type === "tv"
                   ? "bg-blue-500/20 text-blue-400"
-                  : type === "person"
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-purple-500/20 text-purple-400"
+                  : "bg-purple-500/20 text-purple-400"
               }">
-                ${type === "tv" ? "TV Series" : type === "person" ? "Person" : "Movie"}
+                ${type === "tv" ? "TV Series" : "Movie"}
               </span>
-              ${
-                year
-                  ? `<span class="text-surface-400">${year}</span>`
-                  : ""
-              }
+              ${year ? `<span class="text-surface-400">${year}</span>` : ""}
               ${
                 runtime
                   ? `<span class="text-surface-500">${runtime} min</span>`
@@ -640,7 +888,16 @@ Shows{% endblock %} {% block body %}
                     }</span>`
                   : ""
               }
-              ${status ? `<span class="text-surface-500">${status}</span>` : ""}
+              ${
+                episodes
+                  ? `<span class="text-surface-500">${episodes} Episodes</span>`
+                  : ""
+              }
+              ${
+                status
+                  ? `<span class="text-surface-500 capitalize">${status}</span>`
+                  : ""
+              }
             </div>
             
             <!-- Rating -->
@@ -694,34 +951,193 @@ Shows{% endblock %} {% block body %}
             <!-- Director -->
             ${
               director
-                ? `
-              <div class="mt-4">
-                <span class="text-surface-500">Directed by</span>
-                <span class="text-white ml-1">${director}</span>
-              </div>
-            `
+                ? `<div class="mt-4"><span class="text-surface-500">Directed by</span><span class="text-white ml-1">${director}</span></div>`
                 : ""
             }
           </div>
         </div>
         
-        <!-- Cast -->
+        <!-- Watch Providers -->
         ${
-          castList.length > 0
+          flatrate.length > 0 ||
+          rent.length > 0 ||
+          buy.length > 0 ||
+          streamingPlatform
+            ? `
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Where to Watch</h3>
+            ${
+              streamingPlatform
+                ? `<p class="text-brand-400 mb-3 font-medium">📺 ${streamingPlatform}</p>`
+                : ""
+            }
+            ${
+              flatrate.length > 0
+                ? `
+              <div class="mb-4">
+                <p class="text-xs text-surface-500 mb-2">Stream</p>
+                <div class="flex flex-wrap gap-2">
+                  ${flatrate
+                    .slice(0, 6)
+                    .map(
+                      (p) => `
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${
+                      p.provider_name
+                    }">
+                      ${
+                        p.logo_path
+                          ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                          : ""
+                      }
+                      <span class="text-sm text-surface-300">${
+                        p.provider_name
+                      }</span>
+                    </div>
+                  `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+            ${
+              rent.length > 0
+                ? `
+              <div class="mb-4">
+                <p class="text-xs text-surface-500 mb-2">Rent</p>
+                <div class="flex flex-wrap gap-2">
+                  ${rent
+                    .slice(0, 4)
+                    .map(
+                      (p) => `
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${
+                      p.provider_name
+                    }">
+                      ${
+                        p.logo_path
+                          ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                          : ""
+                      }
+                      <span class="text-sm text-surface-300">${
+                        p.provider_name
+                      }</span>
+                    </div>
+                  `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+            ${
+              buy.length > 0
+                ? `
+              <div>
+                <p class="text-xs text-surface-500 mb-2">Buy</p>
+                <div class="flex flex-wrap gap-2">
+                  ${buy
+                    .slice(0, 4)
+                    .map(
+                      (p) => `
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${
+                      p.provider_name
+                    }">
+                      ${
+                        p.logo_path
+                          ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                          : ""
+                      }
+                      <span class="text-sm text-surface-300">${
+                        p.provider_name
+                      }</span>
+                    </div>
+                  `
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `
+                : ""
+            }
+          </div>
+        `
+            : ""
+        }
+        
+        <!-- Trailer -->
+        ${
+          primaryTrailer
+            ? `
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Trailer</h3>
+            <a href="${
+              primaryTrailer.url
+            }" target="_blank" rel="noopener noreferrer" 
+               class="relative block w-full max-w-xl aspect-video bg-surface-800 rounded-xl overflow-hidden group hover:ring-2 hover:ring-brand-500 transition-all">
+              ${
+                primaryTrailer.thumbnail_url
+                  ? `<img src="${primaryTrailer.thumbnail_url}" alt="Trailer thumbnail" class="w-full h-full object-cover">`
+                  : ""
+              }
+              <div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+                <div class="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8 text-surface-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-xs text-white">${
+                primaryTrailer.name || "Watch Trailer"
+              }</div>
+            </a>
+          </div>
+        `
+            : ""
+        }
+        
+        <!-- Cast with Images (Clickable) -->
+        ${
+          castToShow.length > 0
             ? `
           <div class="mt-8">
             <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Cast</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              ${castList
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              ${castToShow
+                .slice(0, 10)
                 .map(
                   (c) => `
-                <div class="flex items-center gap-3 p-2 bg-surface-800/50 rounded-lg">
-                  <div class="w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center text-surface-500 text-sm font-medium">
-                    ${(c.name || "?").charAt(0)}
+                <div class="cast-member-card flex flex-col items-center text-center p-3 bg-surface-800/50 rounded-xl hover:bg-surface-700 hover:ring-2 hover:ring-brand-500/50 cursor-pointer transition-all"
+                     data-person-id="${c.id}"
+                     data-person-name="${c.name}">
+                  <div class="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-surface-700 mb-2 flex-shrink-0">
+                    ${
+                      c.profile_image_url ||
+                      c.image_url ||
+                      c.profile_images?.medium
+                        ? `<img src="${
+                            c.profile_image_url ||
+                            c.image_url ||
+                            c.profile_images?.medium
+                          }" alt="${
+                            c.name
+                          }" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-500 text-xl font-medium\\'>${(
+                            c.name || "?"
+                          ).charAt(0)}</div>'">`
+                        : `<div class="w-full h-full flex items-center justify-center text-surface-500 text-xl font-medium">${(
+                            c.name || "?"
+                          ).charAt(0)}</div>`
+                    }
                   </div>
-                  <div class="min-w-0">
-                    <p class="text-sm text-white truncate">${c.name}</p>
-                  </div>
+                  <p class="text-sm text-white font-medium truncate w-full">${
+                    c.name
+                  }</p>
+                  ${
+                    c.character
+                      ? `<p class="text-xs text-surface-400 truncate w-full mt-0.5">${c.character}</p>`
+                      : ""
+                  }
                 </div>
               `
                 )
@@ -734,40 +1150,292 @@ Shows{% endblock %} {% block body %}
         
         <!-- Technical Info -->
         <div class="mt-8 pt-6 border-t border-surface-800">
-          <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Technical Info</h3>
+          <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Details</h3>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span class="text-surface-500">ID</span>
-              <p class="text-surface-300 font-mono text-xs mt-1">${data.id}</p>
+              <p class="text-surface-300 font-mono text-xs mt-1">${
+                data.id || data.mc_id
+              }</p>
             </div>
             ${
+              data.tmdb_id
+                ? `<div><span class="text-surface-500">TMDB ID</span><p class="text-surface-300 mt-1">${data.tmdb_id}</p></div>`
+                : ""
+            }
+            ${
               data.source
-                ? `
-              <div>
-                <span class="text-surface-500">Source</span>
-                <p class="text-surface-300 mt-1">${data.source}</p>
-              </div>
-            `
+                ? `<div><span class="text-surface-500">Source</span><p class="text-surface-300 mt-1">${data.source}</p></div>`
                 : ""
             }
             ${
               popularity
-                ? `
-              <div>
-                <span class="text-surface-500">Popularity</span>
-                <p class="text-surface-300 mt-1">${popularity.toFixed(2)}</p>
-              </div>
-            `
+                ? `<div><span class="text-surface-500">Popularity</span><p class="text-surface-300 mt-1">${
+                    typeof popularity === "number"
+                      ? popularity.toFixed(2)
+                      : popularity
+                  }</p></div>`
+                : ""
+            }
+          </div>
+        </div>
+        
+        <!-- Raw JSON Toggle -->
+        <details class="mt-6">
+          <summary class="cursor-pointer text-sm text-surface-500 hover:text-surface-300 transition-colors">
+            View Raw JSON
+          </summary>
+          <pre class="mt-3 p-4 bg-surface-950 rounded-lg overflow-x-auto text-xs text-surface-400 max-h-64 overflow-y-auto"><code>${JSON.stringify(
+            data,
+            null,
+            2
+          )}</code></pre>
+        </details>
+      </div>
+    `;
+  }
+
+  function renderPersonDetail(data) {
+    const name = data.search_title || data.name || "Unknown";
+    const biography =
+      data.full_overview || data.overview || "No biography available.";
+    const department = data.known_for_department || "";
+    const birthday = data.birthday;
+    const deathday = data.deathday;
+    const placeOfBirth = data.place_of_birth;
+    const popularity = data.popularity || 0;
+
+    // Profile images
+    const profileImages = data.profile_images || {};
+    const profileUrl =
+      profileImages.large || profileImages.medium || data.image;
+
+    // Credits
+    const movieCredits = data.movie_credits || [];
+    const tvCredits = data.tv_credits || [];
+
+    // Format department display
+    const departmentDisplay = department
+      ? department.charAt(0).toUpperCase() + department.slice(1).toLowerCase()
+      : "Actor";
+
+    // Calculate age
+    let ageDisplay = "";
+    if (birthday) {
+      const birthDate = new Date(birthday);
+      const endDate = deathday ? new Date(deathday) : new Date();
+      const age = Math.floor(
+        (endDate - birthDate) / (365.25 * 24 * 60 * 60 * 1000)
+      );
+      if (deathday) {
+        ageDisplay = `(${birthday} - ${deathday}, died at ${age})`;
+      } else {
+        ageDisplay = `(${birthday}, age ${age})`;
+      }
+    }
+
+    modalBody.innerHTML = `
+      <div class="p-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+          <!-- Profile Photo -->
+          <div class="flex-shrink-0 mx-auto md:mx-0">
+            ${
+              profileUrl
+                ? `<img src="${profileUrl}" alt="${name}" class="w-40 md:w-48 rounded-xl shadow-2xl border border-surface-700">`
+                : `<div class="w-40 md:w-48 h-60 md:h-72 rounded-xl bg-surface-800 flex items-center justify-center border border-surface-700">
+                    <span class="text-6xl text-surface-500 font-medium">${name.charAt(
+                      0
+                    )}</span>
+                  </div>`
+            }
+          </div>
+          
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <h2 class="text-2xl md:text-3xl font-bold text-white">${name}</h2>
+            
+            <div class="flex flex-wrap items-center gap-3 mt-3">
+              <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400">
+                ${departmentDisplay}
+              </span>
+              ${
+                ageDisplay
+                  ? `<span class="text-surface-400 text-sm">${ageDisplay}</span>`
+                  : ""
+              }
+            </div>
+            
+            ${
+              placeOfBirth
+                ? `<p class="mt-3 text-surface-400 text-sm">📍 ${placeOfBirth}</p>`
+                : ""
+            }
+            
+            <!-- Biography -->
+            <div class="mt-4">
+              <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-2">Biography</h3>
+              <p class="text-surface-300 leading-relaxed text-sm">${
+                biography.length > 500
+                  ? biography.substring(0, 500) + "..."
+                  : biography
+              }</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Movie Credits (Clickable) -->
+        ${
+          movieCredits.length > 0
+            ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">🎬 Movies (${
+              movieCredits.length
+            })</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              ${movieCredits
+                .slice(0, 10)
+                .map(
+                  (m) => `
+                <div class="credit-card group bg-surface-800/50 rounded-lg overflow-hidden hover:bg-surface-700 hover:ring-2 hover:ring-brand-500/50 cursor-pointer transition-all"
+                     data-tmdb-id="${m.id}"
+                     data-mc-type="movie">
+                  <div class="aspect-[2/3] bg-surface-700 overflow-hidden">
+                    ${
+                      m.poster_path
+                        ? `<img src="https://image.tmdb.org/t/p/w185${
+                            m.poster_path
+                          }" alt="${
+                            m.title || m.name
+                          }" class="w-full h-full object-cover group-hover:scale-105 transition-transform">`
+                        : `<div class="w-full h-full flex items-center justify-center text-surface-500">
+                          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                          </svg>
+                        </div>`
+                    }
+                  </div>
+                  <div class="p-2">
+                    <p class="text-sm text-white truncate font-medium">${
+                      m.title || m.name
+                    }</p>
+                    ${
+                      m.character
+                        ? `<p class="text-xs text-surface-400 truncate">as ${m.character}</p>`
+                        : ""
+                    }
+                    ${
+                      m.release_date
+                        ? `<p class="text-xs text-surface-500">${
+                            m.release_date.split("-")[0]
+                          }</p>`
+                        : ""
+                    }
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+            ${
+              movieCredits.length > 10
+                ? `<p class="text-surface-500 text-sm mt-3">+ ${
+                    movieCredits.length - 10
+                  } more movies</p>`
+                : ""
+            }
+          </div>
+        `
+            : ""
+        }
+        
+        <!-- TV Credits (Clickable) -->
+        ${
+          tvCredits.length > 0
+            ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">📺 TV Shows (${
+              tvCredits.length
+            })</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              ${tvCredits
+                .slice(0, 10)
+                .map(
+                  (t) => `
+                <div class="credit-card group bg-surface-800/50 rounded-lg overflow-hidden hover:bg-surface-700 hover:ring-2 hover:ring-brand-500/50 cursor-pointer transition-all"
+                     data-tmdb-id="${t.id}"
+                     data-mc-type="tv">
+                  <div class="aspect-[2/3] bg-surface-700 overflow-hidden">
+                    ${
+                      t.poster_path
+                        ? `<img src="https://image.tmdb.org/t/p/w185${
+                            t.poster_path
+                          }" alt="${
+                            t.name || t.title
+                          }" class="w-full h-full object-cover group-hover:scale-105 transition-transform">`
+                        : `<div class="w-full h-full flex items-center justify-center text-surface-500">
+                          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                          </svg>
+                        </div>`
+                    }
+                  </div>
+                  <div class="p-2">
+                    <p class="text-sm text-white truncate font-medium">${
+                      t.name || t.title
+                    }</p>
+                    ${
+                      t.character
+                        ? `<p class="text-xs text-surface-400 truncate">as ${t.character}</p>`
+                        : ""
+                    }
+                    ${
+                      t.first_air_date
+                        ? `<p class="text-xs text-surface-500">${
+                            t.first_air_date.split("-")[0]
+                          }</p>`
+                        : ""
+                    }
+                  </div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+            ${
+              tvCredits.length > 10
+                ? `<p class="text-surface-500 text-sm mt-3">+ ${
+                    tvCredits.length - 10
+                  } more TV shows</p>`
+                : ""
+            }
+          </div>
+        `
+            : ""
+        }
+        
+        <!-- Technical Info -->
+        <div class="pt-6 border-t border-surface-800">
+          <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Details</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span class="text-surface-500">ID</span>
+              <p class="text-surface-300 font-mono text-xs mt-1">${
+                data.id || data.mc_id
+              }</p>
+            </div>
+            ${
+              data.tmdb_id
+                ? `<div><span class="text-surface-500">TMDB ID</span><p class="text-surface-300 mt-1">${data.tmdb_id}</p></div>`
                 : ""
             }
             ${
-              data.year
-                ? `
-              <div>
-                <span class="text-surface-500">Year</span>
-                <p class="text-surface-300 mt-1">${data.year}</p>
-              </div>
-            `
+              popularity
+                ? `<div><span class="text-surface-500">Popularity</span><p class="text-surface-300 mt-1">${
+                    typeof popularity === "number"
+                      ? popularity.toFixed(2)
+                      : popularity
+                  }</p></div>`
                 : ""
             }
           </div>
@@ -792,7 +1460,48 @@ Shows{% endblock %} {% block body %}
   resultsList.addEventListener("click", (e) => {
     const resultItem = e.target.closest("[data-media-id]");
     if (resultItem) {
-      openModal(resultItem.dataset.mediaId);
+      const mediaId = resultItem.dataset.mediaId;
+      const sourceId = resultItem.dataset.sourceId;
+      const mcType = resultItem.dataset.mcType;
+      const mcSubtype = resultItem.dataset.mcSubtype;
+      openModal(mediaId, sourceId, mcType, mcSubtype);
+    }
+  });
+
+  // Add click handler for cast members and credits in the modal
+  modalBody.addEventListener("click", (e) => {
+    // Handle cast member clicks (from media detail view)
+    const castCard = e.target.closest(".cast-member-card");
+    if (castCard) {
+      const personId = castCard.dataset.personId;
+      if (personId) {
+        // Show loading state in the modal
+        modalLoading.classList.remove("hidden");
+        modalBody.classList.add("hidden");
+        // Fetch person details
+        fetchMediaDetail(
+          `tmdb_person_${personId}`,
+          personId,
+          "person",
+          "actor"
+        );
+      }
+      return;
+    }
+
+    // Handle credit card clicks (from person detail view)
+    const creditCard = e.target.closest(".credit-card");
+    if (creditCard) {
+      const tmdbId = creditCard.dataset.tmdbId;
+      const mcType = creditCard.dataset.mcType;
+      if (tmdbId && mcType) {
+        // Show loading state in the modal
+        modalLoading.classList.remove("hidden");
+        modalBody.classList.add("hidden");
+        // Fetch media details
+        const mcId = `tmdb_${mcType}_${tmdbId}`;
+        fetchMediaDetail(mcId, tmdbId, mcType, null);
+      }
     }
   });
 </script>

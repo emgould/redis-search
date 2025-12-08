@@ -4,7 +4,6 @@ Handles person details, credits, and search operations.
 """
 
 import asyncio
-from typing import cast
 
 from api.tmdb.core import TMDBService
 from api.tmdb.models import (
@@ -43,61 +42,25 @@ def credit_filter_for_tv_shows(shows: list[TMDBPersonTvCastCredit]) -> list[TMDB
         if not show.character:
             continue
 
-        # Skip talk shows and game shows
-        talk_show_keywords = [
-            "show",
-            "tonight",
-            "live",
-            "today",
-            "morning",
-            "evening",
-            "news",
-            "interview",
-            "studio",
-            "awards",
-            "ceremony",
-            "special",
-            "documentary",
-            "variety",
-            "entertainment",
-            "celebrities",
-            "uncensored",
-            "between two ferns",
-        ]
-
-        game_show_keywords = [
-            "game",
-            "quiz",
-            "contest",
-            "challenge",
-            "competition",
-            "america's game",
-        ]
-
         # Filter out all self appearances (e.g., "Self - Guest", "Self (archive footage)")
         character = show.character
-        if character and "self" in character.lower():
+        is_self_appearance = character and "self" in character.lower()
+
+        if is_self_appearance:
             continue
 
-        # Filter out talk shows and game shows, but only if they have self appearances
-        # or if they match keywords (indicating they're primarily talk/game shows)
         name = show.name
         if not name:
             continue
-        is_talk_show = any(keyword in name.lower() for keyword in talk_show_keywords)
-        is_game_show = any(keyword in name.lower() for keyword in game_show_keywords)
 
         # Check by genre IDs: 10767 = Talk, 10763 = News (often talk/news shows)
-        # Only filter if name matches keywords (talk/game show format) AND has self character
-        # OR if it's a clear talk/game show by name
         genre_ids = getattr(show, "genre_ids", []) or []
         is_talk_show_by_genre = 10767 in genre_ids or 10763 in genre_ids
 
-        # Filter talk/news shows by genre only if they have self appearances or match name keywords
-        # This allows talk shows with actual character roles (like "Weatherman") to pass through
-        if is_talk_show or is_game_show:
-            continue
-        if is_talk_show_by_genre and character and "self" in character.lower():
+        # Only filter by genre - keyword matching is too aggressive
+        # (e.g., "The Studio" is a scripted show that would be incorrectly filtered)
+        # Shows with actual scripted characters should pass through
+        if is_talk_show_by_genre:
             continue
 
         filtered_shows.append(show)
@@ -174,10 +137,11 @@ class TMDBPersonService(TMDBService):
             data
         )
 
-        # Process and filter movies
+        # Process and filter all TV credits (apply limit AFTER sorting)
         processed_tv_shows = []
+        filtered_credits = credit_filter_for_tv_shows(person_tv_credits.cast)
 
-        for idx, tv in enumerate(credit_filter_for_tv_shows(person_tv_credits.cast)[:limit]):
+        for idx, tv in enumerate(filtered_credits):
             tv_item = MCTvItem.from_tv_search(tv, self.image_base_url)
             tv_credit_item = MCTvCreditMediaItem.model_validate(tv_item.to_dict())
 
@@ -187,41 +151,27 @@ class TMDBPersonService(TMDBService):
             tv_credit_item.order = idx
             processed_tv_shows.append(tv_credit_item)
 
-        # Sort by release date (most recent first), then popular
-        #         # Sort by a combination of factors to prioritize most recently active shows
+        # Sort by recency first (most recent shows appear first)
         def get_tv_sort_key(show: MCTvItem) -> float:
-            # Get recency score (more recent shows get higher score)
-            recency_score = -self._get_sort_date(show)
-
-            # Get episode count (more episodes = more significant role)
-            episode_count = show.number_of_episodes or 0
-
-            # Get popularity score
-            popularity = show.popularity or 0
-
-            # Get character significance (shows with more episodes are more significant)
-            character_significance = episode_count * 10
-
-            # Calculate final score (higher is better)
-            final_score = (
-                recency_score  # More recent first
-                + character_significance  # More episodes = more significant role
-                + popularity * 0.1  # Popularity as tiebreaker
-            )
-
-            return final_score
+            # Primary: recency (more recent shows get higher score)
+            recency_score: float = -self._get_sort_date(show)
+            return recency_score
 
         processed_tv_shows.sort(key=get_tv_sort_key, reverse=True)
+
+        # Apply limit AFTER sorting
+        limited_tv_shows = processed_tv_shows[:limit]
+
         metadata = {
-            "total_results": len(processed_tv_shows),
-            "total_tv_shows": len(processed_tv_shows),
+            "total_results": len(filtered_credits),
+            "total_tv_shows": len(limited_tv_shows),
             "data_source": "TMDB Person API",
         }
 
         return MCPersonCreditsResult(
             person=None,
             movies=[],
-            tv_shows=cast(list[MCTvItem | MCTvCreditMediaItem], processed_tv_shows),
+            tv_shows=limited_tv_shows,
             metadata=metadata,
         )
 
@@ -504,7 +454,7 @@ class TMDBPersonService(TMDBService):
 
         return MCPersonCreditsResult(
             person=None,
-            movies=cast(list[MCMovieItem | MCMovieCreditMediaItem], processed_movies),
+            movies=processed_movies,
             tv_shows=[],
             metadata=metadata,
         )

@@ -3,8 +3,6 @@ TMDB Services - Modular TMDB API services
 Provides organized access to TMDB functionality through specialized api.
 """
 
-from contracts.models import MCSearchResponse
-
 import api.tmdb.wrappers as tmdb_wrapper
 from api.tmdb.models import (
     MCBaseMediaItem,
@@ -23,6 +21,7 @@ from api.tmdb.models import (
     MCTvItem,
 )
 from api.tmdb.person import TMDBPersonService
+from contracts.models import MCSearchResponse
 
 __all__ = [
     # Wrappers

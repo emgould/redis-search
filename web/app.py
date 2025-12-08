@@ -2,6 +2,9 @@ import os
 import re
 import subprocess
 import sys
+import threading
+from datetime import datetime
+from pathlib import Path
 from typing import cast
 
 from fastapi import BackgroundTasks, FastAPI, Query, Request
@@ -13,7 +16,45 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 from src.adapters.redis_client import get_redis
 from src.adapters.redis_manager import RedisEnvironment, RedisManager
 from src.adapters.redis_repository import RedisRepository
-from src.services.search_service import autocomplete, reset_repo
+from src.services.search_service import (
+    DetailsRequest,
+    autocomplete,
+    get_details,
+    reset_repo,
+)
+
+# Project root directory for subprocess cwd
+PROJECT_ROOT = str(Path(__file__).parent.parent)
+
+
+def get_latest_person_ids_file() -> dict | None:
+    """Get info about the latest person IDs file in data/person/."""
+    project_root = Path(__file__).parent.parent
+    person_dir = project_root / "data" / "person"
+
+    if not person_dir.exists():
+        return None
+
+    # Find all person_ids_*.json files
+    files = list(person_dir.glob("person_ids_*.json"))
+    if not files:
+        return None
+
+    # Get the most recent file by modification time
+    latest_file = max(files, key=lambda f: f.stat().st_mtime)
+    stat = latest_file.stat()
+
+    # Format the modification time
+    mod_time = datetime.fromtimestamp(stat.st_mtime)
+
+    return {
+        "filename": latest_file.name,
+        "path": str(latest_file),
+        "size_mb": round(stat.st_size / (1024 * 1024), 1),
+        "modified": mod_time.strftime("%Y-%m-%d %H:%M"),
+        "modified_date": mod_time.strftime("%Y-%m-%d"),
+    }
+
 
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")
@@ -33,14 +74,22 @@ _extract_status: dict[str, dict] = {
     "movie": {"running": False, "output": "", "error": "", "progress": {}},
 }
 
+# Track Person ETL task status
+_person_download_status = {"running": False, "output": "", "error": ""}
+_person_extract_status = {"running": False, "output": "", "error": "", "progress": {}}
+_person_load_status = {"running": False, "output": "", "error": ""}
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     current_env = RedisManager.get_current_env()
-    return templates.TemplateResponse("home.html", {
-        "request": request,
-        "current_env": current_env.value,
-    })
+    return templates.TemplateResponse(
+        "home.html",
+        {
+            "request": request,
+            "current_env": current_env.value,
+        },
+    )
 
 
 @app.get("/api/autocomplete")
@@ -55,8 +104,10 @@ async def api_autocomplete(q: str = Query(default="")):
 @app.get("/autocomplete_test", response_class=HTMLResponse)
 async def autocomplete_test(request: Request, q: str = ""):
     results = await autocomplete(q) if q else []
-    return templates.TemplateResponse("autocomplete.html",
-                                      {"request": request, "query": q, "results": results})
+    return templates.TemplateResponse(
+        "autocomplete.html", {"request": request, "query": q, "results": results}
+    )
+
 
 @app.get("/management", response_class=HTMLResponse)
 async def management(request: Request):
@@ -74,14 +125,21 @@ async def management(request: Request):
     except Exception as e:
         stats = {"error": str(e)}
 
-    return templates.TemplateResponse("management.html", {
-        "request": request,
-        "current_env": current_env.value,
-        "local_status": local_status,
-        "public_status": public_status,
-        "stats": stats,
-        "task_status": _task_status,
-    })
+    # Get latest person IDs file info
+    person_ids_info = get_latest_person_ids_file()
+
+    return templates.TemplateResponse(
+        "management.html",
+        {
+            "request": request,
+            "current_env": current_env.value,
+            "local_status": local_status,
+            "public_status": public_status,
+            "stats": stats,
+            "task_status": _task_status,
+            "person_ids_info": person_ids_info,
+        },
+    )
 
 
 @app.post("/api/switch-redis")
@@ -94,15 +152,16 @@ async def switch_redis(env: str = Query(...)):
 
         # Test new connection
         status = await RedisManager.test_connection(new_env)
-        return JSONResponse(content={
-            "success": True,
-            "env": new_env.value,
-            "status": status,
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "env": new_env.value,
+                "status": status,
+            }
+        )
     except ValueError:
         return JSONResponse(
-            status_code=400,
-            content={"success": False, "error": f"Invalid environment: {env}"}
+            status_code=400, content={"success": False, "error": f"Invalid environment: {env}"}
         )
 
 
@@ -113,11 +172,13 @@ async def redis_status():
     local_status = await RedisManager.test_connection(RedisEnvironment.LOCAL)
     public_status = await RedisManager.test_connection(RedisEnvironment.PUBLIC)
 
-    return JSONResponse(content={
-        "current_env": current_env.value,
-        "local": local_status,
-        "public": public_status,
-    })
+    return JSONResponse(
+        content={
+            "current_env": current_env.value,
+            "local": local_status,
+            "public": public_status,
+        }
+    )
 
 
 @app.get("/api/redis-stats")
@@ -126,20 +187,26 @@ async def redis_stats():
     try:
         repo = RedisRepository()
         stats = await repo.stats()
-        return JSONResponse(content={
-            "success": True,
-            "num_docs": stats.get("num_docs", 0),
-            "dbsize": stats.get("dbsize", 0),
-            "cache_breakdown": stats.get("cache_breakdown", {}),
-            "memory_used": stats.get("info", {}).get("used_memory", 0),
-            "memory_peak": stats.get("info", {}).get("used_memory_peak", 0),
-            "index_stats": stats.get("index_stats", {}),
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "num_docs": stats.get("num_docs", 0),
+                "dbsize": stats.get("dbsize", 0),
+                "cache_breakdown": stats.get("cache_breakdown", {}),
+                "memory_used": stats.get("info", {}).get("used_memory", 0),
+                "memory_peak": stats.get("info", {}).get("used_memory_peak", 0),
+                "index_stats": stats.get("index_stats", {}),
+                "people_num_docs": stats.get("people_num_docs", 0),
+                "people_index_stats": stats.get("people_index_stats", {}),
+            }
+        )
     except Exception as e:
         return JSONResponse(content={"success": False, "error": str(e)})
 
 
-def run_gcs_load_task(media_type: str, redis_host: str, redis_port: int, redis_password: str | None):
+def run_gcs_load_task(
+    media_type: str, redis_host: str, redis_port: int, redis_password: str | None
+):
     """Run GCS metadata load in background with specified Redis connection."""
     global _task_status
     _task_status = {"running": True, "output": "", "error": ""}
@@ -159,7 +226,8 @@ def run_gcs_load_task(media_type: str, redis_host: str, redis_port: int, redis_p
                 sys.executable,
                 "-u",  # Unbuffered output
                 "scripts/load_gcs_metadata.py",
-                "--type", media_type,
+                "--type",
+                media_type,
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -202,14 +270,13 @@ async def load_gcs_metadata(
 
     if _task_status["running"]:
         return JSONResponse(
-            status_code=409,
-            content={"success": False, "error": "A load task is already running"}
+            status_code=409, content={"success": False, "error": "A load task is already running"}
         )
 
     if media_type not in ["movie", "tv", "all"]:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": f"Invalid media type: {media_type}"}
+            content={"success": False, "error": f"Invalid media type: {media_type}"},
         )
 
     # Get the currently selected Redis connection
@@ -224,10 +291,12 @@ async def load_gcs_metadata(
         config.password,
     )
 
-    return JSONResponse(content={
-        "success": True,
-        "message": f"Started loading {media_type} metadata from GCS into {config.name}",
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started loading {media_type} metadata from GCS into {config.name}",
+        }
+    )
 
 
 @app.get("/api/task-status")
@@ -293,15 +362,17 @@ async def promote_to_dev(background_tasks: BackgroundTasks):
     if _promote_status["running"]:
         return JSONResponse(
             status_code=409,
-            content={"success": False, "error": "A promote task is already running"}
+            content={"success": False, "error": "A promote task is already running"},
         )
 
     background_tasks.add_task(run_promote_task)
 
-    return JSONResponse(content={
-        "success": True,
-        "message": "Started promoting local Redis to dev",
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": "Started promoting local Redis to dev",
+        }
+    )
 
 
 @app.get("/api/promote-status")
@@ -331,8 +402,10 @@ def run_etl_task(
         cmd = [
             sys.executable,
             "-u",  # Unbuffered output
-            "-m", "src.etl.run_etl",
-            "--type", media_type,
+            "-m",
+            "src.etl.run_etl",
+            "--type",
+            media_type,
         ]
 
         if load_all:
@@ -407,14 +480,13 @@ async def api_run_etl(
 
     if _etl_status["running"]:
         return JSONResponse(
-            status_code=409,
-            content={"success": False, "error": "An ETL task is already running"}
+            status_code=409, content={"success": False, "error": "An ETL task is already running"}
         )
 
     if media_type not in ["movie", "tv"]:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": f"Invalid media type: {media_type}"}
+            content={"success": False, "error": f"Invalid media type: {media_type}"},
         )
 
     # Get the currently selected Redis connection
@@ -451,10 +523,12 @@ async def api_run_etl(
         else:
             desc_parts.append(f"year <= {year_lte}")
 
-    return JSONResponse(content={
-        "success": True,
-        "message": f"Started ETL for {' '.join(desc_parts)} into {config.name}",
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started ETL for {' '.join(desc_parts)} into {config.name}",
+        }
+    )
 
 
 @app.get("/api/etl-status")
@@ -475,10 +549,7 @@ def parse_extract_progress(output: str) -> dict[str, int | str]:
     }
 
     # Find all month progress lines: "Processing month X/Y: YYYY-MM"
-    month_matches = list(re.finditer(
-        r"Processing month (\d+)/(\d+): (\d{4}-\d{2})",
-        output
-    ))
+    month_matches = list(re.finditer(r"Processing month (\d+)/(\d+): (\d{4}-\d{2})", output))
     if month_matches:
         last_match = month_matches[-1]
         progress["month_current"] = int(last_match.group(1))
@@ -486,10 +557,7 @@ def parse_extract_progress(output: str) -> dict[str, int | str]:
         progress["current_month_label"] = last_match.group(3)
 
     # Find all batch progress lines: "Processing batch X/Y (N items)"
-    batch_matches = list(re.finditer(
-        r"Processing batch (\d+)/(\d+)",
-        output
-    ))
+    batch_matches = list(re.finditer(r"Processing batch (\d+)/(\d+)", output))
     if batch_matches:
         last_match = batch_matches[-1]
         progress["batch_current"] = int(last_match.group(1))
@@ -512,9 +580,7 @@ def parse_extract_progress(output: str) -> dict[str, int | str]:
                 f"Batch {batch_current}/{batch_total}"
             )
         else:
-            progress["status_message"] = (
-                f"Discovering shows for {current_month_label}..."
-            )
+            progress["status_message"] = f"Discovering shows for {current_month_label}..."
     elif "Starting" in output:
         progress["status_message"] = "Starting extraction..."
     else:
@@ -600,7 +666,6 @@ def run_extract_task(
 
 @app.post("/api/run-extract")
 async def api_run_extract(
-    background_tasks: BackgroundTasks,
     media_type: str = Query(...),
     start_date: str = Query(...),
     months_back: int = Query(...),
@@ -611,39 +676,45 @@ async def api_run_extract(
     if media_type not in ["movie", "tv"]:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": f"Invalid media type: {media_type}"}
+            content={"success": False, "error": f"Invalid media type: {media_type}"},
         )
 
     if _extract_status[media_type]["running"]:
         return JSONResponse(
             status_code=409,
-            content={"success": False, "error": f"An extract task for {media_type} is already running"}
+            content={
+                "success": False,
+                "error": f"An extract task for {media_type} is already running",
+            },
         )
 
     # Validate start_date format (YYYY-MM)
     if not re.match(r"^\d{4}-\d{2}$", start_date):
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": "Invalid start_date format. Expected YYYY-MM"}
+            content={"success": False, "error": "Invalid start_date format. Expected YYYY-MM"},
         )
 
     if months_back < 1 or months_back > 60:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": "months_back must be between 1 and 60"}
+            content={"success": False, "error": "months_back must be between 1 and 60"},
         )
 
-    background_tasks.add_task(
-        run_extract_task,
-        media_type,
-        start_date,
-        months_back,
+    # Use a dedicated thread instead of BackgroundTasks to avoid blocking the server
+    thread = threading.Thread(
+        target=run_extract_task,
+        args=(media_type, start_date, months_back),
+        daemon=True,
     )
+    thread.start()
 
-    return JSONResponse(content={
-        "success": True,
-        "message": f"Started {media_type} extraction from {start_date} for {months_back} month(s)",
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started {media_type} extraction from {start_date} for {months_back} month(s)",
+        }
+    )
 
 
 @app.get("/api/extract-status/{media_type}")
@@ -652,9 +723,389 @@ async def extract_status(media_type: str):
     if media_type not in ["movie", "tv"]:
         return JSONResponse(
             status_code=400,
-            content={"success": False, "error": f"Invalid media type: {media_type}"}
+            content={"success": False, "error": f"Invalid media type: {media_type}"},
         )
     return JSONResponse(content=_extract_status[media_type])
+
+
+# ============================================================
+# Person ETL Endpoints
+# ============================================================
+
+
+def run_person_download_task(date_str: str | None = None):
+    """Run person ID bulk download in background."""
+    global _person_download_status
+    _person_download_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command
+        cmd = [sys.executable, "-u", "scripts/download_tmdb_person_ids.py"]
+        if date_str:
+            cmd.extend(["--date", date_str])
+
+        # Set up environment
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _person_download_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            _person_download_status["output"] = "".join(output_lines)
+
+        if process.returncode != 0:
+            _person_download_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_download_status["error"] = str(e)
+    finally:
+        _person_download_status["running"] = False
+
+
+@app.post("/api/person/download")
+async def api_person_download(
+    date: str | None = Query(default=None),
+):
+    """Download person IDs from TMDB daily export."""
+    global _person_download_status
+
+    if _person_download_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A download task is already running"},
+        )
+
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_download_task,
+        args=(date,),
+        daemon=True,
+    )
+    thread.start()
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started person ID download{' for ' + date if date else ''}",
+        }
+    )
+
+
+@app.get("/api/person/download-status")
+async def person_download_status():
+    """Get status of person download task."""
+    return JSONResponse(content=_person_download_status)
+
+
+def run_person_extract_task(source_file: str | None, limit: int | None):
+    """Run person extract (enrich) in background."""
+    global _person_extract_status
+    _person_extract_status = {"running": True, "output": "", "error": "", "progress": {}}
+
+    try:
+        # Build command
+        cmd = [
+            sys.executable,
+            "-u",
+            "-c",
+            f"""
+import asyncio
+import sys
+sys.path.insert(0, '.')
+sys.path.insert(0, 'src')
+from src.services.person_etl_service import run_person_extract
+
+async def main():
+    source = {source_file!r} if {source_file!r} else None
+    limit = {limit!r}
+    await run_person_extract(source_file=source, limit=limit)
+
+asyncio.run(main())
+""",
+        ]
+
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                output = "".join(output_lines)
+                _person_extract_status["output"] = output
+                # Parse progress from output
+                _person_extract_status["progress"] = parse_person_extract_progress(output)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            output = "".join(output_lines)
+            _person_extract_status["output"] = output
+            _person_extract_status["progress"] = parse_person_extract_progress(output)
+
+        if process.returncode != 0:
+            _person_extract_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_extract_status["error"] = str(e)
+    finally:
+        _person_extract_status["running"] = False
+
+
+def parse_person_extract_progress(output: str) -> dict:
+    """Parse person extract output to extract progress information."""
+    progress: dict = {
+        "batch_current": 0,
+        "batch_total": 0,
+        "status_message": "",
+    }
+
+    # Find batch progress: "Processing batch X/Y"
+    batch_matches = list(re.finditer(r"Processing batch (\d+)/(\d+)", output))
+    if batch_matches:
+        last_match = batch_matches[-1]
+        progress["batch_current"] = int(last_match.group(1))
+        progress["batch_total"] = int(last_match.group(2))
+        progress["status_message"] = f"Batch {progress['batch_current']}/{progress['batch_total']}"
+
+    if "Extract Summary" in output:
+        progress["status_message"] = "Complete"
+
+    return progress
+
+
+@app.post("/api/person/extract")
+async def api_person_extract(
+    source_file: str | None = Query(default=None),
+    limit: int | None = Query(default=None),
+):
+    """Extract and enrich person data from TMDB."""
+    global _person_extract_status
+
+    if _person_extract_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "An extract task is already running"},
+        )
+
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_extract_task,
+        args=(source_file, limit),
+        daemon=True,
+    )
+    thread.start()
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": "Started person extract and enrich",
+        }
+    )
+
+
+@app.get("/api/person/extract-status")
+async def person_extract_status():
+    """Get status of person extract task."""
+    return JSONResponse(content=_person_extract_status)
+
+
+def run_person_load_task(
+    source_file: str | None,
+    redis_host: str,
+    redis_port: int,
+    redis_password: str | None,
+):
+    """Run person load into Redis in background."""
+    global _person_load_status
+    _person_load_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command
+        cmd = [
+            sys.executable,
+            "-u",
+            "-c",
+            f"""
+import asyncio
+import sys
+sys.path.insert(0, '.')
+sys.path.insert(0, 'src')
+from src.services.person_etl_service import run_person_load
+
+async def main():
+    source = {source_file!r} if {source_file!r} else None
+    await run_person_load(
+        source_file=source,
+        redis_host={redis_host!r},
+        redis_port={redis_port!r},
+        redis_password={redis_password!r},
+    )
+
+asyncio.run(main())
+""",
+        ]
+
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _person_load_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            _person_load_status["output"] = "".join(output_lines)
+
+        if process.returncode != 0:
+            _person_load_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _person_load_status["error"] = str(e)
+    finally:
+        _person_load_status["running"] = False
+
+
+@app.post("/api/person/load")
+async def api_person_load(
+    source_file: str | None = Query(default=None),
+):
+    """Load enriched person data into Redis."""
+    global _person_load_status
+
+    if _person_load_status["running"]:
+        return JSONResponse(
+            status_code=409, content={"success": False, "error": "A load task is already running"}
+        )
+
+    # Get the currently selected Redis connection
+    current_env = RedisManager.get_current_env()
+    config = RedisManager.get_config(current_env)
+
+    # Use a dedicated thread to avoid blocking the server
+    thread = threading.Thread(
+        target=run_person_load_task,
+        args=(source_file, config.host, config.port, config.password),
+        daemon=True,
+    )
+    thread.start()
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started person load into {config.name}",
+        }
+    )
+
+
+@app.get("/api/person/load-status")
+async def person_load_status():
+    """Get status of person load task."""
+    return JSONResponse(content=_person_load_status)
+
+
+@app.post("/api/person/clean")
+async def api_person_clean():
+    """Delete all person:* keys from Redis to prepare for clean reload."""
+    try:
+        # Get the current Redis connection
+        r = await get_redis()
+        current_env = RedisManager.get_current_env()
+
+        # Find and delete all person:* keys
+        deleted_count = 0
+        cursor = 0
+        while True:
+            cursor, keys = await r.scan(cursor=cursor, match="person:*", count=1000)
+            if keys:
+                await r.delete(*keys)
+                deleted_count += len(keys)
+            if cursor == 0:
+                break
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "deleted_count": deleted_count,
+                "message": f"Deleted {deleted_count} person keys from {current_env.value}",
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            content={
+                "success": False,
+                "error": str(e),
+            },
+            status_code=500,
+        )
+
+
+@app.get("/api/person/files")
+async def list_person_files():
+    """List available person data files."""
+    from pathlib import Path
+
+    data_dir = Path("data/person")
+    if not data_dir.exists():
+        return JSONResponse(content={"id_files": [], "enriched_files": []})
+
+    id_files = sorted(data_dir.glob("person_ids_*.json"), reverse=True)
+    enriched_files = sorted(data_dir.glob("enriched_person_*.json"), reverse=True)
+
+    return JSONResponse(
+        content={
+            "id_files": [{"name": f.name, "size": f.stat().st_size} for f in id_files],
+            "enriched_files": [{"name": f.name, "size": f.stat().st_size} for f in enriched_files],
+        }
+    )
 
 
 @app.get("/api/media/{media_id}")
@@ -668,6 +1119,38 @@ async def get_media(media_id: str):
         if data:
             return JSONResponse(content={"id": key, **data})
         return JSONResponse(status_code=404, content={"error": "Media not found"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/details")
+async def api_get_details(
+    mc_id: str = Query(...),
+    source_id: str = Query(...),
+    mc_type: str = Query(...),
+    mc_subtype: str | None = Query(default=None),
+):
+    """
+    Get detailed metadata for a media item or person.
+
+    For tv/movie: Returns indexed data enriched with watch providers and cast.
+    For person: Returns person data with movie and TV credits.
+    """
+    try:
+        request = DetailsRequest(
+            mc_id=mc_id,
+            source_id=source_id,
+            mc_type=mc_type,
+            mc_subtype=mc_subtype,
+        )
+        result = await get_details(request)
+
+        # Check if result contains an error
+        if result.get("error"):
+            status_code = result.get("status_code", 500)
+            return JSONResponse(status_code=status_code, content=result)
+
+        return JSONResponse(content=result)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -691,6 +1174,23 @@ INDEX_CONFIGS = {
             NumericField("$.year", as_name="year", sortable=True),
         ),
     },
+    "people": {
+        "redis_name": "idx:people",
+        "prefix": "person:",
+        "schema": (
+            # Primary search field (name) with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            # Also known as (alternate names) - searchable
+            TextField("$.also_known_as", as_name="also_known_as", weight=3.0),
+            # Content type filters (MCType and MCSubType)
+            TagField("$.mc_type", as_name="mc_type"),
+            TagField("$.mc_subtype", as_name="mc_subtype"),
+            # Source filter
+            TagField("$.source", as_name="source"),
+            # Sortable numeric fields for ranking
+            NumericField("$.popularity", as_name="popularity", sortable=True),
+        ),
+    },
 }
 
 
@@ -699,8 +1199,7 @@ async def delete_index(index_name: str):
     """Delete a Redis search index (keeps the data documents)."""
     if index_name not in INDEX_CONFIGS:
         return JSONResponse(
-            status_code=400,
-            content={"success": False, "error": f"Unknown index: {index_name}"}
+            status_code=400, content={"success": False, "error": f"Unknown index: {index_name}"}
         )
 
     config = INDEX_CONFIGS[index_name]
@@ -709,21 +1208,22 @@ async def delete_index(index_name: str):
 
     try:
         await redis.ft(redis_index_name).dropindex(delete_documents=False)
-        return JSONResponse(content={
-            "success": True,
-            "message": f"Index '{redis_index_name}' deleted successfully",
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Index '{redis_index_name}' deleted successfully",
+            }
+        )
     except Exception as e:
         error_msg = str(e)
         if "Unknown index name" in error_msg or "Unknown Index name" in error_msg:
-            return JSONResponse(content={
-                "success": True,
-                "message": f"Index '{redis_index_name}' does not exist (already deleted)",
-            })
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": error_msg}
-        )
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "message": f"Index '{redis_index_name}' does not exist (already deleted)",
+                }
+            )
+        return JSONResponse(status_code=500, content={"success": False, "error": error_msg})
 
 
 @app.post("/api/index/{index_name}")
@@ -731,8 +1231,7 @@ async def create_index(index_name: str):
     """Create a Redis search index."""
     if index_name not in INDEX_CONFIGS:
         return JSONResponse(
-            status_code=400,
-            content={"success": False, "error": f"Unknown index: {index_name}"}
+            status_code=400, content={"success": False, "error": f"Unknown index: {index_name}"}
         )
 
     config = INDEX_CONFIGS[index_name]
@@ -745,21 +1244,22 @@ async def create_index(index_name: str):
 
     try:
         await redis.ft(redis_index_name).create_index(schema, definition=definition)
-        return JSONResponse(content={
-            "success": True,
-            "message": f"Index '{redis_index_name}' created successfully",
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Index '{redis_index_name}' created successfully",
+            }
+        )
     except Exception as e:
         error_msg = str(e)
         if "Index already exists" in error_msg:
-            return JSONResponse(content={
-                "success": True,
-                "message": f"Index '{redis_index_name}' already exists",
-            })
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": error_msg}
-        )
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "message": f"Index '{redis_index_name}' already exists",
+                }
+            )
+        return JSONResponse(status_code=500, content={"success": False, "error": error_msg})
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
@@ -770,10 +1270,9 @@ async def index_info(request: Request):
         info = {}
         for i in range(0, len(raw), 2):
             key = raw[i]
-            val = raw[i+1]
+            val = raw[i + 1]
             info[key] = val
     except Exception as e:
         info = {"error": str(e)}
 
-    return templates.TemplateResponse("admin_index.html",
-                                      {"request": request, "info": info})
+    return templates.TemplateResponse("admin_index.html", {"request": request, "info": info})

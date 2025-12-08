@@ -4,10 +4,15 @@ Load TMDB metadata from Google Cloud Storage into Redis.
 This script downloads movie and/or TV metadata from GCS and seeds it into Redis
 using the existing normalization layer.
 
+Supports two GCS formats:
+1. New format: us/movie/tmdb_movie_YYYY_MM.json (multiple files by year/month)
+2. Legacy format: faiss-indexes/movie-index.metadata.json (single file)
+
 Usage:
     python scripts/load_gcs_metadata.py --type movie
     python scripts/load_gcs_metadata.py --type tv
     python scripts/load_gcs_metadata.py --type all
+    python scripts/load_gcs_metadata.py --type all --prefix us  # Use new format
 """
 
 import argparse
@@ -23,16 +28,71 @@ from redis.asyncio import Redis
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.adapters.config import load_env
-from src.contracts.models import MCSources
+from src.contracts.models import MCSources, MCType
 from src.core.normalize import document_to_redis, normalize_document
 
 # GCS configuration
 DEFAULT_BUCKET = "mc-media-manager"
-DEFAULT_PREFIX = "faiss-indexes"
-METADATA_FILES = {
+DEFAULT_PREFIX = "us"  # New default - uses the new format
+
+# Legacy single-file format
+LEGACY_PREFIX = "faiss-indexes"
+LEGACY_FILES = {
     "movie": "movie-index.metadata.json",
     "tv": "tv-index.metadata.json",
 }
+
+
+def list_gcs_blobs(bucket_name: str, prefix: str, pattern: str = "") -> list[str]:
+    """
+    List blobs in a GCS bucket matching a prefix and pattern.
+
+    Args:
+        bucket_name: GCS bucket name
+        prefix: Path prefix to search
+        pattern: Optional pattern to filter blob names
+
+    Returns:
+        List of blob paths
+    """
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)
+
+    paths = []
+    for blob in blobs:
+        if pattern and pattern not in blob.name:
+            continue
+        if blob.name.endswith('.json') or blob.name.endswith('.json.gz'):
+            paths.append(blob.name)
+
+    return sorted(paths)
+
+
+def download_blob_content(bucket_name: str, blob_path: str) -> str:
+    """
+    Download and return content from a GCS blob.
+
+    Args:
+        bucket_name: GCS bucket name
+        blob_path: Path to the blob
+
+    Returns:
+        Blob content as string
+    """
+    import gzip
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
+
+    content = blob.download_as_bytes()
+
+    # Handle gzipped content
+    if blob_path.endswith('.gz'):
+        content = gzip.decompress(content)
+
+    return content.decode('utf-8')
 
 
 def download_metadata_from_gcs(bucket_name: str, blob_path: str) -> dict:
@@ -46,22 +106,37 @@ def download_metadata_from_gcs(bucket_name: str, blob_path: str) -> dict:
     Returns:
         Parsed JSON data as a dictionary
     """
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
-
     print(f"📥 Downloading gs://{bucket_name}/{blob_path}...")
-    content = blob.download_as_text()
-
+    content = download_blob_content(bucket_name, blob_path)
     print("📄 Parsing JSON...")
     return json.loads(content)
 
 
-def extract_items_from_metadata(data: dict) -> list[dict]:
+def extract_items_from_new_format(data: dict) -> list[dict]:
     """
-    Extract individual items from the GCS metadata format.
+    Extract individual items from the new GCS format.
 
-    The GCS files have structure:
+    The new format has structure:
+    {
+        "metadata": {...},
+        "results": [
+            {"mc_id": "...", "title": "...", ...},
+            ...
+        ]
+    }
+
+    Returns:
+        List of item dictionaries ready for normalization
+    """
+    results = data.get("results", [])
+    return results
+
+
+def extract_items_from_legacy_format(data: dict) -> list[dict]:
+    """
+    Extract individual items from the legacy GCS format.
+
+    The legacy format has structure:
     {
         "metadata": {
             "0": {"id": "...", "metadata": {...}},
@@ -103,12 +178,15 @@ async def load_metadata_to_redis(
     Returns:
         Tuple of (seeded_count, skipped_count)
     """
+    # Map media_type string to MCType enum
+    mc_type = MCType.MOVIE if media_type == "movie" else MCType.TV_SERIES
+
     seeded_count = 0
     skipped_count = 0
 
     for _i, item in enumerate(items):
         # Normalize the document using the existing abstraction layer
-        search_doc = normalize_document(item, source=MCSources.TMDB)
+        search_doc = normalize_document(item, source=MCSources.TMDB, mc_type=mc_type)
 
         if search_doc is None:
             skipped_count += 1
@@ -130,12 +208,109 @@ async def load_metadata_to_redis(
     return seeded_count, skipped_count
 
 
-async def load_from_gcs(media_types: list[str]) -> None:
+async def load_new_format(
+    media_type: str,
+    bucket_name: str,
+    prefix: str,
+    redis_client: Redis,
+) -> tuple[int, int]:
+    """
+    Load metadata from the new GCS format (individual files by year/month).
+
+    Args:
+        media_type: 'movie' or 'tv'
+        bucket_name: GCS bucket name
+        prefix: GCS path prefix (e.g., 'us')
+        redis_client: Redis async client
+
+    Returns:
+        Tuple of (total_seeded, total_skipped)
+    """
+    # List all matching files
+    type_prefix = f"{prefix}/{media_type}"
+    pattern = f"tmdb_{media_type}_"
+
+    print(f"🔍 Searching for files in gs://{bucket_name}/{type_prefix}/ matching '{pattern}*'...")
+    blob_paths = list_gcs_blobs(bucket_name, type_prefix, pattern)
+
+    if not blob_paths:
+        print("⚠️  No files found matching pattern. Trying without pattern...")
+        blob_paths = list_gcs_blobs(bucket_name, type_prefix)
+
+    print(f"📊 Found {len(blob_paths)} {media_type} files")
+
+    if not blob_paths:
+        return 0, 0
+
+    total_seeded = 0
+    total_skipped = 0
+
+    for i, blob_path in enumerate(blob_paths):
+        print(f"\n📁 [{i+1}/{len(blob_paths)}] Processing {blob_path.split('/')[-1]}...")
+
+        try:
+            data = download_metadata_from_gcs(bucket_name, blob_path)
+            items = extract_items_from_new_format(data)
+
+            if not items:
+                print("  ⚠️  No items found in file, trying legacy format...")
+                items = extract_items_from_legacy_format(data)
+
+            print(f"  📊 Found {len(items)} items")
+
+            seeded, skipped = await load_metadata_to_redis(
+                items, media_type, redis_client
+            )
+
+            total_seeded += seeded
+            total_skipped += skipped
+            print(f"  ✅ Loaded {seeded}, skipped {skipped}")
+
+        except Exception as e:
+            print(f"  ❌ Error processing file: {e}")
+            continue
+
+    return total_seeded, total_skipped
+
+
+async def load_legacy_format(
+    media_type: str,
+    bucket_name: str,
+    redis_client: Redis,
+) -> tuple[int, int]:
+    """
+    Load metadata from the legacy GCS format (single file per type).
+
+    Args:
+        media_type: 'movie' or 'tv'
+        bucket_name: GCS bucket name
+        redis_client: Redis async client
+
+    Returns:
+        Tuple of (seeded_count, skipped_count)
+    """
+    filename = LEGACY_FILES[media_type]
+    blob_path = f"{LEGACY_PREFIX}/{filename}"
+
+    try:
+        data = download_metadata_from_gcs(bucket_name, blob_path)
+        items = extract_items_from_legacy_format(data)
+        print(f"📊 Found {len(items)} {media_type} items")
+
+        return await load_metadata_to_redis(items, media_type, redis_client)
+
+    except Exception as e:
+        print(f"❌ Error loading legacy format: {e}")
+        return 0, 0
+
+
+async def load_from_gcs(media_types: list[str], use_legacy: bool = False) -> None:
     """
     Main function to load metadata from GCS into Redis.
 
     Args:
         media_types: List of media types to load ('movie', 'tv', or both)
+        use_legacy: Whether to use the legacy single-file format
     """
     # Load environment configuration
     load_env()
@@ -147,6 +322,7 @@ async def load_from_gcs(media_types: list[str]) -> None:
     print("🔧 Configuration:")
     print(f"   GCS Bucket: {bucket_name}")
     print(f"   Prefix: {prefix}")
+    print(f"   Format: {'legacy (single file)' if use_legacy else 'new (year/month files)'}")
     print(f"   Media types: {', '.join(media_types)}")
     print()
 
@@ -177,34 +353,24 @@ async def load_from_gcs(media_types: list[str]) -> None:
     total_skipped = 0
 
     for media_type in media_types:
-        if media_type not in METADATA_FILES:
-            print(f"⚠️  Unknown media type: {media_type}, skipping")
-            continue
-
-        filename = METADATA_FILES[media_type]
-        blob_path = f"{prefix}/{filename}"
-
         print(f"{'='*60}")
         print(f"📽️  Loading {media_type.upper()} metadata")
         print(f"{'='*60}")
 
         try:
-            # Download from GCS
-            data = download_metadata_from_gcs(bucket_name, blob_path)
-
-            # Extract items
-            items = extract_items_from_metadata(data)
-            print(f"📊 Found {len(items)} {media_type} items")
-
-            # Load to Redis
-            seeded, skipped = await load_metadata_to_redis(
-                items, media_type, redis_client
-            )
+            if use_legacy:
+                seeded, skipped = await load_legacy_format(
+                    media_type, bucket_name, redis_client
+                )
+            else:
+                seeded, skipped = await load_new_format(
+                    media_type, bucket_name, prefix, redis_client
+                )
 
             total_seeded += seeded
             total_skipped += skipped
 
-            print(f"✅ {media_type.upper()}: Loaded {seeded} items, skipped {skipped}")
+            print(f"\n✅ {media_type.upper()}: Loaded {seeded} items, skipped {skipped}")
             print()
 
         except Exception as e:
@@ -221,7 +387,10 @@ async def load_from_gcs(media_types: list[str]) -> None:
 
     # Show sample
     if total_seeded > 0:
-        sample_keys = await redis_client.keys("media:tmdb_*")
+        # Updated to use new key format
+        sample_keys = await redis_client.keys("media:tmdb_movie_*")
+        if not sample_keys:
+            sample_keys = await redis_client.keys("media:tmdb_tv_*")
         if sample_keys:
             sample = await redis_client.json().get(sample_keys[0])
             print()
@@ -260,6 +429,11 @@ def main():
         default=None,
         help=f"GCS path prefix (default: {DEFAULT_PREFIX} or GCS_METADATA_PREFIX env var)",
     )
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        help="Use legacy single-file format instead of year/month files",
+    )
 
     args = parser.parse_args()
 
@@ -276,9 +450,8 @@ def main():
         media_types = [args.type]
 
     # Run async loader
-    asyncio.run(load_from_gcs(media_types))
+    asyncio.run(load_from_gcs(media_types, use_legacy=args.legacy))
 
 
 if __name__ == "__main__":
     main()
-
