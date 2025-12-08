@@ -375,6 +375,13 @@ class ETLRunner:
         # Save metadata to GCS
         self.metadata_store.save_run_metadata(self._run_metadata)
 
+        # Send email notification
+        from etl.notifications import send_etl_summary_email
+
+        email_sent = send_etl_summary_email(self._run_metadata)
+        if email_sent:
+            self._run_metadata.add_log("Email notification sent")
+
         # Print summary
         print()
         print("=" * 60)
