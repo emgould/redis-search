@@ -11,5 +11,17 @@ ruff
 mypy
 types-simplejson
 types-pytz
+pytz
 dotenv
 google-cloud-storage
+firebase-functions
+firebase-admin
+aiohttp
+aiolimiter
+pyyaml
+simplejson
+beautifulsoup4
+commentjson
+filelock
+PyJWT
+requests

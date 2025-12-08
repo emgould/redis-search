@@ -9,19 +9,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import BackgroundTasks, FastAPI, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 
-from src.adapters.redis_client import get_redis
-from src.adapters.redis_manager import RedisEnvironment, RedisManager
-from src.adapters.redis_repository import RedisRepository
-
-# Note: ETL modules are imported lazily to avoid circular imports
-# with api.tmdb modules that use non-src prefixed imports
-from src.services.search_service import (
+from adapters.redis_client import get_redis
+from adapters.redis_manager import RedisEnvironment, RedisManager
+from adapters.redis_repository import RedisRepository
+from etl.etl_metadata import ETLMetadataStore
+from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
+from etl.tmdb_changes_etl import ChangesETLStats
+from services.search_service import (
     DetailsRequest,
     autocomplete,
     get_details,
@@ -30,6 +31,89 @@ from src.services.search_service import (
 
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
+
+# Check if web UI is disabled (for Cloud Run deployment without auth)
+WEB_UI_DISABLED = os.getenv("DISABLE_WEB_UI", "").lower() in ("true", "1", "yes")
+
+
+def require_web_ui_enabled() -> None:
+    """
+    FastAPI dependency that blocks access when web UI is disabled.
+
+    Use with: Depends(require_web_ui_enabled)
+
+    Set DISABLE_WEB_UI=true to disable web UI routes (for Cloud Run without auth).
+    """
+    if WEB_UI_DISABLED:
+        raise HTTPException(status_code=404, detail="Web UI is disabled in this environment")
+
+
+def verify_api_key(x_api_key: str | None = None) -> bool:
+    """
+    Verify request has valid API key.
+
+    Authorization is granted if:
+    1. Request has valid X-API-Key header matching ETL_API_KEY env var
+    2. Running locally (not in Cloud Run) AND ENVIRONMENT=local
+
+    Args:
+        x_api_key: API key header
+
+    Returns:
+        True if authorized, False otherwise
+    """
+    # Allow API key
+    expected_key = os.getenv("ETL_API_KEY")
+    if expected_key and x_api_key == expected_key:
+        return True
+
+    # If running in Cloud Run, auth is REQUIRED (no bypass)
+    if os.getenv("K_SERVICE"):
+        return False
+
+    # Local development: only skip auth if explicitly set to "local"
+    return os.getenv("ENVIRONMENT") == "local"
+
+
+def require_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> None:
+    """
+    FastAPI dependency that requires API key authentication.
+
+    Use with: Depends(require_api_key)
+
+    Raises HTTPException 401 if not authorized.
+    """
+    if not verify_api_key(x_api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized: X-API-Key header required")
+
+
+def verify_etl_auth(
+    x_cloudscheduler_jobname: str | None = None,
+    x_api_key: str | None = None,
+) -> bool:
+    """
+    Verify request is authorized to trigger ETL.
+
+    Authorization is granted if:
+    1. Request has X-CloudScheduler-JobName header (Cloud Scheduler)
+    2. Request has valid X-API-Key header matching ETL_API_KEY env var
+    3. Running locally (not in Cloud Run) AND ENVIRONMENT=local
+
+    Cloud Run detection: K_SERVICE env var is automatically set by Cloud Run.
+
+    Args:
+        x_cloudscheduler_jobname: Cloud Scheduler job name header
+        x_api_key: API key header
+
+    Returns:
+        True if authorized, False otherwise
+    """
+    # Cloud Scheduler sends this header
+    if x_cloudscheduler_jobname:
+        return True
+
+    # Use common API key verification
+    return verify_api_key(x_api_key)
 
 
 def get_latest_person_ids_file() -> dict | None:
@@ -62,13 +146,94 @@ def get_latest_person_ids_file() -> dict | None:
 
 
 app = FastAPI()
+
+# Enable CORS for all origins (allows local dev to hit public API)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 templates = Jinja2Templates(directory="web/templates")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Cloud Run."""
+    return {"status": "healthy"}
+
+
+@app.get("/debug/redis-test")
+async def debug_redis_test():
+    """Debug endpoint to test Redis connectivity from Cloud Run."""
+    import socket
+    import time
+
+    host = os.getenv("REDIS_HOST", "localhost")
+    port = int(os.getenv("REDIS_PORT", "6379"))
+    password = os.getenv("REDIS_PASSWORD")
+
+    results = {
+        "redis_host": host,
+        "redis_port": port,
+        "has_password": bool(password),
+    }
+
+    # Test 1: Raw socket connection
+    start = time.time()
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        sock.connect((host, port))
+        sock.close()
+        results["socket_connect"] = {
+            "success": True,
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+    except Exception as e:
+        results["socket_connect"] = {
+            "success": False,
+            "error": str(e),
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+
+    # Test 2: Redis client ping
+    start = time.time()
+    try:
+        from redis import Redis
+
+        client = Redis(
+            host=host,
+            port=port,
+            password=password,
+            socket_timeout=10,
+            socket_connect_timeout=10,
+        )
+        pong = client.ping()
+        results["redis_ping"] = {
+            "success": True,
+            "response": pong,
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+        client.close()
+    except Exception as e:
+        results["redis_ping"] = {
+            "success": False,
+            "error": str(e),
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+
+    return results
+
 
 # Track background task status (ETL)
 _task_status = {"running": False, "output": "", "error": ""}
 
 # Track promote task status (separate from ETL task)
 _promote_status = {"running": False, "output": "", "error": ""}
+_copy_to_local_status = {"running": False, "output": "", "error": ""}
 
 # Track ETL task status
 _etl_status = {"running": False, "output": "", "error": ""}
@@ -102,7 +267,7 @@ _changes_job_live_stats: dict[str, Any] = {}
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     current_env = RedisManager.get_current_env()
     return templates.TemplateResponse(
         "home.html",
@@ -114,7 +279,11 @@ async def home(request: Request):
 
 
 @app.get("/etl", response_class=HTMLResponse)
-async def etl_page(request: Request):
+async def etl_page(
+    request: Request,
+    _auth: None = Depends(require_api_key),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     """ETL Runner dashboard for monitoring and triggering ETL jobs."""
     current_env = RedisManager.get_current_env()
 
@@ -149,7 +318,9 @@ async def api_autocomplete(q: str = Query(default="")):
 
 
 @app.get("/autocomplete_test", response_class=HTMLResponse)
-async def autocomplete_test(request: Request, q: str = ""):
+async def autocomplete_test(
+    request: Request, q: str = "", _ui: None = Depends(require_web_ui_enabled)
+):
     results = await autocomplete(q) if q else []
     return templates.TemplateResponse(
         "autocomplete.html", {"request": request, "query": q, "results": results}
@@ -157,32 +328,27 @@ async def autocomplete_test(request: Request, q: str = ""):
 
 
 @app.get("/management", response_class=HTMLResponse)
-async def management(request: Request):
+async def management(
+    request: Request,
+    _auth: None = Depends(require_api_key),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     """Management dashboard with Redis environment switcher and data loading."""
     current_env = RedisManager.get_current_env()
 
-    # Test both connections
-    local_status = await RedisManager.test_connection(RedisEnvironment.LOCAL)
-    public_status = await RedisManager.test_connection(RedisEnvironment.PUBLIC)
-
-    # Get stats from current connection
-    try:
-        repo = RedisRepository()
-        stats = await repo.stats()
-    except Exception as e:
-        stats = {"error": str(e)}
-
-    # Get latest person IDs file info
+    # Get latest person IDs file info (fast, local file check)
     person_ids_info = get_latest_person_ids_file()
 
+    # Return page immediately - stats will be fetched async via JS
+    # This makes the page load instantly instead of waiting for Redis queries
     return templates.TemplateResponse(
         "management.html",
         {
             "request": request,
             "current_env": current_env.value,
-            "local_status": local_status,
-            "public_status": public_status,
-            "stats": stats,
+            "local_status": {"connected": False, "error": "Loading..."},
+            "public_status": {"connected": False, "error": "Loading..."},
+            "stats": {},  # Empty - will be populated by JS
             "task_status": _task_status,
             "person_ids_info": person_ids_info,
         },
@@ -298,8 +464,10 @@ def run_gcs_load_task(
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _task_status["output"] = "".join(output_lines)
-        if stderr:
-            _task_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _task_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _task_status["error"] = str(e)
@@ -353,7 +521,7 @@ async def task_status():
 
 
 @app.get("/api/promote/indices")
-async def list_available_indices():
+async def list_available_indices(_: None = Depends(require_api_key)):
     """List available indices from local Redis for promotion."""
     try:
         # Run the promote script in list mode with JSON output
@@ -454,8 +622,10 @@ def run_promote_task(indices: list[str] | None = None):
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _promote_status["output"] = "".join(output_lines)
-        if stderr:
-            _promote_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _promote_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _promote_status["error"] = str(e)
@@ -467,6 +637,7 @@ def run_promote_task(indices: list[str] | None = None):
 async def promote_to_dev(
     background_tasks: BackgroundTasks,
     indices: list[str] | None = Query(default=None),
+    _: None = Depends(require_api_key),
 ):
     """
     Promote local Redis documents to public Redis.
@@ -496,9 +667,158 @@ async def promote_to_dev(
 
 
 @app.get("/api/promote-status")
-async def promote_status():
+async def promote_status(_: None = Depends(require_api_key)):
     """Get status of promote background task."""
     return JSONResponse(content=_promote_status)
+
+
+# ============================================================================
+# Copy to Local (reverse promote) endpoints
+# ============================================================================
+
+
+def run_copy_to_local_task(indices: list[str] | None = None):
+    """Run copy from public to local Redis in background."""
+    global _copy_to_local_status
+    _copy_to_local_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Set up environment
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Build command - use promote script with --reverse flag
+        cmd = [
+            sys.executable,
+            "-u",
+            "scripts/copy_to_local.py",
+        ]
+
+        if indices:
+            cmd.extend(["--indices"] + indices)
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _copy_to_local_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining_stdout, stderr = process.communicate()
+        if remaining_stdout:
+            output_lines.append(remaining_stdout)
+            _copy_to_local_status["output"] = "".join(output_lines)
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _copy_to_local_status["error"] = (
+                stderr or f"Process exited with code {process.returncode}"
+            )
+
+    except Exception as e:
+        _copy_to_local_status["error"] = str(e)
+    finally:
+        _copy_to_local_status["running"] = False
+
+
+@app.get("/api/copy-to-local/indices")
+async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
+    """List available indices from public Redis for copying to local."""
+    try:
+        # Get public Redis connection info
+        public_host = os.getenv("PUBLIC_REDIS_HOST", "localhost")
+        public_port = int(os.getenv("PUBLIC_REDIS_PORT", "6381"))
+        public_password = os.getenv("PUBLIC_REDIS_PASSWORD") or None
+
+        from redis.asyncio import Redis as AsyncRedis
+
+        redis = AsyncRedis(
+            host=public_host,
+            port=public_port,
+            password=public_password,
+            decode_responses=True,
+        )
+
+        await redis.ping()  # type: ignore[misc]
+
+        # List indices
+        indices_raw = await redis.execute_command("FT._LIST")
+        indices = []
+
+        for idx_name in indices_raw or []:
+            try:
+                info = await redis.ft(idx_name).info()
+                num_docs = int(info.get("num_docs", 0))
+                friendly_name = idx_name[4:] if idx_name.startswith("idx:") else idx_name
+                indices.append(
+                    {
+                        "name": friendly_name,
+                        "redis_name": idx_name,
+                        "num_docs": num_docs,
+                    }
+                )
+            except Exception:
+                pass
+
+        await redis.aclose()
+
+        return JSONResponse(content={"success": True, "indices": indices})
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.post("/api/copy-to-local")
+async def copy_to_local(
+    background_tasks: BackgroundTasks,
+    indices: list[str] | None = Query(default=None),
+    _: None = Depends(require_api_key),
+):
+    """
+    Copy public Redis documents to local Redis.
+
+    Args:
+        indices: Optional list of index names to copy. If not provided,
+                 copies all available indices.
+    """
+    global _copy_to_local_status
+
+    if _copy_to_local_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A copy task is already running"},
+        )
+
+    background_tasks.add_task(run_copy_to_local_task, indices)
+
+    indices_msg = f"indices: {', '.join(indices)}" if indices else "all indices"
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started copying public Redis to local ({indices_msg})",
+        }
+    )
+
+
+@app.get("/api/copy-to-local-status")
+async def copy_to_local_status(_: None = Depends(require_api_key)):
+    """Get status of copy to local background task."""
+    return JSONResponse(content=_copy_to_local_status)
 
 
 def run_etl_task(
@@ -523,7 +843,7 @@ def run_etl_task(
             sys.executable,
             "-u",  # Unbuffered output
             "-m",
-            "src.etl.run_etl",
+            "src.etl.bulk_loader",
             "--type",
             media_type,
         ]
@@ -575,8 +895,11 @@ def run_etl_task(
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _etl_status["output"] = "".join(output_lines)
-        if stderr:
-            _etl_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        # Stderr may contain warnings/logging even on success
+        if process.returncode != 0:
+            _etl_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _etl_status["error"] = str(e)
@@ -652,7 +975,7 @@ async def api_run_etl(
 
 
 @app.get("/api/etl-status")
-async def etl_status():
+async def etl_status(_: None = Depends(require_api_key)):
     """Get status of ETL background task."""
     return JSONResponse(content=_etl_status)
 
@@ -952,7 +1275,7 @@ import asyncio
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'src')
-from src.services.person_etl_service import run_person_extract
+from services.person_etl_service import run_person_extract
 
 async def main():
     source = {source_file!r} if {source_file!r} else None
@@ -1083,7 +1406,7 @@ import asyncio
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'src')
-from src.services.person_etl_service import run_person_load
+from services.person_etl_service import run_person_load
 
 async def main():
     source = {source_file!r} if {source_file!r} else None
@@ -1287,24 +1610,34 @@ async def run_nightly_etl_task(
 ) -> None:
     """Background task to run the full nightly ETL."""
     global _nightly_etl_status
+    print("run_nightly_etl_task: entered", flush=True)
 
-    # Lazy import to avoid circular import issues
-    from src.etl.etl_runner import ETLConfig, ETLRunner
+    def update_progress(progress: dict) -> None:
+        """Callback to update progress during ETL run."""
+        _nightly_etl_status["progress"] = progress
+        print(f"Progress updated: {progress}", flush=True)
 
     try:
+        print("run_nightly_etl_task: loading config", flush=True)
         config = ETLConfig.from_env()
         runner = ETLRunner(config)
 
+        total_jobs = sum(len(j.runs) for j in config.jobs if j.enabled)
+        print(f"run_nightly_etl_task: setting progress, total_jobs={total_jobs}", flush=True)
         _nightly_etl_status["progress"] = {
-            "total_jobs": sum(len(j.runs) for j in config.jobs if j.enabled),
+            "total_jobs": total_jobs,
             "jobs_completed": 0,
-            "current_job": None,
+            "current_job": "Starting...",
         }
+        print(
+            f"run_nightly_etl_task: progress set to {_nightly_etl_status['progress']}", flush=True
+        )
 
         result = await runner.run_all(
             start_date_override=start_date,
             end_date_override=end_date,
             job_filter=job_filter,
+            progress_callback=update_progress,
         )
 
         _nightly_etl_status["result"] = result.to_dict()
@@ -1326,10 +1659,6 @@ async def run_changes_job_task(
 ) -> None:
     """Background task to run a single changes ETL job."""
     global _changes_job_status, _changes_job_live_stats
-
-    # Lazy import to avoid circular import issues
-    from src.etl.etl_runner import run_single_etl
-    from src.etl.tmdb_changes_etl import ChangesETLStats
 
     # Create stats object upfront for progress tracking
     stats = ChangesETLStats()
@@ -1366,10 +1695,8 @@ async def run_changes_job_task(
 
 
 @app.get("/api/etl/config")
-async def get_etl_config():
+async def get_etl_config(_: None = Depends(require_api_key)):
     """Get the current ETL configuration."""
-    from src.etl.etl_runner import ETLConfig
-
     try:
         config = ETLConfig.from_env()
         return JSONResponse(
@@ -1386,10 +1713,8 @@ async def get_etl_config():
 
 
 @app.get("/api/etl/jobs")
-async def list_etl_jobs():
+async def list_etl_jobs(_: None = Depends(require_api_key)):
     """List all configured ETL jobs."""
-    from src.etl.etl_runner import ETLConfig
-
     try:
         config = ETLConfig.from_env()
         jobs = []
@@ -1419,14 +1744,25 @@ async def list_etl_jobs():
 async def trigger_nightly_etl(
     background_tasks: BackgroundTasks,
     request: Request,
+    x_cloudscheduler_jobname: str | None = Header(None, alias="X-CloudScheduler-JobName"),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
 ):
     """
     Trigger the full nightly ETL run.
 
     This is the endpoint that Cloud Scheduler will call.
     It can also be called manually from the web UI.
+
+    Authentication:
+    - Cloud Scheduler: Automatically sends X-CloudScheduler-JobName header
+    - Manual: Provide X-API-Key header matching ETL_API_KEY env var
+    - Development: No auth required when ENVIRONMENT=development
     """
     global _nightly_etl_status
+
+    # Verify authorization
+    if not verify_etl_auth(x_cloudscheduler_jobname, x_api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid or missing credentials")
 
     if _nightly_etl_status["running"]:
         return JSONResponse(
@@ -1461,13 +1797,27 @@ async def trigger_nightly_etl(
     }
 
     # Use a thread to avoid blocking
-    etl_thread = threading.Thread(
-        target=lambda: __import__("asyncio").run(
-            run_nightly_etl_task(start_date, end_date, job_filter)
-        ),
-        daemon=True,
-    )
+    def run_etl_in_thread():
+        """Wrapper to catch all exceptions in the thread."""
+        global _nightly_etl_status
+        print(f"ETL thread starting, run_id={run_id}", flush=True)
+        try:
+            import asyncio
+
+            print("ETL thread: calling asyncio.run()", flush=True)
+            asyncio.run(run_nightly_etl_task(start_date, end_date, job_filter))
+            print("ETL thread: asyncio.run() completed", flush=True)
+        except Exception as e:
+            import traceback
+
+            error_msg = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+            _nightly_etl_status["error"] = error_msg
+            _nightly_etl_status["running"] = False
+            print(f"ETL thread error: {error_msg}", flush=True)
+
+    etl_thread = threading.Thread(target=run_etl_in_thread, daemon=True)
     etl_thread.start()
+    print(f"ETL thread started for run_id={run_id}", flush=True)
 
     return JSONResponse(
         content={
@@ -1479,7 +1829,7 @@ async def trigger_nightly_etl(
 
 
 @app.get("/api/etl/status")
-async def get_nightly_etl_status():
+async def get_nightly_etl_status(_: None = Depends(require_api_key)):
     """Get the status of the current or most recent ETL run."""
     return JSONResponse(
         content={
@@ -1500,6 +1850,7 @@ async def trigger_changes_job(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     verbose: bool = Query(False, description="Enable verbose logging"),
+    _: None = Depends(require_api_key),
 ):
     """
     Trigger a single ETL job for a specific media type.
@@ -1558,7 +1909,7 @@ async def trigger_changes_job(
 
 
 @app.get("/api/etl/job/status/{task_id}")
-async def get_changes_job_status(task_id: str):
+async def get_changes_job_status(task_id: str, _: None = Depends(require_api_key)):
     """Get the status of a specific job task."""
     if task_id not in _changes_job_status:
         return JSONResponse(
@@ -1590,7 +1941,7 @@ async def get_changes_job_status(task_id: str):
 
 
 @app.get("/api/etl/job/status")
-async def list_changes_job_statuses():
+async def list_changes_job_statuses(_: None = Depends(require_api_key)):
     """List all job task statuses."""
     return JSONResponse(
         content={
@@ -1604,10 +1955,9 @@ async def list_changes_job_statuses():
 async def list_etl_runs(
     run_date: str | None = Query(None, description="Filter by date (YYYY-MM-DD)"),
     limit: int = Query(10, description="Maximum runs to return"),
+    _: None = Depends(require_api_key),
 ):
     """List recent ETL runs from GCS metadata."""
-    from src.etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         runs = store.list_runs(run_date=run_date, limit=limit)
@@ -1625,10 +1975,8 @@ async def list_etl_runs(
 
 
 @app.get("/api/etl/runs/{run_date}/{run_id}")
-async def get_etl_run(run_date: str, run_id: str):
+async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_key)):
     """Get details of a specific ETL run."""
-    from src.etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         metadata = store.get_run_metadata(run_date, run_id)
@@ -1653,10 +2001,8 @@ async def get_etl_run(run_date: str, run_id: str):
 
 
 @app.get("/api/etl/job/state")
-async def get_etl_job_states():
+async def get_etl_job_states(_: None = Depends(require_api_key)):
     """Get the persistent state of all jobs (last run times, etc.)."""
-    from src.etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         states = store.get_all_job_states()
@@ -1781,7 +2127,7 @@ async def create_index(index_name: str):
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
-async def index_info(request: Request):
+async def index_info(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     redis = get_redis()
     try:
         raw = await redis.ft("idx:media").info()

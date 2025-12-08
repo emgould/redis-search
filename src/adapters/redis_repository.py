@@ -1,4 +1,3 @@
-
 from redis.commands.search.query import Query
 
 from .redis_client import get_redis
@@ -76,9 +75,7 @@ class RedisRepository:
             inverted_sz_mb = float(index_info.get("inverted_sz_mb", 0))
             offset_vectors_sz_mb = float(index_info.get("offset_vectors_sz_mb", 0))
             doc_table_size_mb = float(index_info.get("doc_table_size_mb", 0))
-            sortable_values_size_mb = float(
-                index_info.get("sortable_values_size_mb", 0)
-            )
+            sortable_values_size_mb = float(index_info.get("sortable_values_size_mb", 0))
             key_table_size_mb = float(index_info.get("key_table_size_mb", 0))
 
             # Calculate total index memory in bytes
@@ -114,9 +111,7 @@ class RedisRepository:
             inverted_sz_mb = float(people_index_info.get("inverted_sz_mb", 0))
             offset_vectors_sz_mb = float(people_index_info.get("offset_vectors_sz_mb", 0))
             doc_table_size_mb = float(people_index_info.get("doc_table_size_mb", 0))
-            sortable_values_size_mb = float(
-                people_index_info.get("sortable_values_size_mb", 0)
-            )
+            sortable_values_size_mb = float(people_index_info.get("sortable_values_size_mb", 0))
             key_table_size_mb = float(people_index_info.get("key_table_size_mb", 0))
 
             total_index_mb = (
@@ -156,9 +151,7 @@ class RedisRepository:
             count = 0
             cursor = 0
             while True:
-                cursor, keys = await self.redis.scan(
-                    cursor=cursor, match=pattern, count=10000
-                )
+                cursor, keys = await self.redis.scan(cursor=cursor, match=pattern, count=10000)
                 count += len(keys)
                 if cursor == 0:
                     break

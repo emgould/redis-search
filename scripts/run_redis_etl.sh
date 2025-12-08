@@ -48,7 +48,7 @@ echo "🚀 Running ETL..."
 echo ""
 
 # Run the ETL with all passed arguments
-python -m src.etl.run_etl "$@"
+python -m src.etl.bulk_loader "$@"
 
 echo ""
 echo "✅ Done!"

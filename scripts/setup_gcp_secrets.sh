@@ -98,9 +98,9 @@ else
     fi
 
     # Add new version with current env file contents
-    echo "   Adding new version from ${API_ENV_FILE}..."
+    echo "   Adding new version from ${ETL_ENV_FILE}..."
     gcloud secrets versions add "${ETL_SECRET_NAME}" \
-        --data-file="${API_ENV_FILE}" \
+        --data-file="${ETL_ENV_FILE}" \
         --project="${PROJECT_ID}"
     
     echo "   ✅ ETL bundle created: ${ETL_SECRET_NAME}"

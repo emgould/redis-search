@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy-api deploy-etl create-redis-vm local deploy tunnel
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop
 
 help:
 	@echo "Available make commands:"
@@ -14,10 +14,7 @@ help:
 	@echo ""
 	@echo "  Local Development:"
 	@echo "    make local         - Start Redis, API & Web (if not running), then load all GCS metadata"
-	@echo "    make web           - Start developer test website on port 9001"
-	@echo "    make local-api     - Run Search API with local env secrets"
 	@echo "    make local-etl     - Run ETL with local env secrets"
-	@echo "    make api           - Run Search API (requires secrets already loaded)"
 	@echo "    make etl           - Run ETL (requires secrets already loaded)"
 	@echo ""
 	@echo "  Data Loading (local Redis):"
@@ -31,16 +28,29 @@ help:
 	@echo "    make index         - Build Redis search index"
 	@echo "    make seed          - Seed example data"
 	@echo ""
-	@echo "  Docker:"
-	@echo "    make docker-api    - Run API in Docker (uses LOCAL_DEV=true)"
-	@echo "    make docker-etl    - Run ETL in Docker (uses LOCAL_DEV=true)"
-	@echo "    make docker-down   - Stop all Docker containers"
+	@echo "  Web App:"
+	@echo "    make web-local        - Start web app locally on port 9001"
+	@echo "    make web-docker       - Start web app in Docker on port 9001 (auto-starts Redis if needed)"
+	@echo "    make web-docker-down  - Stop web container only (Redis keeps running)"
+	@echo "    make redis-docker-down - Stop Redis container"
+	@echo "    make docker-down-all  - Stop all Docker containers"
 	@echo ""
-	@echo "  Cloud Run Deployment:"
-	@echo "    make deploy SERVICE=api ENV=dev  - Deploy Search API to Cloud Run (dev)"
-	@echo "    make deploy SERVICE=etl ENV=dev  - Deploy ETL job to Cloud Run (dev)"
-	@echo "    make create-redis-vm             - Create Redis Stack VM on GCE (one-time)"
-	@echo "    make tunnel                      - Create IAP tunnel to public Redis VM (localhost:6381)"
+	@echo "  ETL (Docker):"
+	@echo "    make etl-docker       - Run full ETL in Docker (auto-starts Redis if needed)"
+	@echo "    make etl-docker-tv    - Run TV ETL only in Docker"
+	@echo "    make etl-docker-movie - Run Movie ETL only in Docker"
+	@echo "    make etl-docker-person - Run Person ETL only in Docker"
+	@echo "    make etl-docker-build - Build ETL Docker image"
+	@echo "    make etl-docker-test  - Test ETL configuration and environment (dry-run)"
+	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM UTC daily)"
+	@echo "    make etl-docker-cron-stop - Stop cron scheduler container"
+	@echo ""
+	@echo "  Deployment:"
+	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
+	@echo "    make deploy-etl       - Deploy ETL service to Dedicated ETL VM"
+	@echo "    make setup-etl-schedule - Setup daily ETL schedule (2 AM UTC, auto-shutdown)"
+	@echo "    make create-redis-vm  - Create Redis Stack VM on GCE (one-time)"
+	@echo "    make tunnel           - Create IAP tunnel to public Redis VM (localhost:6381)"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -76,24 +86,18 @@ local-dev:
 	@echo "  LOCAL_DEV=true source scripts/load_secrets.sh dev etl"
 	@echo ""
 	@echo "Or use these convenience commands:"
-	@echo "  make local-api   - Run Search API with dev secrets"
 	@echo "  make local-etl   - Run ETL with dev secrets"
-
-local-api:
-	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local api && uvicorn src.search_api.main:app --reload --port 8080'
+	@echo "  make web-local   - Run web app with dev secrets"
 
 local-etl:
-	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local etl && python -m src.etl.run_etl'
+	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local etl && python -m src.etl.bulk_loader'
 
 # GCP Secret Manager setup (one-time per environment)
 secrets-setup:	
 	GCP_PROJECT_ID=$(GCP_PROJECT_ID) bash scripts/setup_gcp_secrets.sh $(ENV)
 
-api:
-	. venv/bin/activate && uvicorn src.search_api.main:app --reload --port 8080
-
 etl:
-	. venv/bin/activate && python -m src.etl.run_etl
+	. venv/bin/activate && python -m src.etl.bulk_loader
 
 redis-mac:
 	bash scripts/install_redis_mac.sh
@@ -108,17 +112,105 @@ redis-status:
 test:
 	. venv/bin/activate && pytest -q
 
-web:
+web-local:
+	@echo "🐳 Starting local environment..."
+	@echo ""
+	@echo "1️⃣  Checking IAP tunnel to public Redis..."
+	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
+		echo "   Tunnel not running, starting it in background..."; \
+		(nohup gcloud compute start-iap-tunnel redis-stack-vm 6379 \
+			--local-host-port=localhost:6381 \
+			--zone=us-central1-a \
+			--project=media-circle > /tmp/iap-tunnel.log 2>&1 &) && \
+		echo "   Tunnel started (logs: /tmp/iap-tunnel.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ Tunnel already running on port 6381"; \
+	fi
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
-docker-api:
-	cd docker && docker-compose up search_api
+web-docker:
+	@echo "🐳 Starting Docker environment..."
+	@echo ""
+	@echo "1️⃣  Checking IAP tunnel to public Redis..."
+	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
+		echo "   Tunnel not running, starting it in background..."; \
+		(nohup gcloud compute start-iap-tunnel redis-stack-vm 6379 \
+			--local-host-port=localhost:6381 \
+			--zone=us-central1-a \
+			--project=media-circle > /tmp/iap-tunnel.log 2>&1 &) && \
+		echo "   Tunnel started (logs: /tmp/iap-tunnel.log)"; \
+		sleep 3; \
+	else \
+		echo "   ✅ Tunnel already running on port 6381"; \
+	fi
+	@echo ""
+	@echo "2️⃣  Checking local Redis container..."
+	@if ! docker ps --format '{{.Names}}' | grep -q '^redis-search-redis-1$$' 2>/dev/null; then \
+		echo "   Redis not running, starting it..."; \
+		cd docker && docker-compose up -d redis; \
+		sleep 3; \
+	else \
+		echo "   ✅ Redis already running"; \
+	fi
+	@echo ""
+	@echo "3️⃣  Starting web container..."
+	cd docker && docker-compose up --build web
 
-docker-etl:
-	cd docker && docker-compose run etl
+web-docker-down:
+	@echo "🛑 Stopping web container (Redis will keep running)..."
+	cd docker && docker-compose stop web
+	cd docker && docker-compose rm -f web
 
-docker-down:
+redis-docker-down:
+	@echo "🛑 Stopping Redis container..."
+	cd docker && docker-compose stop redis
+
+docker-down-all:
+	@echo "🛑 Stopping all Docker containers..."
 	cd docker && docker-compose down
+
+# Build ETL Docker image
+etl-docker-build:
+	@echo "📦 Building ETL Docker image..."
+	docker build -f docker/etl.Dockerfile -t redis-search-etl .
+
+# Run ETL in Docker (requires Redis to be running)
+etl-docker:
+	@echo "🔄 Running ETL in Docker..."
+	@# Ensure Redis is running
+	@if ! docker ps | grep -q redis-search-redis; then \
+		echo "Starting Redis first..."; \
+		cd docker && docker-compose up -d redis; \
+		sleep 3; \
+	fi
+	cd docker && docker-compose --profile etl run --rm etl
+
+# Run ETL in Docker with specific job
+etl-docker-tv:
+	cd docker && docker-compose --profile etl run --rm etl run --job tv
+
+etl-docker-movie:
+	cd docker && docker-compose --profile etl run --rm etl run --job movie
+
+etl-docker-person:
+	cd docker && docker-compose --profile etl run --rm etl run --job person
+
+# Test cron setup without actually running ETL (dry-run)
+etl-docker-test:
+	cd docker && docker-compose --profile etl run --rm etl test
+
+# Start ETL container with cron daemon (runs at 3 AM UTC)
+etl-docker-cron:
+	@echo "🕐 Starting ETL container with cron scheduler..."
+	@echo "   ETL will run daily at 3 AM UTC"
+	@echo "   View logs: docker logs -f redis-search-etl-1"
+	@echo "   Run manually: docker exec redis-search-etl-1 python -m etl.run_nightly_etl"
+	cd docker && docker-compose --profile etl run -d --name redis-search-etl-cron etl cron
+
+# Stop ETL cron container
+etl-docker-cron-stop:
+	docker rm -f redis-search-etl-cron 2>/dev/null || true
 
 index:
 	. venv/bin/activate && python scripts/build_redis_index.py
@@ -184,23 +276,21 @@ local:
 create-redis-vm:
 	./scripts/create_redis_vm.sh
 
-# Deploy to Cloud Run: make deploy SERVICE=api ENV=dev
-SERVICE ?= api
-ENV ?= dev
-deploy:
-	@if [ "$(SERVICE)" != "api" ] && [ "$(SERVICE)" != "etl" ]; then \
-		echo "❌ SERVICE must be 'api' or 'etl'"; \
-		echo "   Usage: make deploy SERVICE=api ENV=dev"; \
-		exit 1; \
-	fi
-	./scripts/deploy_cloud_run.sh $(SERVICE) $(ENV)
+# Deploy to Cloud Run (dev environment)
+# Deploy Search API to Cloud Run (for autocomplete/search endpoints)
+deploy-web:
+	./scripts/deploy_web_cr.sh
 
-# Legacy targets (for backwards compatibility)
-deploy-api:
-	./scripts/deploy_cloud_run.sh api prod
-
+# Deploy ETL service to VM (ETL container only, Redis unchanged)
 deploy-etl:
-	./scripts/deploy_cloud_run.sh etl prod
+	./scripts/deploy_etl_vm.sh
+
+# Setup scheduled ETL (2 AM UTC daily, auto-shutdown after completion)
+setup-etl-schedule:
+	./scripts/setup_etl_schedule.sh
+
+# Legacy alias
+deploy: deploy-api
 
 # IAP tunnel to Redis VM - forwards localhost:6381 to Redis VM port 6379
 # Use PUBLIC_REDIS_PORT=6381 in local.env to connect through tunnel

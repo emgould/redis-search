@@ -1,25 +1,24 @@
 """
-Promote Local Redis to Dev.
+Copy Public Redis to Local.
 
-This script copies indices and documents from the local Redis instance to the
-public/dev Redis instance. It dynamically discovers indices from local Redis
-and allows selective promotion.
+This script copies indices and documents from the public/dev Redis instance to the
+local Redis instance. It's the reverse of promote_to_dev.py.
 
 Usage:
     # Dry run - show what would be copied
-    python scripts/promote_to_dev.py --dry-run
+    python scripts/copy_to_local.py --dry-run
 
     # List available indices
-    python scripts/promote_to_dev.py --list
+    python scripts/copy_to_local.py --list
 
-    # Promote all indices (complete replacement)
-    python scripts/promote_to_dev.py
+    # Copy all indices (complete replacement)
+    python scripts/copy_to_local.py
 
-    # Promote specific indices
-    python scripts/promote_to_dev.py --indices media people
+    # Copy specific indices
+    python scripts/copy_to_local.py --indices media people
 
     # JSON output for API integration
-    python scripts/promote_to_dev.py --list --json
+    python scripts/copy_to_local.py --list --json
 """
 
 import argparse
@@ -30,7 +29,6 @@ import sys
 from dataclasses import asdict, dataclass
 
 from dotenv import load_dotenv
-from google.cloud import storage  # type: ignore[attr-defined]
 from redis.asyncio import Redis
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
@@ -38,11 +36,6 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 # Load environment
 env_file = os.getenv("ENV_FILE", "config/local.env")
 load_dotenv(env_file)
-
-# ETL metadata GCS paths
-GCS_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl")
-GCS_ETL_PREFIX_LOCAL = os.getenv("GCS_ETL_PREFIX", "redis-search/etl/local")
-GCS_ETL_PREFIX_DEV = "redis-search/etl/dev"
 
 
 @dataclass
@@ -88,13 +81,10 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
     try:
         info = await redis.ft(index_name).info()
 
-        # info is already a dict from redis-py
-
         # Extract prefix from index definition
         prefix = ""
         if "index_definition" in info:
             idx_def = info["index_definition"]
-            # idx_def is a flat list: ['key_type', 'JSON', 'prefixes', ['media:'], ...]
             for j in range(0, len(idx_def), 2):
                 if idx_def[j] == "prefixes":
                     prefixes = idx_def[j + 1]
@@ -103,7 +93,6 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
                     break
 
         # Parse schema fields from attributes
-        # attributes is a list of lists: [['identifier', '$.search_title', 'attribute', 'search_title', 'type', 'TEXT', ...], ...]
         schema_fields = []
         if "attributes" in info:
             attrs = info["attributes"]
@@ -113,7 +102,6 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
                     field_info[attr[k]] = attr[k + 1]
                 schema_fields.append(field_info)
 
-        # Derive friendly name from redis index name (e.g., idx:media -> media)
         friendly_name = index_name
         if index_name.startswith("idx:"):
             friendly_name = index_name[4:]
@@ -131,7 +119,6 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
             schema_fields=schema_fields,
         )
     except Exception as e:
-        # Print to stderr to not corrupt JSON output
         print(f"   ⚠️  Could not get info for index '{index_name}': {e}", file=sys.stderr)
         return None
 
@@ -168,7 +155,6 @@ async def delete_keys_by_prefix(redis: Redis, prefix: str) -> int:
     if not keys:
         return 0
 
-    # Delete in batches
     deleted = 0
     batch_size = 100
     for i in range(0, len(keys), batch_size):
@@ -187,10 +173,7 @@ def build_schema_from_fields(fields: list[dict]) -> list[Field]:
         identifier = field.get("identifier", "")
         attribute = field.get("attribute", identifier)
 
-        # Determine if sortable
         sortable = "SORTABLE" in field.get("flags", []) if "flags" in field else False
-
-        # Get weight for text fields
         weight = float(field.get("weight", 1.0)) if "weight" in field else 1.0
 
         if field_type == "TEXT":
@@ -250,7 +233,6 @@ async def copy_documents(
     errors = 0
     error_messages: list[str] = []
 
-    # Process in batches
     for i in range(0, len(keys), batch_size):
         batch_keys = keys[i : i + batch_size]
 
@@ -258,7 +240,6 @@ async def copy_documents(
             copied += len(batch_keys)
             continue
 
-        # Get documents from source
         pipeline = source.pipeline()
         for key in batch_keys:
             pipeline.json().get(key)
@@ -266,7 +247,6 @@ async def copy_documents(
         try:
             docs = await pipeline.execute()
 
-            # Write to target
             target_pipeline = target.pipeline()
             for key, doc in zip(batch_keys, docs, strict=True):
                 if doc is not None:
@@ -278,21 +258,20 @@ async def copy_documents(
             errors += len(batch_keys)
             error_messages.append(f"Batch error at {i}: {e}")
 
-        # Progress indicator every 10 batches
         if (i // batch_size) % 10 == 0 and i > 0:
             print(f"      Progress: {copied:,} documents copied...")
 
     return copied, errors, error_messages
 
 
-async def promote_index(
+async def copy_index(
     source: Redis,
     target: Redis,
     index_info: IndexInfo,
     dry_run: bool = False,
 ) -> dict:
     """
-    Promote a single index from source to target.
+    Copy a single index from source (public) to target (local).
 
     This performs a complete replacement:
     1. Delete all documents with the prefix on target
@@ -317,7 +296,6 @@ async def promote_index(
     prefix = index_info.prefix
 
     try:
-        # Count source documents
         source_count = await count_keys_by_prefix(source, prefix)
         result["source_docs"] = source_count
         print(f"      Source documents: {source_count:,}")
@@ -332,13 +310,11 @@ async def promote_index(
             result["success"] = True
             return result
 
-        # Step 1: Delete target documents
         print("      Deleting target documents...")
         deleted = await delete_keys_by_prefix(target, prefix)
         result["target_docs_deleted"] = deleted
         print(f"      Deleted {deleted:,} documents")
 
-        # Step 2: Drop target index
         print("      Dropping target index...")
         dropped = await drop_index_safe(target, index_info.redis_name)
         if dropped:
@@ -346,7 +322,6 @@ async def promote_index(
         else:
             print("      Index did not exist")
 
-        # Step 3: Recreate index
         print("      Creating index with schema...")
         await create_index_from_schema(
             target,
@@ -356,7 +331,6 @@ async def promote_index(
         )
         print("      Index created")
 
-        # Step 4: Copy documents
         print("      Copying documents...")
         copied, errors, error_msgs = await copy_documents(
             source, target, prefix, dry_run=False
@@ -378,66 +352,14 @@ async def promote_index(
     return result
 
 
-def promote_etl_job_states(dry_run: bool = False) -> dict:
-    """
-    Copy ETL job states from local GCS path to dev GCS path.
-
-    This ensures that dev's scheduled ETL picks up where local left off,
-    avoiding re-processing of data that was already processed locally
-    and promoted to dev.
-
-    Returns dict with results.
-    """
-    result = {
-        "success": False,
-        "source_path": f"gs://{GCS_BUCKET}/{GCS_ETL_PREFIX_LOCAL}/state/job_states.json.gz",
-        "target_path": f"gs://{GCS_BUCKET}/{GCS_ETL_PREFIX_DEV}/state/job_states.json.gz",
-        "error": None,
-    }
-
-    try:
-        client = storage.Client()
-        bucket = client.bucket(GCS_BUCKET)
-
-        source_blob_name = f"{GCS_ETL_PREFIX_LOCAL}/state/job_states.json.gz"
-        target_blob_name = f"{GCS_ETL_PREFIX_DEV}/state/job_states.json.gz"
-
-        source_blob = bucket.blob(source_blob_name)
-
-        # Check if source exists
-        if not source_blob.exists():
-            result["error"] = "Source job states file does not exist"
-            print(f"      ⚠️  No local job states found at {source_blob_name}")
-            print("      This is normal if ETL hasn't been run locally yet")
-            result["success"] = True  # Not an error, just nothing to copy
-            return result
-
-        if dry_run:
-            print(f"      Would copy: {source_blob_name}")
-            print(f"      To: {target_blob_name}")
-            result["success"] = True
-            return result
-
-        # Copy the blob
-        bucket.copy_blob(source_blob, bucket, target_blob_name)
-        print("      Copied job states to dev")
-        result["success"] = True
-
-    except Exception as e:
-        result["error"] = str(e)
-        print(f"      ❌ Error copying job states: {e}")
-
-    return result
-
-
 async def list_available_indices(
-    local_host: str,
-    local_port: int,
-    local_password: str | None,
+    public_host: str,
+    public_port: int,
+    public_password: str | None,
     output_json: bool = False,
 ) -> list[IndexInfo]:
-    """List all available indices from local Redis."""
-    redis = await get_redis_connection(local_host, local_port, local_password, "local")
+    """List all available indices from public Redis."""
+    redis = await get_redis_connection(public_host, public_port, public_password, "public")
 
     indices = await list_indices(redis)
     index_infos = []
@@ -452,7 +374,7 @@ async def list_available_indices(
     if output_json:
         print(json.dumps([asdict(i) for i in index_infos], indent=2))
     else:
-        print("\n📋 Available Indices:")
+        print("\n📋 Available Indices (from Public Redis):")
         print("-" * 60)
         for info in index_infos:
             print(f"  • {info.name}")
@@ -467,22 +389,22 @@ async def list_available_indices(
 
 async def main(
     dry_run: bool = False,
-    indices_to_promote: list[str] | None = None,
+    indices_to_copy: list[str] | None = None,
     list_only: bool = False,
     output_json: bool = False,
 ) -> int:
     """
-    Main promote function.
+    Main copy function.
 
     Args:
         dry_run: Show what would be done without making changes
-        indices_to_promote: List of index names to promote (None = all)
+        indices_to_copy: List of index names to copy (None = all)
         list_only: Just list available indices
         output_json: Output JSON format (for API integration)
 
     Returns exit code (0 = success, 1 = error).
     """
-    # Get configuration
+    # Get configuration - NOTE: source is PUBLIC, target is LOCAL
     local_host = os.getenv("REDIS_HOST", "localhost")
     local_port = int(os.getenv("REDIS_PORT", "6380"))
     local_password = os.getenv("REDIS_PASSWORD") or None
@@ -494,40 +416,29 @@ async def main(
     # List only mode
     if list_only:
         await list_available_indices(
-            local_host, local_port, local_password, output_json
+            public_host, public_port, public_password, output_json
         )
         return 0
 
     print("=" * 60)
-    print("🚀 Promote Local Redis to Dev")
+    print("📥 Copy Public Redis to Local")
     print("=" * 60)
 
     print()
-    print("📍 Source (Local):")
-    print(f"   Host: {local_host}:{local_port}")
-    print(f"   Password: {'***' if local_password else 'None'}")
-    print()
-    print("🎯 Target (Dev/Public):")
+    print("📍 Source (Public/Dev):")
     print(f"   Host: {public_host}:{public_port}")
     print(f"   Password: {'***' if public_password else 'None'}")
+    print()
+    print("🎯 Target (Local):")
+    print(f"   Host: {local_host}:{local_port}")
+    print(f"   Password: {'***' if local_password else 'None'}")
     print()
 
     if dry_run:
         print("🔍 DRY RUN MODE - No changes will be made")
         print()
 
-    # Connect to local Redis
-    print("🔌 Connecting to Local Redis...")
-    try:
-        local_redis = await get_redis_connection(
-            local_host, local_port, local_password, "local"
-        )
-        print("   ✅ Connected")
-    except Exception as e:
-        print(f"   ❌ Failed: {e}")
-        return 1
-
-    # Connect to public Redis
+    # Connect to public Redis (SOURCE)
     print("🔌 Connecting to Public Redis...")
     try:
         public_redis = await get_redis_connection(
@@ -539,37 +450,46 @@ async def main(
         print()
         print("💡 Tip: Make sure the IAP tunnel is running:")
         print("   make tunnel")
-        await local_redis.aclose()
+        return 1
+
+    # Connect to local Redis (TARGET)
+    print("🔌 Connecting to Local Redis...")
+    try:
+        local_redis = await get_redis_connection(
+            local_host, local_port, local_password, "local"
+        )
+        print("   ✅ Connected")
+    except Exception as e:
+        print(f"   ❌ Failed: {e}")
+        await public_redis.aclose()
         return 1
 
     print()
 
-    # Discover available indices
-    print("📋 Discovering indices...")
-    indices = await list_indices(local_redis)
+    # Discover available indices from PUBLIC
+    print("📋 Discovering indices from public Redis...")
+    indices = await list_indices(public_redis)
     print(f"   Found {len(indices)} indices: {', '.join(indices)}")
     print()
 
     # Get info for each index
     available_indices: list[IndexInfo] = []
     for idx_name in indices:
-        info = await get_index_info(local_redis, idx_name)
+        info = await get_index_info(public_redis, idx_name)
         if info:
             available_indices.append(info)
 
     # Filter to requested indices if specified
-    if indices_to_promote:
-        # Match by friendly name or redis name
+    if indices_to_copy:
         filtered = []
         for info in available_indices:
-            if info.name in indices_to_promote or info.redis_name in indices_to_promote:
+            if info.name in indices_to_copy or info.redis_name in indices_to_copy:
                 filtered.append(info)
 
-        # Check for unknown indices
         known_names = {i.name for i in available_indices} | {
             i.redis_name for i in available_indices
         }
-        unknown = [i for i in indices_to_promote if i not in known_names]
+        unknown = [i for i in indices_to_copy if i not in known_names]
         if unknown:
             print(f"⚠️  Unknown indices (will be skipped): {', '.join(unknown)}")
             print()
@@ -577,13 +497,13 @@ async def main(
         available_indices = filtered
 
     if not available_indices:
-        print("❌ No indices to promote")
-        await local_redis.aclose()
+        print("❌ No indices to copy")
         await public_redis.aclose()
+        await local_redis.aclose()
         return 1
 
-    # Promote each index
-    print(f"🚀 Promoting {len(available_indices)} indices...")
+    # Copy each index
+    print(f"📥 Copying {len(available_indices)} indices...")
     print()
 
     results = []
@@ -592,7 +512,8 @@ async def main(
 
     for info in available_indices:
         print(f"   📦 Index: {info.name} ({info.redis_name})")
-        result = await promote_index(local_redis, public_redis, info, dry_run=dry_run)
+        # NOTE: source is public, target is local
+        result = await copy_index(public_redis, local_redis, info, dry_run=dry_run)
         results.append(result)
         total_copied += result["docs_copied"]
         total_errors += result["errors"]
@@ -602,41 +523,31 @@ async def main(
             print("      ❌ Failed")
         print()
 
-    # Promote ETL job states from GCS
-    print("📋 Promoting ETL job states...")
-    etl_result = promote_etl_job_states(dry_run=dry_run)
-    if etl_result["success"]:
-        print("   ✅ ETL job states promoted")
-    else:
-        print(f"   ❌ Failed: {etl_result.get('error')}")
-    print()
-
     # Final summary
     print("=" * 60)
     print("📊 Summary")
     print("=" * 60)
-    print(f"   Indices promoted: {len([r for r in results if r['success']])}/{len(results)}")
+    print(f"   Indices copied: {len([r for r in results if r['success']])}/{len(results)}")
     print(f"   Total documents {'would be ' if dry_run else ''}copied: {total_copied:,}")
-    print(f"   ETL job states: {'✅' if etl_result['success'] else '❌'}")
     if total_errors > 0:
         print(f"   Total errors: {total_errors}")
     print()
 
     # Cleanup
-    await local_redis.aclose()
     await public_redis.aclose()
+    await local_redis.aclose()
 
     if total_errors > 0 or any(not r["success"] for r in results):
         print("❌ Completed with errors")
         return 1
 
-    print("🎉 Promote complete!")
+    print("🎉 Copy complete!")
     return 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Promote local Redis indices and documents to dev/public Redis"
+        description="Copy public Redis indices and documents to local Redis"
     )
     parser.add_argument(
         "--dry-run",
@@ -651,7 +562,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--indices",
         nargs="+",
-        help="Specific indices to promote (by name, e.g., 'media people')",
+        help="Specific indices to copy (by name, e.g., 'media people')",
     )
     parser.add_argument(
         "--json",
@@ -664,9 +575,10 @@ if __name__ == "__main__":
     exit_code = asyncio.run(
         main(
             dry_run=args.dry_run,
-            indices_to_promote=args.indices,
+            indices_to_copy=args.indices,
             list_only=args.list,
             output_json=args.json,
         )
     )
     sys.exit(exit_code)
+

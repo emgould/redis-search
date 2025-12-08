@@ -1,63 +1,78 @@
+name: redis-search
+
 services:
   redis:
-    image: redis/redis-stack:latest
+    # Pin to same version as GCP (redis-stack-vm) to avoid module mismatch bugs
+    # Note: GCP uses redis-stack-server, local uses redis-stack (includes RedisInsight UI)
+    image: redis/redis-stack:7.4.0-v8
     ports:
       - "6380:6379"
       - "8001:8001"
     volumes:
       - redis_data:/data
     environment:
-      # Auto-accept RedisInsight EULA
       - RIPROXYEULA=true
-      # Persistence: AOF + RDB snapshots (same as GCE VM)
-      - REDIS_ARGS=--appendonly yes --save 60 1
+      # volatile-lru only evicts keys with TTL (cache), NEVER permanent data (media, person, indices)
+      - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 4gb --maxmemory-policy volatile-lru
 
-  search_api:
+  web:
     build:
       context: ..
-      dockerfile: src/search_api/Dockerfile
+      dockerfile: docker/cloudrun.Dockerfile
+    env_file:
+      - ../config/local.env
     environment:
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - ENVIRONMENT=${ENVIRONMENT:-dev}
-      - LOCAL_DEV=${LOCAL_DEV:-true}
-      # For GCP authentication in local dev (mounted below)
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+      # Connect to Redis container via Docker network (service name)
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Public Redis still goes through host tunnel
+      PUBLIC_REDIS_HOST: host.docker.internal
+      PUBLIC_REDIS_PORT: "6381"
+      ENVIRONMENT: local
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
     volumes:
-      # Mount GCP credentials for local development
-      # Falls back gracefully if file doesn't exist when using LOCAL_DEV=true
-      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
-      # Mount local config for LOCAL_DEV mode
       - ../config:/app/config:ro
+      # Mount source code for live reload
+      - ../src:/app/src:ro
+      - ../web:/app/web:ro
+      - ../scripts:/app/scripts:ro
+      # Mount data directory for ETL input/output (read-write)
+      - ../data:/app/data
+    ports:
+      - "9001:8080"
     depends_on:
       - redis
-    ports:
-      - "8080:8080"
-    command: >
-      bash -c "
-        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} search_api &&
-        python -m src.search_api.main"
+    # Override CMD to enable live reload
+    command: sh -c "uvicorn web.app:app --host 0.0.0.0 --port 8080 --reload --reload-dir /app/web --reload-dir /app/src"
 
+  # ETL runner for testing (run with: make etl-docker)
+  # Uses entrypoint script:
+  #   - "run" (default): Run ETL once and exit
+  #   - "cron": Start cron daemon for scheduled runs at 3 AM UTC
+  #   - "test": Verify environment and dry-run
   etl:
     build:
       context: ..
-      dockerfile: src/etl/Dockerfile
+      dockerfile: docker/etl.Dockerfile
+    env_file:
+      - ../config/local.env
     environment:
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - ENVIRONMENT=${ENVIRONMENT:-dev}
-      - LOCAL_DEV=${LOCAL_DEV:-true}
-      # For GCP authentication in local dev (mounted below)
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      ENVIRONMENT: local
+      ETL_CONFIG_PATH: /app/config/etl_jobs.yaml
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
     volumes:
-      # Mount GCP credentials for local development
-      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
-      # Mount local config for LOCAL_DEV mode
       - ../config:/app/config:ro
+      - ../data:/app/data
     depends_on:
       - redis
-    command: >
-      bash -c "
-        source /app/scripts/load_secrets.sh $${ENVIRONMENT:-dev} etl &&
-        python -m src.etl.run_etl"
+    profiles:
+      - etl
+    # Default: run ETL once. Override with: docker compose --profile etl run etl cron
+    command: ["run"]
 
 volumes:
   redis_data:
+    name: docker_redis_data
+    external: true

@@ -120,13 +120,14 @@ else
     echo 'Creating Redis container...'
     mkdir -p /var/lib/redis-data
     # Note: redis-stack-server uses REDIS_ARGS env var for config, not CLI args
+    # CRITICAL: volatile-lru only evicts cache (keys with TTL), NEVER data/indices
     docker run -d \
         --name ${CONTAINER_NAME} \
         --restart always \
         -p 6379:6379 \
         -v /var/lib/redis-data:/data \
-        -e REDIS_ARGS="--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1" \
-        redis/redis-stack-server:latest
+        -e REDIS_ARGS="--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 6gb --maxmemory-policy volatile-lru" \
+        redis/redis-stack-server:7.4.0-v8
 fi
 EOF
 

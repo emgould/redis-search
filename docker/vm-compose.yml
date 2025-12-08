@@ -1,0 +1,66 @@
+# Docker Compose for Redis Stack VM
+#
+# This runs both Redis and the ETL service on the production VM.
+# The ETL service runs on a schedule via cron inside the container.
+#
+# Deploy with: ./scripts/deploy_vm.sh
+#
+# Services:
+#   - redis: Redis Stack with RediSearch modules
+#   - etl: Nightly ETL runner (cron-based)
+
+services:
+  redis:
+    image: redis/redis-stack-server:7.4.0-v8
+    container_name: redis-stack
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    environment:
+      # CRITICAL: volatile-lru only evicts cache (keys with TTL), NEVER indices/documents
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 6gb --maxmemory-policy volatile-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  etl:
+    build:
+      context: ..
+      dockerfile: docker/etl.Dockerfile
+    container_name: etl-runner
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - TMDB_READ_TOKEN=${TMDB_READ_TOKEN}
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - GCS_BUCKET=${GCS_BUCKET}
+      - GCS_ETL_PREFIX=${GCS_ETL_PREFIX}
+      - ETL_CONFIG_PATH=/app/config/etl_jobs.yaml
+      - ETL_NOTIFICATION_EMAIL=${ETL_NOTIFICATION_EMAIL}
+      - SENDGRID_SERVER=${SENDGRID_SERVER}
+      - SENDGRID_PORT=${SENDGRID_PORT}
+      - SENDGRID_USERNAME=${SENDGRID_USERNAME}
+      - SENDGRID_PASSWORD=${SENDGRID_PASSWORD}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcs-key.json
+    volumes:
+      - ${GCS_CREDENTIALS_PATH:-/dev/null}:/app/credentials/gcs-key.json:ro
+      - etl-data:/app/data
+    # Start cron daemon - runs ETL at 3 AM UTC daily
+    # Logs output to Docker stdout/stderr for visibility
+    command: ["cron"]
+
+volumes:
+  redis-data:
+    driver: local
+  etl-data:
+    driver: local

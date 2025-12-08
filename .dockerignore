@@ -22,11 +22,16 @@ __pycache__/
 
 # Local development
 config/*.env
-docker/
-web/
 tests/
-scripts/
 data/
+
+# Docker - ignore compose files but allow entrypoint scripts
+docker/*.yml
+docker/*.Dockerfile
+
+# Scripts - exclude most but keep ETL runner
+scripts/*
+!scripts/run_etl.py
 
 # Documentation
 *.md

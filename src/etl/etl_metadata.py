@@ -18,8 +18,8 @@ from typing import Any
 from google.cloud import storage  # type: ignore[attr-defined]
 from google.cloud.exceptions import NotFound
 
-from src.adapters.config import load_env
-from src.utils.get_logger import get_logger
+from adapters.config import load_env
+from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -188,6 +188,34 @@ class ETLMetadataStore:
     def __init__(self, config: ETLStateConfig | None = None):
         self.config = config or ETLStateConfig.from_env()
         self._client: storage.Client | None = None
+        self._log_configuration()
+
+    def _log_configuration(self) -> None:
+        """Log metadata store configuration for visibility."""
+        # Detect if running in Cloud Run (K_SERVICE is auto-set by Cloud Run)
+        is_cloud_run = os.getenv("K_SERVICE") is not None
+        environment = "cloud_run" if is_cloud_run else os.getenv("ENVIRONMENT", "local")
+
+        if self.config.gcs_bucket:
+            logger.info(
+                f"ETL metadata store initialized: "
+                f"bucket={self.config.gcs_bucket}, "
+                f"prefix={self.config.gcs_prefix}, "
+                f"environment={environment}"
+            )
+        else:
+            if is_cloud_run:
+                logger.error(
+                    "GCS_BUCKET not configured in Cloud Run! "
+                    "ETL run metadata will NOT be persisted. "
+                    "Set GCS_BUCKET environment variable."
+                )
+            else:
+                logger.warning(
+                    f"GCS_BUCKET not configured (environment={environment}). "
+                    "ETL run metadata will not be persisted to GCS. "
+                    "This is expected in local development."
+                )
 
     @property
     def client(self) -> storage.Client:
@@ -299,7 +327,9 @@ class ETLMetadataStore:
 
         state = states[job_name]
         state.last_run_time = result.completed_at.isoformat() if result.completed_at else None
-        state.last_run_date = result.completed_at.strftime("%Y-%m-%d") if result.completed_at else None
+        state.last_run_date = (
+            result.completed_at.strftime("%Y-%m-%d") if result.completed_at else None
+        )
         state.last_status = result.status
         state.last_changes_found = result.changes_found
         state.last_documents_upserted = result.documents_upserted
@@ -425,13 +455,17 @@ class ETLMetadataStore:
                         # Parse run_id from filename: run_YYYYMMDD_HHMMSS.json.gz
                         run_id = filename.replace("run_", "").replace(".json.gz", "")
 
-                        runs.append({
-                            "run_id": run_id,
-                            "run_date": date_part,
-                            "blob_path": blob.name,
-                            "size_bytes": blob.size,
-                            "created": blob.time_created.isoformat() if blob.time_created else None,
-                        })
+                        runs.append(
+                            {
+                                "run_id": run_id,
+                                "run_date": date_part,
+                                "blob_path": blob.name,
+                                "size_bytes": blob.size,
+                                "created": blob.time_created.isoformat()
+                                if blob.time_created
+                                else None,
+                            }
+                        )
 
             # Sort by run_id (most recent first) and limit
             runs.sort(key=lambda x: x["run_id"], reverse=True)
@@ -465,4 +499,3 @@ def create_run_metadata() -> ETLRunMetadata:
         status="running",
         started_at=now,
     )
-

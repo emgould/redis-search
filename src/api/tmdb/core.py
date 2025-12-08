@@ -33,7 +33,7 @@ TMDBRequestCache = RedisCache(
     prefix="tmdb_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Request cache version - independent from other caches
+    version="1.0.1",  # Rolled for ETL diagnostics test
 )
 
 # Cache for standalone async functions (not class methods)
@@ -49,7 +49,7 @@ TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="tmdb",
     verbose=False,
-    version="1.4.1",  # Fixed nullable number_of_episodes/seasons in TV model
+    version="1.4.2",  # Rolled for ETL diagnostics test
 )
 
 
@@ -228,9 +228,7 @@ class TMDBService(Auth, BaseAPIClient):
             logger.debug("is_vaild_tv: Filtered '%s' - no name/title", item_name)
             return False
         if not item.overview or len(item.overview) == 0 or item.poster_path is None:
-            logger.debug(
-                "is_vaild_tv: Filtered '%s' - missing overview or poster", item_name
-            )
+            logger.debug("is_vaild_tv: Filtered '%s' - missing overview or poster", item_name)
             return False
 
         # If watch_providers dict exists and has content, validate streaming availability
@@ -244,9 +242,7 @@ class TMDBService(Auth, BaseAPIClient):
                 or (item.watch_providers.get("rent", None) is not None)
             )
             if not has_availability:
-                logger.debug(
-                    "is_vaild_tv: Filtered '%s' - no US streaming availability", item_name
-                )
+                logger.debug("is_vaild_tv: Filtered '%s' - no US streaming availability", item_name)
             return has_availability
 
         # Basic search result without enrichment - allow it
@@ -262,6 +258,7 @@ class TMDBService(Auth, BaseAPIClient):
         include_watch_providers: bool = True,
         include_keywords: bool = True,
         cast_limit: int = 5,
+        no_cache: bool = False,
         **kwargs: Any,
     ) -> MCBaseMediaItem:
         """
@@ -328,7 +325,12 @@ class TMDBService(Auth, BaseAPIClient):
             tasks.append(("videos", self._get_videos(tmdb_id, media_type)))
 
         if include_watch_providers:
-            tasks.append(("watch_providers", self._get_watch_providers(tmdb_id, media_type)))
+            tasks.append(
+                (
+                    "watch_providers",
+                    self._get_watch_providers(tmdb_id, media_type, no_cache=no_cache),
+                )
+            )
 
         if include_keywords:
             tasks.append(("keywords", self._get_keywords(tmdb_id, media_type)))
@@ -542,7 +544,7 @@ class TMDBService(Auth, BaseAPIClient):
 
         return result
 
-    async def _get_videos(self, tmdb_id: int, media_type: MCType) -> dict[str, Any]:
+    async def _get_videos(self, tmdb_id: int, media_type: MCType, **kwargs: Any) -> dict[str, Any]:
         """Get videos/trailers for media.
 
         Args:

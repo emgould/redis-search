@@ -36,12 +36,18 @@ echo ""
 # Change to project root
 cd "$PROJECT_ROOT"
 
-# Activate virtual environment
+# Activate virtual environment (skip in Docker where Python is global)
+if [ -d "venv" ]; then
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
+else
+    echo "🔧 Using system Python (Docker environment)"
+fi
 
-# Load secrets from local.env
+# Load secrets from local.env (preserve Docker env vars if set)
 echo "🔐 Loading secrets from config/local.env..."
+SAVE_REDIS_HOST="${REDIS_HOST:-}"
+SAVE_REDIS_PORT="${REDIS_PORT:-}"
 if [ -f "config/local.env" ]; then
     set -a
     source config/local.env
@@ -50,6 +56,12 @@ if [ -f "config/local.env" ]; then
 else
     echo "❌ Error: config/local.env not found"
     exit 1
+fi
+# Restore Docker's Redis settings if they were set
+if [ -n "$SAVE_REDIS_HOST" ]; then
+    export REDIS_HOST="$SAVE_REDIS_HOST"
+    export REDIS_PORT="$SAVE_REDIS_PORT"
+    echo "🐳 Using Docker Redis: $REDIS_HOST:$REDIS_PORT"
 fi
 
 # Verify TMDB token is set

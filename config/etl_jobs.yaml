@@ -14,7 +14,7 @@ jobs:
     runs:
       - params:
           media_type: "tv"
-          verbose: true
+          verbose: false
           # start_date: "2025-12-01"  # Optional override
           # end_date: "2025-12-08"    # Optional override
 
@@ -25,7 +25,7 @@ jobs:
     runs:
       - params:
           media_type: "movie"
-          verbose: true
+          verbose: false
 
   # TMDB Person Changes - Process daily person changes
   - name: tmdb_person_changes
@@ -34,8 +34,7 @@ jobs:
     runs:
       - params:
           media_type: "person"
-          verbose: true
-
+          verbose: false
 # Redis configuration (can be overridden by environment variables)
 # redis:
 #   host: localhost

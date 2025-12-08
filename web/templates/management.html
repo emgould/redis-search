@@ -1,296 +1,413 @@
-{% extends "base.html" %}
-
-{% block title %}Management - Redis Search{% endblock %}
-
-{% block body %}
+{% extends "base.html" %} {% block title %}Management - Redis Search{% endblock
+%} {% block body %}
 <div class="min-h-full">
   <!-- Header -->
-  <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm">
+  <header
+    class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm"
+  >
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="/" class="text-xl font-semibold text-white hover:text-brand-400 transition-colors">
+      <a
+        href="/"
+        class="text-xl font-semibold text-white hover:text-brand-400 transition-colors"
+      >
         ← Media Search
       </a>
       <div class="flex items-center gap-4">
-        <a href="/etl" class="text-sm text-surface-400 hover:text-white transition-colors">
+        <a
+          href="/etl"
+          class="text-sm text-surface-400 hover:text-white transition-colors"
+        >
           ETL Runner →
         </a>
-        <h1 class="text-lg font-medium text-surface-300">Management Dashboard</h1>
+        <h1 class="text-lg font-medium text-surface-300">
+          Management Dashboard
+        </h1>
       </div>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
-    
     <!-- Redis Environment Switcher -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
         <span class="text-2xl">🔌</span> Redis Connection
       </h2>
-      
+
       <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
         <!-- Local Redis -->
-        <div id="local-card" class="relative rounded-lg border-2 p-5 transition-all cursor-pointer
-          {% if current_env == 'local' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
-          onclick="switchRedis('local')">
-          
+        <div
+          id="local-card"
+          data-env="local"
+          class="relative rounded-lg border-2 p-5 transition-all cursor-pointer {% if current_env == 'local' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
+          onclick="switchRedis('local')"
+        >
           <div class="flex items-start justify-between mb-3">
             <div>
               <h3 class="font-semibold text-lg">Local Redis</h3>
-              <p class="text-sm text-surface-400">Docker container (localhost:6380)</p>
+              <p class="text-sm text-surface-400">
+                Docker container (localhost:6380)
+              </p>
             </div>
-            <span id="local-status" class="px-2 py-1 rounded text-xs font-medium
-              {% if local_status.status == 'connected' %}bg-green-500/20 text-green-400{% else %}bg-red-500/20 text-red-400{% endif %}">
-              {{ local_status.status }}
+            <span
+              id="local-status"
+              class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400"
+            >
+              Loading...
             </span>
           </div>
-          
-          {% if local_status.status == 'connected' %}
-          <div class="text-sm text-surface-400 space-y-1">
-            <p>Version: {{ local_status.redis_version }}</p>
-            <p>Documents: {{ local_status.dbsize }}</p>
+
+          <div id="local-details" class="text-sm text-surface-400 space-y-1">
+            <p id="local-version">Version: ...</p>
+            <p id="local-docs">Documents: ...</p>
           </div>
-          {% else %}
-          <p class="text-sm text-red-400">{{ local_status.error }}</p>
-          {% endif %}
-          
-          <div id="local-active" class="absolute bottom-3 right-3 {% if current_env != 'local' %}hidden{% endif %}">
+
+          <div
+            id="local-active"
+            class="absolute bottom-3 right-3 {% if current_env != 'local' %}hidden{% endif %}"
+          >
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
         </div>
-        
-        <!-- Promote Button -->
-        <div class="flex flex-col items-center gap-2">
-          <button id="btn-promote" 
-            onclick="openPromoteModal()"
-            class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Promote local documents to public Redis"
-            {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
-            <span class="flex items-center gap-2">
-              <span id="promote-icon" class="text-xl">⟹</span>
-            </span>
-          </button>
-          <span class="text-xs text-surface-500">Promote to Dev</span>
+
+        <!-- Transfer Buttons -->
+        <div class="flex flex-col items-center gap-4">
+          <!-- Promote to Dev Button -->
+          <div class="flex flex-col items-center gap-1">
+            <button
+              id="btn-promote"
+              onclick="openPromoteModal()"
+              class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Promote local documents to public Redis"
+              disabled
+            >
+              <span class="flex items-center gap-2">
+                <span id="promote-icon" class="text-xl">⟹</span>
+              </span>
+            </button>
+            <span class="text-xs text-surface-500">Promote to Dev</span>
+          </div>
+
+          <!-- Copy to Local Button -->
+          <div class="flex flex-col items-center gap-1">
+            <button
+              id="btn-copy-to-local"
+              onclick="openCopyToLocalModal()"
+              class="group relative px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Copy public documents to local Redis"
+              disabled
+            >
+              <span class="flex items-center gap-2">
+                <span id="copy-icon" class="text-xl">⟸</span>
+              </span>
+            </button>
+            <span class="text-xs text-surface-500">Copy to Local</span>
+          </div>
         </div>
-        
+
         <!-- Public Redis -->
-        <div id="public-card" class="relative rounded-lg border-2 p-5 transition-all cursor-pointer
-          {% if current_env == 'public' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
-          onclick="switchRedis('public')">
-          
+        <div
+          id="public-card"
+          data-env="public"
+          class="relative rounded-lg border-2 p-5 transition-all cursor-pointer {% if current_env == 'public' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
+          onclick="switchRedis('public')"
+        >
           <div class="flex items-start justify-between mb-3">
             <div>
               <h3 class="font-semibold text-lg">Public Redis</h3>
-              <p class="text-sm text-surface-400">GCE VM ({{ public_status.host }}:{{ public_status.port }})</p>
+              <p id="public-host" class="text-sm text-surface-400">
+                GCE VM (...)
+              </p>
             </div>
-            <span id="public-status" class="px-2 py-1 rounded text-xs font-medium
-              {% if public_status.status == 'connected' %}bg-green-500/20 text-green-400{% else %}bg-red-500/20 text-red-400{% endif %}">
-              {{ public_status.status }}
+            <span
+              id="public-status"
+              class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400"
+            >
+              Loading...
             </span>
           </div>
-          
-          {% if public_status.status == 'connected' %}
-          <div class="text-sm text-surface-400 space-y-1">
-            <p>Version: {{ public_status.redis_version }}</p>
-            <p>Documents: {{ public_status.dbsize }}</p>
+
+          <div id="public-details" class="text-sm text-surface-400 space-y-1">
+            <p id="public-version">Version: ...</p>
+            <p id="public-docs">Documents: ...</p>
           </div>
-          {% else %}
-          <p class="text-sm text-red-400">{{ public_status.error }}</p>
-          {% endif %}
-          
-          <div id="public-active" class="absolute bottom-3 right-3 {% if current_env != 'public' %}hidden{% endif %}">
+
+          <div
+            id="public-active"
+            class="absolute bottom-3 right-3 {% if current_env != 'public' %}hidden{% endif %}"
+          >
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
         </div>
       </div>
-      
+
       <div id="switch-message" class="mt-4 text-center text-sm hidden"></div>
-      
+
       <!-- Promote Status -->
       <div id="promote-status" class="mt-4 hidden">
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-2">
             <span id="promote-indicator" class="animate-spin">⏳</span>
-            <span id="promote-label" class="font-medium text-surface-300">Promoting...</span>
+            <span id="promote-label" class="font-medium text-surface-300"
+              >Promoting...</span
+            >
           </div>
-          <pre id="promote-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"></pre>
+          <pre
+            id="promote-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
     </section>
-    
+
     <!-- ETL Section -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
         <span class="text-2xl">📥</span> ETL - Load Data into Redis
       </h2>
-      
+
       <p class="text-surface-400 mb-6">
-        Load metadata from local JSON files into the currently active Redis instance.
+        Extract: Run apis and cache data from source(data/us). Load: Load
+        metadata from local JSON files into the currently active Redis instance.
       </p>
-      
+
       <!-- TMDB Subsection -->
-      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+      <div
+        class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4"
+      >
         <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <span>🎬</span> TMDB Data
         </h3>
-        
+
         <!-- TV Row -->
-        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between py-3 border-b border-surface-700"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">📺</span>
             <div>
               <p class="font-medium text-surface-200">TV Shows</p>
-              <p class="text-sm text-surface-500">tmdb_tv_*.json → <span class="text-brand-400">index:media</span></p>
+              <p class="text-sm text-surface-500">
+                tmdb_tv_*.json → <span class="text-brand-400">index:media</span>
+              </p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="openExtractModal('tv')"
+            <button
+              onclick="openExtractModal('tv')"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-extract-tv">
+              id="btn-extract-tv"
+            >
               🔍 Extract
             </button>
-            <button onclick="runEtl('tv', true)" 
+            <button
+              onclick="runEtl('tv', true)"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-etl-tv-all">
+              id="btn-etl-tv-all"
+            >
               Load All
             </button>
-            <button onclick="openEtlModal('tv')"
+            <button
+              onclick="openEtlModal('tv')"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-etl-tv-custom">
+              id="btn-etl-tv-custom"
+            >
               Load Custom...
             </button>
           </div>
         </div>
-        
+
         <!-- Movie Row -->
         <div class="flex items-center justify-between py-3">
           <div class="flex items-center gap-3">
             <span class="text-2xl">🎥</span>
             <div>
               <p class="font-medium text-surface-200">Movies</p>
-              <p class="text-sm text-surface-500">tmdb_movie_*.json → <span class="text-brand-400">index:media</span></p>
+              <p class="text-sm text-surface-500">
+                tmdb_movie_*.json →
+                <span class="text-brand-400">index:media</span>
+              </p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="openExtractModal('movie')"
+            <button
+              onclick="openExtractModal('movie')"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-extract-movie">
+              id="btn-extract-movie"
+            >
               🔍 Extract
             </button>
-            <button onclick="runEtl('movie', true)" 
+            <button
+              onclick="runEtl('movie', true)"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-etl-movie-all">
+              id="btn-etl-movie-all"
+            >
               Load All
             </button>
-            <button onclick="openEtlModal('movie')"
+            <button
+              onclick="openEtlModal('movie')"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-etl-movie-custom">
+              id="btn-etl-movie-custom"
+            >
               Load Custom...
             </button>
           </div>
         </div>
       </div>
-      
+
       <!-- Person Data Subsection -->
-      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+      <div
+        class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4"
+      >
         <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <span>👤</span> Person Data
         </h3>
-        
+
         <p class="text-sm text-surface-400 mb-4">
-          Three-step process: (1) Download person IDs from TMDB, (2) Extract & enrich with details, (3) Load into Redis index.
+          Three-step process: (1) Download person IDs from TMDB, (2) Extract &
+          enrich with details, (3) Load into Redis index.
         </p>
-        
+
         <!-- Step 1: Bulk Download -->
-        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between py-3 border-b border-surface-700"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">📥</span>
             <div>
               <p class="font-medium text-surface-200">Step 1: Bulk Download</p>
               <p class="text-sm text-surface-500">
-                Download person IDs from TMDB daily export
-                {% if person_ids_info %}
-                <span class="text-surface-400 ml-2">• Last download: <span class="text-green-400">{{ person_ids_info.modified }}</span> ({{ person_ids_info.size_mb }} MB)</span>
+                Download person IDs from TMDB daily export {% if person_ids_info
+                %}
+                <span class="text-surface-400 ml-2"
+                  >• Last download:
+                  <span class="text-green-400"
+                    >{{ person_ids_info.modified }}</span
+                  >
+                  ({{ person_ids_info.size_mb }} MB)</span
+                >
                 {% endif %}
               </p>
             </div>
           </div>
-          <button onclick="runPersonDownload()" 
+          <button
+            onclick="runPersonDownload()"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-            id="btn-person-download">
+            id="btn-person-download"
+          >
             📥 Bulk Download
           </button>
         </div>
-        
+
         <!-- Step 2: Extract -->
-        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between py-3 border-b border-surface-700"
+        >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🔍</span>
             <div>
-              <p class="font-medium text-surface-200">Step 2: Extract & Enrich</p>
-              <p class="text-sm text-surface-500">Filter by popularity, call TMDB API for details</p>
+              <p class="font-medium text-surface-200">
+                Step 2: Extract & Enrich
+              </p>
+              <p class="text-sm text-surface-500">
+                Filter by popularity, call TMDB API for details
+              </p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="runPersonExtract()" 
+            <button
+              onclick="runPersonExtract()"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-person-extract">
+              id="btn-person-extract"
+            >
               🔍 Extract
             </button>
-            <button onclick="openPersonExtractModal()"
+            <button
+              onclick="openPersonExtractModal()"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-person-extract-custom">
+              id="btn-person-extract-custom"
+            >
               Options...
             </button>
           </div>
         </div>
-        
+
         <!-- Step 3: Load -->
         <div class="flex items-center justify-between py-3">
           <div class="flex items-center gap-3">
             <span class="text-2xl">📤</span>
             <div>
               <p class="font-medium text-surface-200">Step 3: Load</p>
-              <p class="text-sm text-surface-500">enriched_person_*.json → <span class="text-brand-400">index:people</span></p>
+              <p class="text-sm text-surface-500">
+                enriched_person_*.json →
+                <span class="text-brand-400">index:people</span>
+              </p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="runPersonLoad()" 
+            <button
+              onclick="runPersonLoad()"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-person-load">
+              id="btn-person-load"
+            >
               📤 Load
             </button>
-            <button onclick="openPersonLoadModal()"
+            <button
+              onclick="openPersonLoadModal()"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-person-load-options">
+              id="btn-person-load-options"
+            >
               Options...
             </button>
           </div>
         </div>
       </div>
-      
+
       <!-- Person Download Status -->
       <div id="person-download-status" class="hidden mb-4">
-        <div class="bg-surface-800 rounded-lg p-4 border border-blue-500/30 relative">
-          <button onclick="dismissPersonDownloadStatus()" id="person-download-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+        <div
+          class="bg-surface-800 rounded-lg p-4 border border-blue-500/30 relative"
+        >
+          <button
+            onclick="dismissPersonDownloadStatus()"
+            id="person-download-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
+          >
+            ✕
+          </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📥</span>
             <span id="person-download-indicator" class="animate-spin">⏳</span>
-            <span id="person-download-label" class="font-medium text-blue-400">Downloading...</span>
+            <span id="person-download-label" class="font-medium text-blue-400"
+              >Downloading...</span
+            >
           </div>
-          <pre id="person-download-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+          <pre
+            id="person-download-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
-      
+
       <!-- Person Extract Status -->
       <div id="person-extract-status" class="hidden mb-4">
-        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
-          <button onclick="dismissPersonExtractStatus()" id="person-extract-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+        <div
+          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
+        >
+          <button
+            onclick="dismissPersonExtractStatus()"
+            id="person-extract-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
+          >
+            ✕
+          </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🔍</span>
             <span id="person-extract-indicator" class="animate-spin">⏳</span>
-            <span id="person-extract-label" class="font-medium text-amber-400">Extracting...</span>
+            <span id="person-extract-label" class="font-medium text-amber-400"
+              >Extracting...</span
+            >
           </div>
-          
+
           <!-- Progress Bar -->
           <div class="mb-3">
             <div class="flex justify-between text-xs text-surface-400 mb-1">
@@ -298,37 +415,67 @@
               <span id="person-extract-batch-label">0 / 0</span>
             </div>
             <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-              <div id="person-extract-batch-bar" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+              <div
+                id="person-extract-batch-bar"
+                class="h-full bg-amber-500 transition-all duration-300"
+                style="width: 0%"
+              ></div>
             </div>
           </div>
-          
-          <pre id="person-extract-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+
+          <pre
+            id="person-extract-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
-      
+
       <!-- Person Load Status -->
       <div id="person-load-status" class="hidden mb-4">
-        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
-          <button onclick="dismissPersonLoadStatus()" id="person-load-dismiss" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+        <div
+          class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative"
+        >
+          <button
+            onclick="dismissPersonLoadStatus()"
+            id="person-load-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
+          >
+            ✕
+          </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📤</span>
             <span id="person-load-indicator" class="animate-spin">⏳</span>
-            <span id="person-load-label" class="font-medium text-brand-400">Loading...</span>
+            <span id="person-load-label" class="font-medium text-brand-400"
+              >Loading...</span
+            >
           </div>
-          <pre id="person-load-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+          <pre
+            id="person-load-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
-      
+
       <!-- Extract Task Status -->
       <div id="extract-status-tv" class="hidden mb-4">
-        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
-          <button onclick="dismissExtractStatus('tv')" id="extract-dismiss-tv" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+        <div
+          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
+        >
+          <button
+            onclick="dismissExtractStatus('tv')"
+            id="extract-dismiss-tv"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
+          >
+            ✕
+          </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📺</span>
             <span id="extract-indicator-tv" class="animate-spin">⏳</span>
-            <span id="extract-label-tv" class="font-medium text-amber-400">Extracting TV Shows...</span>
+            <span id="extract-label-tv" class="font-medium text-amber-400"
+              >Extracting TV Shows...</span
+            >
           </div>
-          
+
           <!-- Progress Bars -->
           <div class="space-y-3 mb-3">
             <!-- Month Progress -->
@@ -338,10 +485,14 @@
                 <span id="extract-month-label-tv">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div id="extract-month-bar-tv" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+                <div
+                  id="extract-month-bar-tv"
+                  class="h-full bg-amber-500 transition-all duration-300"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
-            
+
             <!-- Batch Progress -->
             <div>
               <div class="flex justify-between text-xs text-surface-400 mb-1">
@@ -349,24 +500,41 @@
                 <span id="extract-batch-label-tv">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div id="extract-batch-bar-tv" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                <div
+                  id="extract-batch-bar-tv"
+                  class="h-full bg-green-500 transition-all duration-300"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
           </div>
-          
-          <pre id="extract-output-tv" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+
+          <pre
+            id="extract-output-tv"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
-      
+
       <div id="extract-status-movie" class="hidden mb-4">
-        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
-          <button onclick="dismissExtractStatus('movie')" id="extract-dismiss-movie" class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">✕</button>
+        <div
+          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
+        >
+          <button
+            onclick="dismissExtractStatus('movie')"
+            id="extract-dismiss-movie"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
+          >
+            ✕
+          </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🎥</span>
             <span id="extract-indicator-movie" class="animate-spin">⏳</span>
-            <span id="extract-label-movie" class="font-medium text-amber-400">Extracting Movies...</span>
+            <span id="extract-label-movie" class="font-medium text-amber-400"
+              >Extracting Movies...</span
+            >
           </div>
-          
+
           <!-- Progress Bars -->
           <div class="space-y-3 mb-3">
             <!-- Month Progress -->
@@ -376,10 +544,14 @@
                 <span id="extract-month-label-movie">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div id="extract-month-bar-movie" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+                <div
+                  id="extract-month-bar-movie"
+                  class="h-full bg-amber-500 transition-all duration-300"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
-            
+
             <!-- Batch Progress -->
             <div>
               <div class="flex justify-between text-xs text-surface-400 mb-1">
@@ -387,81 +559,139 @@
                 <span id="extract-batch-label-movie">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div id="extract-batch-bar-movie" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                <div
+                  id="extract-batch-bar-movie"
+                  class="h-full bg-green-500 transition-all duration-300"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
           </div>
-          
-          <pre id="extract-output-movie" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+
+          <pre
+            id="extract-output-movie"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
+          ></pre>
         </div>
       </div>
-      
+
       <!-- ETL Task Status -->
-      <div id="etl-status" class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}">
+      <div
+        id="etl-status"
+        class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}"
+      >
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-3">
-            <span id="etl-indicator" class="{% if task_status.running %}animate-spin{% endif %}">
-              {% if task_status.running %}⏳{% elif task_status.error %}❌{% else %}✅{% endif %}
+            <span
+              id="etl-indicator"
+              class="{% if task_status.running %}animate-spin{% endif %}"
+            >
+              {% if task_status.running %}⏳{% elif task_status.error %}❌{%
+              else %}✅{% endif %}
             </span>
             <span id="etl-label" class="font-medium">
-              {% if task_status.running %}Loading...{% elif task_status.error %}Error{% else %}Complete{% endif %}
+              {% if task_status.running %}Loading...{% elif task_status.error
+              %}Error{% else %}Complete{% endif %}
             </span>
           </div>
-          
-          <pre id="etl-output" class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap">{{ task_status.output }}{{ task_status.error }}</pre>
+
+          <pre
+            id="etl-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"
+          >
+{{ task_status.output }}{{ task_status.error }}</pre
+          >
         </div>
       </div>
     </section>
-    
+
     <!-- ETL Custom Modal -->
-    <div id="etl-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
-      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
+    <div
+      id="etl-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span id="modal-icon">📺</span>
             <span>Load <span id="modal-type-label">TV</span> Data</span>
           </h3>
-          <button onclick="closeEtlModal()" class="text-surface-400 hover:text-white p-1 rounded">
+          <button
+            onclick="closeEtlModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
             ✕
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="p-4 space-y-4">
-          <input type="hidden" id="modal-media-type" value="">
-          
+          <input type="hidden" id="modal-media-type" value="" />
+
           <!-- Filter Mode -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-2">Filter Mode</label>
+            <label class="block text-sm font-medium text-surface-300 mb-2"
+              >Filter Mode</label
+            >
             <div class="grid grid-cols-3 gap-2">
-              <button type="button" onclick="setFilterMode('exact')" id="filter-exact"
+              <button
+                type="button"
+                onclick="setFilterMode('exact')"
+                id="filter-exact"
                 class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
-                data-active="true">
+                data-active="true"
+              >
                 Exact Date
               </button>
-              <button type="button" onclick="setFilterMode('range')" id="filter-range"
-                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
+              <button
+                type="button"
+                onclick="setFilterMode('range')"
+                id="filter-range"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
+              >
                 Date Range
               </button>
-              <button type="button" onclick="setFilterMode('all')" id="filter-all"
-                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
+              <button
+                type="button"
+                onclick="setFilterMode('all')"
+                id="filter-all"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
+              >
                 All Files
               </button>
             </div>
           </div>
-          
+
           <!-- Exact Date Fields -->
           <div id="exact-fields" class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1">Year</label>
-                <input type="number" id="etl-year" placeholder="e.g. 2025" min="2000" max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                <label class="block text-sm font-medium text-surface-300 mb-1"
+                  >Year</label
+                >
+                <input
+                  type="number"
+                  id="etl-year"
+                  placeholder="e.g. 2025"
+                  min="2000"
+                  max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                />
               </div>
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1">Month (optional)</label>
-                <select id="etl-month" class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                <label class="block text-sm font-medium text-surface-300 mb-1"
+                  >Month (optional)</label
+                >
+                <select
+                  id="etl-month"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                >
                   <option value="">All months</option>
                   <option value="1">January</option>
                   <option value="2">February</option>
@@ -479,1664 +709,2251 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Range Fields -->
           <div id="range-fields" class="space-y-3 hidden">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1">Year From (≥)</label>
-                <input type="number" id="etl-year-gte" placeholder="e.g. 2020" min="2000" max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                <label class="block text-sm font-medium text-surface-300 mb-1"
+                  >Year From (≥)</label
+                >
+                <input
+                  type="number"
+                  id="etl-year-gte"
+                  placeholder="e.g. 2020"
+                  min="2000"
+                  max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                />
               </div>
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1">Year To (≤)</label>
-                <input type="number" id="etl-year-lte" placeholder="e.g. 2025" min="2000" max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+                <label class="block text-sm font-medium text-surface-300 mb-1"
+                  >Year To (≤)</label
+                >
+                <input
+                  type="number"
+                  id="etl-year-lte"
+                  placeholder="e.g. 2025"
+                  min="2000"
+                  max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                />
               </div>
             </div>
-            <p class="text-xs text-surface-500">Leave empty for open-ended range (e.g., only From = 2020 and earlier)</p>
+            <p class="text-xs text-surface-500">
+              Leave empty for open-ended range (e.g., only From = 2020 and
+              earlier)
+            </p>
           </div>
-          
+
           <!-- All Files Message -->
           <div id="all-fields" class="hidden">
-            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+            <div
+              class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
+            >
               <p class="text-sm text-yellow-400">
-                ⚠️ This will load <strong>all</strong> files for this media type. This may take a while.
+                ⚠️ This will load <strong>all</strong> files for this media
+                type. This may take a while.
               </p>
             </div>
           </div>
-          
+
           <!-- Options -->
           <div class="flex items-center gap-3 pt-2">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="etl-skip-gcs" 
-                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+              <input
+                type="checkbox"
+                id="etl-skip-gcs"
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
+              />
               <span class="text-sm text-surface-300">Skip GCS upload</span>
             </label>
           </div>
         </div>
-        
+
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button onclick="closeEtlModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+          <button
+            onclick="closeEtlModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
             Cancel
           </button>
-          <button onclick="runCustomEtl()" id="btn-run-custom-etl"
-            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+          <button
+            onclick="runCustomEtl()"
+            id="btn-run-custom-etl"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors"
+          >
             Run ETL
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Extract Modal -->
-    <div id="extract-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
-      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+    <div
+      id="extract-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span id="extract-modal-icon">📺</span>
-            <span>Extract <span id="extract-modal-type-label">TV</span> Data from TMDB</span>
+            <span
+              >Extract <span id="extract-modal-type-label">TV</span> Data from
+              TMDB</span
+            >
           </h3>
-          <button onclick="closeExtractModal()" class="text-surface-400 hover:text-white p-1 rounded">
+          <button
+            onclick="closeExtractModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
             ✕
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="p-4 space-y-4">
-          <input type="hidden" id="extract-modal-media-type" value="">
-          
+          <input type="hidden" id="extract-modal-media-type" value="" />
+
           <p class="text-sm text-surface-400">
-            Extract and enrich data from the TMDB API. This will discover media items and save enriched JSON files to the data directory.
+            Extract and enrich data from the TMDB API. This will discover media
+            items and save enriched JSON files to the data directory.
           </p>
-          
+
           <!-- Start Date -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1">Start Date (YYYY-MM)</label>
-            <input type="month" id="extract-start-date"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
-            <p class="text-xs text-surface-500 mt-1">The month to start extracting from</p>
+            <label class="block text-sm font-medium text-surface-300 mb-1"
+              >Start Date (YYYY-MM)</label
+            >
+            <input
+              type="month"
+              id="extract-start-date"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            />
+            <p class="text-xs text-surface-500 mt-1">
+              The month to start extracting from
+            </p>
           </div>
-          
+
           <!-- Months Back -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1">Months Back</label>
-            <input type="number" id="extract-months-back" value="1" min="1" max="60"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
-            <p class="text-xs text-surface-500 mt-1">Number of months to process (going backwards from start date)</p>
+            <label class="block text-sm font-medium text-surface-300 mb-1"
+              >Months Back</label
+            >
+            <input
+              type="number"
+              id="extract-months-back"
+              value="1"
+              min="1"
+              max="60"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            />
+            <p class="text-xs text-surface-500 mt-1">
+              Number of months to process (going backwards from start date)
+            </p>
           </div>
-          
+
           <!-- Preview -->
-          <div id="extract-preview" class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+          <div
+            id="extract-preview"
+            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
+          >
             <p class="text-xs text-surface-400 mb-1">Will extract data for:</p>
-            <p id="extract-preview-text" class="text-sm text-surface-200 font-medium">-</p>
+            <p
+              id="extract-preview-text"
+              class="text-sm text-surface-200 font-medium"
+            >
+              -
+            </p>
           </div>
         </div>
-        
+
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button onclick="closeExtractModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+          <button
+            onclick="closeExtractModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
             Cancel
           </button>
-          <button onclick="runExtract()" id="btn-run-extract"
-            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
+          <button
+            onclick="runExtract()"
+            id="btn-run-extract"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
+          >
             🔍 Start Extraction
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Person Extract Modal -->
-    <div id="person-extract-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
-      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+    <div
+      id="person-extract-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>👤</span>
             <span>Extract Person Data Options</span>
           </h3>
-          <button onclick="closePersonExtractModal()" class="text-surface-400 hover:text-white p-1 rounded">
+          <button
+            onclick="closePersonExtractModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
             ✕
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="p-4 space-y-4">
           <p class="text-sm text-surface-400">
-            Extract and enrich person data from TMDB. This calls the TMDB API for each person to get detailed information.
+            Extract and enrich person data from TMDB. This calls the TMDB API
+            for each person to get detailed information.
           </p>
-          
+
           <!-- Limit -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1">Record Limit (Optional)</label>
-            <input type="number" id="person-extract-limit" min="1" placeholder="Leave empty for all records"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
-            <p class="text-xs text-surface-500 mt-1">Limit the number of records to process (for testing)</p>
+            <label class="block text-sm font-medium text-surface-300 mb-1"
+              >Record Limit (Optional)</label
+            >
+            <input
+              type="number"
+              id="person-extract-limit"
+              min="1"
+              placeholder="Leave empty for all records"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            />
+            <p class="text-xs text-surface-500 mt-1">
+              Limit the number of records to process (for testing)
+            </p>
           </div>
-          
+
           <!-- Info -->
-          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+          <div
+            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
+          >
             <p class="text-xs text-surface-400 mb-1">Note:</p>
-            <p class="text-sm text-surface-300">This process filters by popularity (&gt; 1.0) and enriches each person with detailed TMDB data including biography, profile images, and known-for credits.</p>
+            <p class="text-sm text-surface-300">
+              This process filters by popularity (&gt; 1.0) and enriches each
+              person with detailed TMDB data including biography, profile
+              images, and known-for credits.
+            </p>
           </div>
         </div>
-        
+
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button onclick="closePersonExtractModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+          <button
+            onclick="closePersonExtractModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
             Cancel
           </button>
-          <button onclick="startPersonExtractFromModal()" id="btn-run-person-extract"
-            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
+          <button
+            onclick="startPersonExtractFromModal()"
+            id="btn-run-person-extract"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
+          >
             🔍 Start Extraction
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Person Load Options Modal -->
-    <div id="person-load-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
-      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+    <div
+      id="person-load-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>📤</span>
             <span>Load Person Data Options</span>
           </h3>
-          <button onclick="closePersonLoadModal()" class="text-surface-400 hover:text-white p-1 rounded">
+          <button
+            onclick="closePersonLoadModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
             ✕
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="p-4 space-y-4">
           <p class="text-sm text-surface-400">
             Load enriched person data from local JSON files into Redis.
           </p>
-          
+
           <!-- Clean Load Option -->
           <div class="flex items-center gap-3">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="person-load-clean" 
-                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
-              <span class="text-sm text-surface-300">Clean load (delete existing person data first)</span>
+              <input
+                type="checkbox"
+                id="person-load-clean"
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
+              />
+              <span class="text-sm text-surface-300"
+                >Clean load (delete existing person data first)</span
+              >
             </label>
           </div>
-          
+
           <!-- Info about clean load -->
-          <div id="clean-load-warning" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 hidden">
+          <div
+            id="clean-load-warning"
+            class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 hidden"
+          >
             <p class="text-sm text-yellow-400">
-              ⚠️ This will delete all existing <code class="bg-surface-800 px-1 rounded">person:*</code> keys before loading. Use this to ensure fresh data with updated ID formats.
+              ⚠️ This will delete all existing
+              <code class="bg-surface-800 px-1 rounded">person:*</code> keys
+              before loading. Use this to ensure fresh data with updated ID
+              formats.
             </p>
           </div>
-          
+
           <!-- Source File Info -->
-          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+          <div
+            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
+          >
             <p class="text-xs text-surface-400 mb-1">Source File:</p>
-            <p class="text-sm text-surface-300 font-mono">data/person/enriched_person_*.json</p>
-            <p class="text-xs text-surface-500 mt-1">Uses the most recent enriched file</p>
+            <p class="text-sm text-surface-300 font-mono">
+              data/person/enriched_person_*.json
+            </p>
+            <p class="text-xs text-surface-500 mt-1">
+              Uses the most recent enriched file
+            </p>
           </div>
         </div>
-        
+
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button onclick="closePersonLoadModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+          <button
+            onclick="closePersonLoadModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
             Cancel
           </button>
-          <button onclick="startPersonLoadFromModal()" id="btn-run-person-load-modal"
-            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+          <button
+            onclick="startPersonLoadFromModal()"
+            id="btn-run-person-load-modal"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors"
+          >
             📤 Start Load
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Promote to Dev Modal -->
-    <div id="promote-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
-      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
+    <div
+      id="promote-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
+      >
         <!-- Modal Header -->
-        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>🚀</span>
             <span>Promote to Dev</span>
           </h3>
-          <button onclick="closePromoteModal()" class="text-surface-400 hover:text-white p-1 rounded">
+          <button
+            onclick="closePromoteModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
             ✕
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="p-4 space-y-4">
           <p class="text-sm text-surface-400">
             Select the indices to promote from local Redis to public/dev Redis.
-            <strong class="text-yellow-400">This is a complete replacement</strong> - 
-            selected indices will be deleted on dev and recreated with fresh data from local.
+            <strong class="text-yellow-400"
+              >This is a complete replacement</strong
+            >
+            - selected indices will be deleted on dev and recreated with fresh
+            data from local.
           </p>
-          
+
           <!-- Loading state -->
-          <div id="promote-indices-loading" class="flex items-center justify-center py-8">
+          <div
+            id="promote-indices-loading"
+            class="flex items-center justify-center py-8"
+          >
             <span class="animate-spin mr-2">⏳</span>
             <span class="text-surface-400">Loading available indices...</span>
           </div>
-          
+
           <!-- Error state -->
-          <div id="promote-indices-error" class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-            <p class="text-sm text-red-400" id="promote-indices-error-msg">Failed to load indices</p>
+          <div
+            id="promote-indices-error"
+            class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4"
+          >
+            <p class="text-sm text-red-400" id="promote-indices-error-msg">
+              Failed to load indices
+            </p>
           </div>
-          
+
           <!-- Indices list -->
           <div id="promote-indices-list" class="hidden space-y-3">
             <!-- Select All -->
-            <div class="flex items-center justify-between pb-2 border-b border-surface-700">
+            <div
+              class="flex items-center justify-between pb-2 border-b border-surface-700"
+            >
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="promote-select-all" onchange="toggleAllPromoteIndices()"
-                  class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
-                <span class="text-sm font-medium text-surface-300">Select All</span>
+                <input
+                  type="checkbox"
+                  id="promote-select-all"
+                  onchange="toggleAllPromoteIndices()"
+                  class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
+                />
+                <span class="text-sm font-medium text-surface-300"
+                  >Select All</span
+                >
               </label>
             </div>
-            
+
             <!-- Index checkboxes will be inserted here -->
-            <div id="promote-indices-container" class="space-y-2 max-h-64 overflow-y-auto">
-            </div>
+            <div
+              id="promote-indices-container"
+              class="space-y-2 max-h-64 overflow-y-auto"
+            ></div>
           </div>
-          
+
           <!-- Warning -->
-          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+          <div
+            class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
+          >
             <p class="text-sm text-yellow-400">
-              ⚠️ <strong>Warning:</strong> This will completely replace the selected indices on dev.
-              All existing data for selected indices will be deleted and replaced with local data.
+              ⚠️ <strong>Warning:</strong> This will completely replace the
+              selected indices on dev. All existing data for selected indices
+              will be deleted and replaced with local data.
             </p>
           </div>
         </div>
-        
+
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button onclick="closePromoteModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+          <button
+            onclick="closePromoteModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
             Cancel
           </button>
-          <button onclick="startPromoteFromModal()" id="btn-run-promote-modal"
+          <button
+            onclick="startPromoteFromModal()"
+            id="btn-run-promote-modal"
             class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled>
+            disabled
+          >
             🚀 Promote Selected
           </button>
         </div>
       </div>
     </div>
-    
+
+    <!-- Copy to Local Modal -->
+    <div
+      id="copy-to-local-modal"
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none"
+    >
+      <div
+        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
+      >
+        <!-- Modal Header -->
+        <div
+          class="flex items-center justify-between p-4 border-b border-surface-700"
+        >
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>📥</span>
+            <span>Copy to Local</span>
+          </h3>
+          <button
+            onclick="closeCopyToLocalModal()"
+            class="text-surface-400 hover:text-white p-1 rounded"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <p class="text-surface-300">
+            Select the indices to copy from public Redis to local Redis. This is
+            a <strong class="text-amber-400">complete replacement</strong> -
+            selected indices will be deleted on local and recreated with fresh
+            data from public.
+          </p>
+
+          <div
+            class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-300"
+          >
+            <strong>⚠️ Warning:</strong> This will overwrite your local data
+            with public data.
+          </div>
+
+          <!-- Loading State -->
+          <div
+            id="copy-indices-loading"
+            class="py-4 text-center text-surface-400"
+          >
+            <span class="animate-pulse">Loading available indices...</span>
+          </div>
+
+          <!-- Index Selection -->
+          <div id="copy-indices-list" class="space-y-2 hidden">
+            <div
+              class="flex items-center gap-2 pb-2 border-b border-surface-700"
+            >
+              <label
+                class="flex items-center gap-2 cursor-pointer text-sm text-surface-300"
+              >
+                <input
+                  type="checkbox"
+                  id="copy-select-all"
+                  onchange="toggleCopySelectAll()"
+                  class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500"
+                />
+                <span>Select All</span>
+              </label>
+            </div>
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Error State -->
+          <div
+            id="copy-indices-error"
+            class="hidden py-4 text-center text-red-400"
+          >
+            Failed to load indices
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button
+            onclick="closeCopyToLocalModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="startCopyToLocalFromModal()"
+            id="btn-run-copy-modal"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            📥 Copy Selected
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Index Management -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-semibold flex items-center gap-2">
           <span class="text-2xl">🗂️</span> Index Management
         </h2>
-        <button onclick="refreshStatsWithFeedback()" 
+        <button
+          onclick="refreshStatsWithFeedback()"
           id="btn-refresh-stats"
-          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+        >
           <span id="refresh-icon">🔄</span> Refresh
         </button>
       </div>
-      
+
       <p class="text-surface-400 mb-6">
-        Manage Redis Search indexes. Deleting an index does not delete the underlying data documents.
+        Manage Redis Search indexes. Deleting an index does not delete the
+        underlying data documents.
       </p>
-      
+
       <!-- Media Index -->
-      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+      <div
+        class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4"
+      >
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="font-semibold text-lg text-surface-200">Index: <span class="text-brand-400">media</span></h3>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">media</span>
+            </h3>
             <p class="text-sm text-surface-500">idx:media • Prefix: media:*</p>
           </div>
           <div class="flex flex-wrap gap-3">
-            <button onclick="deleteIndex('media')" 
+            <button
+              onclick="deleteIndex('media')"
               class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-delete-index-media">
+              id="btn-delete-index-media"
+            >
               🗑️ Delete Index
             </button>
-            <button onclick="createIndex('media')"
+            <button
+              onclick="createIndex('media')"
               class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-create-index-media">
+              id="btn-create-index-media"
+            >
               ➕ Create Index
             </button>
           </div>
         </div>
-        
-        {% if not stats.error %}
-        <!-- Index Stats -->
+
+        <!-- Index Stats - values loaded async via JavaScript -->
         <div class="grid md:grid-cols-2 gap-4 mt-4">
-          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+          <div
+            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
+          >
             <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
-            <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.num_docs | default(0)) }}</p>
+            <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
           </div>
-          
-          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+
+          <div
+            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
+          >
             <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
             <p id="stat-index-memory" class="text-3xl font-bold text-brand-400">
-              {{ ((stats.index_stats.index_memory_bytes | default(0)) / 1024 / 1024) | round(2) }} MB
+              Loading...
             </p>
           </div>
         </div>
-        {% endif %}
-        
+
         <div class="mt-4">
-          <a href="/admin/index_info" class="text-brand-400 hover:text-brand-300 text-sm">
+          <a
+            href="/admin/index_info"
+            class="text-brand-400 hover:text-brand-300 text-sm"
+          >
             View Full Index Info →
           </a>
         </div>
       </div>
-      
+
       <!-- People Index -->
-      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+      <div
+        class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4"
+      >
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="font-semibold text-lg text-surface-200">Index: <span class="text-brand-400">people</span></h3>
-            <p class="text-sm text-surface-500">idx:people • Prefix: person:*</p>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">people</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:people • Prefix: person:*
+            </p>
           </div>
           <div class="flex flex-wrap gap-3">
-            <button onclick="deleteIndex('people')" 
+            <button
+              onclick="deleteIndex('people')"
               class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-delete-index-people">
+              id="btn-delete-index-people"
+            >
               🗑️ Delete Index
             </button>
-            <button onclick="createIndex('people')"
+            <button
+              onclick="createIndex('people')"
               class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-create-index-people">
+              id="btn-create-index-people"
+            >
               ➕ Create Index
             </button>
           </div>
         </div>
-        
-        {% if not stats.error %}
-        <!-- Index Stats -->
+
+        <!-- Index Stats - values loaded async via JavaScript -->
         <div class="grid md:grid-cols-2 gap-4 mt-4">
-          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+          <div
+            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
+          >
             <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
-            <p id="stat-people-num-docs" class="text-3xl font-bold text-brand-400">{{ "{:,}".format(stats.people_num_docs | default(0)) }}</p>
+            <p
+              id="stat-people-num-docs"
+              class="text-3xl font-bold text-brand-400"
+            >
+              Loading...
+            </p>
           </div>
-          
-          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+
+          <div
+            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
+          >
             <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
-            <p id="stat-people-index-memory" class="text-3xl font-bold text-brand-400">
-              {{ ((stats.people_index_stats.index_memory_bytes | default(0)) / 1024 / 1024) | round(2) }} MB
+            <p
+              id="stat-people-index-memory"
+              class="text-3xl font-bold text-brand-400"
+            >
+              Loading...
             </p>
           </div>
         </div>
-        {% endif %}
       </div>
-      
+
       <!-- Index Operation Status -->
       <div id="index-status" class="hidden">
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2">
             <span id="index-indicator">⏳</span>
-            <span id="index-message" class="font-medium text-surface-300"></span>
+            <span
+              id="index-message"
+              class="font-medium text-surface-300"
+            ></span>
           </div>
         </div>
       </div>
     </section>
-    
+
     <!-- Redis Cache -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
         <span class="text-2xl">💾</span> Redis Cache
       </h2>
-      
-      {% if stats.error %}
-      <p class="text-red-400">{{ stats.error }}</p>
-      {% else %}
-      
-      <!-- Overall Memory Stats -->
+
+      <!-- Error display - shown/hidden by JavaScript -->
+      <p id="cache-error" class="text-red-400 hidden"></p>
+
+      <!-- Overall Memory Stats - values loaded async via JavaScript -->
       <h3 class="text-lg font-medium mb-3 text-surface-300">📊 Memory</h3>
       <div class="grid md:grid-cols-2 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Total Memory Used</p>
           <p id="stat-memory-used" class="text-3xl font-bold text-brand-400">
-            {{ ((stats.info.used_memory | default(0)) / 1024 / 1024) | round(1) }} MB
+            Loading...
           </p>
         </div>
-        
+
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Peak Memory</p>
           <p id="stat-memory-peak" class="text-3xl font-bold text-surface-300">
-            {{ ((stats.info.used_memory_peak | default(0)) / 1024 / 1024) | round(1) }} MB
+            Loading...
           </p>
         </div>
       </div>
-      
+
       <!-- Cache Breakdown -->
-      <h3 class="text-lg font-medium mb-3 text-surface-300">🔑 Key Breakdown</h3>
+      <h3 class="text-lg font-medium mb-3 text-surface-300">
+        🔑 Key Breakdown
+      </h3>
       <div class="grid md:grid-cols-5 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
-          <p id="stat-media-keys" class="text-2xl font-bold text-green-400">{{ "{:,}".format(stats.cache_breakdown.media | default(0)) }}</p>
+          <p id="stat-media-keys" class="text-2xl font-bold text-green-400">
+            ...
+          </p>
           <p class="text-xs text-surface-500">media:*</p>
         </div>
-        
+
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Person Keys</p>
-          <p id="stat-person-keys" class="text-2xl font-bold text-purple-400">{{ "{:,}".format(stats.cache_breakdown.person | default(0)) }}</p>
+          <p id="stat-person-keys" class="text-2xl font-bold text-purple-400">
+            ...
+          </p>
           <p class="text-xs text-surface-500">person:*</p>
         </div>
-        
+
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">API Response Cache</p>
-          <p id="stat-tmdb-request" class="text-2xl font-bold text-yellow-400">{{ "{:,}".format(stats.cache_breakdown.tmdb_request | default(0)) }}</p>
+          <p id="stat-tmdb-request" class="text-2xl font-bold text-yellow-400">
+            ...
+          </p>
           <p class="text-xs text-surface-500">tmdb_request:*</p>
         </div>
-        
+
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Enrichment Cache</p>
-          <p id="stat-tmdb-cache" class="text-2xl font-bold text-orange-400">{{ "{:,}".format(stats.cache_breakdown.tmdb | default(0)) }}</p>
+          <p id="stat-tmdb-cache" class="text-2xl font-bold text-orange-400">
+            ...
+          </p>
           <p class="text-xs text-surface-500">tmdb:*</p>
         </div>
-        
+
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Other Keys</p>
-          <p id="stat-other-keys" class="text-2xl font-bold text-surface-400">{{ "{:,}".format(stats.cache_breakdown.other | default(0)) }}</p>
+          <p id="stat-other-keys" class="text-2xl font-bold text-surface-400">
+            ...
+          </p>
           <p class="text-xs text-surface-500">misc</p>
         </div>
       </div>
-      
+
       <!-- Total -->
       <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
         <div class="flex items-center justify-between">
           <p class="text-surface-400">Total Keys in Redis</p>
-          <p id="stat-dbsize" class="text-2xl font-bold text-surface-300">{{ "{:,}".format(stats.dbsize | default(0)) }}</p>
+          <p id="stat-dbsize" class="text-2xl font-bold text-surface-300">
+            ...
+          </p>
         </div>
       </div>
-      {% endif %}
     </section>
-    
   </main>
 </div>
 
 <script>
-// Format number with commas
-function formatNumber(num) {
-  return num.toLocaleString();
-}
+  // Format number with commas
+  function formatNumber(num) {
+    return num.toLocaleString();
+  }
 
-// Format bytes to MB
-function formatMB(bytes) {
-  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-}
+  // Format bytes to MB
+  function formatMB(bytes) {
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
 
-// Refresh stats from the current Redis connection
-async function refreshStats() {
-  try {
-    const res = await fetch('/api/redis-stats');
-    const data = await res.json();
-    
-    if (data.success) {
-      // Update media index stats
-      document.getElementById('stat-num-docs').textContent = formatNumber(data.num_docs);
-      const indexMemoryEl = document.getElementById('stat-index-memory');
-      if (indexMemoryEl && data.index_stats) {
-        indexMemoryEl.textContent = formatMB(data.index_stats.index_memory_bytes || 0);
+  // Refresh stats from the current Redis connection
+  async function refreshStats() {
+    try {
+      const res = await fetch('/api/redis-stats');
+      const data = await res.json();
+
+      if (data.success) {
+        // Update media index stats
+        document.getElementById('stat-num-docs').textContent = formatNumber(data.num_docs);
+        const indexMemoryEl = document.getElementById('stat-index-memory');
+        if (indexMemoryEl && data.index_stats) {
+          indexMemoryEl.textContent = formatMB(data.index_stats.index_memory_bytes || 0);
+        }
+
+        // Update people index stats
+        const peopleNumDocsEl = document.getElementById('stat-people-num-docs');
+        if (peopleNumDocsEl) {
+          peopleNumDocsEl.textContent = formatNumber(data.people_num_docs || 0);
+        }
+        const peopleIndexMemoryEl = document.getElementById('stat-people-index-memory');
+        if (peopleIndexMemoryEl && data.people_index_stats) {
+          peopleIndexMemoryEl.textContent = formatMB(data.people_index_stats.index_memory_bytes || 0);
+        }
+
+        // Update overall Redis memory stats
+        document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
+        document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
+
+        // Update cache breakdown
+        document.getElementById('stat-media-keys').textContent = formatNumber(data.cache_breakdown.media || 0);
+        const personKeysEl = document.getElementById('stat-person-keys');
+        if (personKeysEl) {
+          personKeysEl.textContent = formatNumber(data.cache_breakdown.person || 0);
+        }
+        document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
+        document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
+        document.getElementById('stat-other-keys').textContent = formatNumber(data.cache_breakdown.other || 0);
+
+        // Update total
+        document.getElementById('stat-dbsize').textContent = formatNumber(data.dbsize);
+        return true;
       }
-      
-      // Update people index stats
-      const peopleNumDocsEl = document.getElementById('stat-people-num-docs');
-      if (peopleNumDocsEl) {
-        peopleNumDocsEl.textContent = formatNumber(data.people_num_docs || 0);
-      }
-      const peopleIndexMemoryEl = document.getElementById('stat-people-index-memory');
-      if (peopleIndexMemoryEl && data.people_index_stats) {
-        peopleIndexMemoryEl.textContent = formatMB(data.people_index_stats.index_memory_bytes || 0);
-      }
-      
-      // Update overall Redis memory stats
-      document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
-      document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
-      
-      // Update cache breakdown
-      document.getElementById('stat-media-keys').textContent = formatNumber(data.cache_breakdown.media || 0);
-      const personKeysEl = document.getElementById('stat-person-keys');
-      if (personKeysEl) {
-        personKeysEl.textContent = formatNumber(data.cache_breakdown.person || 0);
-      }
-      document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
-      document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
-      document.getElementById('stat-other-keys').textContent = formatNumber(data.cache_breakdown.other || 0);
-      
-      // Update total
-      document.getElementById('stat-dbsize').textContent = formatNumber(data.dbsize);
-      return true;
+      return false;
+    } catch (e) {
+      console.error('Failed to refresh stats:', e);
+      return false;
     }
-    return false;
-  } catch (e) {
-    console.error('Failed to refresh stats:', e);
-    return false;
   }
-}
 
-// Refresh stats with visual feedback
-async function refreshStatsWithFeedback() {
-  const btn = document.getElementById('btn-refresh-stats');
-  const icon = document.getElementById('refresh-icon');
-  
-  btn.disabled = true;
-  icon.classList.add('animate-spin');
-  
-  const success = await refreshStats();
-  
-  icon.classList.remove('animate-spin');
-  icon.textContent = success ? '✅' : '❌';
-  
-  setTimeout(() => {
-    icon.textContent = '🔄';
-    btn.disabled = false;
-  }, 1000);
-}
+  // Refresh stats with visual feedback
+  async function refreshStatsWithFeedback() {
+    const btn = document.getElementById('btn-refresh-stats');
+    const icon = document.getElementById('refresh-icon');
 
-// Update card styling to show active environment
-function updateCardStyles(activeEnv) {
-  const localCard = document.getElementById('local-card');
-  const publicCard = document.getElementById('public-card');
-  const localActive = document.getElementById('local-active');
-  const publicActive = document.getElementById('public-active');
-  
-  if (activeEnv === 'local') {
-    // Activate local
-    localCard.classList.remove('border-surface-700', 'hover:border-surface-600');
-    localCard.classList.add('border-brand-500', 'bg-brand-500/10');
-    localActive.classList.remove('hidden');
-    
-    // Deactivate public
-    publicCard.classList.remove('border-brand-500', 'bg-brand-500/10');
-    publicCard.classList.add('border-surface-700', 'hover:border-surface-600');
-    publicActive.classList.add('hidden');
-  } else {
-    // Activate public
-    publicCard.classList.remove('border-surface-700', 'hover:border-surface-600');
-    publicCard.classList.add('border-brand-500', 'bg-brand-500/10');
-    publicActive.classList.remove('hidden');
-    
-    // Deactivate local
-    localCard.classList.remove('border-brand-500', 'bg-brand-500/10');
-    localCard.classList.add('border-surface-700', 'hover:border-surface-600');
-    localActive.classList.add('hidden');
+    btn.disabled = true;
+    icon.classList.add('animate-spin');
+
+    const success = await refreshStats();
+
+    icon.classList.remove('animate-spin');
+    icon.textContent = success ? '✅' : '❌';
+
+    setTimeout(() => {
+      icon.textContent = '🔄';
+      btn.disabled = false;
+    }, 1000);
   }
-}
 
-async function switchRedis(env) {
-  const msgEl = document.getElementById('switch-message');
-  msgEl.textContent = 'Switching...';
-  msgEl.className = 'mt-4 text-center text-sm text-surface-400';
-  msgEl.classList.remove('hidden');
-  
-  try {
-    const res = await fetch(`/api/switch-redis?env=${env}`, { method: 'POST' });
-    const data = await res.json();
-    
-    if (data.success) {
-      msgEl.textContent = `Switched to ${env} Redis - loading stats...`;
-      msgEl.className = 'mt-4 text-center text-sm text-green-400';
-      
-      // Update card styles
-      updateCardStyles(env);
-      
-      // Refresh stats without page reload
-      await refreshStats();
-      
-      msgEl.textContent = `Switched to ${env} Redis`;
-      setTimeout(() => msgEl.classList.add('hidden'), 2000);
+  // Update card styling to show active environment
+  function updateCardStyles(activeEnv) {
+    const localCard = document.getElementById('local-card');
+    const publicCard = document.getElementById('public-card');
+    const localActive = document.getElementById('local-active');
+    const publicActive = document.getElementById('public-active');
+
+    if (activeEnv === 'local') {
+      // Activate local
+      localCard.classList.remove('border-surface-700', 'hover:border-surface-600');
+      localCard.classList.add('border-brand-500', 'bg-brand-500/10');
+      localActive.classList.remove('hidden');
+
+      // Deactivate public
+      publicCard.classList.remove('border-brand-500', 'bg-brand-500/10');
+      publicCard.classList.add('border-surface-700', 'hover:border-surface-600');
+      publicActive.classList.add('hidden');
     } else {
-      msgEl.textContent = data.error;
+      // Activate public
+      publicCard.classList.remove('border-surface-700', 'hover:border-surface-600');
+      publicCard.classList.add('border-brand-500', 'bg-brand-500/10');
+      publicActive.classList.remove('hidden');
+
+      // Deactivate local
+      localCard.classList.remove('border-brand-500', 'bg-brand-500/10');
+      localCard.classList.add('border-surface-700', 'hover:border-surface-600');
+      localActive.classList.add('hidden');
+    }
+  }
+
+  async function switchRedis(env) {
+    const msgEl = document.getElementById('switch-message');
+    msgEl.textContent = 'Switching...';
+    msgEl.className = 'mt-4 text-center text-sm text-surface-400';
+    msgEl.classList.remove('hidden');
+
+    try {
+      const res = await fetch(`/api/switch-redis?env=${env}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        msgEl.textContent = `Switched to ${env} Redis - loading stats...`;
+        msgEl.className = 'mt-4 text-center text-sm text-green-400';
+
+        // Update card styles
+        updateCardStyles(env);
+
+        // Refresh stats without page reload
+        await refreshStats();
+
+        msgEl.textContent = `Switched to ${env} Redis`;
+        setTimeout(() => msgEl.classList.add('hidden'), 2000);
+      } else {
+        msgEl.textContent = data.error;
+        msgEl.className = 'mt-4 text-center text-sm text-red-400';
+      }
+    } catch (e) {
+      msgEl.textContent = 'Failed to switch: ' + e.message;
       msgEl.className = 'mt-4 text-center text-sm text-red-400';
     }
-  } catch (e) {
-    msgEl.textContent = 'Failed to switch: ' + e.message;
-    msgEl.className = 'mt-4 text-center text-sm text-red-400';
   }
-}
 
-// ETL Functions
-let currentFilterMode = 'exact';
+  // ETL Functions
+  let currentFilterMode = 'exact';
 
-function setEtlButtonsDisabled(disabled) {
-  const btns = ['btn-etl-tv-all', 'btn-etl-tv-custom', 'btn-etl-movie-all', 'btn-etl-movie-custom'];
-  btns.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = disabled;
-  });
-}
-
-async function runEtl(mediaType, loadAll = false, options = {}) {
-  setEtlButtonsDisabled(true);
-  
-  const statusEl = document.getElementById('etl-status');
-  const indicatorEl = document.getElementById('etl-indicator');
-  const labelEl = document.getElementById('etl-label');
-  const outputEl = document.getElementById('etl-output');
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = `Loading ${mediaType} data...`;
-  outputEl.textContent = '';
-  
-  // Build query params
-  const params = new URLSearchParams();
-  params.set('media_type', mediaType);
-  if (loadAll) params.set('load_all', 'true');
-  if (options.year) params.set('year', options.year);
-  if (options.month) params.set('month', options.month);
-  if (options.yearGte) params.set('year_gte', options.yearGte);
-  if (options.yearLte) params.set('year_lte', options.yearLte);
-  if (options.skipGcs) params.set('skip_gcs', 'true');
-  
-  try {
-    const res = await fetch(`/api/run-etl?${params.toString()}`, { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    // Poll for status
-    pollEtlStatus();
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    outputEl.textContent = e.message;
-    setEtlButtonsDisabled(false);
-  }
-}
-
-async function pollEtlStatus() {
-  const indicatorEl = document.getElementById('etl-indicator');
-  const labelEl = document.getElementById('etl-label');
-  const outputEl = document.getElementById('etl-output');
-  
-  try {
-    const res = await fetch('/api/etl-status');
-    const data = await res.json();
-    
-    outputEl.textContent = data.output + data.error;
-    
-    if (data.running) {
-      setTimeout(pollEtlStatus, 1000);
-    } else {
-      indicatorEl.className = '';
-      if (data.error) {
-        indicatorEl.textContent = '❌';
-        labelEl.textContent = 'Error';
-      } else {
-        indicatorEl.textContent = '✅';
-        labelEl.textContent = 'Complete';
-        // Refresh stats
-        await refreshStats();
-      }
-      setEtlButtonsDisabled(false);
-    }
-  } catch (e) {
-    setTimeout(pollEtlStatus, 1000);
-  }
-}
-
-// Modal Functions
-function openEtlModal(mediaType) {
-  const modal = document.getElementById('etl-modal');
-  const typeLabel = document.getElementById('modal-type-label');
-  const icon = document.getElementById('modal-icon');
-  const mediaTypeInput = document.getElementById('modal-media-type');
-  
-  mediaTypeInput.value = mediaType;
-  typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
-  icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
-  
-  // Reset form
-  setFilterMode('exact');
-  document.getElementById('etl-year').value = '';
-  document.getElementById('etl-month').value = '';
-  document.getElementById('etl-year-gte').value = '';
-  document.getElementById('etl-year-lte').value = '';
-  document.getElementById('etl-skip-gcs').checked = false;
-  
-  modal.style.display = 'flex';
-}
-
-function closeEtlModal() {
-  document.getElementById('etl-modal').style.display = 'none';
-}
-
-function setFilterMode(mode) {
-  currentFilterMode = mode;
-  
-  // Update button styles
-  ['exact', 'range', 'all'].forEach(m => {
-    document.getElementById(`filter-${m}`).dataset.active = (m === mode).toString();
-  });
-  
-  // Show/hide fields
-  document.getElementById('exact-fields').classList.toggle('hidden', mode !== 'exact');
-  document.getElementById('range-fields').classList.toggle('hidden', mode !== 'range');
-  document.getElementById('all-fields').classList.toggle('hidden', mode !== 'all');
-}
-
-function runCustomEtl() {
-  const mediaType = document.getElementById('modal-media-type').value;
-  const skipGcs = document.getElementById('etl-skip-gcs').checked;
-  
-  let options = { skipGcs };
-  
-  if (currentFilterMode === 'exact') {
-    const year = document.getElementById('etl-year').value;
-    const month = document.getElementById('etl-month').value;
-    if (!year) {
-      alert('Please enter a year');
-      return;
-    }
-    options.year = year;
-    if (month) options.month = month;
-  } else if (currentFilterMode === 'range') {
-    const yearGte = document.getElementById('etl-year-gte').value;
-    const yearLte = document.getElementById('etl-year-lte').value;
-    if (!yearGte && !yearLte) {
-      alert('Please enter at least one year bound');
-      return;
-    }
-    if (yearGte) options.yearGte = yearGte;
-    if (yearLte) options.yearLte = yearLte;
-  }
-  // For 'all' mode, no additional options needed
-  
-  closeEtlModal();
-  runEtl(mediaType, currentFilterMode === 'all', options);
-}
-
-// Poll if ETL task is running on page load
-{% if task_status.running %}
-pollEtlStatus();
-{% endif %}
-
-// Promote to Dev functionality
-let promoteAvailableIndices = [];
-
-async function openPromoteModal() {
-  const modal = document.getElementById('promote-modal');
-  const loadingEl = document.getElementById('promote-indices-loading');
-  const errorEl = document.getElementById('promote-indices-error');
-  const listEl = document.getElementById('promote-indices-list');
-  const containerEl = document.getElementById('promote-indices-container');
-  const runBtn = document.getElementById('btn-run-promote-modal');
-  const selectAllEl = document.getElementById('promote-select-all');
-  
-  // Reset state
-  loadingEl.classList.remove('hidden');
-  errorEl.classList.add('hidden');
-  listEl.classList.add('hidden');
-  runBtn.disabled = true;
-  selectAllEl.checked = false;
-  containerEl.innerHTML = '';
-  promoteAvailableIndices = [];
-  
-  // Show modal
-  modal.style.display = 'flex';
-  
-  // Fetch available indices
-  try {
-    const res = await fetch('/api/promote/indices');
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to load indices');
-    }
-    
-    promoteAvailableIndices = data.indices;
-    
-    if (promoteAvailableIndices.length === 0) {
-      document.getElementById('promote-indices-error-msg').textContent = 'No indices found in local Redis';
-      errorEl.classList.remove('hidden');
-      loadingEl.classList.add('hidden');
-      return;
-    }
-    
-    // Build checkboxes for each index
-    promoteAvailableIndices.forEach((idx, i) => {
-      const div = document.createElement('div');
-      div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
-      div.innerHTML = `
-        <label class="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" id="promote-idx-${i}" data-index-name="${idx.name}"
-            onchange="updatePromoteButtonState()"
-            class="w-4 h-4 mt-1 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
-          <div class="flex-1">
-            <div class="flex items-center justify-between">
-              <span class="font-medium text-surface-200">${idx.name}</span>
-              <span class="text-xs text-surface-500">${idx.redis_name}</span>
-            </div>
-            <div class="text-xs text-surface-400 mt-1">
-              <span>Prefix: <code class="bg-surface-900 px-1 rounded">${idx.prefix}*</code></span>
-              <span class="mx-2">•</span>
-              <span class="text-brand-400 font-medium">${idx.num_docs.toLocaleString()} documents</span>
-            </div>
-          </div>
-        </label>
-      `;
-      containerEl.appendChild(div);
+  function setEtlButtonsDisabled(disabled) {
+    const btns = ['btn-etl-tv-all', 'btn-etl-tv-custom', 'btn-etl-movie-all', 'btn-etl-movie-custom'];
+    btns.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
     });
-    
-    loadingEl.classList.add('hidden');
-    listEl.classList.remove('hidden');
-    
-  } catch (e) {
-    document.getElementById('promote-indices-error-msg').textContent = e.message;
-    errorEl.classList.remove('hidden');
-    loadingEl.classList.add('hidden');
   }
-}
 
-function closePromoteModal() {
-  document.getElementById('promote-modal').style.display = 'none';
-}
+  async function runEtl(mediaType, loadAll = false, options = {}) {
+    setEtlButtonsDisabled(true);
 
-function toggleAllPromoteIndices() {
-  const selectAll = document.getElementById('promote-select-all').checked;
-  promoteAvailableIndices.forEach((_, i) => {
-    document.getElementById(`promote-idx-${i}`).checked = selectAll;
-  });
-  updatePromoteButtonState();
-}
+    const statusEl = document.getElementById('etl-status');
+    const indicatorEl = document.getElementById('etl-indicator');
+    const labelEl = document.getElementById('etl-label');
+    const outputEl = document.getElementById('etl-output');
 
-function updatePromoteButtonState() {
-  const selectedCount = getSelectedPromoteIndices().length;
-  const runBtn = document.getElementById('btn-run-promote-modal');
-  runBtn.disabled = selectedCount === 0;
-  runBtn.textContent = selectedCount > 0 
-    ? `🚀 Promote ${selectedCount} ${selectedCount === 1 ? 'Index' : 'Indices'}`
-    : '🚀 Promote Selected';
-  
-  // Update select all checkbox
-  const selectAllEl = document.getElementById('promote-select-all');
-  selectAllEl.checked = selectedCount === promoteAvailableIndices.length && selectedCount > 0;
-}
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = `Loading ${mediaType} data...`;
+    outputEl.textContent = '';
 
-function getSelectedPromoteIndices() {
-  const selected = [];
-  promoteAvailableIndices.forEach((idx, i) => {
-    const checkbox = document.getElementById(`promote-idx-${i}`);
-    if (checkbox && checkbox.checked) {
-      selected.push(idx.name);
-    }
-  });
-  return selected;
-}
-
-async function startPromoteFromModal() {
-  const selectedIndices = getSelectedPromoteIndices();
-  if (selectedIndices.length === 0) return;
-  
-  closePromoteModal();
-  await promoteToDev(selectedIndices);
-}
-
-async function promoteToDev(indices = null) {
-  const btn = document.getElementById('btn-promote');
-  const icon = document.getElementById('promote-icon');
-  const statusEl = document.getElementById('promote-status');
-  const indicatorEl = document.getElementById('promote-indicator');
-  const labelEl = document.getElementById('promote-label');
-  const outputEl = document.getElementById('promote-output');
-  
-  btn.disabled = true;
-  icon.textContent = '⏳';
-  icon.classList.add('animate-spin');
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = 'Starting promote...';
-  outputEl.textContent = '';
-  
-  try {
-    // Build URL with indices query params
-    let url = '/api/promote-to-dev';
-    if (indices && indices.length > 0) {
-      const params = new URLSearchParams();
-      indices.forEach(idx => params.append('indices', idx));
-      url += '?' + params.toString();
-    }
-    
-    const res = await fetch(url, { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    // Poll for status
-    pollPromoteStatus();
-  } catch (e) {
-    icon.textContent = '❌';
-    icon.classList.remove('animate-spin');
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    outputEl.textContent = e.message;
-    btn.disabled = false;
-  }
-}
-
-async function pollPromoteStatus() {
-  const btn = document.getElementById('btn-promote');
-  const icon = document.getElementById('promote-icon');
-  const indicatorEl = document.getElementById('promote-indicator');
-  const labelEl = document.getElementById('promote-label');
-  const outputEl = document.getElementById('promote-output');
-  
-  try {
-    const res = await fetch('/api/promote-status');
-    const data = await res.json();
-    
-    outputEl.textContent = data.output + data.error;
-    outputEl.scrollTop = outputEl.scrollHeight;
-    
-    if (data.running) {
-      setTimeout(pollPromoteStatus, 1000);
-    } else {
-      indicatorEl.className = '';
-      icon.classList.remove('animate-spin');
-      if (data.error && !data.output.includes('🎉 Promote complete!')) {
-        indicatorEl.textContent = '❌';
-        icon.textContent = '❌';
-        labelEl.textContent = 'Error';
-      } else {
-        indicatorEl.textContent = '✅';
-        icon.textContent = '✅';
-        labelEl.textContent = 'Complete';
-        // Refresh stats to show updated document counts
-        await refreshStats();
-        // Refresh page to update Redis card document counts
-        setTimeout(() => location.reload(), 2000);
-      }
-      btn.disabled = false;
-      setTimeout(() => {
-        icon.textContent = '⟹';
-      }, 3000);
-    }
-  } catch (e) {
-    setTimeout(pollPromoteStatus, 1000);
-  }
-}
-
-// Index management functions
-async function deleteIndex(indexName) {
-  if (!confirm(`Are you sure you want to delete the "${indexName}" index? This will not delete the data documents, but search will be unavailable until the index is recreated.`)) {
-    return;
-  }
-  
-  const statusEl = document.getElementById('index-status');
-  const indicatorEl = document.getElementById('index-indicator');
-  const messageEl = document.getElementById('index-message');
-  const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
-  const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
-  
-  btnDelete.disabled = true;
-  btnCreate.disabled = true;
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  messageEl.textContent = `Deleting ${indexName} index...`;
-  messageEl.className = 'font-medium text-surface-300';
-  
-  try {
-    const res = await fetch(`/api/index/${indexName}`, { method: 'DELETE' });
-    const data = await res.json();
-    
-    if (data.success) {
-      indicatorEl.textContent = '✅';
-      messageEl.textContent = data.message;
-      messageEl.className = 'font-medium text-green-400';
-      // Refresh stats to show updated index count
-      await refreshStats();
-    } else {
-      indicatorEl.textContent = '❌';
-      messageEl.textContent = data.error;
-      messageEl.className = 'font-medium text-red-400';
-    }
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    messageEl.textContent = 'Failed: ' + e.message;
-    messageEl.className = 'font-medium text-red-400';
-  } finally {
-    btnDelete.disabled = false;
-    btnCreate.disabled = false;
-  }
-}
-
-async function createIndex(indexName) {
-  const statusEl = document.getElementById('index-status');
-  const indicatorEl = document.getElementById('index-indicator');
-  const messageEl = document.getElementById('index-message');
-  const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
-  const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
-  
-  btnDelete.disabled = true;
-  btnCreate.disabled = true;
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  messageEl.textContent = `Creating ${indexName} index...`;
-  messageEl.className = 'font-medium text-surface-300';
-  
-  try {
-    const res = await fetch(`/api/index/${indexName}`, { method: 'POST' });
-    const data = await res.json();
-    
-    if (data.success) {
-      indicatorEl.textContent = '✅';
-      messageEl.textContent = data.message;
-      messageEl.className = 'font-medium text-green-400';
-      // Refresh stats to show updated index count
-      await refreshStats();
-    } else {
-      indicatorEl.textContent = '❌';
-      messageEl.textContent = data.error;
-      messageEl.className = 'font-medium text-red-400';
-    }
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    messageEl.textContent = 'Failed: ' + e.message;
-    messageEl.className = 'font-medium text-red-400';
-  } finally {
-    btnDelete.disabled = false;
-    btnCreate.disabled = false;
-  }
-}
-
-// ============================================================
-// Extract Functions (TMDB API extraction)
-// ============================================================
-
-function getMonthName(monthNum) {
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                  'July', 'August', 'September', 'October', 'November', 'December'];
-  return months[monthNum - 1] || '';
-}
-
-function updateExtractPreview() {
-  const startDateInput = document.getElementById('extract-start-date');
-  const monthsBackInput = document.getElementById('extract-months-back');
-  const previewText = document.getElementById('extract-preview-text');
-  
-  const startDate = startDateInput.value;
-  const monthsBack = parseInt(monthsBackInput.value) || 1;
-  
-  if (!startDate) {
-    previewText.textContent = '-';
-    return;
-  }
-  
-  // Parse YYYY-MM
-  const [year, month] = startDate.split('-').map(Number);
-  
-  if (monthsBack === 1) {
-    previewText.textContent = `${getMonthName(month)} ${year}`;
-  } else {
-    // Calculate end date
-    let endYear = year;
-    let endMonth = month - monthsBack + 1;
-    while (endMonth < 1) {
-      endMonth += 12;
-      endYear--;
-    }
-    previewText.textContent = `${getMonthName(endMonth)} ${endYear} → ${getMonthName(month)} ${year} (${monthsBack} months)`;
-  }
-}
-
-function openExtractModal(mediaType) {
-  const modal = document.getElementById('extract-modal');
-  const typeLabel = document.getElementById('extract-modal-type-label');
-  const icon = document.getElementById('extract-modal-icon');
-  const mediaTypeInput = document.getElementById('extract-modal-media-type');
-  const startDateInput = document.getElementById('extract-start-date');
-  const monthsBackInput = document.getElementById('extract-months-back');
-  
-  mediaTypeInput.value = mediaType;
-  typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
-  icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
-  
-  // Set default start date to current month
-  const now = new Date();
-  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  startDateInput.value = currentYearMonth;
-  monthsBackInput.value = '1';
-  
-  // Add event listeners for preview updates
-  startDateInput.removeEventListener('change', updateExtractPreview);
-  monthsBackInput.removeEventListener('input', updateExtractPreview);
-  startDateInput.addEventListener('change', updateExtractPreview);
-  monthsBackInput.addEventListener('input', updateExtractPreview);
-  
-  updateExtractPreview();
-  modal.style.display = 'flex';
-}
-
-function closeExtractModal() {
-  document.getElementById('extract-modal').style.display = 'none';
-}
-
-function setExtractButtonDisabled(mediaType, disabled) {
-  const btn = document.getElementById(`btn-extract-${mediaType}`);
-  if (btn) btn.disabled = disabled;
-}
-
-function dismissExtractStatus(mediaType) {
-  const statusEl = document.getElementById(`extract-status-${mediaType}`);
-  if (statusEl) statusEl.classList.add('hidden');
-}
-
-async function runExtract() {
-  const mediaType = document.getElementById('extract-modal-media-type').value;
-  const startDateInput = document.getElementById('extract-start-date');
-  const monthsBack = document.getElementById('extract-months-back').value;
-  
-  if (!startDateInput.value) {
-    alert('Please select a start date');
-    return;
-  }
-  
-  // Convert from YYYY-MM format (from input) to our format
-  const startDate = startDateInput.value;
-  
-  closeExtractModal();
-  setExtractButtonDisabled(mediaType, true);
-  
-  const statusEl = document.getElementById(`extract-status-${mediaType}`);
-  const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
-  const labelEl = document.getElementById(`extract-label-${mediaType}`);
-  const outputEl = document.getElementById(`extract-output-${mediaType}`);
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = `Extracting ${mediaType === 'tv' ? 'TV Shows' : 'Movies'}...`;
-  labelEl.className = 'font-medium text-amber-400';
-  outputEl.textContent = '';
-  
-  // Hide dismiss button while running
-  const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
-  if (dismissBtn) dismissBtn.classList.add('hidden');
-  
-  // Reset progress bars
-  updateExtractProgress(mediaType, { month_current: 0, month_total: 0, batch_current: 0, batch_total: 0 });
-  
-  try {
+    // Build query params
     const params = new URLSearchParams();
     params.set('media_type', mediaType);
-    params.set('start_date', startDate);
-    params.set('months_back', monthsBack);
-    
-    const res = await fetch(`/api/run-extract?${params.toString()}`, { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    // Poll for status
-    pollExtractStatus(mediaType);
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    outputEl.textContent = e.message;
-    setExtractButtonDisabled(mediaType, false);
-  }
-}
+    if (loadAll) params.set('load_all', 'true');
+    if (options.year) params.set('year', options.year);
+    if (options.month) params.set('month', options.month);
+    if (options.yearGte) params.set('year_gte', options.yearGte);
+    if (options.yearLte) params.set('year_lte', options.yearLte);
+    if (options.skipGcs) params.set('skip_gcs', 'true');
 
-function updateExtractProgress(mediaType, progress) {
-  const monthLabel = document.getElementById(`extract-month-label-${mediaType}`);
-  const monthBar = document.getElementById(`extract-month-bar-${mediaType}`);
-  const batchLabel = document.getElementById(`extract-batch-label-${mediaType}`);
-  const batchBar = document.getElementById(`extract-batch-bar-${mediaType}`);
-  
-  // Update month progress
-  const monthCurrent = progress.month_current || 0;
-  const monthTotal = progress.month_total || 0;
-  monthLabel.textContent = `${monthCurrent} / ${monthTotal}`;
-  const monthPercent = monthTotal > 0 ? (monthCurrent / monthTotal) * 100 : 0;
-  monthBar.style.width = `${monthPercent}%`;
-  
-  // Update batch progress
-  const batchCurrent = progress.batch_current || 0;
-  const batchTotal = progress.batch_total || 0;
-  batchLabel.textContent = `${batchCurrent} / ${batchTotal}`;
-  const batchPercent = batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0;
-  batchBar.style.width = `${batchPercent}%`;
-}
+    try {
+      const res = await fetch(`/api/run-etl?${params.toString()}`, { method: 'POST' });
+      const data = await res.json();
 
-async function pollExtractStatus(mediaType) {
-  const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
-  const labelEl = document.getElementById(`extract-label-${mediaType}`);
-  const outputEl = document.getElementById(`extract-output-${mediaType}`);
-  
-  try {
-    const res = await fetch(`/api/extract-status/${mediaType}`);
-    const data = await res.json();
-    
-    // Update output and auto-scroll to bottom
-    outputEl.textContent = data.output;
-    outputEl.scrollTop = outputEl.scrollHeight;
-    
-    // Update progress bars
-    if (data.progress) {
-      updateExtractProgress(mediaType, data.progress);
-      if (data.progress.status_message) {
-        labelEl.textContent = data.progress.status_message;
+      if (!data.success) {
+        throw new Error(data.error);
       }
-    }
-    
-    if (data.running) {
-      setTimeout(() => pollExtractStatus(mediaType), 1000);
-    } else {
+
+      // Poll for status
+      pollEtlStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
       indicatorEl.className = '';
-      // Show dismiss button when complete
-      const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
-      if (dismissBtn) dismissBtn.classList.remove('hidden');
-      
-      if (data.error) {
-        indicatorEl.textContent = '❌';
-        labelEl.textContent = 'Error: ' + data.error;
-        labelEl.className = 'font-medium text-red-400';
+      labelEl.textContent = 'Error';
+      outputEl.textContent = e.message;
+      setEtlButtonsDisabled(false);
+    }
+  }
+
+  async function pollEtlStatus() {
+    const indicatorEl = document.getElementById('etl-indicator');
+    const labelEl = document.getElementById('etl-label');
+    const outputEl = document.getElementById('etl-output');
+
+    try {
+      const res = await fetch('/api/etl-status');
+      const data = await res.json();
+
+      outputEl.textContent = data.output + data.error;
+
+      if (data.running) {
+        setTimeout(pollEtlStatus, 1000);
       } else {
-        indicatorEl.textContent = '✅';
-        labelEl.textContent = 'Extraction Complete!';
-        labelEl.className = 'font-medium text-green-400';
-        // Set progress to 100%
-        updateExtractProgress(mediaType, {
-          month_current: data.progress?.month_total || 1,
-          month_total: data.progress?.month_total || 1,
-          batch_current: data.progress?.batch_total || 1,
-          batch_total: data.progress?.batch_total || 1,
-        });
+        indicatorEl.className = '';
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Complete';
+          // Refresh stats
+          await refreshStats();
+        }
+        setEtlButtonsDisabled(false);
       }
+    } catch (e) {
+      setTimeout(pollEtlStatus, 1000);
+    }
+  }
+
+  // Modal Functions
+  function openEtlModal(mediaType) {
+    const modal = document.getElementById('etl-modal');
+    const typeLabel = document.getElementById('modal-type-label');
+    const icon = document.getElementById('modal-icon');
+    const mediaTypeInput = document.getElementById('modal-media-type');
+
+    mediaTypeInput.value = mediaType;
+    typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
+    icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
+
+    // Reset form
+    setFilterMode('exact');
+    document.getElementById('etl-year').value = '';
+    document.getElementById('etl-month').value = '';
+    document.getElementById('etl-year-gte').value = '';
+    document.getElementById('etl-year-lte').value = '';
+    document.getElementById('etl-skip-gcs').checked = false;
+
+    modal.style.display = 'flex';
+  }
+
+  function closeEtlModal() {
+    document.getElementById('etl-modal').style.display = 'none';
+  }
+
+  function setFilterMode(mode) {
+    currentFilterMode = mode;
+
+    // Update button styles
+    ['exact', 'range', 'all'].forEach(m => {
+      document.getElementById(`filter-${m}`).dataset.active = (m === mode).toString();
+    });
+
+    // Show/hide fields
+    document.getElementById('exact-fields').classList.toggle('hidden', mode !== 'exact');
+    document.getElementById('range-fields').classList.toggle('hidden', mode !== 'range');
+    document.getElementById('all-fields').classList.toggle('hidden', mode !== 'all');
+  }
+
+  function runCustomEtl() {
+    const mediaType = document.getElementById('modal-media-type').value;
+    const skipGcs = document.getElementById('etl-skip-gcs').checked;
+
+    let options = { skipGcs };
+
+    if (currentFilterMode === 'exact') {
+      const year = document.getElementById('etl-year').value;
+      const month = document.getElementById('etl-month').value;
+      if (!year) {
+        alert('Please enter a year');
+        return;
+      }
+      options.year = year;
+      if (month) options.month = month;
+    } else if (currentFilterMode === 'range') {
+      const yearGte = document.getElementById('etl-year-gte').value;
+      const yearLte = document.getElementById('etl-year-lte').value;
+      if (!yearGte && !yearLte) {
+        alert('Please enter at least one year bound');
+        return;
+      }
+      if (yearGte) options.yearGte = yearGte;
+      if (yearLte) options.yearLte = yearLte;
+    }
+    // For 'all' mode, no additional options needed
+
+    closeEtlModal();
+    runEtl(mediaType, currentFilterMode === 'all', options);
+  }
+
+  // Poll if ETL task is running on page load
+  {% if task_status.running %}
+  pollEtlStatus();
+  {% endif %}
+
+  // Promote to Dev functionality
+  let promoteAvailableIndices = [];
+
+  async function openPromoteModal() {
+    const modal = document.getElementById('promote-modal');
+    const loadingEl = document.getElementById('promote-indices-loading');
+    const errorEl = document.getElementById('promote-indices-error');
+    const listEl = document.getElementById('promote-indices-list');
+    const containerEl = document.getElementById('promote-indices-container');
+    const runBtn = document.getElementById('btn-run-promote-modal');
+    const selectAllEl = document.getElementById('promote-select-all');
+
+    // Reset state
+    loadingEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    listEl.classList.add('hidden');
+    runBtn.disabled = true;
+    selectAllEl.checked = false;
+    containerEl.innerHTML = '';
+    promoteAvailableIndices = [];
+
+    // Show modal
+    modal.style.display = 'flex';
+
+    // Fetch available indices
+    try {
+      const res = await fetch('/api/promote/indices');
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load indices');
+      }
+
+      promoteAvailableIndices = data.indices;
+
+      if (promoteAvailableIndices.length === 0) {
+        document.getElementById('promote-indices-error-msg').textContent = 'No indices found in local Redis';
+        errorEl.classList.remove('hidden');
+        loadingEl.classList.add('hidden');
+        return;
+      }
+
+      // Build checkboxes for each index
+      promoteAvailableIndices.forEach((idx, i) => {
+        const div = document.createElement('div');
+        div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
+        div.innerHTML = `
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" id="promote-idx-${i}" data-index-name="${idx.name}"
+              onchange="updatePromoteButtonState()"
+              class="w-4 h-4 mt-1 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <span class="font-medium text-surface-200">${idx.name}</span>
+                <span class="text-xs text-surface-500">${idx.redis_name}</span>
+              </div>
+              <div class="text-xs text-surface-400 mt-1">
+                <span>Prefix: <code class="bg-surface-900 px-1 rounded">${idx.prefix}*</code></span>
+                <span class="mx-2">•</span>
+                <span class="text-brand-400 font-medium">${idx.num_docs.toLocaleString()} documents</span>
+              </div>
+            </div>
+          </label>
+        `;
+        containerEl.appendChild(div);
+      });
+
+      loadingEl.classList.add('hidden');
+      listEl.classList.remove('hidden');
+
+    } catch (e) {
+      document.getElementById('promote-indices-error-msg').textContent = e.message;
+      errorEl.classList.remove('hidden');
+      loadingEl.classList.add('hidden');
+    }
+  }
+
+  function closePromoteModal() {
+    document.getElementById('promote-modal').style.display = 'none';
+  }
+
+  function toggleAllPromoteIndices() {
+    const selectAll = document.getElementById('promote-select-all').checked;
+    promoteAvailableIndices.forEach((_, i) => {
+      document.getElementById(`promote-idx-${i}`).checked = selectAll;
+    });
+    updatePromoteButtonState();
+  }
+
+  function updatePromoteButtonState() {
+    const selectedCount = getSelectedPromoteIndices().length;
+    const runBtn = document.getElementById('btn-run-promote-modal');
+    runBtn.disabled = selectedCount === 0;
+    runBtn.textContent = selectedCount > 0
+      ? `🚀 Promote ${selectedCount} ${selectedCount === 1 ? 'Index' : 'Indices'}`
+      : '🚀 Promote Selected';
+
+    // Update select all checkbox
+    const selectAllEl = document.getElementById('promote-select-all');
+    selectAllEl.checked = selectedCount === promoteAvailableIndices.length && selectedCount > 0;
+  }
+
+  function getSelectedPromoteIndices() {
+    const selected = [];
+    promoteAvailableIndices.forEach((idx, i) => {
+      const checkbox = document.getElementById(`promote-idx-${i}`);
+      if (checkbox && checkbox.checked) {
+        selected.push(idx.name);
+      }
+    });
+    return selected;
+  }
+
+  async function startPromoteFromModal() {
+    const selectedIndices = getSelectedPromoteIndices();
+    if (selectedIndices.length === 0) return;
+
+    closePromoteModal();
+    await promoteToDev(selectedIndices);
+  }
+
+  async function promoteToDev(indices = null) {
+    const btn = document.getElementById('btn-promote');
+    const icon = document.getElementById('promote-icon');
+    const statusEl = document.getElementById('promote-status');
+    const indicatorEl = document.getElementById('promote-indicator');
+    const labelEl = document.getElementById('promote-label');
+    const outputEl = document.getElementById('promote-output');
+
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    icon.classList.add('animate-spin');
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Starting promote...';
+    outputEl.textContent = '';
+
+    try {
+      // Build URL with indices query params
+      let url = '/api/promote-to-dev';
+      if (indices && indices.length > 0) {
+        const params = new URLSearchParams();
+        indices.forEach(idx => params.append('indices', idx));
+        url += '?' + params.toString();
+      }
+
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      // Poll for status
+      pollPromoteStatus();
+    } catch (e) {
+      icon.textContent = '❌';
+      icon.classList.remove('animate-spin');
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      outputEl.textContent = e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function pollPromoteStatus() {
+    const btn = document.getElementById('btn-promote');
+    const icon = document.getElementById('promote-icon');
+    const indicatorEl = document.getElementById('promote-indicator');
+    const labelEl = document.getElementById('promote-label');
+    const outputEl = document.getElementById('promote-output');
+
+    try {
+      const res = await fetch('/api/promote-status');
+      const data = await res.json();
+
+      outputEl.textContent = data.output + data.error;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(pollPromoteStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        icon.classList.remove('animate-spin');
+        if (data.error && !data.output.includes('🎉 Promote complete!')) {
+          indicatorEl.textContent = '❌';
+          icon.textContent = '❌';
+          labelEl.textContent = 'Error';
+        } else {
+          indicatorEl.textContent = '✅';
+          icon.textContent = '✅';
+          labelEl.textContent = 'Complete';
+          // Refresh stats to show updated document counts
+          await refreshStats();
+          // Refresh page to update Redis card document counts
+          setTimeout(() => location.reload(), 2000);
+        }
+        btn.disabled = false;
+        setTimeout(() => {
+          icon.textContent = '⟹';
+        }, 3000);
+      }
+    } catch (e) {
+      setTimeout(pollPromoteStatus, 1000);
+    }
+  }
+
+  // Copy to Local functionality
+  let copyAvailableIndices = [];
+
+  async function openCopyToLocalModal() {
+    const modal = document.getElementById('copy-to-local-modal');
+    const loadingEl = document.getElementById('copy-indices-loading');
+    const listEl = document.getElementById('copy-indices-list');
+    const errorEl = document.getElementById('copy-indices-error');
+    const runBtn = document.getElementById('btn-run-copy-modal');
+
+    // Show modal
+    modal.style.display = 'flex';
+    loadingEl.classList.remove('hidden');
+    listEl.classList.add('hidden');
+    errorEl.classList.add('hidden');
+    runBtn.disabled = true;
+
+    try {
+      // Fetch available indices from PUBLIC Redis
+      const res = await fetch('/api/copy-to-local/indices');
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch indices');
+      }
+
+      copyAvailableIndices = data.indices || [];
+
+      // Build checkbox list
+      listEl.innerHTML = `
+        <div class="flex items-center gap-2 pb-2 border-b border-surface-700">
+          <label class="flex items-center gap-2 cursor-pointer text-sm text-surface-300">
+            <input type="checkbox" id="copy-select-all" onchange="toggleCopySelectAll()"
+              class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
+            <span>Select All</span>
+          </label>
+        </div>
+      `;
+
+      copyAvailableIndices.forEach(idx => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between py-2';
+        div.innerHTML = `
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="copy-index" value="${idx.name}" onchange="updateCopyRunButton()"
+              class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
+            <span class="font-medium">${idx.name}</span>
+          </label>
+          <span class="text-sm text-surface-400">${idx.num_docs.toLocaleString()} docs</span>
+        `;
+        listEl.appendChild(div);
+      });
+
+      loadingEl.classList.add('hidden');
+      listEl.classList.remove('hidden');
+
+    } catch (e) {
+      loadingEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+      errorEl.textContent = e.message;
+    }
+  }
+
+  function closeCopyToLocalModal() {
+    document.getElementById('copy-to-local-modal').style.display = 'none';
+  }
+
+  function toggleCopySelectAll() {
+    const selectAll = document.getElementById('copy-select-all');
+    const checkboxes = document.querySelectorAll('input[name="copy-index"]');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateCopyRunButton();
+  }
+
+  function updateCopyRunButton() {
+    const runBtn = document.getElementById('btn-run-copy-modal');
+    const checkboxes = document.querySelectorAll('input[name="copy-index"]:checked');
+    runBtn.disabled = checkboxes.length === 0;
+  }
+
+  async function startCopyToLocalFromModal() {
+    const checkboxes = document.querySelectorAll('input[name="copy-index"]:checked');
+    const indices = Array.from(checkboxes).map(cb => cb.value);
+
+    if (indices.length === 0) return;
+
+    closeCopyToLocalModal();
+    await startCopyToLocal(indices);
+  }
+
+  async function startCopyToLocal(indices) {
+    const btn = document.getElementById('btn-copy-to-local');
+    const icon = document.getElementById('copy-icon');
+
+    // Show status section
+    const statusEl = document.getElementById('copy-status');
+    const indicatorEl = document.getElementById('copy-indicator');
+    const labelEl = document.getElementById('copy-label');
+    const outputEl = document.getElementById('copy-output');
+
+    if (!statusEl) {
+      // Status section doesn't exist yet, create it
+      const promoteStatus = document.getElementById('promote-status');
+      const copyStatusHtml = `
+        <div id="copy-status" class="mt-4 hidden">
+          <div class="flex items-center gap-2 text-sm">
+            <span id="copy-indicator" class="animate-spin">⏳</span>
+            <span id="copy-label">Starting copy...</span>
+          </div>
+          <pre id="copy-output" class="mt-2 text-xs bg-surface-950 p-3 rounded-lg max-h-48 overflow-y-auto font-mono whitespace-pre-wrap"></pre>
+        </div>
+      `;
+      promoteStatus.insertAdjacentHTML('afterend', copyStatusHtml);
+    }
+
+    const statusElFresh = document.getElementById('copy-status');
+    const indicatorElFresh = document.getElementById('copy-indicator');
+    const labelElFresh = document.getElementById('copy-label');
+    const outputElFresh = document.getElementById('copy-output');
+
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    icon.classList.add('animate-spin');
+    statusElFresh.classList.remove('hidden');
+    indicatorElFresh.textContent = '⏳';
+    indicatorElFresh.className = 'animate-spin';
+    labelElFresh.textContent = 'Starting copy...';
+    outputElFresh.textContent = '';
+
+    try {
+      // Build URL with indices query params
+      let url = '/api/copy-to-local';
+      if (indices && indices.length > 0) {
+        const params = new URLSearchParams();
+        indices.forEach(idx => params.append('indices', idx));
+        url += '?' + params.toString();
+      }
+
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      // Poll for status
+      pollCopyToLocalStatus();
+    } catch (e) {
+      icon.textContent = '❌';
+      icon.classList.remove('animate-spin');
+      indicatorElFresh.textContent = '❌';
+      indicatorElFresh.className = '';
+      labelElFresh.textContent = 'Error';
+      outputElFresh.textContent = e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function pollCopyToLocalStatus() {
+    const btn = document.getElementById('btn-copy-to-local');
+    const icon = document.getElementById('copy-icon');
+    const indicatorEl = document.getElementById('copy-indicator');
+    const labelEl = document.getElementById('copy-label');
+    const outputEl = document.getElementById('copy-output');
+
+    try {
+      const res = await fetch('/api/copy-to-local-status');
+      const data = await res.json();
+
+      outputEl.textContent = data.output + data.error;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(pollCopyToLocalStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        icon.classList.remove('animate-spin');
+        if (data.error && !data.output.includes('🎉 Copy complete!')) {
+          indicatorEl.textContent = '❌';
+          icon.textContent = '❌';
+          labelEl.textContent = 'Error';
+        } else {
+          indicatorEl.textContent = '✅';
+          icon.textContent = '✅';
+          labelEl.textContent = 'Complete';
+          // Refresh stats to show updated document counts
+          await refreshStats();
+          // Refresh page to update Redis card document counts
+          setTimeout(() => location.reload(), 2000);
+        }
+        btn.disabled = false;
+        setTimeout(() => {
+          icon.textContent = '⟸';
+        }, 3000);
+      }
+    } catch (e) {
+      setTimeout(pollCopyToLocalStatus, 1000);
+    }
+  }
+
+  // Index management functions
+  async function deleteIndex(indexName) {
+    if (!confirm(`Are you sure you want to delete the "${indexName}" index? This will not delete the data documents, but search will be unavailable until the index is recreated.`)) {
+      return;
+    }
+
+    const statusEl = document.getElementById('index-status');
+    const indicatorEl = document.getElementById('index-indicator');
+    const messageEl = document.getElementById('index-message');
+    const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
+    const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
+
+    btnDelete.disabled = true;
+    btnCreate.disabled = true;
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    messageEl.textContent = `Deleting ${indexName} index...`;
+    messageEl.className = 'font-medium text-surface-300';
+
+    try {
+      const res = await fetch(`/api/index/${indexName}`, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (data.success) {
+        indicatorEl.textContent = '✅';
+        messageEl.textContent = data.message;
+        messageEl.className = 'font-medium text-green-400';
+        // Refresh stats to show updated index count
+        await refreshStats();
+      } else {
+        indicatorEl.textContent = '❌';
+        messageEl.textContent = data.error;
+        messageEl.className = 'font-medium text-red-400';
+      }
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      messageEl.textContent = 'Failed: ' + e.message;
+      messageEl.className = 'font-medium text-red-400';
+    } finally {
+      btnDelete.disabled = false;
+      btnCreate.disabled = false;
+    }
+  }
+
+  async function createIndex(indexName) {
+    const statusEl = document.getElementById('index-status');
+    const indicatorEl = document.getElementById('index-indicator');
+    const messageEl = document.getElementById('index-message');
+    const btnDelete = document.getElementById(`btn-delete-index-${indexName}`);
+    const btnCreate = document.getElementById(`btn-create-index-${indexName}`);
+
+    btnDelete.disabled = true;
+    btnCreate.disabled = true;
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    messageEl.textContent = `Creating ${indexName} index...`;
+    messageEl.className = 'font-medium text-surface-300';
+
+    try {
+      const res = await fetch(`/api/index/${indexName}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        indicatorEl.textContent = '✅';
+        messageEl.textContent = data.message;
+        messageEl.className = 'font-medium text-green-400';
+        // Refresh stats to show updated index count
+        await refreshStats();
+      } else {
+        indicatorEl.textContent = '❌';
+        messageEl.textContent = data.error;
+        messageEl.className = 'font-medium text-red-400';
+      }
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      messageEl.textContent = 'Failed: ' + e.message;
+      messageEl.className = 'font-medium text-red-400';
+    } finally {
+      btnDelete.disabled = false;
+      btnCreate.disabled = false;
+    }
+  }
+
+  // ============================================================
+  // Extract Functions (TMDB API extraction)
+  // ============================================================
+
+  function getMonthName(monthNum) {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[monthNum - 1] || '';
+  }
+
+  function updateExtractPreview() {
+    const startDateInput = document.getElementById('extract-start-date');
+    const monthsBackInput = document.getElementById('extract-months-back');
+    const previewText = document.getElementById('extract-preview-text');
+
+    const startDate = startDateInput.value;
+    const monthsBack = parseInt(monthsBackInput.value) || 1;
+
+    if (!startDate) {
+      previewText.textContent = '-';
+      return;
+    }
+
+    // Parse YYYY-MM
+    const [year, month] = startDate.split('-').map(Number);
+
+    if (monthsBack === 1) {
+      previewText.textContent = `${getMonthName(month)} ${year}`;
+    } else {
+      // Calculate end date
+      let endYear = year;
+      let endMonth = month - monthsBack + 1;
+      while (endMonth < 1) {
+        endMonth += 12;
+        endYear--;
+      }
+      previewText.textContent = `${getMonthName(endMonth)} ${endYear} → ${getMonthName(month)} ${year} (${monthsBack} months)`;
+    }
+  }
+
+  function openExtractModal(mediaType) {
+    const modal = document.getElementById('extract-modal');
+    const typeLabel = document.getElementById('extract-modal-type-label');
+    const icon = document.getElementById('extract-modal-icon');
+    const mediaTypeInput = document.getElementById('extract-modal-media-type');
+    const startDateInput = document.getElementById('extract-start-date');
+    const monthsBackInput = document.getElementById('extract-months-back');
+
+    mediaTypeInput.value = mediaType;
+    typeLabel.textContent = mediaType === 'tv' ? 'TV' : 'Movie';
+    icon.textContent = mediaType === 'tv' ? '📺' : '🎥';
+
+    // Set default start date to current month
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    startDateInput.value = currentYearMonth;
+    monthsBackInput.value = '1';
+
+    // Add event listeners for preview updates
+    startDateInput.removeEventListener('change', updateExtractPreview);
+    monthsBackInput.removeEventListener('input', updateExtractPreview);
+    startDateInput.addEventListener('change', updateExtractPreview);
+    monthsBackInput.addEventListener('input', updateExtractPreview);
+
+    updateExtractPreview();
+    modal.style.display = 'flex';
+  }
+
+  function closeExtractModal() {
+    document.getElementById('extract-modal').style.display = 'none';
+  }
+
+  function setExtractButtonDisabled(mediaType, disabled) {
+    const btn = document.getElementById(`btn-extract-${mediaType}`);
+    if (btn) btn.disabled = disabled;
+  }
+
+  function dismissExtractStatus(mediaType) {
+    const statusEl = document.getElementById(`extract-status-${mediaType}`);
+    if (statusEl) statusEl.classList.add('hidden');
+  }
+
+  async function runExtract() {
+    const mediaType = document.getElementById('extract-modal-media-type').value;
+    const startDateInput = document.getElementById('extract-start-date');
+    const monthsBack = document.getElementById('extract-months-back').value;
+
+    if (!startDateInput.value) {
+      alert('Please select a start date');
+      return;
+    }
+
+    // Convert from YYYY-MM format (from input) to our format
+    const startDate = startDateInput.value;
+
+    closeExtractModal();
+    setExtractButtonDisabled(mediaType, true);
+
+    const statusEl = document.getElementById(`extract-status-${mediaType}`);
+    const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
+    const labelEl = document.getElementById(`extract-label-${mediaType}`);
+    const outputEl = document.getElementById(`extract-output-${mediaType}`);
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = `Extracting ${mediaType === 'tv' ? 'TV Shows' : 'Movies'}...`;
+    labelEl.className = 'font-medium text-amber-400';
+    outputEl.textContent = '';
+
+    // Hide dismiss button while running
+    const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    // Reset progress bars
+    updateExtractProgress(mediaType, { month_current: 0, month_total: 0, batch_current: 0, batch_total: 0 });
+
+    try {
+      const params = new URLSearchParams();
+      params.set('media_type', mediaType);
+      params.set('start_date', startDate);
+      params.set('months_back', monthsBack);
+
+      const res = await fetch(`/api/run-extract?${params.toString()}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      // Poll for status
+      pollExtractStatus(mediaType);
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      outputEl.textContent = e.message;
       setExtractButtonDisabled(mediaType, false);
     }
-  } catch (e) {
-    setTimeout(() => pollExtractStatus(mediaType), 1000);
   }
-}
 
-// ============================================================
-// Person ETL Functions
-// ============================================================
+  function updateExtractProgress(mediaType, progress) {
+    const monthLabel = document.getElementById(`extract-month-label-${mediaType}`);
+    const monthBar = document.getElementById(`extract-month-bar-${mediaType}`);
+    const batchLabel = document.getElementById(`extract-batch-label-${mediaType}`);
+    const batchBar = document.getElementById(`extract-batch-bar-${mediaType}`);
 
-function setPersonButtonsDisabled(disabled) {
-  const btns = ['btn-person-download', 'btn-person-extract', 'btn-person-extract-custom', 'btn-person-load'];
-  btns.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = disabled;
-  });
-}
+    // Update month progress
+    const monthCurrent = progress.month_current || 0;
+    const monthTotal = progress.month_total || 0;
+    monthLabel.textContent = `${monthCurrent} / ${monthTotal}`;
+    const monthPercent = monthTotal > 0 ? (monthCurrent / monthTotal) * 100 : 0;
+    monthBar.style.width = `${monthPercent}%`;
 
-// Step 1: Bulk Download
-async function runPersonDownload() {
-  document.getElementById('btn-person-download').disabled = true;
-  
-  const statusEl = document.getElementById('person-download-status');
-  const indicatorEl = document.getElementById('person-download-indicator');
-  const labelEl = document.getElementById('person-download-label');
-  const outputEl = document.getElementById('person-download-output');
-  const dismissBtn = document.getElementById('person-download-dismiss');
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = 'Downloading person IDs...';
-  labelEl.className = 'font-medium text-blue-400';
-  outputEl.textContent = '';
-  if (dismissBtn) dismissBtn.classList.add('hidden');
-  
-  try {
-    const res = await fetch('/api/person/download', { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    pollPersonDownloadStatus();
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    labelEl.className = 'font-medium text-red-400';
-    outputEl.textContent = e.message;
-    document.getElementById('btn-person-download').disabled = false;
+    // Update batch progress
+    const batchCurrent = progress.batch_current || 0;
+    const batchTotal = progress.batch_total || 0;
+    batchLabel.textContent = `${batchCurrent} / ${batchTotal}`;
+    const batchPercent = batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0;
+    batchBar.style.width = `${batchPercent}%`;
   }
-}
 
-async function pollPersonDownloadStatus() {
-  const indicatorEl = document.getElementById('person-download-indicator');
-  const labelEl = document.getElementById('person-download-label');
-  const outputEl = document.getElementById('person-download-output');
-  const dismissBtn = document.getElementById('person-download-dismiss');
-  
-  try {
-    const res = await fetch('/api/person/download-status');
-    const data = await res.json();
-    
-    outputEl.textContent = data.output;
-    outputEl.scrollTop = outputEl.scrollHeight;
-    
-    if (data.running) {
-      setTimeout(pollPersonDownloadStatus, 1000);
-    } else {
-      indicatorEl.className = '';
-      if (dismissBtn) dismissBtn.classList.remove('hidden');
-      
-      if (data.error) {
-        indicatorEl.textContent = '❌';
-        labelEl.textContent = 'Error';
-        labelEl.className = 'font-medium text-red-400';
-      } else {
-        indicatorEl.textContent = '✅';
-        labelEl.textContent = 'Download Complete!';
-        labelEl.className = 'font-medium text-green-400';
+  async function pollExtractStatus(mediaType) {
+    const indicatorEl = document.getElementById(`extract-indicator-${mediaType}`);
+    const labelEl = document.getElementById(`extract-label-${mediaType}`);
+    const outputEl = document.getElementById(`extract-output-${mediaType}`);
+
+    try {
+      const res = await fetch(`/api/extract-status/${mediaType}`);
+      const data = await res.json();
+
+      // Update output and auto-scroll to bottom
+      outputEl.textContent = data.output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      // Update progress bars
+      if (data.progress) {
+        updateExtractProgress(mediaType, data.progress);
+        if (data.progress.status_message) {
+          labelEl.textContent = data.progress.status_message;
+        }
       }
+
+      if (data.running) {
+        setTimeout(() => pollExtractStatus(mediaType), 1000);
+      } else {
+        indicatorEl.className = '';
+        // Show dismiss button when complete
+        const dismissBtn = document.getElementById(`extract-dismiss-${mediaType}`);
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error: ' + data.error;
+          labelEl.className = 'font-medium text-red-400';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Extraction Complete!';
+          labelEl.className = 'font-medium text-green-400';
+          // Set progress to 100%
+          updateExtractProgress(mediaType, {
+            month_current: data.progress?.month_total || 1,
+            month_total: data.progress?.month_total || 1,
+            batch_current: data.progress?.batch_total || 1,
+            batch_total: data.progress?.batch_total || 1,
+          });
+        }
+        setExtractButtonDisabled(mediaType, false);
+      }
+    } catch (e) {
+      setTimeout(() => pollExtractStatus(mediaType), 1000);
+    }
+  }
+
+  // ============================================================
+  // Person ETL Functions
+  // ============================================================
+
+  function setPersonButtonsDisabled(disabled) {
+    const btns = ['btn-person-download', 'btn-person-extract', 'btn-person-extract-custom', 'btn-person-load'];
+    btns.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  // Step 1: Bulk Download
+  async function runPersonDownload() {
+    document.getElementById('btn-person-download').disabled = true;
+
+    const statusEl = document.getElementById('person-download-status');
+    const indicatorEl = document.getElementById('person-download-indicator');
+    const labelEl = document.getElementById('person-download-label');
+    const outputEl = document.getElementById('person-download-output');
+    const dismissBtn = document.getElementById('person-download-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Downloading person IDs...';
+    labelEl.className = 'font-medium text-blue-400';
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/person/download', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPersonDownloadStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = e.message;
       document.getElementById('btn-person-download').disabled = false;
     }
-  } catch (e) {
-    setTimeout(pollPersonDownloadStatus, 1000);
   }
-}
 
-function dismissPersonDownloadStatus() {
-  document.getElementById('person-download-status').classList.add('hidden');
-}
+  async function pollPersonDownloadStatus() {
+    const indicatorEl = document.getElementById('person-download-indicator');
+    const labelEl = document.getElementById('person-download-label');
+    const outputEl = document.getElementById('person-download-output');
+    const dismissBtn = document.getElementById('person-download-dismiss');
 
-// Step 2: Extract
-async function runPersonExtract(limit = null) {
-  document.getElementById('btn-person-extract').disabled = true;
-  document.getElementById('btn-person-extract-custom').disabled = true;
-  
-  const statusEl = document.getElementById('person-extract-status');
-  const indicatorEl = document.getElementById('person-extract-indicator');
-  const labelEl = document.getElementById('person-extract-label');
-  const outputEl = document.getElementById('person-extract-output');
-  const dismissBtn = document.getElementById('person-extract-dismiss');
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = 'Extracting and enriching...';
-  labelEl.className = 'font-medium text-amber-400';
-  outputEl.textContent = '';
-  if (dismissBtn) dismissBtn.classList.add('hidden');
-  
-  // Reset progress
-  document.getElementById('person-extract-batch-label').textContent = '0 / 0';
-  document.getElementById('person-extract-batch-bar').style.width = '0%';
-  
-  try {
-    const params = new URLSearchParams();
-    if (limit) params.set('limit', limit);
-    
-    const res = await fetch(`/api/person/extract?${params.toString()}`, { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    pollPersonExtractStatus();
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    labelEl.className = 'font-medium text-red-400';
-    outputEl.textContent = e.message;
-    document.getElementById('btn-person-extract').disabled = false;
-    document.getElementById('btn-person-extract-custom').disabled = false;
-  }
-}
+    try {
+      const res = await fetch('/api/person/download-status');
+      const data = await res.json();
 
-async function pollPersonExtractStatus() {
-  const indicatorEl = document.getElementById('person-extract-indicator');
-  const labelEl = document.getElementById('person-extract-label');
-  const outputEl = document.getElementById('person-extract-output');
-  const dismissBtn = document.getElementById('person-extract-dismiss');
-  const batchLabel = document.getElementById('person-extract-batch-label');
-  const batchBar = document.getElementById('person-extract-batch-bar');
-  
-  try {
-    const res = await fetch('/api/person/extract-status');
-    const data = await res.json();
-    
-    outputEl.textContent = data.output;
-    outputEl.scrollTop = outputEl.scrollHeight;
-    
-    // Update progress
-    if (data.progress) {
-      const current = data.progress.batch_current || 0;
-      const total = data.progress.batch_total || 0;
-      batchLabel.textContent = `${current} / ${total}`;
-      const percent = total > 0 ? (current / total) * 100 : 0;
-      batchBar.style.width = `${percent}%`;
-      
-      if (data.progress.status_message) {
-        labelEl.textContent = data.progress.status_message;
-      }
-    }
-    
-    if (data.running) {
-      setTimeout(pollPersonExtractStatus, 1000);
-    } else {
-      indicatorEl.className = '';
-      if (dismissBtn) dismissBtn.classList.remove('hidden');
-      
-      if (data.error) {
-        indicatorEl.textContent = '❌';
-        labelEl.textContent = 'Error';
-        labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = data.output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(pollPersonDownloadStatus, 1000);
       } else {
-        indicatorEl.textContent = '✅';
-        labelEl.textContent = 'Extract Complete!';
-        labelEl.className = 'font-medium text-green-400';
-        batchBar.style.width = '100%';
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Download Complete!';
+          labelEl.className = 'font-medium text-green-400';
+        }
+        document.getElementById('btn-person-download').disabled = false;
       }
+    } catch (e) {
+      setTimeout(pollPersonDownloadStatus, 1000);
+    }
+  }
+
+  function dismissPersonDownloadStatus() {
+    document.getElementById('person-download-status').classList.add('hidden');
+  }
+
+  // Step 2: Extract
+  async function runPersonExtract(limit = null) {
+    document.getElementById('btn-person-extract').disabled = true;
+    document.getElementById('btn-person-extract-custom').disabled = true;
+
+    const statusEl = document.getElementById('person-extract-status');
+    const indicatorEl = document.getElementById('person-extract-indicator');
+    const labelEl = document.getElementById('person-extract-label');
+    const outputEl = document.getElementById('person-extract-output');
+    const dismissBtn = document.getElementById('person-extract-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Extracting and enriching...';
+    labelEl.className = 'font-medium text-amber-400';
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    // Reset progress
+    document.getElementById('person-extract-batch-label').textContent = '0 / 0';
+    document.getElementById('person-extract-batch-bar').style.width = '0%';
+
+    try {
+      const params = new URLSearchParams();
+      if (limit) params.set('limit', limit);
+
+      const res = await fetch(`/api/person/extract?${params.toString()}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPersonExtractStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = e.message;
       document.getElementById('btn-person-extract').disabled = false;
       document.getElementById('btn-person-extract-custom').disabled = false;
     }
-  } catch (e) {
-    setTimeout(pollPersonExtractStatus, 1000);
   }
-}
 
-function dismissPersonExtractStatus() {
-  document.getElementById('person-extract-status').classList.add('hidden');
-}
+  async function pollPersonExtractStatus() {
+    const indicatorEl = document.getElementById('person-extract-indicator');
+    const labelEl = document.getElementById('person-extract-label');
+    const outputEl = document.getElementById('person-extract-output');
+    const dismissBtn = document.getElementById('person-extract-dismiss');
+    const batchLabel = document.getElementById('person-extract-batch-label');
+    const batchBar = document.getElementById('person-extract-batch-bar');
 
-function openPersonExtractModal() {
-  const modal = document.getElementById('person-extract-modal');
-  document.getElementById('person-extract-limit').value = '';
-  modal.style.display = 'flex';
-}
+    try {
+      const res = await fetch('/api/person/extract-status');
+      const data = await res.json();
 
-function closePersonExtractModal() {
-  document.getElementById('person-extract-modal').style.display = 'none';
-}
+      outputEl.textContent = data.output;
+      outputEl.scrollTop = outputEl.scrollHeight;
 
-function startPersonExtractFromModal() {
-  const limitInput = document.getElementById('person-extract-limit');
-  const limit = limitInput.value ? parseInt(limitInput.value) : null;
-  closePersonExtractModal();
-  runPersonExtract(limit);
-}
+      // Update progress
+      if (data.progress) {
+        const current = data.progress.batch_current || 0;
+        const total = data.progress.batch_total || 0;
+        batchLabel.textContent = `${current} / ${total}`;
+        const percent = total > 0 ? (current / total) * 100 : 0;
+        batchBar.style.width = `${percent}%`;
 
-// Step 3: Load
-async function runPersonLoad() {
-  document.getElementById('btn-person-load').disabled = true;
-  const optionsBtn = document.getElementById('btn-person-load-options');
-  if (optionsBtn) optionsBtn.disabled = true;
-  
-  const statusEl = document.getElementById('person-load-status');
-  const indicatorEl = document.getElementById('person-load-indicator');
-  const labelEl = document.getElementById('person-load-label');
-  const outputEl = document.getElementById('person-load-output');
-  const dismissBtn = document.getElementById('person-load-dismiss');
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = 'Loading into Redis...';
-  labelEl.className = 'font-medium text-brand-400';
-  outputEl.textContent = '';
-  if (dismissBtn) dismissBtn.classList.add('hidden');
-  
-  try {
-    const res = await fetch('/api/person/load', { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    pollPersonLoadStatus();
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    labelEl.className = 'font-medium text-red-400';
-    outputEl.textContent = e.message;
-    document.getElementById('btn-person-load').disabled = false;
-    if (optionsBtn) optionsBtn.disabled = false;
-  }
-}
-
-async function pollPersonLoadStatus() {
-  const indicatorEl = document.getElementById('person-load-indicator');
-  const labelEl = document.getElementById('person-load-label');
-  const outputEl = document.getElementById('person-load-output');
-  const dismissBtn = document.getElementById('person-load-dismiss');
-  
-  try {
-    const res = await fetch('/api/person/load-status');
-    const data = await res.json();
-    
-    // Preserve any existing output (like from clean operation) and append new output
-    const existingOutput = outputEl.textContent;
-    if (data.output && !existingOutput.includes(data.output)) {
-      outputEl.textContent = existingOutput + data.output;
-    }
-    outputEl.scrollTop = outputEl.scrollHeight;
-    
-    if (data.running) {
-      setTimeout(pollPersonLoadStatus, 1000);
-    } else {
-      indicatorEl.className = '';
-      if (dismissBtn) dismissBtn.classList.remove('hidden');
-      
-      if (data.error) {
-        indicatorEl.textContent = '❌';
-        labelEl.textContent = 'Error';
-        labelEl.className = 'font-medium text-red-400';
-        outputEl.textContent = existingOutput + (data.error || '');
-      } else {
-        indicatorEl.textContent = '✅';
-        labelEl.textContent = 'Load Complete!';
-        labelEl.className = 'font-medium text-green-400';
-        // Refresh stats to show new document counts
-        await refreshStats();
+        if (data.progress.status_message) {
+          labelEl.textContent = data.progress.status_message;
+        }
       }
+
+      if (data.running) {
+        setTimeout(pollPersonExtractStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Extract Complete!';
+          labelEl.className = 'font-medium text-green-400';
+          batchBar.style.width = '100%';
+        }
+        document.getElementById('btn-person-extract').disabled = false;
+        document.getElementById('btn-person-extract-custom').disabled = false;
+      }
+    } catch (e) {
+      setTimeout(pollPersonExtractStatus, 1000);
+    }
+  }
+
+  function dismissPersonExtractStatus() {
+    document.getElementById('person-extract-status').classList.add('hidden');
+  }
+
+  function openPersonExtractModal() {
+    const modal = document.getElementById('person-extract-modal');
+    document.getElementById('person-extract-limit').value = '';
+    modal.style.display = 'flex';
+  }
+
+  function closePersonExtractModal() {
+    document.getElementById('person-extract-modal').style.display = 'none';
+  }
+
+  function startPersonExtractFromModal() {
+    const limitInput = document.getElementById('person-extract-limit');
+    const limit = limitInput.value ? parseInt(limitInput.value) : null;
+    closePersonExtractModal();
+    runPersonExtract(limit);
+  }
+
+  // Step 3: Load
+  async function runPersonLoad() {
+    document.getElementById('btn-person-load').disabled = true;
+    const optionsBtn = document.getElementById('btn-person-load-options');
+    if (optionsBtn) optionsBtn.disabled = true;
+
+    const statusEl = document.getElementById('person-load-status');
+    const indicatorEl = document.getElementById('person-load-indicator');
+    const labelEl = document.getElementById('person-load-label');
+    const outputEl = document.getElementById('person-load-output');
+    const dismissBtn = document.getElementById('person-load-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Loading into Redis...';
+    labelEl.className = 'font-medium text-brand-400';
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/person/load', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPersonLoadStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = e.message;
       document.getElementById('btn-person-load').disabled = false;
-      const optionsBtn = document.getElementById('btn-person-load-options');
       if (optionsBtn) optionsBtn.disabled = false;
     }
-  } catch (e) {
-    setTimeout(pollPersonLoadStatus, 1000);
   }
-}
 
-function dismissPersonLoadStatus() {
-  document.getElementById('person-load-status').classList.add('hidden');
-}
+  async function pollPersonLoadStatus() {
+    const indicatorEl = document.getElementById('person-load-indicator');
+    const labelEl = document.getElementById('person-load-label');
+    const outputEl = document.getElementById('person-load-output');
+    const dismissBtn = document.getElementById('person-load-dismiss');
 
-// Person Load Options Modal
-function openPersonLoadModal() {
-  const modal = document.getElementById('person-load-modal');
-  document.getElementById('person-load-clean').checked = false;
-  document.getElementById('clean-load-warning').classList.add('hidden');
-  
-  // Add listener for clean load checkbox
-  const cleanCheckbox = document.getElementById('person-load-clean');
-  cleanCheckbox.onchange = function() {
-    document.getElementById('clean-load-warning').classList.toggle('hidden', !this.checked);
-  };
-  
-  modal.style.display = 'flex';
-}
+    try {
+      const res = await fetch('/api/person/load-status');
+      const data = await res.json();
 
-function closePersonLoadModal() {
-  document.getElementById('person-load-modal').style.display = 'none';
-}
+      // Preserve any existing output (like from clean operation) and append new output
+      const existingOutput = outputEl.textContent;
+      if (data.output && !existingOutput.includes(data.output)) {
+        outputEl.textContent = existingOutput + data.output;
+      }
+      outputEl.scrollTop = outputEl.scrollHeight;
 
-async function startPersonLoadFromModal() {
-  const cleanLoad = document.getElementById('person-load-clean').checked;
-  closePersonLoadModal();
-  
-  if (cleanLoad) {
-    await runPersonLoadWithClean();
-  } else {
-    runPersonLoad();
-  }
-}
+      if (data.running) {
+        setTimeout(pollPersonLoadStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
 
-async function runPersonLoadWithClean() {
-  document.getElementById('btn-person-load').disabled = true;
-  document.getElementById('btn-person-load-options').disabled = true;
-  
-  const statusEl = document.getElementById('person-load-status');
-  const indicatorEl = document.getElementById('person-load-indicator');
-  const labelEl = document.getElementById('person-load-label');
-  const outputEl = document.getElementById('person-load-output');
-  const dismissBtn = document.getElementById('person-load-dismiss');
-  
-  statusEl.classList.remove('hidden');
-  indicatorEl.textContent = '⏳';
-  indicatorEl.className = 'animate-spin';
-  labelEl.textContent = 'Deleting old person data...';
-  labelEl.className = 'font-medium text-brand-400';
-  outputEl.textContent = 'Cleaning old person:* keys...\n';
-  if (dismissBtn) dismissBtn.classList.add('hidden');
-  
-  try {
-    // First delete old person keys
-    const deleteRes = await fetch('/api/person/clean', { method: 'POST' });
-    const deleteData = await deleteRes.json();
-    
-    if (!deleteData.success) {
-      throw new Error(deleteData.error || 'Failed to clean person data');
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+          outputEl.textContent = existingOutput + (data.error || '');
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Load Complete!';
+          labelEl.className = 'font-medium text-green-400';
+          // Refresh stats to show new document counts
+          await refreshStats();
+        }
+        document.getElementById('btn-person-load').disabled = false;
+        const optionsBtn = document.getElementById('btn-person-load-options');
+        if (optionsBtn) optionsBtn.disabled = false;
+      }
+    } catch (e) {
+      setTimeout(pollPersonLoadStatus, 1000);
     }
-    
-    outputEl.textContent += `Deleted ${deleteData.deleted_count || 0} old person keys.\n\n`;
-    labelEl.textContent = 'Loading fresh person data...';
-    
-    // Now run the load
-    const res = await fetch('/api/person/load', { method: 'POST' });
-    const data = await res.json();
-    
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-    
-    pollPersonLoadStatus();
-  } catch (e) {
-    indicatorEl.textContent = '❌';
-    indicatorEl.className = '';
-    labelEl.textContent = 'Error';
-    labelEl.className = 'font-medium text-red-400';
-    outputEl.textContent += 'Error: ' + e.message;
-    document.getElementById('btn-person-load').disabled = false;
-    document.getElementById('btn-person-load-options').disabled = false;
   }
-}
+
+  function dismissPersonLoadStatus() {
+    document.getElementById('person-load-status').classList.add('hidden');
+  }
+
+  // Person Load Options Modal
+  function openPersonLoadModal() {
+    const modal = document.getElementById('person-load-modal');
+    document.getElementById('person-load-clean').checked = false;
+    document.getElementById('clean-load-warning').classList.add('hidden');
+
+    // Add listener for clean load checkbox
+    const cleanCheckbox = document.getElementById('person-load-clean');
+    cleanCheckbox.onchange = function() {
+      document.getElementById('clean-load-warning').classList.toggle('hidden', !this.checked);
+    };
+
+    modal.style.display = 'flex';
+  }
+
+  function closePersonLoadModal() {
+    document.getElementById('person-load-modal').style.display = 'none';
+  }
+
+  async function startPersonLoadFromModal() {
+    const cleanLoad = document.getElementById('person-load-clean').checked;
+    closePersonLoadModal();
+
+    if (cleanLoad) {
+      await runPersonLoadWithClean();
+    } else {
+      runPersonLoad();
+    }
+  }
+
+  async function runPersonLoadWithClean() {
+    document.getElementById('btn-person-load').disabled = true;
+    document.getElementById('btn-person-load-options').disabled = true;
+
+    const statusEl = document.getElementById('person-load-status');
+    const indicatorEl = document.getElementById('person-load-indicator');
+    const labelEl = document.getElementById('person-load-label');
+    const outputEl = document.getElementById('person-load-output');
+    const dismissBtn = document.getElementById('person-load-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Deleting old person data...';
+    labelEl.className = 'font-medium text-brand-400';
+    outputEl.textContent = 'Cleaning old person:* keys...\n';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    try {
+      // First delete old person keys
+      const deleteRes = await fetch('/api/person/clean', { method: 'POST' });
+      const deleteData = await deleteRes.json();
+
+      if (!deleteData.success) {
+        throw new Error(deleteData.error || 'Failed to clean person data');
+      }
+
+      outputEl.textContent += `Deleted ${deleteData.deleted_count || 0} old person keys.\n\n`;
+      labelEl.textContent = 'Loading fresh person data...';
+
+      // Now run the load
+      const res = await fetch('/api/person/load', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPersonLoadStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent += 'Error: ' + e.message;
+      document.getElementById('btn-person-load').disabled = false;
+      document.getElementById('btn-person-load-options').disabled = false;
+    }
+  }
+
+  // Refresh Redis connection status
+  async function refreshConnectionStatus() {
+    try {
+      const res = await fetch('/api/redis-status');
+      const data = await res.json();
+
+      // Update local status
+      const localStatusEl = document.getElementById('local-status');
+      const localDocsEl = document.getElementById('local-docs');
+      const localVersionEl = document.getElementById('local-version');
+      if (localStatusEl) {
+        if (data.local.status === 'connected') {
+          localStatusEl.textContent = '🟢 Connected';
+          localStatusEl.className = 'px-2 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400';
+          if (localDocsEl) localDocsEl.textContent = 'Documents: ' + formatNumber(data.local.dbsize || 0);
+          if (localVersionEl) localVersionEl.textContent = 'Version: ' + (data.local.redis_version || '...');
+          // Enable promote button when local is connected
+          document.getElementById('btn-promote').disabled = false;
+        } else {
+          localStatusEl.textContent = '🔴 ' + (data.local.error || 'Disconnected');
+          localStatusEl.className = 'px-2 py-1 rounded text-xs font-medium bg-red-500/20 text-red-400';
+        }
+      }
+
+      // Update public status
+      const publicStatusEl = document.getElementById('public-status');
+      const publicDocsEl = document.getElementById('public-docs');
+      const publicVersionEl = document.getElementById('public-version');
+      const publicHostEl = document.getElementById('public-host');
+      if (publicStatusEl) {
+        if (data.public.status === 'connected') {
+          publicStatusEl.textContent = '🟢 Connected';
+          publicStatusEl.className = 'px-2 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400';
+          if (publicDocsEl) publicDocsEl.textContent = 'Documents: ' + formatNumber(data.public.dbsize || 0);
+          if (publicVersionEl) publicVersionEl.textContent = 'Version: ' + (data.public.redis_version || '...');
+          if (publicHostEl) publicHostEl.textContent = 'GCE VM (' + (data.public.host || '...') + ')';
+          // Enable copy button when public is connected
+          document.getElementById('btn-copy-to-local').disabled = false;
+        } else {
+          publicStatusEl.textContent = '🔴 ' + (data.public.error || 'Disconnected');
+          publicStatusEl.className = 'px-2 py-1 rounded text-xs font-medium bg-red-500/20 text-red-400';
+        }
+      }
+    } catch (e) {
+      console.error('Failed to refresh connection status:', e);
+    }
+  }
+
+  // Auto-refresh on page load
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Refresh connection status and stats in parallel
+    await Promise.all([
+      refreshConnectionStatus(),
+      refreshStats()
+    ]);
+  });
 </script>
 {% endblock %}
