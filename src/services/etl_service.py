@@ -39,6 +39,8 @@ MAJOR_STREAMING_PROVIDERS = {
     "Apple TV",
     "Paramount Plus",
     "Paramount+",
+    "Fubo",
+    "FuboTV",
 }
 
 

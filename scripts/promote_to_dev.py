@@ -30,6 +30,7 @@ import sys
 from dataclasses import asdict, dataclass
 
 from dotenv import load_dotenv
+from google.cloud import storage  # type: ignore[attr-defined]
 from redis.asyncio import Redis
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
@@ -37,6 +38,11 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 # Load environment
 env_file = os.getenv("ENV_FILE", "config/local.env")
 load_dotenv(env_file)
+
+# ETL metadata GCS paths
+GCS_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl")
+GCS_ETL_PREFIX_LOCAL = os.getenv("GCS_ETL_PREFIX", "redis-search/etl/local")
+GCS_ETL_PREFIX_DEV = "redis-search/etl/dev"
 
 
 @dataclass
@@ -372,6 +378,58 @@ async def promote_index(
     return result
 
 
+def promote_etl_job_states(dry_run: bool = False) -> dict:
+    """
+    Copy ETL job states from local GCS path to dev GCS path.
+
+    This ensures that dev's scheduled ETL picks up where local left off,
+    avoiding re-processing of data that was already processed locally
+    and promoted to dev.
+
+    Returns dict with results.
+    """
+    result = {
+        "success": False,
+        "source_path": f"gs://{GCS_BUCKET}/{GCS_ETL_PREFIX_LOCAL}/state/job_states.json.gz",
+        "target_path": f"gs://{GCS_BUCKET}/{GCS_ETL_PREFIX_DEV}/state/job_states.json.gz",
+        "error": None,
+    }
+
+    try:
+        client = storage.Client()
+        bucket = client.bucket(GCS_BUCKET)
+
+        source_blob_name = f"{GCS_ETL_PREFIX_LOCAL}/state/job_states.json.gz"
+        target_blob_name = f"{GCS_ETL_PREFIX_DEV}/state/job_states.json.gz"
+
+        source_blob = bucket.blob(source_blob_name)
+
+        # Check if source exists
+        if not source_blob.exists():
+            result["error"] = "Source job states file does not exist"
+            print(f"      ⚠️  No local job states found at {source_blob_name}")
+            print("      This is normal if ETL hasn't been run locally yet")
+            result["success"] = True  # Not an error, just nothing to copy
+            return result
+
+        if dry_run:
+            print(f"      Would copy: {source_blob_name}")
+            print(f"      To: {target_blob_name}")
+            result["success"] = True
+            return result
+
+        # Copy the blob
+        bucket.copy_blob(source_blob, bucket, target_blob_name)
+        print("      Copied job states to dev")
+        result["success"] = True
+
+    except Exception as e:
+        result["error"] = str(e)
+        print(f"      ❌ Error copying job states: {e}")
+
+    return result
+
+
 async def list_available_indices(
     local_host: str,
     local_port: int,
@@ -544,12 +602,22 @@ async def main(
             print("      ❌ Failed")
         print()
 
+    # Promote ETL job states from GCS
+    print("📋 Promoting ETL job states...")
+    etl_result = promote_etl_job_states(dry_run=dry_run)
+    if etl_result["success"]:
+        print("   ✅ ETL job states promoted")
+    else:
+        print(f"   ❌ Failed: {etl_result.get('error')}")
+    print()
+
     # Final summary
     print("=" * 60)
     print("📊 Summary")
     print("=" * 60)
     print(f"   Indices promoted: {len([r for r in results if r['success']])}/{len(results)}")
     print(f"   Total documents {'would be ' if dry_run else ''}copied: {total_copied:,}")
+    print(f"   ETL job states: {'✅' if etl_result['success'] else '❌'}")
     if total_errors > 0:
         print(f"   Total errors: {total_errors}")
     print()

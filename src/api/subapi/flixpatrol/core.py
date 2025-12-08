@@ -53,6 +53,7 @@ PLATFORM_KEYWORDS = {
     "Paramount": "paramount+",
     "Peacock": "peacock",
     "Starz": "starz",
+    "Fubo": "fubo",
 }
 
 
@@ -290,6 +291,7 @@ class FlixPatrolService:
                     "paramount+",
                     "apple",
                     "amazon",
+                    "fubo",
                 ]
 
             # Convert raw dicts to FlixPatrolMediaItem models and remove duplicates

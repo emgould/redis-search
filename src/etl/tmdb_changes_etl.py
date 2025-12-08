@@ -56,6 +56,8 @@ MAJOR_STREAMING_PROVIDERS = {
     "Apple TV",
     "Paramount Plus",
     "Paramount+",
+    "Fubo",
+    "FuboTV",
 }
 
 
@@ -193,7 +195,9 @@ class TMDBChangesETL(TMDBService):
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, MAX_RETRY_DELAY)
                 else:
-                    logger.error(f"Failed to fetch {mc_type.value} {tmdb_id} after {max_retries + 1} attempts: {e}")
+                    logger.error(
+                        f"Failed to fetch {mc_type.value} {tmdb_id} after {max_retries + 1} attempts: {e}"
+                    )
                     return None
 
         return None
@@ -234,9 +238,7 @@ class TMDBChangesETL(TMDBService):
 
         total_pages = first_page.get("total_pages", 1)
         total_results = first_page.get("total_results", 0)
-        logger.info(
-            f"Changes for {media_type}: {total_results} results across {total_pages} pages"
-        )
+        logger.info(f"Changes for {media_type}: {total_results} results across {total_pages} pages")
 
         # Process first page - filter out adult content
         for item in first_page.get("results", []):
@@ -378,10 +380,7 @@ class TMDBChangesETL(TMDBService):
             logger.info(f"Processing batch {batch_num}/{total_batches}")
 
             # Use retry helper for each enrichment call
-            tasks = [
-                self._get_media_details_with_retry(tmdb_id, mc_type)
-                for tmdb_id in batch_ids
-            ]
+            tasks = [self._get_media_details_with_retry(tmdb_id, mc_type) for tmdb_id in batch_ids]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -409,7 +408,9 @@ class TMDBChangesETL(TMDBService):
                     item_dict = result
                 else:
                     stats.enrichment_errors += 1
-                    stats.errors.append(f"Unexpected result type for {media_type} {tmdb_id}: {type(result)}")
+                    stats.errors.append(
+                        f"Unexpected result type for {media_type} {tmdb_id}: {type(result)}"
+                    )
                     continue
 
                 stats.enriched_count += 1
@@ -438,9 +439,7 @@ class TMDBChangesETL(TMDBService):
             if i + BATCH_SIZE < total:
                 await asyncio.sleep(0.3)
 
-        logger.info(
-            f"Enriched {stats.enriched_count}, passed filter: {stats.passed_filter}"
-        )
+        logger.info(f"Enriched {stats.enriched_count}, passed filter: {stats.passed_filter}")
         return enriched_items
 
     async def enrich_and_filter_persons(
@@ -592,7 +591,9 @@ async def run_changes_etl(
         enriched_items = await etl.enrich_and_filter_persons(changed_ids, stats)
     else:
         enriched_items = await etl.enrich_and_filter_media(
-            changed_ids, media_type, stats  # type: ignore[arg-type]
+            changed_ids,
+            media_type,
+            stats,  # type: ignore[arg-type]
         )
 
     print(f"  Enriched: {stats.enriched_count}")
@@ -666,7 +667,10 @@ async def run_changes_etl(
                         age = (
                             end_date_obj.year
                             - birth_date.year
-                            - ((end_date_obj.month, end_date_obj.day) < (birth_date.month, birth_date.day))
+                            - (
+                                (end_date_obj.month, end_date_obj.day)
+                                < (birth_date.month, birth_date.day)
+                            )
                         )
                         redis_doc["age"] = age
                         redis_doc["is_deceased"] = deathday is not None
@@ -732,4 +736,3 @@ async def run_changes_etl(
     print("🎉 ETL Complete!")
 
     return stats
-
