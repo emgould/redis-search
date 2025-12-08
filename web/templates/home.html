@@ -51,12 +51,21 @@ Shows{% endblock %} {% block body %}
   </header>
 
   <!-- Redis Connection Indicator -->
-  <div class="px-4 py-1.5 flex justify-end">
+  <div class="px-4 py-1.5 flex items-center justify-end gap-3">
+    <button
+      id="api-base-toggle"
+      class="px-3 py-1 rounded-full border border-surface-700 text-sm text-surface-300 hover:border-surface-500 transition-colors"
+    >
+      Connected to Public Cloud Run (click to switch)
+    </button>
     <div class="flex items-center gap-1.5 text-xs text-surface-500">
       <span
         class="w-1.5 h-1.5 rounded-full {% if current_env == 'local' %}bg-green-500{% else %}bg-blue-500{% endif %}"
       ></span>
-      <span>{{ current_env | capitalize }} Redis</span>
+      <span
+        id="redis-env-label"
+        data-env="{{ current_env | capitalize }}"
+      ></span>
     </div>
   </div>
 
@@ -76,70 +85,72 @@ Shows{% endblock %} {% block body %}
       </p>
     </div>
 
-    <!-- Search Container -->
-    <div class="w-full max-w-2xl relative" id="search-container">
-      <!-- Search Input -->
-      <div class="relative">
-        <div
-          class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"
-        >
-          <svg
-            class="w-5 h-5 text-surface-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <div class="w-full max-w-2xl">
+      <!-- Search Container -->
+      <div class="relative" id="search-container">
+        <!-- Search Input -->
+        <div class="relative">
+          <div
+            class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-        </div>
-        <input
-          type="text"
-          id="search-input"
-          placeholder="Search for movies, TV shows..."
-          autocomplete="off"
-          class="w-full pl-12 pr-4 py-4 bg-surface-800 border border-surface-700 rounded-2xl text-white placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-lg transition-all"
-        />
-        <div
-          id="loading-spinner"
-          class="absolute inset-y-0 right-0 pr-4 flex items-center hidden"
-        >
-          <svg
-            class="animate-spin h-5 w-5 text-brand-500"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
+            <svg
+              class="w-5 h-5 text-surface-500"
+              fill="none"
               stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search for movies, TV shows..."
+            autocomplete="off"
+            class="w-full pl-12 pr-4 py-4 bg-surface-800 border border-surface-700 rounded-2xl text-white placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-lg transition-all"
+          />
+          <div
+            id="loading-spinner"
+            class="absolute inset-y-0 right-0 pr-4 flex items-center hidden"
+          >
+            <svg
+              class="animate-spin h-5 w-5 text-brand-500"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          </div>
         </div>
-      </div>
 
-      <!-- Results Dropdown -->
-      <div
-        id="results-container"
-        class="absolute top-full left-0 right-0 mt-2 hidden"
-      >
+        <!-- Results Dropdown -->
         <div
-          class="bg-surface-900 border border-surface-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden search-results-enter"
+          id="results-container"
+          class="absolute top-full left-0 right-0 mt-2 hidden"
         >
-          <div id="results-list" class="max-h-[70vh] overflow-y-auto">
-            <!-- Results will be inserted here -->
+          <div
+            class="bg-surface-900 border border-surface-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden search-results-enter"
+          >
+            <div id="results-list" class="max-h-[70vh] overflow-y-auto">
+              <!-- Results will be inserted here -->
+            </div>
           </div>
         </div>
       </div>
@@ -246,6 +257,43 @@ Shows{% endblock %} {% block body %}
   const resultsContainer = document.getElementById("results-container");
   const resultsList = document.getElementById("results-list");
   const loadingSpinner = document.getElementById("loading-spinner");
+  const apiBaseToggle = document.getElementById("api-base-toggle");
+  const redisEnvLabel = document.getElementById("redis-env-label");
+
+  const API_BASES = {
+    local: "",
+    public: "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app",
+  };
+  let currentApiBaseKey = "public";
+
+  function connectionLabel() {
+    return currentApiBaseKey === "public" ? "Public Cloud Run" : "Local API";
+  }
+
+  function updateApiBaseControls() {
+    apiBaseToggle.textContent = `Connected to ${connectionLabel()} (click to switch)`;
+  }
+
+  if (redisEnvLabel) {
+    const envLabel = redisEnvLabel.dataset.env || "";
+    redisEnvLabel.textContent = `${envLabel} Redis`;
+  }
+
+  function getCurrentApiBase() {
+    return API_BASES[currentApiBaseKey];
+  }
+
+  function getApiUrl(path) {
+    const base = getCurrentApiBase();
+    return `${base}${path}`;
+  }
+
+  apiBaseToggle.addEventListener("click", () => {
+    currentApiBaseKey = currentApiBaseKey === "public" ? "local" : "public";
+    updateApiBaseControls();
+  });
+
+  updateApiBaseControls();
 
   let debounceTimer;
   let currentQuery = "";
@@ -640,7 +688,7 @@ Shows{% endblock %} {% block body %}
 
     try {
       const response = await fetch(
-        `/api/autocomplete?q=${encodeURIComponent(query)}`
+        getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}`)
       );
       const results = await response.json();
 

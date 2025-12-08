@@ -41,6 +41,7 @@ MAJOR_STREAMING_PROVIDERS = {
     "Paramount+",
     "Fubo",
     "FuboTV",
+    "fuboTV",
 }
 
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
@@ -18,6 +19,9 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
+from etl.etl_metadata import ETLMetadataStore
+from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
+from etl.tmdb_changes_etl import ChangesETLStats
 from services.search_service import (
     DetailsRequest,
     autocomplete,
@@ -142,6 +146,16 @@ def get_latest_person_ids_file() -> dict | None:
 
 
 app = FastAPI()
+
+# Enable CORS for all origins (allows local dev to hit public API)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 templates = Jinja2Templates(directory="web/templates")
 
 
@@ -149,6 +163,69 @@ templates = Jinja2Templates(directory="web/templates")
 async def health_check():
     """Health check endpoint for Cloud Run."""
     return {"status": "healthy"}
+
+
+@app.get("/debug/redis-test")
+async def debug_redis_test():
+    """Debug endpoint to test Redis connectivity from Cloud Run."""
+    import socket
+    import time
+
+    host = os.getenv("REDIS_HOST", "localhost")
+    port = int(os.getenv("REDIS_PORT", "6379"))
+    password = os.getenv("REDIS_PASSWORD")
+
+    results = {
+        "redis_host": host,
+        "redis_port": port,
+        "has_password": bool(password),
+    }
+
+    # Test 1: Raw socket connection
+    start = time.time()
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        sock.connect((host, port))
+        sock.close()
+        results["socket_connect"] = {
+            "success": True,
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+    except Exception as e:
+        results["socket_connect"] = {
+            "success": False,
+            "error": str(e),
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+
+    # Test 2: Redis client ping
+    start = time.time()
+    try:
+        from redis import Redis
+
+        client = Redis(
+            host=host,
+            port=port,
+            password=password,
+            socket_timeout=10,
+            socket_connect_timeout=10,
+        )
+        pong = client.ping()
+        results["redis_ping"] = {
+            "success": True,
+            "response": pong,
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+        client.close()
+    except Exception as e:
+        results["redis_ping"] = {
+            "success": False,
+            "error": str(e),
+            "duration_ms": round((time.time() - start) * 1000, 2),
+        }
+
+    return results
 
 
 # Track background task status (ETL)
@@ -259,28 +336,19 @@ async def management(
     """Management dashboard with Redis environment switcher and data loading."""
     current_env = RedisManager.get_current_env()
 
-    # Test both connections
-    local_status = await RedisManager.test_connection(RedisEnvironment.LOCAL)
-    public_status = await RedisManager.test_connection(RedisEnvironment.PUBLIC)
-
-    # Get stats from current connection
-    try:
-        repo = RedisRepository()
-        stats = await repo.stats()
-    except Exception as e:
-        stats = {"error": str(e)}
-
-    # Get latest person IDs file info
+    # Get latest person IDs file info (fast, local file check)
     person_ids_info = get_latest_person_ids_file()
 
+    # Return page immediately - stats will be fetched async via JS
+    # This makes the page load instantly instead of waiting for Redis queries
     return templates.TemplateResponse(
         "management.html",
         {
             "request": request,
             "current_env": current_env.value,
-            "local_status": local_status,
-            "public_status": public_status,
-            "stats": stats,
+            "local_status": {"connected": False, "error": "Loading..."},
+            "public_status": {"connected": False, "error": "Loading..."},
+            "stats": {},  # Empty - will be populated by JS
             "task_status": _task_status,
             "person_ids_info": person_ids_info,
         },
@@ -396,8 +464,10 @@ def run_gcs_load_task(
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _task_status["output"] = "".join(output_lines)
-        if stderr:
-            _task_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _task_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _task_status["error"] = str(e)
@@ -552,8 +622,10 @@ def run_promote_task(indices: list[str] | None = None):
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _promote_status["output"] = "".join(output_lines)
-        if stderr:
-            _promote_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _promote_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _promote_status["error"] = str(e)
@@ -648,8 +720,12 @@ def run_copy_to_local_task(indices: list[str] | None = None):
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _copy_to_local_status["output"] = "".join(output_lines)
-        if stderr:
-            _copy_to_local_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        if process.returncode != 0:
+            _copy_to_local_status["error"] = (
+                stderr or f"Process exited with code {process.returncode}"
+            )
 
     except Exception as e:
         _copy_to_local_status["error"] = str(e)
@@ -767,7 +843,7 @@ def run_etl_task(
             sys.executable,
             "-u",  # Unbuffered output
             "-m",
-            "src.etl.run_etl",
+            "src.etl.bulk_loader",
             "--type",
             media_type,
         ]
@@ -819,8 +895,11 @@ def run_etl_task(
         if remaining_stdout:
             output_lines.append(remaining_stdout)
             _etl_status["output"] = "".join(output_lines)
-        if stderr:
-            _etl_status["error"] = stderr
+
+        # Only treat as error if process actually failed (non-zero exit code)
+        # Stderr may contain warnings/logging even on success
+        if process.returncode != 0:
+            _etl_status["error"] = stderr or f"Process exited with code {process.returncode}"
 
     except Exception as e:
         _etl_status["error"] = str(e)
@@ -1531,23 +1610,28 @@ async def run_nightly_etl_task(
 ) -> None:
     """Background task to run the full nightly ETL."""
     global _nightly_etl_status
-
-    # Lazy import to avoid circular import issues
-    from etl.etl_runner import ETLConfig, ETLRunner
+    print("run_nightly_etl_task: entered", flush=True)
 
     def update_progress(progress: dict) -> None:
         """Callback to update progress during ETL run."""
         _nightly_etl_status["progress"] = progress
+        print(f"Progress updated: {progress}", flush=True)
 
     try:
+        print("run_nightly_etl_task: loading config", flush=True)
         config = ETLConfig.from_env()
         runner = ETLRunner(config)
 
+        total_jobs = sum(len(j.runs) for j in config.jobs if j.enabled)
+        print(f"run_nightly_etl_task: setting progress, total_jobs={total_jobs}", flush=True)
         _nightly_etl_status["progress"] = {
-            "total_jobs": sum(len(j.runs) for j in config.jobs if j.enabled),
+            "total_jobs": total_jobs,
             "jobs_completed": 0,
             "current_job": "Starting...",
         }
+        print(
+            f"run_nightly_etl_task: progress set to {_nightly_etl_status['progress']}", flush=True
+        )
 
         result = await runner.run_all(
             start_date_override=start_date,
@@ -1575,10 +1659,6 @@ async def run_changes_job_task(
 ) -> None:
     """Background task to run a single changes ETL job."""
     global _changes_job_status, _changes_job_live_stats
-
-    # Lazy import to avoid circular import issues
-    from etl.etl_runner import run_single_etl
-    from etl.tmdb_changes_etl import ChangesETLStats
 
     # Create stats object upfront for progress tracking
     stats = ChangesETLStats()
@@ -1617,8 +1697,6 @@ async def run_changes_job_task(
 @app.get("/api/etl/config")
 async def get_etl_config(_: None = Depends(require_api_key)):
     """Get the current ETL configuration."""
-    from etl.etl_runner import ETLConfig
-
     try:
         config = ETLConfig.from_env()
         return JSONResponse(
@@ -1637,8 +1715,6 @@ async def get_etl_config(_: None = Depends(require_api_key)):
 @app.get("/api/etl/jobs")
 async def list_etl_jobs(_: None = Depends(require_api_key)):
     """List all configured ETL jobs."""
-    from etl.etl_runner import ETLConfig
-
     try:
         config = ETLConfig.from_env()
         jobs = []
@@ -1721,13 +1797,27 @@ async def trigger_nightly_etl(
     }
 
     # Use a thread to avoid blocking
-    etl_thread = threading.Thread(
-        target=lambda: __import__("asyncio").run(
-            run_nightly_etl_task(start_date, end_date, job_filter)
-        ),
-        daemon=True,
-    )
+    def run_etl_in_thread():
+        """Wrapper to catch all exceptions in the thread."""
+        global _nightly_etl_status
+        print(f"ETL thread starting, run_id={run_id}", flush=True)
+        try:
+            import asyncio
+
+            print("ETL thread: calling asyncio.run()", flush=True)
+            asyncio.run(run_nightly_etl_task(start_date, end_date, job_filter))
+            print("ETL thread: asyncio.run() completed", flush=True)
+        except Exception as e:
+            import traceback
+
+            error_msg = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+            _nightly_etl_status["error"] = error_msg
+            _nightly_etl_status["running"] = False
+            print(f"ETL thread error: {error_msg}", flush=True)
+
+    etl_thread = threading.Thread(target=run_etl_in_thread, daemon=True)
     etl_thread.start()
+    print(f"ETL thread started for run_id={run_id}", flush=True)
 
     return JSONResponse(
         content={
@@ -1868,8 +1958,6 @@ async def list_etl_runs(
     _: None = Depends(require_api_key),
 ):
     """List recent ETL runs from GCS metadata."""
-    from etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         runs = store.list_runs(run_date=run_date, limit=limit)
@@ -1889,8 +1977,6 @@ async def list_etl_runs(
 @app.get("/api/etl/runs/{run_date}/{run_id}")
 async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_key)):
     """Get details of a specific ETL run."""
-    from etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         metadata = store.get_run_metadata(run_date, run_id)
@@ -1917,8 +2003,6 @@ async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_
 @app.get("/api/etl/job/state")
 async def get_etl_job_states(_: None = Depends(require_api_key)):
     """Get the persistent state of all jobs (last run times, etc.)."""
-    from etl.etl_metadata import ETLMetadataStore
-
     try:
         store = ETLMetadataStore()
         states = store.get_all_job_states()

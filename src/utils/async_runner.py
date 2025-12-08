@@ -29,6 +29,7 @@ def _ensure_nest_asyncio():
     if not _nest_asyncio_applied:
         try:
             import nest_asyncio
+
             nest_asyncio.apply()
             _nest_asyncio_applied = True
             logger.debug("nest_asyncio patch applied successfully")

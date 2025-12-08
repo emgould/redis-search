@@ -24,7 +24,7 @@ from etl.etl_metadata import (
     JobRunResult,
     create_run_metadata,
 )
-from etl.tmdb_changes_etl import ChangesETLStats, run_changes_etl
+from etl.tmdb_changes_etl import ChangesETLStats, run_nightly_etl
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -38,6 +38,7 @@ class JobRunParams:
     verbose: bool = False
     start_date: str | None = None
     end_date: str | None = None
+    max_batches: int = 0  # 0 = no limit, >0 = limit for testing
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "JobRunParams":
@@ -46,6 +47,7 @@ class JobRunParams:
             verbose=data.get("verbose", False),
             start_date=data.get("start_date"),
             end_date=data.get("end_date"),
+            max_batches=data.get("max_batches", 0),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -54,6 +56,7 @@ class JobRunParams:
             "verbose": self.verbose,
             "start_date": self.start_date,
             "end_date": self.end_date,
+            "max_batches": self.max_batches,
         }
 
 
@@ -142,7 +145,7 @@ class ETLConfig:
 
 # Registry of available ETL functions
 ETL_FUNCTIONS = {
-    "tmdb_changes_etl": run_changes_etl,
+    "tmdb_changes_etl": run_nightly_etl,
 }
 
 
@@ -235,7 +238,9 @@ class ETLRunner:
                 raise ValueError(f"Unknown ETL function: {job.target}")
 
             # Determine dates
-            start_date = start_date_override or params.start_date or self.get_job_start_date(job_name)
+            start_date = (
+                start_date_override or params.start_date or self.get_job_start_date(job_name)
+            )
             end_date = end_date_override or params.end_date or date.today().isoformat()
 
             logger.info(f"Running {job_name}: {start_date} to {end_date}")
@@ -254,15 +259,18 @@ class ETLRunner:
                 redis_port=self.config.redis_port,
                 redis_password=self.config.redis_password,
                 verbose=params.verbose,
+                max_batches=params.max_batches,
             )
 
             # Update result from stats
-            result.status = "success" if stats.load_errors == 0 else "partial"
+            load_errors = stats.load_phase.items_failed
+            result.status = "success" if load_errors == 0 else "partial"
             result.changes_found = stats.total_changes_found
-            result.documents_upserted = stats.documents_upserted
-            result.documents_skipped = stats.documents_skipped
-            result.errors_count = len(stats.errors)
-            result.errors = stats.errors
+            result.documents_upserted = stats.load_phase.items_success
+            result.documents_skipped = stats.failed_filter
+            all_errors = stats.fetch_phase.errors + stats.load_phase.errors
+            result.errors_count = len(all_errors)
+            result.errors = all_errors
 
             if self._run_metadata:
                 self._run_metadata.add_log(
@@ -355,23 +363,28 @@ class ETLRunner:
                 self._run_metadata.total_documents_upserted += result.documents_upserted
                 self._run_metadata.total_errors += result.errors_count
 
-                # Update job state
-                self.metadata_store.update_job_state(result.job_name, result)
+                # Update job state (don't let GCS failures kill the whole run)
+                try:
+                    self.metadata_store.update_job_state(result.job_name, result)
+                except Exception as e:
+                    logger.warning(f"Failed to update job state for {result.job_name}: {e}")
 
                 # Call progress callback if provided
                 if progress_callback:
-                    progress_callback({
-                        "total_jobs": total_runs,
-                        "jobs_completed": self._run_metadata.jobs_completed,
-                        "jobs_failed": self._run_metadata.jobs_failed,
-                        "current_job": f"{job.name}_{params.media_type}",
-                        "last_result": {
-                            "job_name": result.job_name,
-                            "status": result.status,
-                            "changes_found": result.changes_found,
-                            "documents_upserted": result.documents_upserted,
-                        },
-                    })
+                    progress_callback(
+                        {
+                            "total_jobs": total_runs,
+                            "jobs_completed": self._run_metadata.jobs_completed,
+                            "jobs_failed": self._run_metadata.jobs_failed,
+                            "current_job": f"{job.name}_{params.media_type}",
+                            "last_result": {
+                                "job_name": result.job_name,
+                                "status": result.status,
+                                "changes_found": result.changes_found,
+                                "documents_upserted": result.documents_upserted,
+                            },
+                        }
+                    )
 
         # Finalize run metadata
         self._run_metadata.completed_at = datetime.now()
@@ -390,15 +403,21 @@ class ETLRunner:
 
         self._run_metadata.add_log(f"ETL run completed: {self._run_metadata.status}")
 
-        # Save metadata to GCS
-        self.metadata_store.save_run_metadata(self._run_metadata)
+        # Save metadata to GCS (don't let failure prevent email)
+        try:
+            self.metadata_store.save_run_metadata(self._run_metadata)
+        except Exception as e:
+            logger.warning(f"Failed to save run metadata to GCS: {e}")
 
         # Send email notification
         from etl.notifications import send_etl_summary_email
 
-        email_sent = send_etl_summary_email(self._run_metadata)
-        if email_sent:
-            self._run_metadata.add_log("Email notification sent")
+        try:
+            email_sent = send_etl_summary_email(self._run_metadata)
+            if email_sent:
+                self._run_metadata.add_log("Email notification sent")
+        except Exception as e:
+            logger.warning(f"Failed to send email notification: {e}")
 
         # Print summary
         print()
@@ -535,7 +554,7 @@ async def run_single_etl(
         raise ValueError(f"Invalid media_type: {media_type}")
     media_type_literal: Literal["tv", "movie", "person"] = media_type  # type: ignore[assignment]
 
-    return await run_changes_etl(
+    return await run_nightly_etl(
         media_type=media_type_literal,
         start_date=start_date,
         end_date=end_date,
@@ -545,4 +564,3 @@ async def run_single_etl(
         verbose=verbose,
         stats=stats,
     )
-

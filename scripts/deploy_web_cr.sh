@@ -76,32 +76,33 @@ echo "   ✅ GCS access configured"
 # Build the image
 echo ""
 echo "📦 Building Docker image..."
-gcloud builds submit \
-    --config=cloudbuild.yaml \
-    --substitutions="_IMAGE=${IMAGE},_DOCKERFILE=src/search_api/Dockerfile" \
-    .
+        gcloud builds submit \
+            --config=cloudbuild.yaml \
+    --substitutions="_IMAGE=${IMAGE},_DOCKERFILE=docker/cloudrun.Dockerfile" \
+            .
 
 # Deploy to Cloud Run
 echo ""
 echo "🚀 Deploying to Cloud Run..."
 gcloud run deploy "${SERVICE_NAME}" \
     --image "${IMAGE}" \
-    --region "${REGION}" \
-    --platform managed \
-    --vpc-connector "${VPC_CONNECTOR}" \
-    --vpc-egress all-traffic \
+            --region "${REGION}" \
+            --platform managed \
+            --vpc-connector "${VPC_CONNECTOR}" \
+            --vpc-egress all-traffic \
     --set-secrets "/secrets/env=${SECRET_NAME}:latest" \
     --set-env-vars "DISABLE_WEB_UI=true" \
-    --allow-unauthenticated \
-    --memory 1Gi \
+            --allow-unauthenticated \
+    --memory 2Gi \
+    --cpu 2 \
     --timeout 3600 \
-    --min-instances 0 \
-    --max-instances 10
+    --min-instances 1 \
+    --max-instances 1
 
 # Get the URL
 URL=$(gcloud run services describe "${SERVICE_NAME}" --region="${REGION}" --format="value(status.url)")
 
-echo ""
+        echo ""
 echo "============================================================"
 echo "✅ Deployment Complete!"
 echo "============================================================"

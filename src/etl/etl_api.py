@@ -181,10 +181,12 @@ async def get_config():
     """Get the current ETL configuration."""
     try:
         config = ETLConfig.from_env()
-        return JSONResponse(content={
-            "success": True,
-            "config": config.to_dict(),
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "config": config.to_dict(),
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -199,16 +201,20 @@ async def list_jobs():
         config = ETLConfig.from_env()
         jobs = []
         for job in config.jobs:
-            jobs.append({
-                "name": job.name,
-                "target": job.target,
-                "enabled": job.enabled,
-                "runs": [r.to_dict() for r in job.runs],
-            })
-        return JSONResponse(content={
-            "success": True,
-            "jobs": jobs,
-        })
+            jobs.append(
+                {
+                    "name": job.name,
+                    "target": job.target,
+                    "enabled": job.enabled,
+                    "runs": [r.to_dict() for r in job.runs],
+                }
+            )
+        return JSONResponse(
+            content={
+                "success": True,
+                "jobs": jobs,
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -263,24 +269,28 @@ async def trigger_full_etl(
         job_filter=job_filter,
     )
 
-    return JSONResponse(content={
-        "success": True,
-        "message": "ETL run started",
-        "run_id": run_id,
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": "ETL run started",
+            "run_id": run_id,
+        }
+    )
 
 
 @app.get("/status")
 async def get_etl_status():
     """Get the status of the current or most recent ETL run."""
-    return JSONResponse(content={
-        "running": _etl_task_status["running"],
-        "run_id": _etl_task_status.get("run_id"),
-        "started_at": _etl_task_status.get("started_at"),
-        "progress": _etl_task_status.get("progress", {}),
-        "error": _etl_task_status.get("error"),
-        "result": _etl_task_status.get("result"),
-    })
+    return JSONResponse(
+        content={
+            "running": _etl_task_status["running"],
+            "run_id": _etl_task_status.get("run_id"),
+            "started_at": _etl_task_status.get("started_at"),
+            "progress": _etl_task_status.get("progress", {}),
+            "error": _etl_task_status.get("error"),
+            "result": _etl_task_status.get("result"),
+        }
+    )
 
 
 @app.post("/job/trigger")
@@ -347,11 +357,13 @@ async def trigger_single_job(
         redis_password=redis_password,
     )
 
-    return JSONResponse(content={
-        "success": True,
-        "message": f"ETL job started for {media_type}",
-        "task_id": task_id,
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"ETL job started for {media_type}",
+            "task_id": task_id,
+        }
+    )
 
 
 @app.get("/job/status/{task_id}")
@@ -363,20 +375,24 @@ async def get_job_status(task_id: str):
             content={"success": False, "error": f"Task not found: {task_id}"},
         )
 
-    return JSONResponse(content={
-        "success": True,
-        "task_id": task_id,
-        **_job_task_status[task_id],
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "task_id": task_id,
+            **_job_task_status[task_id],
+        }
+    )
 
 
 @app.get("/job/status")
 async def list_job_statuses():
     """List all job task statuses."""
-    return JSONResponse(content={
-        "success": True,
-        "tasks": _job_task_status,
-    })
+    return JSONResponse(
+        content={
+            "success": True,
+            "tasks": _job_task_status,
+        }
+    )
 
 
 @app.get("/runs")
@@ -388,10 +404,12 @@ async def list_runs(
     try:
         store = ETLMetadataStore()
         runs = store.list_runs(run_date=run_date, limit=limit)
-        return JSONResponse(content={
-            "success": True,
-            "runs": runs,
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "runs": runs,
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -412,10 +430,12 @@ async def get_run(run_date: str, run_id: str):
                 content={"success": False, "error": "Run not found"},
             )
 
-        return JSONResponse(content={
-            "success": True,
-            "run": metadata.to_dict(),
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "run": metadata.to_dict(),
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -429,10 +449,12 @@ async def get_job_states():
     try:
         store = ETLMetadataStore()
         states = store.get_all_job_states()
-        return JSONResponse(content={
-            "success": True,
-            "states": {name: state.to_dict() for name, state in states.items()},
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "states": {name: state.to_dict() for name, state in states.items()},
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -455,4 +477,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

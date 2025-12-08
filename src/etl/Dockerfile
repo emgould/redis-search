@@ -9,4 +9,4 @@ COPY . ./
 
 # Source secret file if it exists (Cloud Run mounts secrets as files)
 # This makes all env vars from the secret bundle available to the process
-CMD ["sh", "-c", "if [ -f \"${ETL_ENV}\" ]; then set -a && source \"${ETL_ENV}\" && set +a; fi && python -m src.etl.run_etl"]
+CMD ["sh", "-c", "if [ -f \"${ETL_ENV}\" ]; then set -a && source \"${ETL_ENV}\" && set +a; fi && python -m src.etl.bulk_loader"]

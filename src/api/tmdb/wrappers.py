@@ -6,15 +6,6 @@ These maintain backward compatibility with existing Firebase Functions.
 
 from typing import Any
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-    MCSearchResponse,
-    MCSources,
-    MCType,
-)
-
 from api.tmdb.core import TMDBFunctionCache
 from api.tmdb.models import (
     MCBaseMediaItem,
@@ -36,6 +27,14 @@ from api.tmdb.search import TMDBSearchService
 from api.tmdb.search_with_credits import search_person_with_credits
 from api.tmdb.tmdb_models import TMDBProvidersResponse
 from api.tmdb.trending import get_trending_movies, get_trending_tv_shows
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+    MCSearchResponse,
+    MCSources,
+    MCType,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 

@@ -27,7 +27,7 @@ from etl.etl_runner import (
 from etl.tmdb_changes_etl import (
     ChangesETLStats,
     TMDBChangesETL,
-    run_changes_etl,
+    run_nightly_etl,
 )
 
 # Note: etl_api is not imported here to avoid circular imports
@@ -37,7 +37,7 @@ __all__ = [
     # Changes ETL
     "TMDBChangesETL",
     "ChangesETLStats",
-    "run_changes_etl",
+    "run_nightly_etl",
     # Runner
     "ETLRunner",
     "ETLConfig",
@@ -53,4 +53,3 @@ __all__ = [
     "JobState",
     "create_run_metadata",
 ]
-

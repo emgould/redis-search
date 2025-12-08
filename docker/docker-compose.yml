@@ -2,7 +2,9 @@ name: redis-search
 
 services:
   redis:
-    image: redis/redis-stack:latest
+    # Pin to same version as GCP (redis-stack-vm) to avoid module mismatch bugs
+    # Note: GCP uses redis-stack-server, local uses redis-stack (includes RedisInsight UI)
+    image: redis/redis-stack:7.4.0-v8
     ports:
       - "6380:6379"
       - "8001:8001"
@@ -10,12 +12,13 @@ services:
       - redis_data:/data
     environment:
       - RIPROXYEULA=true
-      - REDIS_ARGS=--appendonly yes --save 60 1
+      # volatile-lru only evicts keys with TTL (cache), NEVER permanent data (media, person, indices)
+      - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 4gb --maxmemory-policy volatile-lru
 
   web:
     build:
       context: ..
-      dockerfile: src/search_api/Dockerfile
+      dockerfile: docker/cloudrun.Dockerfile
     env_file:
       - ../config/local.env
     environment:
@@ -41,6 +44,33 @@ services:
       - redis
     # Override CMD to enable live reload
     command: sh -c "uvicorn web.app:app --host 0.0.0.0 --port 8080 --reload --reload-dir /app/web --reload-dir /app/src"
+
+  # ETL runner for testing (run with: make etl-docker)
+  # Uses entrypoint script:
+  #   - "run" (default): Run ETL once and exit
+  #   - "cron": Start cron daemon for scheduled runs at 3 AM UTC
+  #   - "test": Verify environment and dry-run
+  etl:
+    build:
+      context: ..
+      dockerfile: docker/etl.Dockerfile
+    env_file:
+      - ../config/local.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      ENVIRONMENT: local
+      ETL_CONFIG_PATH: /app/config/etl_jobs.yaml
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
+    volumes:
+      - ../config:/app/config:ro
+      - ../data:/app/data
+    depends_on:
+      - redis
+    profiles:
+      - etl
+    # Default: run ETL once. Override with: docker compose --profile etl run etl cron
+    command: ["run"]
 
 volumes:
   redis_data:

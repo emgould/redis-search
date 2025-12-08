@@ -1,34 +1,37 @@
 """
-Entry point for running the TMDB ETL process.
+Bulk loader for importing TMDB JSON files into Redis.
+
+This loads pre-downloaded JSON files from disk, NOT the nightly changes ETL.
+For nightly changes ETL, use: python -m etl.run_nightly_etl
 
 Usage:
     # List available files
-    python -m src.etl.run_etl --list
-    python -m src.etl.run_etl --list --type movie
+    python -m src.etl.bulk_loader --list
+    python -m src.etl.bulk_loader --list --type movie
 
     # Load specific files
-    python -m src.etl.run_etl --files tmdb_movie_2025_10.json tmdb_movie_2025_11.json
-    python -m src.etl.run_etl --files tmdb_tv_2020_10.json --no-gcs
+    python -m src.etl.bulk_loader --files tmdb_movie_2025_10.json tmdb_movie_2025_11.json
+    python -m src.etl.bulk_loader --files tmdb_tv_2020_10.json --no-gcs
 
     # Load by exact date
-    python -m src.etl.run_etl --type movie --year 2025 --month 10
-    python -m src.etl.run_etl --type tv --year 2025
+    python -m src.etl.bulk_loader --type movie --year 2025 --month 10
+    python -m src.etl.bulk_loader --type tv --year 2025
 
     # Load by date range
-    python -m src.etl.run_etl --type tv --year-lte 2020      # 2020 and earlier
-    python -m src.etl.run_etl --type tv --year-gte 2023      # 2023 and later
-    python -m src.etl.run_etl --type movie --year-gte 2020 --year-lte 2022  # 2020-2022
+    python -m src.etl.bulk_loader --type tv --year-lte 2020      # 2020 and earlier
+    python -m src.etl.bulk_loader --type tv --year-gte 2023      # 2023 and later
+    python -m src.etl.bulk_loader --type movie --year-gte 2020 --year-lte 2022  # 2020-2022
 
     # Load all files of a type (use with caution)
-    python -m src.etl.run_etl --type movie --all
+    python -m src.etl.bulk_loader --type movie --all
 """
 
 import os
 import sys
 
 # Add src to path for imports (handles 'from utils.' style imports)
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import argparse
 import asyncio
@@ -117,7 +120,9 @@ def main():
 
     # Don't allow --year with --year-lte or --year-gte
     if args.year and (args.year_lte or args.year_gte):
-        parser.error("Cannot use --year with --year-lte or --year-gte. Use --year for exact year, or --year-lte/--year-gte for ranges.")
+        parser.error(
+            "Cannot use --year with --year-lte or --year-gte. Use --year for exact year, or --year-lte/--year-gte for ranges."
+        )
 
     upload_to_gcs = not args.no_gcs
 

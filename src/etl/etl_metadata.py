@@ -327,7 +327,9 @@ class ETLMetadataStore:
 
         state = states[job_name]
         state.last_run_time = result.completed_at.isoformat() if result.completed_at else None
-        state.last_run_date = result.completed_at.strftime("%Y-%m-%d") if result.completed_at else None
+        state.last_run_date = (
+            result.completed_at.strftime("%Y-%m-%d") if result.completed_at else None
+        )
         state.last_status = result.status
         state.last_changes_found = result.changes_found
         state.last_documents_upserted = result.documents_upserted
@@ -453,13 +455,17 @@ class ETLMetadataStore:
                         # Parse run_id from filename: run_YYYYMMDD_HHMMSS.json.gz
                         run_id = filename.replace("run_", "").replace(".json.gz", "")
 
-                        runs.append({
-                            "run_id": run_id,
-                            "run_date": date_part,
-                            "blob_path": blob.name,
-                            "size_bytes": blob.size,
-                            "created": blob.time_created.isoformat() if blob.time_created else None,
-                        })
+                        runs.append(
+                            {
+                                "run_id": run_id,
+                                "run_date": date_part,
+                                "blob_path": blob.name,
+                                "size_bytes": blob.size,
+                                "created": blob.time_created.isoformat()
+                                if blob.time_created
+                                else None,
+                            }
+                        )
 
             # Sort by run_id (most recent first) and limit
             runs.sort(key=lambda x: x["run_id"], reverse=True)
@@ -493,4 +499,3 @@ def create_run_metadata() -> ETLRunMetadata:
         status="running",
         started_at=now,
     )
-
