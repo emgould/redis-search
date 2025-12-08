@@ -39,7 +39,9 @@ def verify_etl_auth(
     Authorization is granted if:
     1. Request has X-CloudScheduler-JobName header (Cloud Scheduler)
     2. Request has valid X-API-Key header matching ETL_API_KEY env var
-    3. ENVIRONMENT is "development" (local development)
+    3. Running locally (not in Cloud Run) AND ENVIRONMENT=local
+
+    Cloud Run detection: K_SERVICE env var is automatically set by Cloud Run.
 
     Args:
         x_cloudscheduler_jobname: Cloud Scheduler job name header
@@ -57,8 +59,13 @@ def verify_etl_auth(
     if expected_key and x_api_key == expected_key:
         return True
 
-    # In development, allow unauthenticated
-    return os.getenv("ENVIRONMENT", "development") == "development"
+    # If running in Cloud Run, auth is REQUIRED (no bypass)
+    # K_SERVICE is automatically set by Cloud Run
+    if os.getenv("K_SERVICE"):
+        return False
+
+    # Local development: only skip auth if explicitly set to "local"
+    return os.getenv("ENVIRONMENT") == "local"
 
 
 def get_latest_person_ids_file() -> dict | None:

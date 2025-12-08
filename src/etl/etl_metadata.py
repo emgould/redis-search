@@ -192,7 +192,9 @@ class ETLMetadataStore:
 
     def _log_configuration(self) -> None:
         """Log metadata store configuration for visibility."""
-        environment = os.getenv("ENVIRONMENT", "development")
+        # Detect if running in Cloud Run (K_SERVICE is auto-set by Cloud Run)
+        is_cloud_run = os.getenv("K_SERVICE") is not None
+        environment = "cloud_run" if is_cloud_run else os.getenv("ENVIRONMENT", "local")
 
         if self.config.gcs_bucket:
             logger.info(
@@ -202,9 +204,9 @@ class ETLMetadataStore:
                 f"environment={environment}"
             )
         else:
-            if environment == "production":
+            if is_cloud_run:
                 logger.error(
-                    "GCS_BUCKET not configured in production! "
+                    "GCS_BUCKET not configured in Cloud Run! "
                     "ETL run metadata will NOT be persisted. "
                     "Set GCS_BUCKET environment variable."
                 )
