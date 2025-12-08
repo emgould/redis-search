@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy-api deploy-etl create-redis-vm local deploy tunnel
+.PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-prod create-redis-vm local tunnel
 
 help:
 	@echo "Available make commands:"
@@ -184,23 +184,14 @@ local:
 create-redis-vm:
 	./scripts/create_redis_vm.sh
 
-# Deploy to Cloud Run: make deploy SERVICE=api ENV=dev
-SERVICE ?= api
-ENV ?= dev
+# Deploy to Cloud Run
+# Usage: make deploy          (deploys to dev)
+#        make deploy-prod     (deploys to production)
 deploy:
-	@if [ "$(SERVICE)" != "api" ] && [ "$(SERVICE)" != "etl" ]; then \
-		echo "❌ SERVICE must be 'api' or 'etl'"; \
-		echo "   Usage: make deploy SERVICE=api ENV=dev"; \
-		exit 1; \
-	fi
-	./scripts/deploy_cloud_run.sh $(SERVICE) $(ENV)
+	./scripts/deploy_cloud_run.sh dev
 
-# Legacy targets (for backwards compatibility)
-deploy-api:
-	./scripts/deploy_cloud_run.sh api prod
-
-deploy-etl:
-	./scripts/deploy_cloud_run.sh etl prod
+deploy-prod:
+	./scripts/deploy_cloud_run.sh prod
 
 # IAP tunnel to Redis VM - forwards localhost:6381 to Redis VM port 6379
 # Use PUBLIC_REDIS_PORT=6381 in local.env to connect through tunnel
