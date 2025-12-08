@@ -76,29 +76,35 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
 
     # Add per-job breakdown
     if metadata.job_results:
-        lines.extend([
-            f"{'─' * 60}",
-            "  JOB BREAKDOWN",
-            f"{'─' * 60}",
-        ])
+        lines.extend(
+            [
+                f"{'─' * 60}",
+                "  JOB BREAKDOWN",
+                f"{'─' * 60}",
+            ]
+        )
         for job in metadata.job_results:
             status_icon = "✓" if job.status == "success" else "✗" if job.status == "failed" else "○"
             lines.append(f"  {status_icon} {job.job_name}")
-            lines.append(f"      Changes: {format_number(job.changes_found)} → "
-                        f"Upserted: {format_number(job.documents_upserted)} | "
-                        f"Errors: {job.errors_count} | "
-                        f"Duration: {format_duration(job.duration_seconds)}")
+            lines.append(
+                f"      Changes: {format_number(job.changes_found)} → "
+                f"Upserted: {format_number(job.documents_upserted)} | "
+                f"Errors: {job.errors_count} | "
+                f"Duration: {format_duration(job.duration_seconds)}"
+            )
             if job.error_message:
                 lines.append(f"      Error: {job.error_message[:100]}")
         lines.append("")
 
     # Add errors summary if any
     if metadata.total_errors > 0:
-        lines.extend([
-            f"{'─' * 60}",
-            "  ERRORS (first 10)",
-            f"{'─' * 60}",
-        ])
+        lines.extend(
+            [
+                f"{'─' * 60}",
+                "  ERRORS (first 10)",
+                f"{'─' * 60}",
+            ]
+        )
         error_count = 0
         for job in metadata.job_results:
             for error in job.errors[:5]:  # Max 5 per job
@@ -113,16 +119,18 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
         lines.append("")
 
     # Footer
-    lines.extend([
-        f"{'─' * 60}",
-        "  LINKS",
-        f"{'─' * 60}",
-        f"  GCS Metadata: gs://mc-redis-etl/redis-search/etl/runs/{metadata.run_date}/",
-        "",
-        f"{'=' * 60}",
-        "  This is an automated message from the Redis Search ETL",
-        f"{'=' * 60}",
-    ])
+    lines.extend(
+        [
+            f"{'─' * 60}",
+            "  LINKS",
+            f"{'─' * 60}",
+            f"  GCS Metadata: gs://mc-redis-etl/redis-search/etl/runs/{metadata.run_date}/",
+            "",
+            f"{'=' * 60}",
+            "  This is an automated message from the Redis Search ETL",
+            f"{'=' * 60}",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -149,22 +157,28 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
     # Build job rows
     job_rows_list = []
     for job in metadata.job_results:
-        row_color = "#22c55e" if job.status == "success" else "#ef4444" if job.status == "failed" else "#6b7280"
+        row_color = (
+            "#22c55e"
+            if job.status == "success"
+            else "#ef4444"
+            if job.status == "failed"
+            else "#6b7280"
+        )
         job_rows_list.append(
-            f'<tr>'
+            f"<tr>"
             f'<td style="padding:8px;border-bottom:1px solid #374151">{job.job_name}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;color:{row_color}">{job.status}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{format_number(job.changes_found)}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{format_number(job.documents_upserted)}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{job.errors_count}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151">{format_duration(job.duration_seconds)}</td>'
-            f'</tr>'
+            f"</tr>"
         )
     job_rows = "".join(job_rows_list)
 
     # Build HTML using list to avoid trailing whitespace issues
     html_parts = [
-        '<!DOCTYPE html>',
+        "<!DOCTYPE html>",
         '<html><head><meta charset="utf-8"><title>ETL Run Summary</title></head>',
         '<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#111827;color:#f3f4f6;padding:20px;margin:0">',
         '<div style="max-width:700px;margin:0 auto;background:#1f2937;border-radius:8px;overflow:hidden;border:1px solid #374151">',
@@ -172,14 +186,14 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         f'<div style="background:{status_color};padding:20px;text-align:center">',
         f'<h1 style="margin:0;color:white;font-size:24px">{status_emoji} ETL Run {metadata.status.upper()}</h1>',
         f'<p style="margin:5px 0 0;color:rgba(255,255,255,0.9);font-size:14px">{metadata.run_date} • {metadata.run_id}</p>',
-        '</div>',
+        "</div>",
         # Summary Stats
         '<div style="padding:20px;display:flex;justify-content:space-around;background:#111827;border-bottom:1px solid #374151">',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#22c55e">{format_number(metadata.total_documents_upserted)}</div><div style="font-size:12px;color:#9ca3af">Documents Upserted</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#3b82f6">{format_number(metadata.total_changes_found)}</div><div style="font-size:12px;color:#9ca3af">Changes Found</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:{error_color}">{format_number(metadata.total_errors)}</div><div style="font-size:12px;color:#9ca3af">Errors</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#f3f4f6">{format_duration(metadata.duration_seconds)}</div><div style="font-size:12px;color:#9ca3af">Duration</div></div>',
-        '</div>',
+        "</div>",
         # Job Details Table
         '<div style="padding:20px">',
         '<h2 style="margin:0 0 15px;font-size:16px;color:#9ca3af">Job Breakdown</h2>',
@@ -191,14 +205,14 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         '<th style="padding:10px 8px;text-align:right">Upserted</th>',
         '<th style="padding:10px 8px;text-align:right">Errors</th>',
         '<th style="padding:10px 8px;text-align:left">Duration</th>',
-        '</tr></thead>',
-        f'<tbody>{job_rows}</tbody>',
-        '</table></div>',
+        "</tr></thead>",
+        f"<tbody>{job_rows}</tbody>",
+        "</table></div>",
         # Footer
         '<div style="padding:15px 20px;background:#111827;border-top:1px solid #374151;font-size:12px;color:#6b7280">',
         f'<p style="margin:0">Redis Search ETL • <a href="{gcs_url}" style="color:#60a5fa">View in GCS</a></p>',
-        '</div>',
-        '</div></body></html>',
+        "</div>",
+        "</div></body></html>",
     ]
 
     return "".join(html_parts)
@@ -248,7 +262,7 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
         smtp_server = "smtp.gmail.com"
         smtp_port = 465
         gmail_user = os.getenv("SMTP_USER")
-        gmail_password = os.getenv("SMTP_APP_PASSWORD") or os.getenv("SMTP_PASSWORD")
+        gmail_password = os.getenv("SMTP_PASSWORD")
         use_tls = False
 
         if not gmail_user or not gmail_password:
@@ -306,4 +320,3 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     except Exception as e:
         logger.error(f"Failed to send ETL summary email: {e}")
         return False
-

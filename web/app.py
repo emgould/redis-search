@@ -1327,6 +1327,10 @@ async def run_nightly_etl_task(
     # Lazy import to avoid circular import issues
     from etl.etl_runner import ETLConfig, ETLRunner
 
+    def update_progress(progress: dict) -> None:
+        """Callback to update progress during ETL run."""
+        _nightly_etl_status["progress"] = progress
+
     try:
         config = ETLConfig.from_env()
         runner = ETLRunner(config)
@@ -1334,13 +1338,14 @@ async def run_nightly_etl_task(
         _nightly_etl_status["progress"] = {
             "total_jobs": sum(len(j.runs) for j in config.jobs if j.enabled),
             "jobs_completed": 0,
-            "current_job": None,
+            "current_job": "Starting...",
         }
 
         result = await runner.run_all(
             start_date_override=start_date,
             end_date_override=end_date,
             job_filter=job_filter,
+            progress_callback=update_progress,
         )
 
         _nightly_etl_status["result"] = result.to_dict()

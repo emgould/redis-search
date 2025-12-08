@@ -9,6 +9,7 @@ This module provides:
 """
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -290,6 +291,7 @@ class ETLRunner:
         start_date_override: str | None = None,
         end_date_override: str | None = None,
         job_filter: list[str] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> ETLRunMetadata:
         """
         Run all enabled ETL jobs sequentially.
@@ -298,6 +300,7 @@ class ETLRunner:
             start_date_override: Override start date for all jobs
             end_date_override: Override end date for all jobs
             job_filter: Optional list of job names to run (runs all if None)
+            progress_callback: Optional callback called after each job with progress dict
 
         Returns:
             ETLRunMetadata with complete run results
@@ -354,6 +357,21 @@ class ETLRunner:
 
                 # Update job state
                 self.metadata_store.update_job_state(result.job_name, result)
+
+                # Call progress callback if provided
+                if progress_callback:
+                    progress_callback({
+                        "total_jobs": total_runs,
+                        "jobs_completed": self._run_metadata.jobs_completed,
+                        "jobs_failed": self._run_metadata.jobs_failed,
+                        "current_job": f"{job.name}_{params.media_type}",
+                        "last_result": {
+                            "job_name": result.job_name,
+                            "status": result.status,
+                            "changes_found": result.changes_found,
+                            "documents_upserted": result.documents_upserted,
+                        },
+                    })
 
         # Finalize run metadata
         self._run_metadata.completed_at = datetime.now()
