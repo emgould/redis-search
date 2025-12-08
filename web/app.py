@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
@@ -27,6 +27,48 @@ from services.search_service import (
 
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
+
+
+def verify_api_key(x_api_key: str | None = None) -> bool:
+    """
+    Verify request has valid API key.
+
+    Authorization is granted if:
+    1. Request has valid X-API-Key header matching ETL_API_KEY env var
+    2. Running locally (not in Cloud Run) AND ENVIRONMENT=local
+
+    Args:
+        x_api_key: API key header
+
+    Returns:
+        True if authorized, False otherwise
+    """
+    # Allow API key
+    expected_key = os.getenv("ETL_API_KEY")
+    if expected_key and x_api_key == expected_key:
+        return True
+
+    # If running in Cloud Run, auth is REQUIRED (no bypass)
+    if os.getenv("K_SERVICE"):
+        return False
+
+    # Local development: only skip auth if explicitly set to "local"
+    return os.getenv("ENVIRONMENT") == "local"
+
+
+def require_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> None:
+    """
+    FastAPI dependency that requires API key authentication.
+
+    Use with: Depends(require_api_key)
+
+    Raises HTTPException 401 if not authorized.
+    """
+    if not verify_api_key(x_api_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: X-API-Key header required"
+        )
 
 
 def verify_etl_auth(
@@ -54,18 +96,8 @@ def verify_etl_auth(
     if x_cloudscheduler_jobname:
         return True
 
-    # Allow API key for manual triggers
-    expected_key = os.getenv("ETL_API_KEY")
-    if expected_key and x_api_key == expected_key:
-        return True
-
-    # If running in Cloud Run, auth is REQUIRED (no bypass)
-    # K_SERVICE is automatically set by Cloud Run
-    if os.getenv("K_SERVICE"):
-        return False
-
-    # Local development: only skip auth if explicitly set to "local"
-    return os.getenv("ENVIRONMENT") == "local"
+    # Use common API key verification
+    return verify_api_key(x_api_key)
 
 
 def get_latest_person_ids_file() -> dict | None:
@@ -150,7 +182,7 @@ async def home(request: Request):
 
 
 @app.get("/etl", response_class=HTMLResponse)
-async def etl_page(request: Request):
+async def etl_page(request: Request, _: None = Depends(require_api_key)):
     """ETL Runner dashboard for monitoring and triggering ETL jobs."""
     current_env = RedisManager.get_current_env()
 
@@ -193,7 +225,7 @@ async def autocomplete_test(request: Request, q: str = ""):
 
 
 @app.get("/management", response_class=HTMLResponse)
-async def management(request: Request):
+async def management(request: Request, _: None = Depends(require_api_key)):
     """Management dashboard with Redis environment switcher and data loading."""
     current_env = RedisManager.get_current_env()
 
@@ -389,7 +421,7 @@ async def task_status():
 
 
 @app.get("/api/promote/indices")
-async def list_available_indices():
+async def list_available_indices(_: None = Depends(require_api_key)):
     """List available indices from local Redis for promotion."""
     try:
         # Run the promote script in list mode with JSON output
@@ -503,6 +535,7 @@ def run_promote_task(indices: list[str] | None = None):
 async def promote_to_dev(
     background_tasks: BackgroundTasks,
     indices: list[str] | None = Query(default=None),
+    _: None = Depends(require_api_key),
 ):
     """
     Promote local Redis documents to public Redis.
@@ -532,7 +565,7 @@ async def promote_to_dev(
 
 
 @app.get("/api/promote-status")
-async def promote_status():
+async def promote_status(_: None = Depends(require_api_key)):
     """Get status of promote background task."""
     return JSONResponse(content=_promote_status)
 
@@ -688,7 +721,7 @@ async def api_run_etl(
 
 
 @app.get("/api/etl-status")
-async def etl_status():
+async def etl_status(_: None = Depends(require_api_key)):
     """Get status of ETL background task."""
     return JSONResponse(content=_etl_status)
 
@@ -1407,7 +1440,7 @@ async def run_changes_job_task(
 
 
 @app.get("/api/etl/config")
-async def get_etl_config():
+async def get_etl_config(_: None = Depends(require_api_key)):
     """Get the current ETL configuration."""
     from etl.etl_runner import ETLConfig
 
@@ -1427,7 +1460,7 @@ async def get_etl_config():
 
 
 @app.get("/api/etl/jobs")
-async def list_etl_jobs():
+async def list_etl_jobs(_: None = Depends(require_api_key)):
     """List all configured ETL jobs."""
     from etl.etl_runner import ETLConfig
 
@@ -1531,7 +1564,7 @@ async def trigger_nightly_etl(
 
 
 @app.get("/api/etl/status")
-async def get_nightly_etl_status():
+async def get_nightly_etl_status(_: None = Depends(require_api_key)):
     """Get the status of the current or most recent ETL run."""
     return JSONResponse(
         content={
@@ -1552,6 +1585,7 @@ async def trigger_changes_job(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     verbose: bool = Query(False, description="Enable verbose logging"),
+    _: None = Depends(require_api_key),
 ):
     """
     Trigger a single ETL job for a specific media type.
@@ -1610,7 +1644,7 @@ async def trigger_changes_job(
 
 
 @app.get("/api/etl/job/status/{task_id}")
-async def get_changes_job_status(task_id: str):
+async def get_changes_job_status(task_id: str, _: None = Depends(require_api_key)):
     """Get the status of a specific job task."""
     if task_id not in _changes_job_status:
         return JSONResponse(
@@ -1642,7 +1676,7 @@ async def get_changes_job_status(task_id: str):
 
 
 @app.get("/api/etl/job/status")
-async def list_changes_job_statuses():
+async def list_changes_job_statuses(_: None = Depends(require_api_key)):
     """List all job task statuses."""
     return JSONResponse(
         content={
@@ -1656,6 +1690,7 @@ async def list_changes_job_statuses():
 async def list_etl_runs(
     run_date: str | None = Query(None, description="Filter by date (YYYY-MM-DD)"),
     limit: int = Query(10, description="Maximum runs to return"),
+    _: None = Depends(require_api_key),
 ):
     """List recent ETL runs from GCS metadata."""
     from etl.etl_metadata import ETLMetadataStore
@@ -1677,7 +1712,7 @@ async def list_etl_runs(
 
 
 @app.get("/api/etl/runs/{run_date}/{run_id}")
-async def get_etl_run(run_date: str, run_id: str):
+async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_key)):
     """Get details of a specific ETL run."""
     from etl.etl_metadata import ETLMetadataStore
 
@@ -1705,7 +1740,7 @@ async def get_etl_run(run_date: str, run_id: str):
 
 
 @app.get("/api/etl/job/state")
-async def get_etl_job_states():
+async def get_etl_job_states(_: None = Depends(require_api_key)):
     """Get the persistent state of all jobs (last run times, etc.)."""
     from etl.etl_metadata import ETLMetadataStore
 

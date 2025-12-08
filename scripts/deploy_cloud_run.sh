@@ -78,7 +78,7 @@ echo ""
 echo "📦 Building Docker image..."
 gcloud builds submit \
     --config=cloudbuild.yaml \
-    --substitutions="_IMAGE=${IMAGE},_DOCKERFILE=Dockerfile" \
+    --substitutions="_IMAGE=${IMAGE},_DOCKERFILE=src/search_api/Dockerfile" \
     .
 
 # Deploy to Cloud Run
