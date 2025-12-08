@@ -107,10 +107,10 @@ redis-status:
 test:
 	. venv/bin/activate && pytest -q
 
-web:
+web local:
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
-docker-up:
+web docker:
 	@echo "🐳 Starting Docker environment..."
 	@echo ""
 	@echo "1️⃣  Checking IAP tunnel to public Redis..."
@@ -129,7 +129,7 @@ docker-up:
 	@echo "2️⃣  Starting Docker containers..."
 	cd docker && docker-compose up --build
 
-docker-down:
+web docker-down:
 	cd docker && docker-compose down
 
 index:

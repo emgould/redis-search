@@ -144,6 +144,13 @@ def get_latest_person_ids_file() -> dict | None:
 app = FastAPI()
 templates = Jinja2Templates(directory="web/templates")
 
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Cloud Run."""
+    return {"status": "healthy"}
+
+
 # Track background task status (ETL)
 _task_status = {"running": False, "output": "", "error": ""}
 
