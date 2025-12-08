@@ -1,3 +1,5 @@
+# Set PYTHONPATH globally to include src/ directory for all make commands
+export PYTHONPATH := src:$(PYTHONPATH)
 
 .PHONY: help install api etl redis-mac redis-docker test docker-api docker-etl docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy-api deploy-etl create-redis-vm local deploy tunnel
 

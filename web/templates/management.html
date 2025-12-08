@@ -248,11 +248,18 @@
               <p class="text-sm text-surface-500">enriched_person_*.json → <span class="text-brand-400">index:people</span></p>
             </div>
           </div>
-          <button onclick="runPersonLoad()" 
-            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-            id="btn-person-load">
-            📤 Load
-          </button>
+          <div class="flex gap-2">
+            <button onclick="runPersonLoad()" 
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-person-load">
+              📤 Load
+            </button>
+            <button onclick="openPersonLoadModal()"
+              class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
+              id="btn-person-load-options">
+              Options...
+            </button>
+          </div>
         </div>
       </div>
       
@@ -621,6 +628,64 @@
           <button onclick="startPersonExtractFromModal()" id="btn-run-person-extract"
             class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
             🔍 Start Extraction
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Person Load Options Modal -->
+    <div id="person-load-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>📤</span>
+            <span>Load Person Data Options</span>
+          </h3>
+          <button onclick="closePersonLoadModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <p class="text-sm text-surface-400">
+            Load enriched person data from local JSON files into Redis.
+          </p>
+          
+          <!-- Clean Load Option -->
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="person-load-clean" 
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+              <span class="text-sm text-surface-300">Clean load (delete existing person data first)</span>
+            </label>
+          </div>
+          
+          <!-- Info about clean load -->
+          <div id="clean-load-warning" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 hidden">
+            <p class="text-sm text-yellow-400">
+              ⚠️ This will delete all existing <code class="bg-surface-800 px-1 rounded">person:*</code> keys before loading. Use this to ensure fresh data with updated ID formats.
+            </p>
+          </div>
+          
+          <!-- Source File Info -->
+          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+            <p class="text-xs text-surface-400 mb-1">Source File:</p>
+            <p class="text-sm text-surface-300 font-mono">data/person/enriched_person_*.json</p>
+            <p class="text-xs text-surface-500 mt-1">Uses the most recent enriched file</p>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closePersonLoadModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="startPersonLoadFromModal()" id="btn-run-person-load-modal"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+            📤 Start Load
           </button>
         </div>
       </div>
@@ -1702,6 +1767,8 @@ function startPersonExtractFromModal() {
 // Step 3: Load
 async function runPersonLoad() {
   document.getElementById('btn-person-load').disabled = true;
+  const optionsBtn = document.getElementById('btn-person-load-options');
+  if (optionsBtn) optionsBtn.disabled = true;
   
   const statusEl = document.getElementById('person-load-status');
   const indicatorEl = document.getElementById('person-load-indicator');
@@ -1733,6 +1800,7 @@ async function runPersonLoad() {
     labelEl.className = 'font-medium text-red-400';
     outputEl.textContent = e.message;
     document.getElementById('btn-person-load').disabled = false;
+    if (optionsBtn) optionsBtn.disabled = false;
   }
 }
 
@@ -1746,7 +1814,11 @@ async function pollPersonLoadStatus() {
     const res = await fetch('/api/person/load-status');
     const data = await res.json();
     
-    outputEl.textContent = data.output;
+    // Preserve any existing output (like from clean operation) and append new output
+    const existingOutput = outputEl.textContent;
+    if (data.output && !existingOutput.includes(data.output)) {
+      outputEl.textContent = existingOutput + data.output;
+    }
     outputEl.scrollTop = outputEl.scrollHeight;
     
     if (data.running) {
@@ -1759,6 +1831,7 @@ async function pollPersonLoadStatus() {
         indicatorEl.textContent = '❌';
         labelEl.textContent = 'Error';
         labelEl.className = 'font-medium text-red-400';
+        outputEl.textContent = existingOutput + (data.error || '');
       } else {
         indicatorEl.textContent = '✅';
         labelEl.textContent = 'Load Complete!';
@@ -1767,6 +1840,8 @@ async function pollPersonLoadStatus() {
         await refreshStats();
       }
       document.getElementById('btn-person-load').disabled = false;
+      const optionsBtn = document.getElementById('btn-person-load-options');
+      if (optionsBtn) optionsBtn.disabled = false;
     }
   } catch (e) {
     setTimeout(pollPersonLoadStatus, 1000);
@@ -1775,6 +1850,86 @@ async function pollPersonLoadStatus() {
 
 function dismissPersonLoadStatus() {
   document.getElementById('person-load-status').classList.add('hidden');
+}
+
+// Person Load Options Modal
+function openPersonLoadModal() {
+  const modal = document.getElementById('person-load-modal');
+  document.getElementById('person-load-clean').checked = false;
+  document.getElementById('clean-load-warning').classList.add('hidden');
+  
+  // Add listener for clean load checkbox
+  const cleanCheckbox = document.getElementById('person-load-clean');
+  cleanCheckbox.onchange = function() {
+    document.getElementById('clean-load-warning').classList.toggle('hidden', !this.checked);
+  };
+  
+  modal.style.display = 'flex';
+}
+
+function closePersonLoadModal() {
+  document.getElementById('person-load-modal').style.display = 'none';
+}
+
+async function startPersonLoadFromModal() {
+  const cleanLoad = document.getElementById('person-load-clean').checked;
+  closePersonLoadModal();
+  
+  if (cleanLoad) {
+    await runPersonLoadWithClean();
+  } else {
+    runPersonLoad();
+  }
+}
+
+async function runPersonLoadWithClean() {
+  document.getElementById('btn-person-load').disabled = true;
+  document.getElementById('btn-person-load-options').disabled = true;
+  
+  const statusEl = document.getElementById('person-load-status');
+  const indicatorEl = document.getElementById('person-load-indicator');
+  const labelEl = document.getElementById('person-load-label');
+  const outputEl = document.getElementById('person-load-output');
+  const dismissBtn = document.getElementById('person-load-dismiss');
+  
+  statusEl.classList.remove('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Deleting old person data...';
+  labelEl.className = 'font-medium text-brand-400';
+  outputEl.textContent = 'Cleaning old person:* keys...\n';
+  if (dismissBtn) dismissBtn.classList.add('hidden');
+  
+  try {
+    // First delete old person keys
+    const deleteRes = await fetch('/api/person/clean', { method: 'POST' });
+    const deleteData = await deleteRes.json();
+    
+    if (!deleteData.success) {
+      throw new Error(deleteData.error || 'Failed to clean person data');
+    }
+    
+    outputEl.textContent += `Deleted ${deleteData.deleted_count || 0} old person keys.\n\n`;
+    labelEl.textContent = 'Loading fresh person data...';
+    
+    // Now run the load
+    const res = await fetch('/api/person/load', { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollPersonLoadStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent += 'Error: ' + e.message;
+    document.getElementById('btn-person-load').disabled = false;
+    document.getElementById('btn-person-load-options').disabled = false;
+  }
 }
 </script>
 {% endblock %}

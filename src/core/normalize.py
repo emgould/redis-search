@@ -1,12 +1,11 @@
 """
-Normalization layer for heterogeneous data sources.
+Normalization layer for TMDB data sources.
 
 This module provides a consistent interface for transforming data from
-various sources (TMDB, IMDB, custom APIs, etc.) into a unified document
-format suitable for Redis Search indexing.
+TMDB into a unified document format suitable for Redis Search indexing.
 
 Every normalizer MUST set mc_type and mc_subtype because the index
-contains heterogeneous content types (movies, TV, people, books, podcasts, etc.).
+contains heterogeneous content types (movies, TV, people, etc.).
 """
 
 from abc import ABC, abstractmethod
@@ -26,18 +25,22 @@ class SearchDocument:
     """
 
     # Indexed fields
-    id: str  # Unique identifier (e.g., "tmdb_12345")
+    id: str  # mc_id - Unique identifier (e.g., "tmdb_movie_12345")
     search_title: str  # Primary searchable title
     mc_type: MCType  # Content type (movie, tv, book, etc.)
     mc_subtype: MCSubType | None  # Subtype (actor, director, author, etc.)
+    source: MCSources  # Data source identifier
+    source_id: str  # Original ID from source (e.g., "12345" for TMDB)
+    # Sortable/filterable fields
     year: int | None  # Release/publish year
     popularity: float  # Normalized popularity score (0-100)
     rating: float  # Rating score (0-10)
-    source: MCSources  # Data source identifier
     # Display fields (stored, not indexed)
     image: str | None  # Medium poster/profile image URL
     cast: list[str]  # First two actor names (for movies/TV)
     overview: str | None  # Truncated description/bio
+    # Person-specific fields (for people index)
+    also_known_as: str | None = None  # Pipe-separated alternate names for search
 
 
 class BaseNormalizer(ABC):
@@ -77,14 +80,31 @@ class BaseTMDBNormalizer(BaseNormalizer):
     def source(self) -> MCSources:
         return MCSources.TMDB
 
+    def extract_source_id(self, raw: dict) -> str | None:
+        """Extract the numeric TMDB ID from raw data."""
+        tmdb_id = raw.get("tmdb_id") or raw.get("id")
+
+        # If tmdb_id is a string like "tmdb_1396", extract the numeric part
+        if isinstance(tmdb_id, str) and tmdb_id.startswith("tmdb_"):
+            tmdb_id = tmdb_id[5:]  # Remove "tmdb_" prefix
+
+        return str(tmdb_id) if tmdb_id else None
+
     def extract_id(self, raw: dict) -> str | None:
-        # TMDB data may have mc_id or we construct from tmdb_id
-        if raw.get("mc_id"):
-            return str(raw["mc_id"])
-        if raw.get("tmdb_id"):
-            return f"tmdb_{raw['tmdb_id']}"
-        if raw.get("id"):
-            return f"tmdb_{raw['id']}"
+        """Extract the mc_id (e.g., tmdb_movie_12345) from raw data."""
+        # Always regenerate mc_id with type prefix to avoid collisions
+        # between movies and TV shows that share the same TMDB numeric ID
+        type_prefix = (
+            "movie"
+            if self.mc_type == MCType.MOVIE
+            else "tv"
+            if self.mc_type == MCType.TV_SERIES
+            else "person"
+        )
+
+        source_id = self.extract_source_id(raw)
+        if source_id:
+            return f"tmdb_{type_prefix}_{source_id}"
         return None
 
     def _extract_title(self, raw: dict) -> str:
@@ -188,7 +208,8 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
     def normalize(self, raw: dict) -> SearchDocument | None:
         """Transform TMDB movie data into a SearchDocument."""
         doc_id = self.extract_id(raw)
-        if not doc_id:
+        source_id = self.extract_source_id(raw)
+        if not doc_id or not source_id:
             return None
 
         title = self._extract_title(raw)
@@ -200,10 +221,11 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             search_title=title,
             mc_type=self.mc_type,
             mc_subtype=self.mc_subtype,
+            source=self.source,
+            source_id=source_id,
             year=self._extract_year(raw),
             popularity=self._compute_popularity(raw),
             rating=self._extract_rating(raw),
-            source=self.source,
             image=self._extract_image(raw),
             cast=self._extract_cast(raw),
             overview=self._extract_overview(raw),
@@ -220,7 +242,8 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
     def normalize(self, raw: dict) -> SearchDocument | None:
         """Transform TMDB TV data into a SearchDocument."""
         doc_id = self.extract_id(raw)
-        if not doc_id:
+        source_id = self.extract_source_id(raw)
+        if not doc_id or not source_id:
             return None
 
         title = self._extract_title(raw)
@@ -232,10 +255,11 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             search_title=title,
             mc_type=self.mc_type,
             mc_subtype=self.mc_subtype,
+            source=self.source,
+            source_id=source_id,
             year=self._extract_year(raw),
             popularity=self._compute_popularity(raw),
             rating=self._extract_rating(raw),
-            source=self.source,
             image=self._extract_image(raw),
             cast=self._extract_cast(raw),
             overview=self._extract_overview(raw),
@@ -265,7 +289,8 @@ class TMDBPersonNormalizer(BaseTMDBNormalizer):
     def normalize(self, raw: dict) -> SearchDocument | None:
         """Transform TMDB person data into a SearchDocument."""
         doc_id = self.extract_id(raw)
-        if not doc_id:
+        source_id = self.extract_source_id(raw)
+        if not doc_id or not source_id:
             return None
 
         name = raw.get("name") or ""
@@ -277,114 +302,14 @@ class TMDBPersonNormalizer(BaseTMDBNormalizer):
             search_title=name,
             mc_type=self.mc_type,
             mc_subtype=self._detect_subtype(raw),
+            source=self.source,
+            source_id=source_id,
             year=None,  # Persons don't have a year
             popularity=self._compute_popularity(raw),
             rating=0.0,  # Persons don't have ratings
-            source=self.source,
             image=self._extract_image(raw),
             cast=[],  # Persons don't have cast
             overview=self._extract_overview(raw),  # Uses biography
-        )
-
-
-class BaseIMDBNormalizer(BaseNormalizer):
-    """
-    Base normalizer for IMDB data.
-    """
-
-    @property
-    def source(self) -> MCSources:
-        # IMDB is often accessed via TMDB or other sources
-        # For now, we treat it as TMDB since that's the primary source
-        return MCSources.TMDB
-
-    def extract_id(self, raw: dict) -> str | None:
-        imdb_id = raw.get("imdb_id") or raw.get("tconst")
-        return f"imdb_{imdb_id}" if imdb_id else None
-
-    def _extract_year(self, raw: dict) -> int | None:
-        if raw.get("startYear"):
-            try:
-                return int(raw["startYear"])
-            except ValueError:
-                pass
-        return None
-
-    def _compute_popularity(self, raw: dict) -> float:
-        """Compute popularity from IMDB votes and rating."""
-        import math
-
-        num_votes: int = raw.get("numVotes", 0)
-        avg_rating: float = raw.get("averageRating", 0)
-
-        popularity = (
-            (min(math.log10(num_votes + 1) * 20, 80) + avg_rating * 2)
-            if num_votes > 0
-            else avg_rating * 2
-        )
-
-        return float(round(popularity, 2))
-
-
-class IMDBMovieNormalizer(BaseIMDBNormalizer):
-    """Normalizer for IMDB movie data."""
-
-    @property
-    def mc_type(self) -> MCType:
-        return MCType.MOVIE
-
-    def normalize(self, raw: dict) -> SearchDocument | None:
-        doc_id = self.extract_id(raw)
-        if not doc_id:
-            return None
-
-        title = raw.get("primaryTitle") or raw.get("title") or ""
-        if not title:
-            return None
-
-        return SearchDocument(
-            id=doc_id,
-            search_title=title,
-            mc_type=self.mc_type,
-            mc_subtype=self.mc_subtype,
-            year=self._extract_year(raw),
-            popularity=self._compute_popularity(raw),
-            rating=raw.get("averageRating", 0.0),
-            source=self.source,
-            image=None,  # IMDB data doesn't include images in same format
-            cast=[],  # IMDB data doesn't include cast in same format
-            overview=raw.get("plot"),  # IMDB uses 'plot' field
-        )
-
-
-class IMDBTvNormalizer(BaseIMDBNormalizer):
-    """Normalizer for IMDB TV series data."""
-
-    @property
-    def mc_type(self) -> MCType:
-        return MCType.TV_SERIES
-
-    def normalize(self, raw: dict) -> SearchDocument | None:
-        doc_id = self.extract_id(raw)
-        if not doc_id:
-            return None
-
-        title = raw.get("primaryTitle") or raw.get("title") or ""
-        if not title:
-            return None
-
-        return SearchDocument(
-            id=doc_id,
-            search_title=title,
-            mc_type=self.mc_type,
-            mc_subtype=self.mc_subtype,
-            year=self._extract_year(raw),
-            popularity=self._compute_popularity(raw),
-            rating=raw.get("averageRating", 0.0),
-            source=self.source,
-            image=None,  # IMDB data doesn't include images in same format
-            cast=[],  # IMDB data doesn't include cast in same format
-            overview=raw.get("plot"),  # IMDB uses 'plot' field
         )
 
 
@@ -400,8 +325,6 @@ NORMALIZERS_BY_NAME: dict[str, BaseNormalizer] = {
     "tmdb_movie": TMDBMovieNormalizer(),
     "tmdb_tv": TMDBTvNormalizer(),
     "tmdb_person": TMDBPersonNormalizer(),
-    "imdb_movie": IMDBMovieNormalizer(),
-    "imdb_tv": IMDBTvNormalizer(),
 }
 
 
@@ -443,11 +366,6 @@ def detect_source_and_type(raw: dict) -> tuple[MCSources | None, MCType | None]:
     ):
         source = MCSources.TMDB
 
-    # IMDB indicators (override source if IMDB-specific)
-    # IMDB data often comes via TMDB, so we use TMDB as the source
-    if raw.get("tconst") or raw.get("imdb_id") or raw.get("source") == "imdb":
-        source = MCSources.TMDB
-
     # Detect mc_type if not already set
     if mc_type is None:
         # Movie indicators
@@ -459,13 +377,6 @@ def detect_source_and_type(raw: dict) -> tuple[MCSources | None, MCType | None]:
         # Person indicators
         elif raw.get("known_for_department") or raw.get("media_type") == "person":
             mc_type = MCType.PERSON
-        # IMDB title type
-        elif raw.get("titleType"):
-            title_type = raw["titleType"].lower()
-            if title_type in ("movie", "short", "tvmovie"):
-                mc_type = MCType.MOVIE
-            elif title_type in ("tvseries", "tvminiseries", "tvepisode"):
-                mc_type = MCType.TV_SERIES
 
     return source, mc_type
 
@@ -507,19 +418,24 @@ def document_to_redis(doc: SearchDocument) -> dict:
     """
     Convert a SearchDocument to the dict format stored in Redis.
     """
-    return {
+    result = {
         "id": doc.id,
         "search_title": doc.search_title,
         "mc_type": doc.mc_type.value,
         "mc_subtype": doc.mc_subtype.value if doc.mc_subtype else None,
+        "source": doc.source.value,
+        "source_id": doc.source_id,
         "year": doc.year,
         "popularity": doc.popularity,
         "rating": doc.rating,
-        "source": doc.source.value,
         "image": doc.image,
         "cast": doc.cast,
         "overview": doc.overview,
     }
+    # Add also_known_as for person documents
+    if doc.also_known_as is not None:
+        result["also_known_as"] = doc.also_known_as
+    return result
 
 
 # Legacy function for backward compatibility
