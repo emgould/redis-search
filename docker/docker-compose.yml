@@ -1,3 +1,5 @@
+name: redis-search
+
 services:
   redis:
     image: redis/redis-stack:latest
@@ -34,3 +36,5 @@ services:
 
 volumes:
   redis_data:
+    name: docker_redis_data
+    external: true

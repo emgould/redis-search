@@ -58,18 +58,35 @@
           </div>
         </div>
         
-        <!-- Promote Button -->
-        <div class="flex flex-col items-center gap-2">
-          <button id="btn-promote" 
-            onclick="openPromoteModal()"
-            class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Promote local documents to public Redis"
-            {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
-            <span class="flex items-center gap-2">
-              <span id="promote-icon" class="text-xl">⟹</span>
-            </span>
-          </button>
-          <span class="text-xs text-surface-500">Promote to Dev</span>
+        <!-- Transfer Buttons -->
+        <div class="flex flex-col items-center gap-4">
+          <!-- Promote to Dev Button -->
+          <div class="flex flex-col items-center gap-1">
+            <button id="btn-promote" 
+              onclick="openPromoteModal()"
+              class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Promote local documents to public Redis"
+              {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
+              <span class="flex items-center gap-2">
+                <span id="promote-icon" class="text-xl">⟹</span>
+              </span>
+            </button>
+            <span class="text-xs text-surface-500">Promote to Dev</span>
+          </div>
+          
+          <!-- Copy to Local Button -->
+          <div class="flex flex-col items-center gap-1">
+            <button id="btn-copy-to-local" 
+              onclick="openCopyToLocalModal()"
+              class="group relative px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Copy public documents to local Redis"
+              {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
+              <span class="flex items-center gap-2">
+                <span id="copy-icon" class="text-xl">⟸</span>
+              </span>
+            </button>
+            <span class="text-xs text-surface-500">Copy to Local</span>
+          </div>
         </div>
         
         <!-- Public Redis -->
@@ -764,6 +781,69 @@
             class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled>
             🚀 Promote Selected
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Copy to Local Modal -->
+    <div id="copy-to-local-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>📥</span>
+            <span>Copy to Local</span>
+          </h3>
+          <button onclick="closeCopyToLocalModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <p class="text-surface-300">
+            Select the indices to copy from public Redis to local Redis. This is a <strong class="text-amber-400">complete replacement</strong> - 
+            selected indices will be deleted on local and recreated with fresh data from public.
+          </p>
+          
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-300">
+            <strong>⚠️ Warning:</strong> This will overwrite your local data with public data.
+          </div>
+          
+          <!-- Loading State -->
+          <div id="copy-indices-loading" class="py-4 text-center text-surface-400">
+            <span class="animate-pulse">Loading available indices...</span>
+          </div>
+          
+          <!-- Index Selection -->
+          <div id="copy-indices-list" class="space-y-2 hidden">
+            <div class="flex items-center gap-2 pb-2 border-b border-surface-700">
+              <label class="flex items-center gap-2 cursor-pointer text-sm text-surface-300">
+                <input type="checkbox" id="copy-select-all" onchange="toggleCopySelectAll()" 
+                  class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
+                <span>Select All</span>
+              </label>
+            </div>
+            <!-- Dynamically populated -->
+          </div>
+          
+          <!-- Error State -->
+          <div id="copy-indices-error" class="hidden py-4 text-center text-red-400">
+            Failed to load indices
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closeCopyToLocalModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="startCopyToLocalFromModal()" id="btn-run-copy-modal"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled>
+            📥 Copy Selected
           </button>
         </div>
       </div>
@@ -1464,6 +1544,206 @@ async function pollPromoteStatus() {
     }
   } catch (e) {
     setTimeout(pollPromoteStatus, 1000);
+  }
+}
+
+// Copy to Local functionality
+let copyAvailableIndices = [];
+
+async function openCopyToLocalModal() {
+  const modal = document.getElementById('copy-to-local-modal');
+  const loadingEl = document.getElementById('copy-indices-loading');
+  const listEl = document.getElementById('copy-indices-list');
+  const errorEl = document.getElementById('copy-indices-error');
+  const runBtn = document.getElementById('btn-run-copy-modal');
+  
+  // Show modal
+  modal.style.display = 'flex';
+  loadingEl.classList.remove('hidden');
+  listEl.classList.add('hidden');
+  errorEl.classList.add('hidden');
+  runBtn.disabled = true;
+  
+  try {
+    // Fetch available indices from PUBLIC Redis
+    const res = await fetch('/api/copy-to-local/indices');
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch indices');
+    }
+    
+    copyAvailableIndices = data.indices || [];
+    
+    // Build checkbox list
+    listEl.innerHTML = `
+      <div class="flex items-center gap-2 pb-2 border-b border-surface-700">
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-surface-300">
+          <input type="checkbox" id="copy-select-all" onchange="toggleCopySelectAll()" 
+            class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
+          <span>Select All</span>
+        </label>
+      </div>
+    `;
+    
+    copyAvailableIndices.forEach(idx => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center justify-between py-2';
+      div.innerHTML = `
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="copy-index" value="${idx.name}" onchange="updateCopyRunButton()"
+            class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
+          <span class="font-medium">${idx.name}</span>
+        </label>
+        <span class="text-sm text-surface-400">${idx.num_docs.toLocaleString()} docs</span>
+      `;
+      listEl.appendChild(div);
+    });
+    
+    loadingEl.classList.add('hidden');
+    listEl.classList.remove('hidden');
+    
+  } catch (e) {
+    loadingEl.classList.add('hidden');
+    errorEl.classList.remove('hidden');
+    errorEl.textContent = e.message;
+  }
+}
+
+function closeCopyToLocalModal() {
+  document.getElementById('copy-to-local-modal').style.display = 'none';
+}
+
+function toggleCopySelectAll() {
+  const selectAll = document.getElementById('copy-select-all');
+  const checkboxes = document.querySelectorAll('input[name="copy-index"]');
+  checkboxes.forEach(cb => cb.checked = selectAll.checked);
+  updateCopyRunButton();
+}
+
+function updateCopyRunButton() {
+  const runBtn = document.getElementById('btn-run-copy-modal');
+  const checkboxes = document.querySelectorAll('input[name="copy-index"]:checked');
+  runBtn.disabled = checkboxes.length === 0;
+}
+
+async function startCopyToLocalFromModal() {
+  const checkboxes = document.querySelectorAll('input[name="copy-index"]:checked');
+  const indices = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (indices.length === 0) return;
+  
+  closeCopyToLocalModal();
+  await startCopyToLocal(indices);
+}
+
+async function startCopyToLocal(indices) {
+  const btn = document.getElementById('btn-copy-to-local');
+  const icon = document.getElementById('copy-icon');
+  
+  // Show status section
+  const statusEl = document.getElementById('copy-status');
+  const indicatorEl = document.getElementById('copy-indicator');
+  const labelEl = document.getElementById('copy-label');
+  const outputEl = document.getElementById('copy-output');
+  
+  if (!statusEl) {
+    // Status section doesn't exist yet, create it
+    const promoteStatus = document.getElementById('promote-status');
+    const copyStatusHtml = `
+      <div id="copy-status" class="mt-4 hidden">
+        <div class="flex items-center gap-2 text-sm">
+          <span id="copy-indicator" class="animate-spin">⏳</span>
+          <span id="copy-label">Starting copy...</span>
+        </div>
+        <pre id="copy-output" class="mt-2 text-xs bg-surface-950 p-3 rounded-lg max-h-48 overflow-y-auto font-mono whitespace-pre-wrap"></pre>
+      </div>
+    `;
+    promoteStatus.insertAdjacentHTML('afterend', copyStatusHtml);
+  }
+  
+  const statusElFresh = document.getElementById('copy-status');
+  const indicatorElFresh = document.getElementById('copy-indicator');
+  const labelElFresh = document.getElementById('copy-label');
+  const outputElFresh = document.getElementById('copy-output');
+  
+  btn.disabled = true;
+  icon.textContent = '⏳';
+  icon.classList.add('animate-spin');
+  statusElFresh.classList.remove('hidden');
+  indicatorElFresh.textContent = '⏳';
+  indicatorElFresh.className = 'animate-spin';
+  labelElFresh.textContent = 'Starting copy...';
+  outputElFresh.textContent = '';
+  
+  try {
+    // Build URL with indices query params
+    let url = '/api/copy-to-local';
+    if (indices && indices.length > 0) {
+      const params = new URLSearchParams();
+      indices.forEach(idx => params.append('indices', idx));
+      url += '?' + params.toString();
+    }
+    
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    // Poll for status
+    pollCopyToLocalStatus();
+  } catch (e) {
+    icon.textContent = '❌';
+    icon.classList.remove('animate-spin');
+    indicatorElFresh.textContent = '❌';
+    indicatorElFresh.className = '';
+    labelElFresh.textContent = 'Error';
+    outputElFresh.textContent = e.message;
+    btn.disabled = false;
+  }
+}
+
+async function pollCopyToLocalStatus() {
+  const btn = document.getElementById('btn-copy-to-local');
+  const icon = document.getElementById('copy-icon');
+  const indicatorEl = document.getElementById('copy-indicator');
+  const labelEl = document.getElementById('copy-label');
+  const outputEl = document.getElementById('copy-output');
+  
+  try {
+    const res = await fetch('/api/copy-to-local-status');
+    const data = await res.json();
+    
+    outputEl.textContent = data.output + data.error;
+    outputEl.scrollTop = outputEl.scrollHeight;
+    
+    if (data.running) {
+      setTimeout(pollCopyToLocalStatus, 1000);
+    } else {
+      indicatorEl.className = '';
+      icon.classList.remove('animate-spin');
+      if (data.error && !data.output.includes('🎉 Copy complete!')) {
+        indicatorEl.textContent = '❌';
+        icon.textContent = '❌';
+        labelEl.textContent = 'Error';
+      } else {
+        indicatorEl.textContent = '✅';
+        icon.textContent = '✅';
+        labelEl.textContent = 'Complete';
+        // Refresh stats to show updated document counts
+        await refreshStats();
+        // Refresh page to update Redis card document counts
+        setTimeout(() => location.reload(), 2000);
+      }
+      btn.disabled = false;
+      setTimeout(() => {
+        icon.textContent = '⟸';
+      }, 3000);
+    }
+  } catch (e) {
+    setTimeout(pollCopyToLocalStatus, 1000);
   }
 }
 

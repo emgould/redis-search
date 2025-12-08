@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install api etl redis-mac redis-docker test docker-up docker-down web lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
+.PHONY: help install api etl redis-mac redis-docker test web-local web-docker web-docker-down lint local-dev local-api local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy create-redis-vm local tunnel
 
 help:
 	@echo "Available make commands:"
@@ -14,7 +14,6 @@ help:
 	@echo ""
 	@echo "  Local Development:"
 	@echo "    make local         - Start Redis, API & Web (if not running), then load all GCS metadata"
-	@echo "    make web           - Start developer test website on port 9001"
 	@echo "    make local-api     - Run Search API with local env secrets"
 	@echo "    make local-etl     - Run ETL with local env secrets"
 	@echo "    make api           - Run Search API (requires secrets already loaded)"
@@ -31,9 +30,10 @@ help:
 	@echo "    make index         - Build Redis search index"
 	@echo "    make seed          - Seed example data"
 	@echo ""
-	@echo "  Docker:"
-	@echo "    make docker-up     - Start web app in Docker on port 9001"
-	@echo "    make docker-down   - Stop all Docker containers"
+	@echo "  Web App:"
+	@echo "    make web-local        - Start web app locally on port 9001"
+	@echo "    make web-docker       - Start web app in Docker on port 9001"
+	@echo "    make web-docker-down  - Stop Docker containers"
 	@echo ""
 	@echo "  Cloud Run Deployment:"
 	@echo "    make deploy SERVICE=api ENV=dev  - Deploy Search API to Cloud Run (dev)"
@@ -107,7 +107,7 @@ redis-status:
 test:
 	. venv/bin/activate && pytest -q
 
-web local:
+web-local:
 	@echo "🐳 Starting local environment..."
 	@echo ""
 	@echo "1️⃣  Checking IAP tunnel to public Redis..."
@@ -124,7 +124,7 @@ web local:
 	fi
 	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
 
-web docker:
+web-docker:
 	@echo "🐳 Starting Docker environment..."
 	@echo ""
 	@echo "1️⃣  Checking IAP tunnel to public Redis..."
@@ -143,7 +143,7 @@ web docker:
 	@echo "2️⃣  Starting Docker containers..."
 	cd docker && docker-compose up --build
 
-web docker-down:
+web-docker-down:
 	cd docker && docker-compose down
 
 index:

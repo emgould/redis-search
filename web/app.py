@@ -156,6 +156,7 @@ _task_status = {"running": False, "output": "", "error": ""}
 
 # Track promote task status (separate from ETL task)
 _promote_status = {"running": False, "output": "", "error": ""}
+_copy_to_local_status = {"running": False, "output": "", "error": ""}
 
 # Track ETL task status
 _etl_status = {"running": False, "output": "", "error": ""}
@@ -597,6 +598,149 @@ async def promote_to_dev(
 async def promote_status(_: None = Depends(require_api_key)):
     """Get status of promote background task."""
     return JSONResponse(content=_promote_status)
+
+
+# ============================================================================
+# Copy to Local (reverse promote) endpoints
+# ============================================================================
+
+
+def run_copy_to_local_task(indices: list[str] | None = None):
+    """Run copy from public to local Redis in background."""
+    global _copy_to_local_status
+    _copy_to_local_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Set up environment
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # Build command - use promote script with --reverse flag
+        cmd = [
+            sys.executable,
+            "-u",
+            "scripts/copy_to_local.py",
+        ]
+
+        if indices:
+            cmd.extend(["--indices"] + indices)
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _copy_to_local_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining_stdout, stderr = process.communicate()
+        if remaining_stdout:
+            output_lines.append(remaining_stdout)
+            _copy_to_local_status["output"] = "".join(output_lines)
+        if stderr:
+            _copy_to_local_status["error"] = stderr
+
+    except Exception as e:
+        _copy_to_local_status["error"] = str(e)
+    finally:
+        _copy_to_local_status["running"] = False
+
+
+@app.get("/api/copy-to-local/indices")
+async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
+    """List available indices from public Redis for copying to local."""
+    try:
+        # Get public Redis connection info
+        public_host = os.getenv("PUBLIC_REDIS_HOST", "localhost")
+        public_port = int(os.getenv("PUBLIC_REDIS_PORT", "6381"))
+        public_password = os.getenv("PUBLIC_REDIS_PASSWORD") or None
+
+        from redis.asyncio import Redis as AsyncRedis
+
+        redis = AsyncRedis(
+            host=public_host,
+            port=public_port,
+            password=public_password,
+            decode_responses=True,
+        )
+
+        await redis.ping()  # type: ignore[misc]
+
+        # List indices
+        indices_raw = await redis.execute_command("FT._LIST")
+        indices = []
+
+        for idx_name in indices_raw or []:
+            try:
+                info = await redis.ft(idx_name).info()
+                num_docs = int(info.get("num_docs", 0))
+                friendly_name = idx_name[4:] if idx_name.startswith("idx:") else idx_name
+                indices.append({
+                    "name": friendly_name,
+                    "redis_name": idx_name,
+                    "num_docs": num_docs,
+                })
+            except Exception:
+                pass
+
+        await redis.aclose()
+
+        return JSONResponse(content={"success": True, "indices": indices})
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.post("/api/copy-to-local")
+async def copy_to_local(
+    background_tasks: BackgroundTasks,
+    indices: list[str] | None = Query(default=None),
+    _: None = Depends(require_api_key),
+):
+    """
+    Copy public Redis documents to local Redis.
+
+    Args:
+        indices: Optional list of index names to copy. If not provided,
+                 copies all available indices.
+    """
+    global _copy_to_local_status
+
+    if _copy_to_local_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A copy task is already running"},
+        )
+
+    background_tasks.add_task(run_copy_to_local_task, indices)
+
+    indices_msg = f"indices: {', '.join(indices)}" if indices else "all indices"
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Started copying public Redis to local ({indices_msg})",
+        }
+    )
+
+
+@app.get("/api/copy-to-local-status")
+async def copy_to_local_status(_: None = Depends(require_api_key)):
+    """Get status of copy to local background task."""
+    return JSONResponse(content=_copy_to_local_status)
 
 
 def run_etl_task(
