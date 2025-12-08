@@ -9,19 +9,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import BackgroundTasks, FastAPI, Query, Request
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 
-from src.adapters.redis_client import get_redis
-from src.adapters.redis_manager import RedisEnvironment, RedisManager
-from src.adapters.redis_repository import RedisRepository
-
-# Note: ETL modules are imported lazily to avoid circular imports
-# with api.tmdb modules that use non-src prefixed imports
-from src.services.search_service import (
+from adapters.redis_client import get_redis
+from adapters.redis_manager import RedisEnvironment, RedisManager
+from adapters.redis_repository import RedisRepository
+from services.search_service import (
     DetailsRequest,
     autocomplete,
     get_details,
@@ -30,6 +27,38 @@ from src.services.search_service import (
 
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
+
+
+def verify_etl_auth(
+    x_cloudscheduler_jobname: str | None = None,
+    x_api_key: str | None = None,
+) -> bool:
+    """
+    Verify request is authorized to trigger ETL.
+
+    Authorization is granted if:
+    1. Request has X-CloudScheduler-JobName header (Cloud Scheduler)
+    2. Request has valid X-API-Key header matching ETL_API_KEY env var
+    3. ENVIRONMENT is "development" (local development)
+
+    Args:
+        x_cloudscheduler_jobname: Cloud Scheduler job name header
+        x_api_key: API key header
+
+    Returns:
+        True if authorized, False otherwise
+    """
+    # Cloud Scheduler sends this header
+    if x_cloudscheduler_jobname:
+        return True
+
+    # Allow API key for manual triggers
+    expected_key = os.getenv("ETL_API_KEY")
+    if expected_key and x_api_key == expected_key:
+        return True
+
+    # In development, allow unauthenticated
+    return os.getenv("ENVIRONMENT", "development") == "development"
 
 
 def get_latest_person_ids_file() -> dict | None:
@@ -952,7 +981,7 @@ import asyncio
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'src')
-from src.services.person_etl_service import run_person_extract
+from services.person_etl_service import run_person_extract
 
 async def main():
     source = {source_file!r} if {source_file!r} else None
@@ -1083,7 +1112,7 @@ import asyncio
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'src')
-from src.services.person_etl_service import run_person_load
+from services.person_etl_service import run_person_load
 
 async def main():
     source = {source_file!r} if {source_file!r} else None
@@ -1289,7 +1318,7 @@ async def run_nightly_etl_task(
     global _nightly_etl_status
 
     # Lazy import to avoid circular import issues
-    from src.etl.etl_runner import ETLConfig, ETLRunner
+    from etl.etl_runner import ETLConfig, ETLRunner
 
     try:
         config = ETLConfig.from_env()
@@ -1328,8 +1357,8 @@ async def run_changes_job_task(
     global _changes_job_status, _changes_job_live_stats
 
     # Lazy import to avoid circular import issues
-    from src.etl.etl_runner import run_single_etl
-    from src.etl.tmdb_changes_etl import ChangesETLStats
+    from etl.etl_runner import run_single_etl
+    from etl.tmdb_changes_etl import ChangesETLStats
 
     # Create stats object upfront for progress tracking
     stats = ChangesETLStats()
@@ -1368,7 +1397,7 @@ async def run_changes_job_task(
 @app.get("/api/etl/config")
 async def get_etl_config():
     """Get the current ETL configuration."""
-    from src.etl.etl_runner import ETLConfig
+    from etl.etl_runner import ETLConfig
 
     try:
         config = ETLConfig.from_env()
@@ -1388,7 +1417,7 @@ async def get_etl_config():
 @app.get("/api/etl/jobs")
 async def list_etl_jobs():
     """List all configured ETL jobs."""
-    from src.etl.etl_runner import ETLConfig
+    from etl.etl_runner import ETLConfig
 
     try:
         config = ETLConfig.from_env()
@@ -1419,14 +1448,25 @@ async def list_etl_jobs():
 async def trigger_nightly_etl(
     background_tasks: BackgroundTasks,
     request: Request,
+    x_cloudscheduler_jobname: str | None = Header(None, alias="X-CloudScheduler-JobName"),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
 ):
     """
     Trigger the full nightly ETL run.
 
     This is the endpoint that Cloud Scheduler will call.
     It can also be called manually from the web UI.
+
+    Authentication:
+    - Cloud Scheduler: Automatically sends X-CloudScheduler-JobName header
+    - Manual: Provide X-API-Key header matching ETL_API_KEY env var
+    - Development: No auth required when ENVIRONMENT=development
     """
     global _nightly_etl_status
+
+    # Verify authorization
+    if not verify_etl_auth(x_cloudscheduler_jobname, x_api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid or missing credentials")
 
     if _nightly_etl_status["running"]:
         return JSONResponse(
@@ -1606,7 +1646,7 @@ async def list_etl_runs(
     limit: int = Query(10, description="Maximum runs to return"),
 ):
     """List recent ETL runs from GCS metadata."""
-    from src.etl.etl_metadata import ETLMetadataStore
+    from etl.etl_metadata import ETLMetadataStore
 
     try:
         store = ETLMetadataStore()
@@ -1627,7 +1667,7 @@ async def list_etl_runs(
 @app.get("/api/etl/runs/{run_date}/{run_id}")
 async def get_etl_run(run_date: str, run_id: str):
     """Get details of a specific ETL run."""
-    from src.etl.etl_metadata import ETLMetadataStore
+    from etl.etl_metadata import ETLMetadataStore
 
     try:
         store = ETLMetadataStore()
@@ -1655,7 +1695,7 @@ async def get_etl_run(run_date: str, run_id: str):
 @app.get("/api/etl/job/state")
 async def get_etl_job_states():
     """Get the persistent state of all jobs (last run times, etc.)."""
-    from src.etl.etl_metadata import ETLMetadataStore
+    from etl.etl_metadata import ETLMetadataStore
 
     try:
         store = ETLMetadataStore()

@@ -17,10 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from src.adapters.config import load_env
-from src.etl.etl_metadata import ETLMetadataStore
-from src.etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
-from src.utils.get_logger import get_logger
+from adapters.config import load_env
+from etl.etl_metadata import ETLMetadataStore
+from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
+from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 

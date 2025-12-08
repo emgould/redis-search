@@ -16,18 +16,24 @@ from typing import Any, Literal
 
 from redis.asyncio import Redis
 
+from adapters.config import load_env
+from api.tmdb.core import TMDBService
 from api.tmdb.models import MCBaseMediaItem
-from src.adapters.config import load_env
-from src.api.tmdb.core import TMDBService
-from src.api.tmdb.person import TMDBPersonService
-from src.contracts.models import MCSources, MCType
-from src.core.normalize import document_to_redis, normalize_document
-from src.utils.get_logger import get_logger
+from api.tmdb.person import TMDBPersonService
+from contracts.models import MCSources, MCType
+from core.normalize import document_to_redis, normalize_document
+from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
 # Batch size for concurrent API calls
 BATCH_SIZE = 15
+
+# Retry configuration for transient failures
+MAX_RETRIES = 3
+INITIAL_RETRY_DELAY = 1.0  # seconds
+MAX_RETRY_DELAY = 10.0  # seconds
+RETRY_STATUS_CODES = {429, 500, 502, 503, 504}  # Transient HTTP errors
 
 # Minimum popularity score for persons
 MIN_PERSON_POPULARITY = 1.0
@@ -130,6 +136,67 @@ class TMDBChangesETL(TMDBService):
     def __init__(self):
         super().__init__()
         self.person_service = TMDBPersonService()
+
+    async def _get_media_details_with_retry(
+        self,
+        tmdb_id: int,
+        mc_type: MCType,
+        max_retries: int = MAX_RETRIES,
+    ) -> MCBaseMediaItem | None:
+        """
+        Get media details with exponential backoff retry for transient failures.
+
+        Args:
+            tmdb_id: TMDB ID to fetch
+            mc_type: Media type (MOVIE or TV_SERIES)
+            max_retries: Maximum retry attempts
+
+        Returns:
+            MCBaseMediaItem or None on permanent failure
+        """
+        delay = INITIAL_RETRY_DELAY
+
+        for attempt in range(max_retries + 1):
+            try:
+                result = await self.get_media_details(
+                    tmdb_id,
+                    mc_type,
+                    include_cast=True,
+                    include_videos=True,
+                    include_watch_providers=True,
+                    include_keywords=True,
+                    cast_limit=10,
+                )
+
+                # Check for retryable status codes
+                if (
+                    isinstance(result, MCBaseMediaItem)
+                    and result.status_code in RETRY_STATUS_CODES
+                    and attempt < max_retries
+                ):
+                    logger.warning(
+                        f"Retryable error {result.status_code} for {mc_type.value} {tmdb_id}, "
+                        f"attempt {attempt + 1}/{max_retries + 1}, retrying in {delay:.1f}s"
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, MAX_RETRY_DELAY)
+                    continue
+
+                return result
+
+            except Exception as e:
+                if attempt < max_retries:
+                    logger.warning(
+                        f"Exception fetching {mc_type.value} {tmdb_id}: {e}, "
+                        f"attempt {attempt + 1}/{max_retries + 1}, retrying in {delay:.1f}s"
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, MAX_RETRY_DELAY)
+                else:
+                    logger.error(f"Failed to fetch {mc_type.value} {tmdb_id} after {max_retries + 1} attempts: {e}")
+                    return None
+
+        return None
 
     async def get_changes(
         self,
@@ -310,16 +377,9 @@ class TMDBChangesETL(TMDBService):
 
             logger.info(f"Processing batch {batch_num}/{total_batches}")
 
+            # Use retry helper for each enrichment call
             tasks = [
-                self.get_media_details(
-                    tmdb_id,
-                    mc_type,
-                    include_cast=True,
-                    include_videos=True,
-                    include_watch_providers=True,
-                    include_keywords=True,
-                    cast_limit=10,
-                )
+                self._get_media_details_with_retry(tmdb_id, mc_type)
                 for tmdb_id in batch_ids
             ]
 

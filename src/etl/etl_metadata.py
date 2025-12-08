@@ -18,8 +18,8 @@ from typing import Any
 from google.cloud import storage  # type: ignore[attr-defined]
 from google.cloud.exceptions import NotFound
 
-from src.adapters.config import load_env
-from src.utils.get_logger import get_logger
+from adapters.config import load_env
+from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -188,6 +188,32 @@ class ETLMetadataStore:
     def __init__(self, config: ETLStateConfig | None = None):
         self.config = config or ETLStateConfig.from_env()
         self._client: storage.Client | None = None
+        self._log_configuration()
+
+    def _log_configuration(self) -> None:
+        """Log metadata store configuration for visibility."""
+        environment = os.getenv("ENVIRONMENT", "development")
+
+        if self.config.gcs_bucket:
+            logger.info(
+                f"ETL metadata store initialized: "
+                f"bucket={self.config.gcs_bucket}, "
+                f"prefix={self.config.gcs_prefix}, "
+                f"environment={environment}"
+            )
+        else:
+            if environment == "production":
+                logger.error(
+                    "GCS_BUCKET not configured in production! "
+                    "ETL run metadata will NOT be persisted. "
+                    "Set GCS_BUCKET environment variable."
+                )
+            else:
+                logger.warning(
+                    f"GCS_BUCKET not configured (environment={environment}). "
+                    "ETL run metadata will not be persisted to GCS. "
+                    "This is expected in local development."
+                )
 
     @property
     def client(self) -> storage.Client:

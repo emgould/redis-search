@@ -16,15 +16,15 @@ from typing import Any, Literal
 
 import yaml  # type: ignore[import-untyped]
 
-from src.adapters.config import load_env
-from src.etl.etl_metadata import (
+from adapters.config import load_env
+from etl.etl_metadata import (
     ETLMetadataStore,
     ETLRunMetadata,
     JobRunResult,
     create_run_metadata,
 )
-from src.etl.tmdb_changes_etl import ChangesETLStats, run_changes_etl
-from src.utils.get_logger import get_logger
+from etl.tmdb_changes_etl import ChangesETLStats, run_changes_etl
+from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
