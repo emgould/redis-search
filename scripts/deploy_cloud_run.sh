@@ -13,25 +13,17 @@
 #   - Secrets created (scripts/setup_gcp_secrets.sh)
 #
 # Usage:
-#   ./scripts/deploy_cloud_run.sh         # Deploy to dev (default)
-#   ./scripts/deploy_cloud_run.sh prod    # Deploy to production
+#   ./scripts/deploy_cloud_run.sh
+#   make deploy
 
 set -e
-
-ENVIRONMENT=${1:-dev}
 
 PROJECT_ID=${GCP_PROJECT_ID:-"media-circle"}
 REGION="us-central1"
 VPC_CONNECTOR="mc-vpc-connector"
 
-# Service naming
-if [ "$ENVIRONMENT" = "prod" ]; then
-    SERVICE_NAME="redis-search-api"
-    SECRET_NAME="redis-search-prod-etl-env"
-else
-    SERVICE_NAME="redis-search-api-${ENVIRONMENT}"
-    SECRET_NAME="redis-search-${ENVIRONMENT}-etl-env"
-fi
+SERVICE_NAME="redis-search-api-dev"
+SECRET_NAME="redis-search-dev-etl-env"
 
 IMAGE="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 
@@ -43,7 +35,6 @@ echo "============================================================"
 echo "🚀 Deploying Redis Search Web App"
 echo "============================================================"
 echo ""
-echo "   Environment:      ${ENVIRONMENT}"
 echo "   Project:          ${PROJECT_ID}"
 echo "   Region:           ${REGION}"
 echo "   Service:          ${SERVICE_NAME}"
