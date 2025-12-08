@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -6,7 +7,7 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from fastapi import BackgroundTasks, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -17,6 +18,9 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 from src.adapters.redis_client import get_redis
 from src.adapters.redis_manager import RedisEnvironment, RedisManager
 from src.adapters.redis_repository import RedisRepository
+
+# Note: ETL modules are imported lazily to avoid circular imports
+# with api.tmdb modules that use non-src prefixed imports
 from src.services.search_service import (
     DetailsRequest,
     autocomplete,
@@ -80,6 +84,22 @@ _person_download_status = {"running": False, "output": "", "error": ""}
 _person_extract_status = {"running": False, "output": "", "error": "", "progress": {}}
 _person_load_status = {"running": False, "output": "", "error": ""}
 
+# Track nightly ETL runner status (for new changes-based ETL)
+_nightly_etl_status: dict[str, Any] = {
+    "running": False,
+    "run_id": None,
+    "started_at": None,
+    "progress": {},
+    "error": None,
+    "result": None,
+}
+
+# Track individual changes ETL job status
+_changes_job_status: dict[str, dict] = {}
+
+# Track live stats for running jobs (for real-time progress)
+_changes_job_live_stats: dict[str, Any] = {}
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -89,6 +109,32 @@ async def home(request: Request):
         {
             "request": request,
             "current_env": current_env.value,
+        },
+    )
+
+
+@app.get("/etl", response_class=HTMLResponse)
+async def etl_page(request: Request):
+    """ETL Runner dashboard for monitoring and triggering ETL jobs."""
+    current_env = RedisManager.get_current_env()
+
+    # Test Redis connection
+    redis_connected = False
+    try:
+        redis = get_redis()
+        ping_result = redis.ping()
+        if asyncio.iscoroutine(ping_result):
+            await ping_result
+        redis_connected = True
+    except Exception:
+        pass
+
+    return templates.TemplateResponse(
+        "etl.html",
+        {
+            "request": request,
+            "current_env": current_env.value,
+            "redis_connected": redis_connected,
         },
     )
 
@@ -1227,6 +1273,404 @@ async def api_get_details(
         return JSONResponse(content=result)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ============================================================
+# ETL Runner API Endpoints (for nightly changes-based ETL)
+# ============================================================
+
+
+async def run_nightly_etl_task(
+    start_date: str | None = None,
+    end_date: str | None = None,
+    job_filter: list[str] | None = None,
+) -> None:
+    """Background task to run the full nightly ETL."""
+    global _nightly_etl_status
+
+    # Lazy import to avoid circular import issues
+    from src.etl.etl_runner import ETLConfig, ETLRunner
+
+    try:
+        config = ETLConfig.from_env()
+        runner = ETLRunner(config)
+
+        _nightly_etl_status["progress"] = {
+            "total_jobs": sum(len(j.runs) for j in config.jobs if j.enabled),
+            "jobs_completed": 0,
+            "current_job": None,
+        }
+
+        result = await runner.run_all(
+            start_date_override=start_date,
+            end_date_override=end_date,
+            job_filter=job_filter,
+        )
+
+        _nightly_etl_status["result"] = result.to_dict()
+        _nightly_etl_status["progress"]["jobs_completed"] = result.jobs_completed
+
+    except Exception as e:
+        _nightly_etl_status["error"] = str(e)
+
+    finally:
+        _nightly_etl_status["running"] = False
+
+
+async def run_changes_job_task(
+    task_id: str,
+    media_type: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    verbose: bool = False,
+) -> None:
+    """Background task to run a single changes ETL job."""
+    global _changes_job_status, _changes_job_live_stats
+
+    # Lazy import to avoid circular import issues
+    from src.etl.etl_runner import run_single_etl
+    from src.etl.tmdb_changes_etl import ChangesETLStats
+
+    # Create stats object upfront for progress tracking
+    stats = ChangesETLStats()
+    _changes_job_live_stats[task_id] = stats
+
+    try:
+        # Get Redis config from current environment
+        current_env = RedisManager.get_current_env()
+        redis_config = RedisManager.get_config(current_env)
+
+        # Pass stats object so we can track progress during execution
+        final_stats = await run_single_etl(
+            media_type=media_type,
+            start_date=start_date,
+            end_date=end_date,
+            redis_host=redis_config.host,
+            redis_port=redis_config.port,
+            redis_password=redis_config.password,
+            verbose=verbose,
+            stats=stats,
+        )
+
+        _changes_job_status[task_id]["result"] = final_stats.to_dict()
+
+    except Exception as e:
+        _changes_job_status[task_id]["error"] = str(e)
+
+    finally:
+        _changes_job_status[task_id]["running"] = False
+        _changes_job_status[task_id]["completed_at"] = datetime.now().isoformat()
+        # Clean up live stats
+        if task_id in _changes_job_live_stats:
+            del _changes_job_live_stats[task_id]
+
+
+@app.get("/api/etl/config")
+async def get_etl_config():
+    """Get the current ETL configuration."""
+    from src.etl.etl_runner import ETLConfig
+
+    try:
+        config = ETLConfig.from_env()
+        return JSONResponse(
+            content={
+                "success": True,
+                "config": config.to_dict(),
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.get("/api/etl/jobs")
+async def list_etl_jobs():
+    """List all configured ETL jobs."""
+    from src.etl.etl_runner import ETLConfig
+
+    try:
+        config = ETLConfig.from_env()
+        jobs = []
+        for job in config.jobs:
+            jobs.append(
+                {
+                    "name": job.name,
+                    "target": job.target,
+                    "enabled": job.enabled,
+                    "runs": [r.to_dict() for r in job.runs],
+                }
+            )
+        return JSONResponse(
+            content={
+                "success": True,
+                "jobs": jobs,
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.post("/api/etl/trigger")
+async def trigger_nightly_etl(
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+    """
+    Trigger the full nightly ETL run.
+
+    This is the endpoint that Cloud Scheduler will call.
+    It can also be called manually from the web UI.
+    """
+    global _nightly_etl_status
+
+    if _nightly_etl_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": "An ETL run is already in progress",
+                "run_id": _nightly_etl_status["run_id"],
+            },
+        )
+
+    # Parse request body
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    start_date = body.get("start_date")
+    end_date = body.get("end_date")
+    job_filter = body.get("job_filter")
+
+    # Initialize task status
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    _nightly_etl_status = {
+        "running": True,
+        "run_id": run_id,
+        "started_at": datetime.now().isoformat(),
+        "progress": {},
+        "error": None,
+        "result": None,
+    }
+
+    # Use a thread to avoid blocking
+    etl_thread = threading.Thread(
+        target=lambda: __import__("asyncio").run(
+            run_nightly_etl_task(start_date, end_date, job_filter)
+        ),
+        daemon=True,
+    )
+    etl_thread.start()
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": "ETL run started",
+            "run_id": run_id,
+        }
+    )
+
+
+@app.get("/api/etl/status")
+async def get_nightly_etl_status():
+    """Get the status of the current or most recent ETL run."""
+    return JSONResponse(
+        content={
+            "running": _nightly_etl_status["running"],
+            "run_id": _nightly_etl_status.get("run_id"),
+            "started_at": _nightly_etl_status.get("started_at"),
+            "progress": _nightly_etl_status.get("progress", {}),
+            "error": _nightly_etl_status.get("error"),
+            "result": _nightly_etl_status.get("result"),
+        }
+    )
+
+
+@app.post("/api/etl/job/trigger")
+async def trigger_changes_job(
+    background_tasks: BackgroundTasks,
+    media_type: str = Query(..., description="Media type: tv, movie, or person"),
+    start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
+    verbose: bool = Query(False, description="Enable verbose logging"),
+):
+    """
+    Trigger a single ETL job for a specific media type.
+
+    This is useful for manual runs from the web UI.
+    """
+    global _changes_job_status
+
+    if media_type not in ["tv", "movie", "person"]:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": f"Invalid media_type: {media_type}"},
+        )
+
+    # Check if this job is already running
+    for task_id, status in _changes_job_status.items():
+        if status.get("running") and status.get("media_type") == media_type:
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "success": False,
+                    "error": f"A {media_type} job is already running",
+                    "task_id": task_id,
+                },
+            )
+
+    # Create task ID
+    task_id = f"{media_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Initialize task status
+    _changes_job_status[task_id] = {
+        "running": True,
+        "media_type": media_type,
+        "started_at": datetime.now().isoformat(),
+        "completed_at": None,
+        "error": None,
+        "result": None,
+    }
+
+    # Use a thread to avoid blocking
+    job_thread = threading.Thread(
+        target=lambda: __import__("asyncio").run(
+            run_changes_job_task(task_id, media_type, start_date, end_date, verbose)
+        ),
+        daemon=True,
+    )
+    job_thread.start()
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"ETL job started for {media_type}",
+            "task_id": task_id,
+        }
+    )
+
+
+@app.get("/api/etl/job/status/{task_id}")
+async def get_changes_job_status(task_id: str):
+    """Get the status of a specific job task."""
+    if task_id not in _changes_job_status:
+        return JSONResponse(
+            status_code=404,
+            content={"success": False, "error": f"Task not found: {task_id}"},
+        )
+
+    response = {
+        "success": True,
+        "task_id": task_id,
+        **_changes_job_status[task_id],
+    }
+
+    # Include live progress if job is still running
+    if task_id in _changes_job_live_stats:
+        live_stats = _changes_job_live_stats[task_id]
+        response["progress"] = {
+            "current_batch": live_stats.current_batch,
+            "total_batches": live_stats.total_batches,
+            "current_phase": live_stats.current_phase,
+            "enriched_count": live_stats.enriched_count,
+            "enrichment_errors": live_stats.enrichment_errors,
+            "passed_filter": live_stats.passed_filter,
+            "failed_filter": live_stats.failed_filter,
+            "total_changes_found": live_stats.total_changes_found,
+        }
+
+    return JSONResponse(content=response)
+
+
+@app.get("/api/etl/job/status")
+async def list_changes_job_statuses():
+    """List all job task statuses."""
+    return JSONResponse(
+        content={
+            "success": True,
+            "tasks": _changes_job_status,
+        }
+    )
+
+
+@app.get("/api/etl/runs")
+async def list_etl_runs(
+    run_date: str | None = Query(None, description="Filter by date (YYYY-MM-DD)"),
+    limit: int = Query(10, description="Maximum runs to return"),
+):
+    """List recent ETL runs from GCS metadata."""
+    from src.etl.etl_metadata import ETLMetadataStore
+
+    try:
+        store = ETLMetadataStore()
+        runs = store.list_runs(run_date=run_date, limit=limit)
+        return JSONResponse(
+            content={
+                "success": True,
+                "runs": runs,
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.get("/api/etl/runs/{run_date}/{run_id}")
+async def get_etl_run(run_date: str, run_id: str):
+    """Get details of a specific ETL run."""
+    from src.etl.etl_metadata import ETLMetadataStore
+
+    try:
+        store = ETLMetadataStore()
+        metadata = store.get_run_metadata(run_date, run_id)
+
+        if not metadata:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Run not found"},
+            )
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "run": metadata.to_dict(),
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.get("/api/etl/job/state")
+async def get_etl_job_states():
+    """Get the persistent state of all jobs (last run times, etc.)."""
+    from src.etl.etl_metadata import ETLMetadataStore
+
+    try:
+        store = ETLMetadataStore()
+        states = store.get_all_job_states()
+        return JSONResponse(
+            content={
+                "success": True,
+                "states": {name: state.to_dict() for name, state in states.items()},
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
 
 
 # Index configurations - maps index name to (redis_index_name, prefix, schema)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 from api.subapi.comscore import BoxOfficeData, comscore_wrapper
 from api.tmdb.auth import Auth
@@ -49,7 +49,7 @@ TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="tmdb",
     verbose=False,
-    version="1.4.0",  # Moved caching and deduplication to _make_request level for all endpoints
+    version="1.4.1",  # Fixed nullable number_of_episodes/seasons in TV model
 )
 
 
@@ -256,7 +256,7 @@ class TMDBService(Auth, BaseAPIClient):
     async def get_media_details(
         self,
         tmdb_id: int,
-        media_type: Literal[MCType.MOVIE, MCType.TV_SERIES],
+        media_type: MCType,
         include_cast: bool = True,
         include_videos: bool = True,
         include_watch_providers: bool = True,
@@ -295,13 +295,22 @@ class TMDBService(Auth, BaseAPIClient):
                 status_code=404,
             )
 
-        if media_type == MCType.TV_SERIES:
-            details: MCBaseMediaItem = MCTvItem.from_tv_details(
-                TMDBTvDetailsResult.model_validate(details_data), self.image_base_url
-            )
-        else:
-            details = MCMovieItem.from_movie_details(
-                TMDBMovieDetailsResult.model_validate(details_data), self.image_base_url
+        try:
+            if media_type == MCType.TV_SERIES:
+                details: MCBaseMediaItem = MCTvItem.from_tv_details(
+                    TMDBTvDetailsResult.model_validate(details_data), self.image_base_url
+                )
+            else:
+                details = MCMovieItem.from_movie_details(
+                    TMDBMovieDetailsResult.model_validate(details_data), self.image_base_url
+                )
+        except Exception as e:
+            logger.warning(f"Validation error for {media_type} {tmdb_id}: {e}")
+            return MCBaseMediaItem(
+                mc_type=media_type,
+                tmdb_id=tmdb_id,
+                error=f"Validation error: {e}",
+                status_code=500,
             )
         # Process basic information
         if details.source_id == "0" or not details.source_id:

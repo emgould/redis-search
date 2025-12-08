@@ -1,0 +1,51 @@
+# ETL Job Configuration
+# This file defines the ETL jobs that run during the nightly scheduled ETL.
+# Jobs are executed sequentially in the order they appear.
+
+# Each job can have multiple "runs" with different parameters.
+# The start_date is automatically determined from the last successful run
+# unless explicitly overridden.
+
+jobs:
+  # TMDB TV Changes - Process daily TV show changes
+  - name: tmdb_tv_changes
+    target: tmdb_changes_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "tv"
+          verbose: true
+          # start_date: "2025-12-01"  # Optional override
+          # end_date: "2025-12-08"    # Optional override
+
+  # TMDB Movie Changes - Process daily movie changes
+  - name: tmdb_movie_changes
+    target: tmdb_changes_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "movie"
+          verbose: true
+
+  # TMDB Person Changes - Process daily person changes
+  - name: tmdb_person_changes
+    target: tmdb_changes_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "person"
+          verbose: true
+
+# Redis configuration (can be overridden by environment variables)
+# redis:
+#   host: localhost
+#   port: 6380
+#   password: null
+
+# Notes:
+# - Jobs run sequentially to avoid overwhelming APIs
+# - start_date defaults to the day after the last successful run
+# - end_date defaults to today
+# - Set enabled: false to skip a job temporarily
+# - The target function must be registered in ETL_FUNCTIONS in etl_runner.py
+

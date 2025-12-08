@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from google.cloud import storage
+from google.cloud import storage  # type: ignore[attr-defined]
 from redis.asyncio import Redis
 
 from src.adapters.config import load_env
