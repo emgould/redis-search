@@ -56,7 +56,7 @@
         <!-- Promote Button -->
         <div class="flex flex-col items-center gap-2">
           <button id="btn-promote" 
-            onclick="promoteToDev()"
+            onclick="openPromoteModal()"
             class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Promote local documents to public Redis"
             {% if local_status.status != 'connected' or public_status.status != 'connected' %}disabled{% endif %}>
@@ -691,6 +691,79 @@
       </div>
     </div>
     
+    <!-- Promote to Dev Modal -->
+    <div id="promote-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>🚀</span>
+            <span>Promote to Dev</span>
+          </h3>
+          <button onclick="closePromoteModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <p class="text-sm text-surface-400">
+            Select the indices to promote from local Redis to public/dev Redis.
+            <strong class="text-yellow-400">This is a complete replacement</strong> - 
+            selected indices will be deleted on dev and recreated with fresh data from local.
+          </p>
+          
+          <!-- Loading state -->
+          <div id="promote-indices-loading" class="flex items-center justify-center py-8">
+            <span class="animate-spin mr-2">⏳</span>
+            <span class="text-surface-400">Loading available indices...</span>
+          </div>
+          
+          <!-- Error state -->
+          <div id="promote-indices-error" class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+            <p class="text-sm text-red-400" id="promote-indices-error-msg">Failed to load indices</p>
+          </div>
+          
+          <!-- Indices list -->
+          <div id="promote-indices-list" class="hidden space-y-3">
+            <!-- Select All -->
+            <div class="flex items-center justify-between pb-2 border-b border-surface-700">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="promote-select-all" onchange="toggleAllPromoteIndices()"
+                  class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+                <span class="text-sm font-medium text-surface-300">Select All</span>
+              </label>
+            </div>
+            
+            <!-- Index checkboxes will be inserted here -->
+            <div id="promote-indices-container" class="space-y-2 max-h-64 overflow-y-auto">
+            </div>
+          </div>
+          
+          <!-- Warning -->
+          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+            <p class="text-sm text-yellow-400">
+              ⚠️ <strong>Warning:</strong> This will completely replace the selected indices on dev.
+              All existing data for selected indices will be deleted and replaced with local data.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closePromoteModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="startPromoteFromModal()" id="btn-run-promote-modal"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled>
+            🚀 Promote Selected
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <!-- Index Management -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <div class="flex items-center justify-between mb-6">
@@ -1181,7 +1254,127 @@ pollEtlStatus();
 {% endif %}
 
 // Promote to Dev functionality
-async function promoteToDev() {
+let promoteAvailableIndices = [];
+
+async function openPromoteModal() {
+  const modal = document.getElementById('promote-modal');
+  const loadingEl = document.getElementById('promote-indices-loading');
+  const errorEl = document.getElementById('promote-indices-error');
+  const listEl = document.getElementById('promote-indices-list');
+  const containerEl = document.getElementById('promote-indices-container');
+  const runBtn = document.getElementById('btn-run-promote-modal');
+  const selectAllEl = document.getElementById('promote-select-all');
+  
+  // Reset state
+  loadingEl.classList.remove('hidden');
+  errorEl.classList.add('hidden');
+  listEl.classList.add('hidden');
+  runBtn.disabled = true;
+  selectAllEl.checked = false;
+  containerEl.innerHTML = '';
+  promoteAvailableIndices = [];
+  
+  // Show modal
+  modal.style.display = 'flex';
+  
+  // Fetch available indices
+  try {
+    const res = await fetch('/api/promote/indices');
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to load indices');
+    }
+    
+    promoteAvailableIndices = data.indices;
+    
+    if (promoteAvailableIndices.length === 0) {
+      document.getElementById('promote-indices-error-msg').textContent = 'No indices found in local Redis';
+      errorEl.classList.remove('hidden');
+      loadingEl.classList.add('hidden');
+      return;
+    }
+    
+    // Build checkboxes for each index
+    promoteAvailableIndices.forEach((idx, i) => {
+      const div = document.createElement('div');
+      div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
+      div.innerHTML = `
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" id="promote-idx-${i}" data-index-name="${idx.name}"
+            onchange="updatePromoteButtonState()"
+            class="w-4 h-4 mt-1 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-surface-200">${idx.name}</span>
+              <span class="text-xs text-surface-500">${idx.redis_name}</span>
+            </div>
+            <div class="text-xs text-surface-400 mt-1">
+              <span>Prefix: <code class="bg-surface-900 px-1 rounded">${idx.prefix}*</code></span>
+              <span class="mx-2">•</span>
+              <span class="text-brand-400 font-medium">${idx.num_docs.toLocaleString()} documents</span>
+            </div>
+          </div>
+        </label>
+      `;
+      containerEl.appendChild(div);
+    });
+    
+    loadingEl.classList.add('hidden');
+    listEl.classList.remove('hidden');
+    
+  } catch (e) {
+    document.getElementById('promote-indices-error-msg').textContent = e.message;
+    errorEl.classList.remove('hidden');
+    loadingEl.classList.add('hidden');
+  }
+}
+
+function closePromoteModal() {
+  document.getElementById('promote-modal').style.display = 'none';
+}
+
+function toggleAllPromoteIndices() {
+  const selectAll = document.getElementById('promote-select-all').checked;
+  promoteAvailableIndices.forEach((_, i) => {
+    document.getElementById(`promote-idx-${i}`).checked = selectAll;
+  });
+  updatePromoteButtonState();
+}
+
+function updatePromoteButtonState() {
+  const selectedCount = getSelectedPromoteIndices().length;
+  const runBtn = document.getElementById('btn-run-promote-modal');
+  runBtn.disabled = selectedCount === 0;
+  runBtn.textContent = selectedCount > 0 
+    ? `🚀 Promote ${selectedCount} ${selectedCount === 1 ? 'Index' : 'Indices'}`
+    : '🚀 Promote Selected';
+  
+  // Update select all checkbox
+  const selectAllEl = document.getElementById('promote-select-all');
+  selectAllEl.checked = selectedCount === promoteAvailableIndices.length && selectedCount > 0;
+}
+
+function getSelectedPromoteIndices() {
+  const selected = [];
+  promoteAvailableIndices.forEach((idx, i) => {
+    const checkbox = document.getElementById(`promote-idx-${i}`);
+    if (checkbox && checkbox.checked) {
+      selected.push(idx.name);
+    }
+  });
+  return selected;
+}
+
+async function startPromoteFromModal() {
+  const selectedIndices = getSelectedPromoteIndices();
+  if (selectedIndices.length === 0) return;
+  
+  closePromoteModal();
+  await promoteToDev(selectedIndices);
+}
+
+async function promoteToDev(indices = null) {
   const btn = document.getElementById('btn-promote');
   const icon = document.getElementById('promote-icon');
   const statusEl = document.getElementById('promote-status');
@@ -1199,7 +1392,15 @@ async function promoteToDev() {
   outputEl.textContent = '';
   
   try {
-    const res = await fetch('/api/promote-to-dev', { method: 'POST' });
+    // Build URL with indices query params
+    let url = '/api/promote-to-dev';
+    if (indices && indices.length > 0) {
+      const params = new URLSearchParams();
+      indices.forEach(idx => params.append('indices', idx));
+      url += '?' + params.toString();
+    }
+    
+    const res = await fetch(url, { method: 'POST' });
     const data = await res.json();
     
     if (!data.success) {
@@ -1231,13 +1432,14 @@ async function pollPromoteStatus() {
     const data = await res.json();
     
     outputEl.textContent = data.output + data.error;
+    outputEl.scrollTop = outputEl.scrollHeight;
     
     if (data.running) {
       setTimeout(pollPromoteStatus, 1000);
     } else {
       indicatorEl.className = '';
       icon.classList.remove('animate-spin');
-      if (data.error) {
+      if (data.error && !data.output.includes('🎉 Promote complete!')) {
         indicatorEl.textContent = '❌';
         icon.textContent = '❌';
         labelEl.textContent = 'Error';

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import subprocess
@@ -305,8 +306,63 @@ async def task_status():
     return JSONResponse(content=_task_status)
 
 
-def run_promote_task():
-    """Run promote to dev in background."""
+@app.get("/api/promote/indices")
+async def list_available_indices():
+    """List available indices from local Redis for promotion."""
+    try:
+        # Run the promote script in list mode with JSON output
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/promote_to_dev.py",
+                "--list",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        if result.returncode != 0:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": result.stderr or "Failed to list indices",
+                },
+            )
+
+        # Parse JSON output
+        indices = json.loads(result.stdout)
+        return JSONResponse(
+            content={
+                "success": True,
+                "indices": indices,
+            }
+        )
+
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": f"Invalid JSON response: {e}"},
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+# Store selected indices for the promote task
+_promote_selected_indices: list[str] = []
+
+
+def run_promote_task(indices: list[str] | None = None):
+    """Run promote to dev in background with optional index selection."""
     global _promote_status
     _promote_status = {"running": True, "output": "", "error": ""}
 
@@ -316,17 +372,24 @@ def run_promote_task():
         # Force unbuffered Python output for real-time progress
         env["PYTHONUNBUFFERED"] = "1"
 
+        # Build command with optional indices
+        cmd = [
+            sys.executable,
+            "-u",  # Unbuffered output
+            "scripts/promote_to_dev.py",
+        ]
+
+        if indices:
+            cmd.extend(["--indices"] + indices)
+
         # Use Popen for real-time output streaming
         process = subprocess.Popen(
-            [
-                sys.executable,
-                "-u",  # Unbuffered output
-                "scripts/promote_to_dev.py",
-            ],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             env=env,
+            cwd=PROJECT_ROOT,
         )
 
         # Read output in real-time
@@ -355,8 +418,17 @@ def run_promote_task():
 
 
 @app.post("/api/promote-to-dev")
-async def promote_to_dev(background_tasks: BackgroundTasks):
-    """Promote local Redis documents to public Redis."""
+async def promote_to_dev(
+    background_tasks: BackgroundTasks,
+    indices: list[str] | None = Query(default=None),
+):
+    """
+    Promote local Redis documents to public Redis.
+
+    Args:
+        indices: Optional list of index names to promote. If not provided,
+                 promotes all available indices.
+    """
     global _promote_status
 
     if _promote_status["running"]:
@@ -365,12 +437,14 @@ async def promote_to_dev(background_tasks: BackgroundTasks):
             content={"success": False, "error": "A promote task is already running"},
         )
 
-    background_tasks.add_task(run_promote_task)
+    # Start the background task with selected indices
+    background_tasks.add_task(run_promote_task, indices)
 
+    indices_msg = f"indices: {', '.join(indices)}" if indices else "all indices"
     return JSONResponse(
         content={
             "success": True,
-            "message": "Started promoting local Redis to dev",
+            "message": f"Started promoting local Redis to dev ({indices_msg})",
         }
     )
 
