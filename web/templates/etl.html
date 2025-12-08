@@ -1,0 +1,740 @@
+{% extends "base.html" %}
+
+{% block title %}ETL Runner - Redis Search{% endblock %}
+
+{% block body %}
+<div class="min-h-full">
+  <!-- Header -->
+  <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="text-xl font-semibold text-white hover:text-brand-400 transition-colors">
+        ← Media Search
+      </a>
+      <div class="flex items-center gap-4">
+        <a href="/management" class="text-sm text-surface-400 hover:text-white transition-colors">
+          Management →
+        </a>
+        <h1 class="text-lg font-medium text-surface-300">ETL Runner</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+    
+    <!-- Redis Environment Banner -->
+    <div class="bg-surface-900 rounded-xl border border-surface-800 p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🔌</span>
+        <div>
+          <p class="text-surface-400 text-sm">Connected to</p>
+          <p class="font-semibold text-white">{{ current_env | capitalize }} Redis</p>
+        </div>
+      </div>
+      <div id="redis-status" class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full {% if redis_connected %}bg-green-400{% else %}bg-red-400{% endif %}"></span>
+        <span class="text-sm {% if redis_connected %}text-green-400{% else %}text-red-400{% endif %}">
+          {% if redis_connected %}Connected{% else %}Disconnected{% endif %}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Run Full ETL Section -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+        <span class="text-2xl">🚀</span> Run Full ETL
+      </h2>
+      
+      <p class="text-surface-400 mb-6">
+        Run all enabled ETL jobs as defined in the configuration. This is the same process that runs on the nightly schedule.
+      </p>
+      
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <!-- Date Override -->
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-2">Start Date Override (optional)</label>
+          <input type="date" id="full-etl-start-date"
+            class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+          <p class="text-xs text-surface-500 mt-1">Leave empty to use last run date + 1</p>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-surface-300 mb-2">End Date Override (optional)</label>
+          <input type="date" id="full-etl-end-date"
+            class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+          <p class="text-xs text-surface-500 mt-1">Leave empty to use today</p>
+        </div>
+      </div>
+      
+      <button onclick="triggerFullEtl()" id="btn-full-etl"
+        class="px-6 py-3 bg-brand-600 hover:bg-brand-500 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        🚀 Run Full ETL
+      </button>
+      
+      <!-- Full ETL Status -->
+      <div id="full-etl-status" class="mt-6 hidden">
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30">
+          <div class="flex items-center gap-2 mb-3">
+            <span id="full-etl-indicator" class="animate-spin">⏳</span>
+            <span id="full-etl-label" class="font-medium text-brand-400">Running...</span>
+          </div>
+          
+          <!-- Progress -->
+          <div class="mb-3">
+            <div class="flex justify-between text-xs text-surface-400 mb-1">
+              <span>Job Progress</span>
+              <span id="full-etl-progress-label">0 / 0 jobs</span>
+            </div>
+            <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+              <div id="full-etl-progress-bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <!-- Result Summary -->
+          <div id="full-etl-result" class="hidden mt-4">
+            <div class="grid grid-cols-4 gap-3 text-center">
+              <div class="bg-surface-900/50 rounded-lg p-3">
+                <p class="text-2xl font-bold text-green-400" id="result-completed">0</p>
+                <p class="text-xs text-surface-500">Completed</p>
+              </div>
+              <div class="bg-surface-900/50 rounded-lg p-3">
+                <p class="text-2xl font-bold text-red-400" id="result-failed">0</p>
+                <p class="text-xs text-surface-500">Failed</p>
+              </div>
+              <div class="bg-surface-900/50 rounded-lg p-3">
+                <p class="text-2xl font-bold text-blue-400" id="result-upserted">0</p>
+                <p class="text-xs text-surface-500">Upserted</p>
+              </div>
+              <div class="bg-surface-900/50 rounded-lg p-3">
+                <p class="text-2xl font-bold text-surface-400" id="result-duration">-</p>
+                <p class="text-xs text-surface-500">Duration</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Individual Job Triggers -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+        <span class="text-2xl">🎯</span> Run Individual Jobs
+      </h2>
+      
+      <p class="text-surface-400 mb-6">
+        Trigger individual ETL jobs for specific media types. Use this for testing or catching up on specific content.
+      </p>
+      
+      <div class="space-y-4">
+        <!-- TV Changes -->
+        <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">📺</span>
+              <div>
+                <p class="font-medium text-surface-200">TV Show Changes</p>
+                <p class="text-sm text-surface-500">Process TMDB TV changes endpoint</p>
+              </div>
+            </div>
+            <button onclick="openJobModal('tv')"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-job-tv">
+              Run TV ETL
+            </button>
+          </div>
+          <div id="job-status-tv" class="mt-3 hidden"></div>
+        </div>
+        
+        <!-- Movie Changes -->
+        <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🎥</span>
+              <div>
+                <p class="font-medium text-surface-200">Movie Changes</p>
+                <p class="text-sm text-surface-500">Process TMDB movie changes endpoint</p>
+              </div>
+            </div>
+            <button onclick="openJobModal('movie')"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-job-movie">
+              Run Movie ETL
+            </button>
+          </div>
+          <div id="job-status-movie" class="mt-3 hidden"></div>
+        </div>
+        
+        <!-- Person Changes -->
+        <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">👤</span>
+              <div>
+                <p class="font-medium text-surface-200">Person Changes</p>
+                <p class="text-sm text-surface-500">Process TMDB person changes endpoint</p>
+              </div>
+            </div>
+            <button onclick="openJobModal('person')"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-job-person">
+              Run Person ETL
+            </button>
+          </div>
+          <div id="job-status-person" class="mt-3 hidden"></div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Job States -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <span class="text-2xl">📋</span> Job States
+        </h2>
+        <button onclick="refreshJobStates()" id="btn-refresh-states"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <span id="refresh-states-icon">🔄</span> Refresh
+        </button>
+      </div>
+      
+      <p class="text-surface-400 mb-6">
+        Last run information for each job. The start_date for the next run is calculated from the last successful run.
+      </p>
+      
+      <div id="job-states-container" class="space-y-3">
+        <div class="text-surface-500 text-center py-4">Loading job states...</div>
+      </div>
+    </section>
+    
+    <!-- Recent Runs -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <span class="text-2xl">📜</span> Recent Runs
+        </h2>
+        <button onclick="refreshRecentRuns()" id="btn-refresh-runs"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <span id="refresh-runs-icon">🔄</span> Refresh
+        </button>
+      </div>
+      
+      <div id="recent-runs-container" class="space-y-3">
+        <div class="text-surface-500 text-center py-4">Loading recent runs...</div>
+      </div>
+    </section>
+    
+    <!-- Configuration -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+        <span class="text-2xl">⚙️</span> Configuration
+      </h2>
+      
+      <p class="text-surface-400 mb-4">
+        Current ETL job configuration from <code class="bg-surface-800 px-2 py-0.5 rounded text-sm">config/etl_jobs.yaml</code>
+      </p>
+      
+      <div id="config-container">
+        <pre class="bg-surface-800 rounded-lg p-4 text-sm text-surface-300 overflow-x-auto max-h-96">Loading configuration...</pre>
+      </div>
+    </section>
+    
+  </main>
+</div>
+
+<!-- Job Modal -->
+<div id="job-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center" style="display: none;">
+  <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-4 border-b border-surface-700">
+      <h3 class="text-lg font-semibold flex items-center gap-2">
+        <span id="job-modal-icon">📺</span>
+        <span>Run <span id="job-modal-type-label">TV</span> ETL</span>
+      </h3>
+      <button onclick="closeJobModal()" class="text-surface-400 hover:text-white p-1 rounded">
+        ✕
+      </button>
+    </div>
+    
+    <!-- Modal Body -->
+    <div class="p-4 space-y-4">
+      <input type="hidden" id="job-modal-media-type" value="">
+      
+      <p class="text-sm text-surface-400">
+        Fetch changes from TMDB and upsert matching items to Redis.
+      </p>
+      
+      <!-- Start Date -->
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-1">Start Date (YYYY-MM-DD)</label>
+        <input type="date" id="job-start-date"
+          class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+        <p class="text-xs text-surface-500 mt-1">Leave empty to use yesterday</p>
+      </div>
+      
+      <!-- End Date -->
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-1">End Date (YYYY-MM-DD)</label>
+        <input type="date" id="job-end-date"
+          class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+        <p class="text-xs text-surface-500 mt-1">Leave empty to use today</p>
+      </div>
+      
+      <!-- Verbose -->
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="job-verbose" checked
+            class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+          <span class="text-sm text-surface-300">Verbose logging</span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Modal Footer -->
+    <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+      <button onclick="closeJobModal()"
+        class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+        Cancel
+      </button>
+      <button onclick="startJobFromModal()" id="btn-run-job-modal"
+        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+        🚀 Run ETL
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Format number with commas
+function formatNumber(num) {
+  return (num || 0).toLocaleString();
+}
+
+// Format duration
+function formatDuration(seconds) {
+  if (!seconds) return '-';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  return `${Math.round(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+}
+
+// ============================================================
+// Full ETL Functions
+// ============================================================
+
+async function triggerFullEtl() {
+  const btn = document.getElementById('btn-full-etl');
+  const statusEl = document.getElementById('full-etl-status');
+  const indicatorEl = document.getElementById('full-etl-indicator');
+  const labelEl = document.getElementById('full-etl-label');
+  const resultEl = document.getElementById('full-etl-result');
+  
+  btn.disabled = true;
+  statusEl.classList.remove('hidden');
+  resultEl.classList.add('hidden');
+  indicatorEl.textContent = '⏳';
+  indicatorEl.className = 'animate-spin';
+  labelEl.textContent = 'Starting ETL run...';
+  labelEl.className = 'font-medium text-brand-400';
+  
+  // Reset progress
+  document.getElementById('full-etl-progress-bar').style.width = '0%';
+  document.getElementById('full-etl-progress-label').textContent = '0 / 0 jobs';
+  
+  const startDate = document.getElementById('full-etl-start-date').value || null;
+  const endDate = document.getElementById('full-etl-end-date').value || null;
+  
+  try {
+    const body = {};
+    if (startDate) body.start_date = startDate;
+    if (endDate) body.end_date = endDate;
+    
+    const res = await fetch('/api/etl/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollFullEtlStatus();
+  } catch (e) {
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error: ' + e.message;
+    labelEl.className = 'font-medium text-red-400';
+    btn.disabled = false;
+  }
+}
+
+async function pollFullEtlStatus() {
+  const btn = document.getElementById('btn-full-etl');
+  const indicatorEl = document.getElementById('full-etl-indicator');
+  const labelEl = document.getElementById('full-etl-label');
+  const progressBar = document.getElementById('full-etl-progress-bar');
+  const progressLabel = document.getElementById('full-etl-progress-label');
+  const resultEl = document.getElementById('full-etl-result');
+  
+  try {
+    const res = await fetch('/api/etl/status');
+    const data = await res.json();
+    
+    // Update progress
+    if (data.progress) {
+      const total = data.progress.total_jobs || 0;
+      const completed = data.progress.jobs_completed || 0;
+      progressLabel.textContent = `${completed} / ${total} jobs`;
+      const percent = total > 0 ? (completed / total) * 100 : 0;
+      progressBar.style.width = `${percent}%`;
+      
+      if (data.progress.current_job) {
+        labelEl.textContent = `Running: ${data.progress.current_job}`;
+      }
+    }
+    
+    if (data.running) {
+      setTimeout(pollFullEtlStatus, 2000);
+    } else {
+      indicatorEl.className = '';
+      
+      if (data.error) {
+        indicatorEl.textContent = '❌';
+        labelEl.textContent = 'Error: ' + data.error;
+        labelEl.className = 'font-medium text-red-400';
+      } else if (data.result) {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = `ETL Complete (${data.result.status})`;
+        labelEl.className = 'font-medium text-green-400';
+        
+        // Show result summary
+        resultEl.classList.remove('hidden');
+        document.getElementById('result-completed').textContent = data.result.jobs_completed || 0;
+        document.getElementById('result-failed').textContent = data.result.jobs_failed || 0;
+        document.getElementById('result-upserted').textContent = formatNumber(data.result.total_documents_upserted);
+        document.getElementById('result-duration').textContent = formatDuration(data.result.duration_seconds);
+        
+        progressBar.style.width = '100%';
+        
+        // Refresh states and runs
+        refreshJobStates();
+        refreshRecentRuns();
+      } else {
+        indicatorEl.textContent = '✅';
+        labelEl.textContent = 'ETL Complete';
+        labelEl.className = 'font-medium text-green-400';
+      }
+      
+      btn.disabled = false;
+    }
+  } catch (e) {
+    setTimeout(pollFullEtlStatus, 2000);
+  }
+}
+
+// ============================================================
+// Individual Job Functions
+// ============================================================
+
+function openJobModal(mediaType) {
+  const modal = document.getElementById('job-modal');
+  const typeLabel = document.getElementById('job-modal-type-label');
+  const icon = document.getElementById('job-modal-icon');
+  const mediaTypeInput = document.getElementById('job-modal-media-type');
+  
+  mediaTypeInput.value = mediaType;
+  
+  if (mediaType === 'tv') {
+    typeLabel.textContent = 'TV';
+    icon.textContent = '📺';
+  } else if (mediaType === 'movie') {
+    typeLabel.textContent = 'Movie';
+    icon.textContent = '🎥';
+  } else {
+    typeLabel.textContent = 'Person';
+    icon.textContent = '👤';
+  }
+  
+  // Reset form
+  document.getElementById('job-start-date').value = '';
+  document.getElementById('job-end-date').value = '';
+  document.getElementById('job-verbose').checked = true;
+  
+  modal.style.display = 'flex';
+}
+
+function closeJobModal() {
+  document.getElementById('job-modal').style.display = 'none';
+}
+
+async function startJobFromModal() {
+  const mediaType = document.getElementById('job-modal-media-type').value;
+  const startDate = document.getElementById('job-start-date').value || null;
+  const endDate = document.getElementById('job-end-date').value || null;
+  const verbose = document.getElementById('job-verbose').checked;
+  
+  closeJobModal();
+  await triggerSingleJob(mediaType, startDate, endDate, verbose);
+}
+
+async function triggerSingleJob(mediaType, startDate, endDate, verbose) {
+  const btn = document.getElementById(`btn-job-${mediaType}`);
+  const statusEl = document.getElementById(`job-status-${mediaType}`);
+  
+  btn.disabled = true;
+  statusEl.classList.remove('hidden');
+  statusEl.innerHTML = `
+    <div class="bg-surface-800 rounded-lg p-3 border border-brand-500/30">
+      <div class="flex items-center gap-2">
+        <span class="animate-spin">⏳</span>
+        <span class="font-medium text-brand-400">Starting...</span>
+      </div>
+    </div>
+  `;
+  
+  const params = new URLSearchParams();
+  params.set('media_type', mediaType);
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  params.set('verbose', verbose.toString());
+  
+  try {
+    const res = await fetch(`/api/etl/job/trigger?${params.toString()}`, { method: 'POST' });
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    pollJobStatus(mediaType, data.task_id);
+  } catch (e) {
+    statusEl.innerHTML = `
+      <div class="bg-surface-800 rounded-lg p-3 border border-red-500/30">
+        <div class="flex items-center gap-2">
+          <span>❌</span>
+          <span class="font-medium text-red-400">Error: ${e.message}</span>
+        </div>
+      </div>
+    `;
+    btn.disabled = false;
+  }
+}
+
+async function pollJobStatus(mediaType, taskId) {
+  const btn = document.getElementById(`btn-job-${mediaType}`);
+  const statusEl = document.getElementById(`job-status-${mediaType}`);
+  
+  try {
+    const res = await fetch(`/api/etl/job/status/${taskId}`);
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    if (data.running) {
+      // Build progress display
+      const p = data.progress || {};
+      const currentBatch = p.current_batch || 0;
+      const totalBatches = p.total_batches || 0;
+      const phase = p.current_phase || 'starting';
+      const enriched = p.enriched_count || 0;
+      const errors = p.enrichment_errors || 0;
+      const passed = p.passed_filter || 0;
+      const totalChanges = p.total_changes_found || 0;
+      
+      const progressPercent = totalBatches > 0 ? Math.round((currentBatch / totalBatches) * 100) : 0;
+      const progressText = totalBatches > 0 ? `${currentBatch} / ${totalBatches} batches` : 'Starting...';
+      
+      statusEl.innerHTML = `
+        <div class="bg-surface-800 rounded-lg p-3 border border-brand-500/30">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="animate-spin">⏳</span>
+              <span class="font-medium text-brand-400">${phase === 'enriching' ? 'Enriching...' : 'Running...'}</span>
+            </div>
+            <span class="text-xs text-surface-400">${progressText}</span>
+          </div>
+          
+          <!-- Progress Bar -->
+          <div class="h-2 bg-surface-700 rounded-full overflow-hidden mb-2">
+            <div class="h-full bg-brand-500 transition-all duration-300" style="width: ${progressPercent}%"></div>
+          </div>
+          
+          <!-- Stats -->
+          <div class="grid grid-cols-4 gap-2 text-xs text-surface-400">
+            <div><span class="text-surface-300 font-medium">${formatNumber(totalChanges)}</span> changes</div>
+            <div><span class="text-surface-300 font-medium">${formatNumber(enriched)}</span> enriched</div>
+            <div><span class="text-surface-300 font-medium">${formatNumber(passed)}</span> passed</div>
+            <div><span class="text-surface-300 font-medium">${errors}</span> errors</div>
+          </div>
+        </div>
+      `;
+      setTimeout(() => pollJobStatus(mediaType, taskId), 1000);
+    } else if (data.error) {
+      statusEl.innerHTML = `
+        <div class="bg-surface-800 rounded-lg p-3 border border-red-500/30">
+          <div class="flex items-center gap-2">
+            <span>❌</span>
+            <span class="font-medium text-red-400">Error: ${data.error}</span>
+          </div>
+        </div>
+      `;
+      btn.disabled = false;
+    } else if (data.result) {
+      const r = data.result;
+      statusEl.innerHTML = `
+        <div class="bg-surface-800 rounded-lg p-3 border border-green-500/30">
+          <div class="flex items-center gap-2 mb-2">
+            <span>✅</span>
+            <span class="font-medium text-green-400">Complete</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2 text-xs text-surface-400">
+            <div><span class="text-surface-300 font-medium">${formatNumber(r.total_changes_found)}</span> changes</div>
+            <div><span class="text-surface-300 font-medium">${formatNumber(r.documents_upserted)}</span> upserted</div>
+            <div><span class="text-surface-300 font-medium">${r.total_errors || 0}</span> errors</div>
+            <div><span class="text-surface-300 font-medium">${formatDuration(r.duration_seconds)}</span></div>
+          </div>
+        </div>
+      `;
+      btn.disabled = false;
+      refreshJobStates();
+    }
+  } catch (e) {
+    setTimeout(() => pollJobStatus(mediaType, taskId), 1000);
+  }
+}
+
+// ============================================================
+// Job States
+// ============================================================
+
+async function refreshJobStates() {
+  const container = document.getElementById('job-states-container');
+  const icon = document.getElementById('refresh-states-icon');
+  
+  icon.classList.add('animate-spin');
+  
+  try {
+    const res = await fetch('/api/etl/job/state');
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    const states = data.states || {};
+    const stateNames = Object.keys(states);
+    
+    if (stateNames.length === 0) {
+      container.innerHTML = '<div class="text-surface-500 text-center py-4">No job states recorded yet</div>';
+    } else {
+      container.innerHTML = stateNames.map(name => {
+        const state = states[name];
+        const statusColor = state.last_status === 'success' ? 'green' : 'red';
+        return `
+          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-surface-200">${name}</p>
+                <p class="text-xs text-surface-500">
+                  Last run: ${state.last_run_date || 'Never'}
+                  ${state.last_run_time ? ` at ${state.last_run_time.split('T')[1]?.substring(0, 5) || ''}` : ''}
+                </p>
+              </div>
+              <div class="text-right">
+                <span class="px-2 py-1 rounded text-xs font-medium bg-${statusColor}-500/20 text-${statusColor}-400">
+                  ${state.last_status || 'unknown'}
+                </span>
+                <p class="text-xs text-surface-500 mt-1">
+                  ${formatNumber(state.last_documents_upserted)} upserted
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (e) {
+    container.innerHTML = `<div class="text-red-400 text-center py-4">Error: ${e.message}</div>`;
+  } finally {
+    icon.classList.remove('animate-spin');
+  }
+}
+
+// ============================================================
+// Recent Runs
+// ============================================================
+
+async function refreshRecentRuns() {
+  const container = document.getElementById('recent-runs-container');
+  const icon = document.getElementById('refresh-runs-icon');
+  
+  icon.classList.add('animate-spin');
+  
+  try {
+    const res = await fetch('/api/etl/runs?limit=10');
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    const runs = data.runs || [];
+    
+    if (runs.length === 0) {
+      container.innerHTML = '<div class="text-surface-500 text-center py-4">No runs recorded yet</div>';
+    } else {
+      container.innerHTML = runs.map(run => `
+        <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-surface-200">${run.run_id}</p>
+              <p class="text-xs text-surface-500">${run.run_date}</p>
+            </div>
+            <div class="text-xs text-surface-500">
+              ${run.size_bytes ? `${(run.size_bytes / 1024).toFixed(1)} KB` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    container.innerHTML = `<div class="text-red-400 text-center py-4">Error: ${e.message}</div>`;
+  } finally {
+    icon.classList.remove('animate-spin');
+  }
+}
+
+// ============================================================
+// Configuration
+// ============================================================
+
+async function loadConfig() {
+  const container = document.getElementById('config-container');
+  
+  try {
+    const res = await fetch('/api/etl/config');
+    const data = await res.json();
+    
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+    
+    container.innerHTML = `<pre class="bg-surface-800 rounded-lg p-4 text-sm text-surface-300 overflow-x-auto max-h-96">${JSON.stringify(data.config, null, 2)}</pre>`;
+  } catch (e) {
+    container.innerHTML = `<div class="text-red-400 p-4">Error loading config: ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  refreshJobStates();
+  refreshRecentRuns();
+  loadConfig();
+});
+</script>
+{% endblock %}
+

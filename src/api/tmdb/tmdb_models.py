@@ -255,8 +255,8 @@ class TMDBTvDetailsResult(BaseModelWithMethods):
     # Dates and airing info
     first_air_date: str | None = None
     last_air_date: str | None = None
-    number_of_seasons: int = 0
-    number_of_episodes: int = 0
+    number_of_seasons: int | None = None
+    number_of_episodes: int | None = None
     episode_run_time: list[int] = Field(default_factory=list)
 
     # Ratings and popularity
