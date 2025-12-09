@@ -9,7 +9,7 @@
 jobs:
   # TMDB TV Changes - Process daily TV show changes
   - name: tmdb_tv_changes
-    target: tmdb_changes_etl
+    target: tmdb_nightly_etl
     enabled: true
     runs:
       - params:
@@ -20,7 +20,7 @@ jobs:
 
   # TMDB Movie Changes - Process daily movie changes
   - name: tmdb_movie_changes
-    target: tmdb_changes_etl
+    target: tmdb_nightly_etl
     enabled: true
     runs:
       - params:
@@ -29,12 +29,23 @@ jobs:
 
   # TMDB Person Changes - Process daily person changes
   - name: tmdb_person_changes
-    target: tmdb_changes_etl
+    target: tmdb_nightly_etl
     enabled: true
     runs:
       - params:
           media_type: "person"
           verbose: false
+
+  # PodcastIndex Changes - Process daily podcast updates
+  - name: podcastindex_changes
+    target: pi_nightly_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "podcast"  # Required but not used by PI ETL
+          verbose: false
+          # max_batches: 100  # Uncomment to limit records for testing
+
 # Redis configuration (can be overridden by environment variables)
 # redis:
 #   host: localhost

@@ -114,47 +114,102 @@ def build_people_autocomplete_query(q: str) -> str:
         return f"({name_query}) | ({aka_query})"
 
 
+def build_podcasts_autocomplete_query(q: str) -> str:
+    """
+    Build a prefix search query for podcasts autocomplete.
+    Searches both search_title (podcast name) and author fields.
+    """
+    words = q.lower().split()
+    # Filter out stopwords and empty strings
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "is",
+        "it",
+        "podcast",
+        "show",
+    }
+    words = [w for w in words if w and w not in stopwords]
+
+    if not words:
+        return "*"
+
+    # For multi-word: match documents containing all words (last word as prefix)
+    if len(words) == 1:
+        # Search both title and author
+        return f"(@search_title:{words[0]}*) | (@author:{words[0]}*)"
+    else:
+        # All words except last should be exact, last word is prefix
+        exact_words = " ".join(words[:-1])
+        prefix_word = words[-1]
+        title_query = f"@search_title:({exact_words} {prefix_word}*)"
+        author_query = f"@author:({exact_words} {prefix_word}*)"
+        return f"({title_query}) | ({author_query})"
+
+
 async def autocomplete(q: str) -> dict[str, list]:
     """
     Autocomplete search that returns categorized results.
 
     Returns:
-        dict with keys: tv, movie, person - each containing list of results
+        dict with keys: tv, movie, person, podcast - each containing list of results
     """
     if not q or len(q) < 2:
-        return {"tv": [], "movie": [], "person": []}
+        return {"tv": [], "movie": [], "person": [], "podcast": []}
 
     repo = get_repo()
 
     # Build queries
     media_query = build_autocomplete_query(q)
     people_query = build_people_autocomplete_query(q)
+    podcasts_query = build_podcasts_autocomplete_query(q)
 
-    # Search both indexes concurrently
+    # Create empty result placeholder
+    empty_result = type("obj", (object,), {"docs": []})()
+
+    # Search all indexes concurrently
     try:
         media_task = repo.search(media_query, limit=20)
         people_task = repo.search_people(people_query, limit=10)
+        podcasts_task = repo.search_podcasts(podcasts_query, limit=10)
 
-        media_res, people_res = await asyncio.gather(
-            media_task, people_task, return_exceptions=True
+        media_res, people_res, podcasts_res = await asyncio.gather(
+            media_task, people_task, podcasts_task, return_exceptions=True
         )
     except Exception:
         # If concurrent search fails, try individually
         try:
             media_res = await repo.search(media_query, limit=20)
         except Exception:
-            media_res = type("obj", (object,), {"docs": []})()
+            media_res = empty_result
 
         try:
             people_res = await repo.search_people(people_query, limit=10)
         except Exception:
-            people_res = type("obj", (object,), {"docs": []})()
+            people_res = empty_result
+
+        try:
+            podcasts_res = await repo.search_podcasts(podcasts_query, limit=10)
+        except Exception:
+            podcasts_res = empty_result
 
     # Handle exceptions from gather
     if isinstance(media_res, Exception):
-        media_res = type("obj", (object,), {"docs": []})()
+        media_res = empty_result
     if isinstance(people_res, Exception):
-        people_res = type("obj", (object,), {"docs": []})()
+        people_res = empty_result
+    if isinstance(podcasts_res, Exception):
+        podcasts_res = empty_result
 
     # Parse and categorize media results
     tv_results = []
@@ -171,10 +226,14 @@ async def autocomplete(q: str) -> dict[str, list]:
     # Parse person results
     person_results = [parse_doc(doc) for doc in people_res.docs]
 
+    # Parse podcast results
+    podcast_results = [parse_doc(doc) for doc in podcasts_res.docs]
+
     return {
         "tv": tv_results[:10],  # Limit each category
         "movie": movie_results[:10],
         "person": person_results[:10],
+        "podcast": podcast_results[:10],
     }
 
 
@@ -279,6 +338,9 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
         - Gets person metadata from Redis index
         - Fetches movie and TV credits from TMDB
 
+    For podcast:
+        - Gets podcast metadata from Redis index
+
     Args:
         request: DetailsRequest with mc_id, source_id, mc_type, mc_subtype
 
@@ -287,6 +349,7 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
         - All indexed fields
         - For tv/movie: watch_providers, main_cast with images
         - For person: movie_credits, tv_credits
+        - For podcast: podcast metadata
     """
     redis = get_redis()
     mc_type = request.mc_type.lower()
@@ -294,6 +357,8 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
     # Determine the Redis key prefix and index based on type
     if mc_type == "person":
         key_prefix = "person:"
+    elif mc_type == "podcast":
+        key_prefix = "podcast:"
     else:
         key_prefix = "media:"
 
@@ -311,6 +376,8 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
     # Handle different content types
     if mc_type == "person":
         return await _get_person_details(request, index_data)
+    elif mc_type == "podcast":
+        return await _get_podcast_details(request, index_data)
     else:
         return await _get_media_details(request, index_data)
 
@@ -521,3 +588,44 @@ async def _get_person_details(request: DetailsRequest, index_data: dict | None) 
             return {"error": str(e), "status_code": 500}
 
     return result
+
+
+async def _get_podcast_details(request: DetailsRequest, index_data: dict | None) -> dict[str, Any]:
+    """
+    Get detailed metadata for a podcast using the PodcastIndex API.
+
+    Uses the same get_podcast_by_id wrapper that the mobile app uses.
+    Falls back to Redis index data if the API call fails.
+    """
+    from api.podcast.wrappers import podcast_wrapper
+
+    # source_id should be the numeric PodcastIndex feed ID
+    try:
+        feed_id = int(request.source_id)
+    except ValueError:
+        return {"error": f"Invalid source_id: {request.source_id}. Expected numeric feed ID.", "status_code": 400}
+
+    # Use the existing podcast wrapper (same as mobile app)
+    try:
+        result = await podcast_wrapper.get_podcast_by_id(feed_id)
+
+        if result.status_code != 200 or result.error:
+            # Fall back to index data if API fails
+            if index_data:
+                logger.warning(f"API failed for podcast {feed_id}, using index data: {result.error}")
+                return {**index_data, "id": request.mc_id, "mc_type": "podcast"}
+            return {"error": result.error or "Podcast not found", "status_code": result.status_code or 404}
+
+        # Convert to dict and ensure proper identifiers
+        podcast_data: dict[str, Any] = result.model_dump()
+        podcast_data["mc_id"] = request.mc_id
+        podcast_data["mc_type"] = "podcast"
+
+        return podcast_data
+
+    except Exception as e:
+        logger.error(f"Error fetching podcast details: {e}")
+        # Fall back to index data if available
+        if index_data:
+            return {**index_data, "id": request.mc_id, "mc_type": "podcast"}
+        return {"error": str(e), "status_code": 500}

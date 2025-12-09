@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Nightly TMDB Changes ETL runner.
+Nightly ETL runner for TMDB and PodcastIndex.
 
 This script runs the nightly ETL process and sends email notifications.
 It's designed to be run via cron or manually.
@@ -8,6 +8,7 @@ It's designed to be run via cron or manually.
 Usage:
     python -m src.etl.run_nightly_etl                    # Run all enabled jobs
     python -m src.etl.run_nightly_etl --job tv           # Run only TV job
+    python -m src.etl.run_nightly_etl --job podcast      # Run only Podcast job
     python -m src.etl.run_nightly_etl --start-date 2025-12-01  # Override start date
     python -m src.etl.run_nightly_etl --dry-run          # Show what would run
 
@@ -16,6 +17,8 @@ Environment variables (required):
     REDIS_PORT          - Redis server port
     REDIS_PASSWORD      - Redis password
     TMDB_READ_TOKEN     - TMDB API token
+    PODCASTINDEX_API_KEY - PodcastIndex API key (for podcast job)
+    PODCASTINDEX_API_SECRET - PodcastIndex API secret
 
 Environment variables (optional):
     ETL_CONFIG_PATH     - Path to etl_jobs.yaml (default: config/etl_jobs.yaml)
@@ -39,13 +42,13 @@ logger = get_logger(__name__)
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Run TMDB ETL process")
+    parser = argparse.ArgumentParser(description="Run nightly ETL process")
     parser.add_argument(
         "--job",
         "-j",
         type=str,
-        help="Run specific job only (tv, movie, person)",
-        choices=["tv", "movie", "person"],
+        help="Run specific job only (tv, movie, person, podcast)",
+        choices=["tv", "movie", "person", "podcast"],
     )
     parser.add_argument(
         "--start-date",
@@ -121,7 +124,10 @@ async def main() -> int:
         # Build job filter if specific job requested
         job_filter = None
         if args.job:
-            job_filter = [f"tmdb_{args.job}_changes"]
+            if args.job == "podcast":
+                job_filter = ["podcastindex_changes"]
+            else:
+                job_filter = [f"tmdb_{args.job}_changes"]
 
         # Run ETL
         result = await runner.run_all(

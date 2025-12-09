@@ -12,13 +12,13 @@ This separation allows:
 
 Usage:
     # Full ETL (both phases)
-    python -m etl.tmdb_changes_etl_v2 --media-type tv
+    python -m etl.tmdb_nightly_etl_v2 --media-type tv
 
     # Phase 1 only (fetch and save)
-    python -m etl.tmdb_changes_etl_v2 --media-type tv --fetch-only
+    python -m etl.tmdb_nightly_etl_v2 --media-type tv --fetch-only
 
     # Phase 2 only (load from existing file)
-    python -m etl.tmdb_changes_etl_v2 --media-type tv --load-only --file /path/to/file.json
+    python -m etl.tmdb_nightly_etl_v2 --media-type tv --load-only --file /path/to/file.json
 """
 
 import asyncio

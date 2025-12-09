@@ -21,7 +21,7 @@ from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
 from etl.etl_metadata import ETLMetadataStore
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
-from etl.tmdb_changes_etl import ChangesETLStats
+from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
     DetailsRequest,
     autocomplete,
@@ -249,6 +249,10 @@ _person_download_status = {"running": False, "output": "", "error": ""}
 _person_extract_status = {"running": False, "output": "", "error": "", "progress": {}}
 _person_load_status = {"running": False, "output": "", "error": ""}
 
+# Track Podcast ETL task status
+_podcast_extract_status = {"running": False, "output": "", "error": ""}
+_podcast_load_status = {"running": False, "output": "", "error": ""}
+
 # Track nightly ETL runner status (for new changes-based ETL)
 _nightly_etl_status: dict[str, Any] = {
     "running": False,
@@ -411,6 +415,8 @@ async def redis_stats():
                 "index_stats": stats.get("index_stats", {}),
                 "people_num_docs": stats.get("people_num_docs", 0),
                 "people_index_stats": stats.get("people_index_stats", {}),
+                "podcasts_num_docs": stats.get("podcasts_num_docs", 0),
+                "podcasts_index_stats": stats.get("podcasts_index_stats", {}),
             }
         )
     except Exception as e:
@@ -1551,6 +1557,236 @@ async def list_person_files():
     )
 
 
+# ============================================================
+# Podcast ETL Endpoints
+# ============================================================
+
+
+def run_podcast_extract_task():
+    """Download podcast database from URL and extract it."""
+    global _podcast_extract_status
+    _podcast_extract_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        import tarfile
+        import urllib.request
+        from pathlib import Path
+
+        # URL for the podcast database dump
+        db_url = "https://public.podcastindex.org/podcastindex_feeds.db.tgz"
+        output_dir = Path("data/podcastindex")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        tgz_path = output_dir / "podcastindex_feeds.db.tgz"
+        db_path = output_dir / "podcastindex_feeds.db"
+
+        _podcast_extract_status["output"] = f"📥 Downloading from {db_url}...\n"
+
+        # Download with progress
+        def report_progress(block_num, block_size, total_size):
+            downloaded = block_num * block_size
+            if total_size > 0:
+                percent = min(100, downloaded * 100 / total_size)
+                mb_downloaded = downloaded / (1024 * 1024)
+                mb_total = total_size / (1024 * 1024)
+                _podcast_extract_status["output"] = (
+                    f"📥 Downloading from {db_url}...\n"
+                    f"   {mb_downloaded:.1f} MB / {mb_total:.1f} MB ({percent:.1f}%)\n"
+                )
+
+        urllib.request.urlretrieve(db_url, str(tgz_path), reporthook=report_progress)
+
+        output = str(_podcast_extract_status["output"])
+        output += f"\n✅ Download complete: {tgz_path}\n"
+        output += "📦 Extracting...\n"
+        _podcast_extract_status["output"] = output
+
+        # Extract the tgz file
+        with tarfile.open(tgz_path, "r:gz") as tar:
+            # Extract all files to the output directory
+            tar.extractall(path=str(output_dir))
+
+        # Check if database was extracted
+        if db_path.exists():
+            size_mb = db_path.stat().st_size / (1024 * 1024)
+            output = str(_podcast_extract_status["output"])
+            output += f"✅ Extracted: {db_path} ({size_mb:.1f} MB)\n"
+            _podcast_extract_status["output"] = output
+        else:
+            # Try to find the extracted file (might have different name)
+            extracted_files = list(output_dir.glob("*.db"))
+            output = str(_podcast_extract_status["output"])
+            if extracted_files:
+                output += f"✅ Extracted files: {[f.name for f in extracted_files]}\n"
+            else:
+                output += "⚠️ No .db file found after extraction\n"
+            _podcast_extract_status["output"] = output
+
+        # Clean up tgz file
+        tgz_path.unlink()
+        output = str(_podcast_extract_status["output"])
+        output += "🗑️ Cleaned up temp files\n"
+        output += "\n🎉 Extract Complete!\n"
+        _podcast_extract_status["output"] = output
+
+    except Exception as e:
+        _podcast_extract_status["error"] = str(e)
+    finally:
+        _podcast_extract_status["running"] = False
+
+
+def run_podcast_load_task(
+    limit: int | None,
+    min_popularity: int,
+    redis_host: str,
+    redis_port: int,
+    redis_password: str | None,
+):
+    """Run podcast bulk loader in background."""
+    global _podcast_load_status
+    _podcast_load_status = {"running": True, "output": "", "error": ""}
+
+    try:
+        # Build command args
+        cmd = [
+            sys.executable,
+            "-u",
+            "scripts/load_podcasts_from_db.py",
+            "--min-popularity",
+            str(min_popularity),
+        ]
+
+        if limit:
+            cmd.extend(["--limit", str(limit)])
+
+        # Set up environment with the selected Redis connection
+        env = os.environ.copy()
+        env["REDIS_HOST"] = redis_host
+        env["REDIS_PORT"] = str(redis_port)
+        env["REDIS_PASSWORD"] = redis_password or ""
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+
+        output_lines = []
+        assert process.stdout is not None
+        while True:
+            line = process.stdout.readline()
+            if line:
+                output_lines.append(line)
+                _podcast_load_status["output"] = "".join(output_lines)
+            elif process.poll() is not None:
+                break
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_lines.append(remaining)
+            _podcast_load_status["output"] = "".join(output_lines)
+
+        if process.returncode != 0:
+            _podcast_load_status["error"] = f"Process exited with code {process.returncode}"
+
+    except Exception as e:
+        _podcast_load_status["error"] = str(e)
+    finally:
+        _podcast_load_status["running"] = False
+
+
+@app.post("/api/podcast/extract")
+async def api_podcast_extract():
+    """Download and extract podcast database from PodcastIndex."""
+    global _podcast_extract_status
+
+    if _podcast_extract_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "An extract task is already running"},
+        )
+
+    # Run in background thread
+    thread = threading.Thread(target=run_podcast_extract_task, daemon=True)
+    thread.start()
+
+    return JSONResponse(content={"success": True, "message": "Started podcast database download"})
+
+
+@app.get("/api/podcast/extract-status")
+async def podcast_extract_status():
+    """Get status of podcast extract task."""
+    return JSONResponse(content=_podcast_extract_status)
+
+
+@app.post("/api/podcast/load")
+async def api_podcast_load(
+    limit: int | None = Query(default=None),
+    min_popularity: int = Query(default=3),
+):
+    """Load podcasts into Redis from local database."""
+    global _podcast_load_status
+
+    if _podcast_load_status["running"]:
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "A load task is already running"},
+        )
+
+    # Get the currently selected Redis connection
+    current_env = RedisManager.get_current_env()
+    config = RedisManager.get_config(current_env)
+
+    # Run in background thread
+    thread = threading.Thread(
+        target=run_podcast_load_task,
+        args=(limit, min_popularity, config.host, config.port, config.password),
+        daemon=True,
+    )
+    thread.start()
+
+    msg = f"Started podcast load into {config.name}"
+    if limit:
+        msg += f" (limit: {limit})"
+    msg += f" (min_popularity: {min_popularity})"
+
+    return JSONResponse(content={"success": True, "message": msg})
+
+
+@app.get("/api/podcast/load-status")
+async def podcast_load_status():
+    """Get status of podcast load task."""
+    return JSONResponse(content=_podcast_load_status)
+
+
+@app.get("/api/podcast/db-info")
+async def podcast_db_info():
+    """Get info about the podcast database file."""
+    from pathlib import Path
+
+    db_path = Path("data/podcastindex/podcastindex_feeds.db")
+
+    if not db_path.exists():
+        return JSONResponse(content={"exists": False})
+
+    stat = db_path.stat()
+    size_mb = stat.st_size / (1024 * 1024)
+    modified = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
+
+    return JSONResponse(
+        content={
+            "exists": True,
+            "path": str(db_path),
+            "size_mb": round(size_mb, 1),
+            "modified": modified,
+        }
+    )
+
+
 @app.get("/api/media/{media_id}")
 async def get_media(media_id: str):
     """Get a single media item by ID."""
@@ -2053,6 +2289,30 @@ INDEX_CONFIGS = {
             TagField("$.source", as_name="source"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
+        ),
+    },
+    "podcasts": {
+        "redis_name": "idx:podcasts",
+        "prefix": "podcast:",
+        "schema": (
+            # Primary search field with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            # Author/creator name - searchable
+            TextField("$.author", as_name="author", weight=3.0),
+            # Content type filter
+            TagField("$.mc_type", as_name="mc_type"),
+            # Source filter
+            TagField("$.source", as_name="source"),
+            # mc_id from SearchDocument.id
+            TagField("$.id", as_name="id"),
+            # Language filter
+            TagField("$.language", as_name="language"),
+            # Category filters
+            TagField("$.categories.1", as_name="category1"),
+            TagField("$.categories.2", as_name="category2"),
+            # Sortable numeric fields for ranking
+            NumericField("$.popularity", as_name="popularity", sortable=True),
+            NumericField("$.episode_count", as_name="episode_count", sortable=True),
         ),
     },
 }

@@ -6,13 +6,6 @@ Provides async wrappers for Firebase Functions integration using ApiWrapperRespo
 from datetime import UTC, datetime
 from typing import cast
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-    MCSources,
-)
-
 from api.podcast.models import (
     EpisodeListResponse,
     MCPodcastItem,
@@ -23,6 +16,12 @@ from api.podcast.models import (
     PodcastWithLatestEpisode,
 )
 from api.podcast.search import PodcastSearchService
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+    MCSources,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
