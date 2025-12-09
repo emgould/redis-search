@@ -2,21 +2,13 @@
 %} {% block body %}
 <div class="min-h-full">
   <!-- Header -->
-  <header
-    class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm"
-  >
+  <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a
-        href="/"
-        class="text-xl font-semibold text-white hover:text-brand-400 transition-colors"
-      >
+      <a href="/" class="text-xl font-semibold text-white hover:text-brand-400 transition-colors">
         ← Media Search
       </a>
       <div class="flex items-center gap-4">
-        <a
-          href="/etl"
-          class="text-sm text-surface-400 hover:text-white transition-colors"
-        >
+        <a href="/etl" class="text-sm text-surface-400 hover:text-white transition-colors">
           ETL Runner →
         </a>
         <h1 class="text-lg font-medium text-surface-300">
@@ -35,12 +27,9 @@
 
       <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
         <!-- Local Redis -->
-        <div
-          id="local-card"
-          data-env="local"
+        <div id="local-card" data-env="local"
           class="relative rounded-lg border-2 p-5 transition-all cursor-pointer {% if current_env == 'local' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
-          onclick="switchRedis('local')"
-        >
+          onclick="switchRedis('local')">
           <div class="flex items-start justify-between mb-3">
             <div>
               <h3 class="font-semibold text-lg">Local Redis</h3>
@@ -48,10 +37,7 @@
                 Docker container (localhost:6380)
               </p>
             </div>
-            <span
-              id="local-status"
-              class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400"
-            >
+            <span id="local-status" class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400">
               Loading...
             </span>
           </div>
@@ -61,10 +47,7 @@
             <p id="local-docs">Documents: ...</p>
           </div>
 
-          <div
-            id="local-active"
-            class="absolute bottom-3 right-3 {% if current_env != 'local' %}hidden{% endif %}"
-          >
+          <div id="local-active" class="absolute bottom-3 right-3 {% if current_env != 'local' %}hidden{% endif %}">
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
         </div>
@@ -73,13 +56,9 @@
         <div class="flex flex-col items-center gap-4">
           <!-- Promote to Dev Button -->
           <div class="flex flex-col items-center gap-1">
-            <button
-              id="btn-promote"
-              onclick="openPromoteModal()"
+            <button id="btn-promote" onclick="openPromoteModal()"
               class="group relative px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Promote local documents to public Redis"
-              disabled
-            >
+              title="Promote local documents to public Redis" disabled>
               <span class="flex items-center gap-2">
                 <span id="promote-icon" class="text-xl">⟹</span>
               </span>
@@ -89,13 +68,9 @@
 
           <!-- Copy to Local Button -->
           <div class="flex flex-col items-center gap-1">
-            <button
-              id="btn-copy-to-local"
-              onclick="openCopyToLocalModal()"
+            <button id="btn-copy-to-local" onclick="openCopyToLocalModal()"
               class="group relative px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 rounded-lg font-bold text-white transition-all shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Copy public documents to local Redis"
-              disabled
-            >
+              title="Copy public documents to local Redis" disabled>
               <span class="flex items-center gap-2">
                 <span id="copy-icon" class="text-xl">⟸</span>
               </span>
@@ -105,12 +80,9 @@
         </div>
 
         <!-- Public Redis -->
-        <div
-          id="public-card"
-          data-env="public"
+        <div id="public-card" data-env="public"
           class="relative rounded-lg border-2 p-5 transition-all cursor-pointer {% if current_env == 'public' %}border-brand-500 bg-brand-500/10{% else %}border-surface-700 hover:border-surface-600{% endif %}"
-          onclick="switchRedis('public')"
-        >
+          onclick="switchRedis('public')">
           <div class="flex items-start justify-between mb-3">
             <div>
               <h3 class="font-semibold text-lg">Public Redis</h3>
@@ -118,10 +90,7 @@
                 GCE VM (...)
               </p>
             </div>
-            <span
-              id="public-status"
-              class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400"
-            >
+            <span id="public-status" class="px-2 py-1 rounded text-xs font-medium bg-surface-700 text-surface-400">
               Loading...
             </span>
           </div>
@@ -131,10 +100,7 @@
             <p id="public-docs">Documents: ...</p>
           </div>
 
-          <div
-            id="public-active"
-            class="absolute bottom-3 right-3 {% if current_env != 'public' %}hidden{% endif %}"
-          >
+          <div id="public-active" class="absolute bottom-3 right-3 {% if current_env != 'public' %}hidden{% endif %}">
             <span class="text-brand-400 text-sm font-medium">● Active</span>
           </div>
         </div>
@@ -147,14 +113,10 @@
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-2">
             <span id="promote-indicator" class="animate-spin">⏳</span>
-            <span id="promote-label" class="font-medium text-surface-300"
-              >Promoting...</span
-            >
+            <span id="promote-label" class="font-medium text-surface-300">Promoting...</span>
           </div>
-          <pre
-            id="promote-output"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="promote-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
     </section>
@@ -171,17 +133,13 @@
       </p>
 
       <!-- TMDB Subsection -->
-      <div
-        class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4"
-      >
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
         <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <span>🎬</span> TMDB Data
         </h3>
 
         <!-- TV Row -->
-        <div
-          class="flex items-center justify-between py-3 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
           <div class="flex items-center gap-3">
             <span class="text-2xl">📺</span>
             <div>
@@ -192,25 +150,19 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              onclick="openExtractModal('tv')"
+            <button onclick="openExtractModal('tv')"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-extract-tv"
-            >
+              id="btn-extract-tv">
               🔍 Extract
             </button>
-            <button
-              onclick="runEtl('tv', true)"
+            <button onclick="runEtl('tv', true)"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-etl-tv-all"
-            >
+              id="btn-etl-tv-all">
               Load All
             </button>
-            <button
-              onclick="openEtlModal('tv')"
+            <button onclick="openEtlModal('tv')"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-etl-tv-custom"
-            >
+              id="btn-etl-tv-custom">
               Load Custom...
             </button>
           </div>
@@ -229,25 +181,19 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              onclick="openExtractModal('movie')"
+            <button onclick="openExtractModal('movie')"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-extract-movie"
-            >
+              id="btn-extract-movie">
               🔍 Extract
             </button>
-            <button
-              onclick="runEtl('movie', true)"
+            <button onclick="runEtl('movie', true)"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-etl-movie-all"
-            >
+              id="btn-etl-movie-all">
               Load All
             </button>
-            <button
-              onclick="openEtlModal('movie')"
+            <button onclick="openEtlModal('movie')"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-etl-movie-custom"
-            >
+              id="btn-etl-movie-custom">
               Load Custom...
             </button>
           </div>
@@ -255,9 +201,7 @@
       </div>
 
       <!-- Person Data Subsection -->
-      <div
-        class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4"
-      >
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
         <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <span>👤</span> Person Data
         </h3>
@@ -268,9 +212,7 @@
         </p>
 
         <!-- Step 1: Bulk Download -->
-        <div
-          class="flex items-center justify-between py-3 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
           <div class="flex items-center gap-3">
             <span class="text-2xl">📥</span>
             <div>
@@ -278,30 +220,22 @@
               <p class="text-sm text-surface-500">
                 Download person IDs from TMDB daily export {% if person_ids_info
                 %}
-                <span class="text-surface-400 ml-2"
-                  >• Last download:
-                  <span class="text-green-400"
-                    >{{ person_ids_info.modified }}</span
-                  >
-                  ({{ person_ids_info.size_mb }} MB)</span
-                >
+                <span class="text-surface-400 ml-2">• Last download:
+                  <span class="text-green-400">{{ person_ids_info.modified }}</span>
+                  ({{ person_ids_info.size_mb }} MB)</span>
                 {% endif %}
               </p>
             </div>
           </div>
-          <button
-            onclick="runPersonDownload()"
+          <button onclick="runPersonDownload()"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-            id="btn-person-download"
-          >
+            id="btn-person-download">
             📥 Bulk Download
           </button>
         </div>
 
         <!-- Step 2: Extract -->
-        <div
-          class="flex items-center justify-between py-3 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
           <div class="flex items-center gap-3">
             <span class="text-2xl">🔍</span>
             <div>
@@ -314,18 +248,14 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              onclick="runPersonExtract()"
+            <button onclick="runPersonExtract()"
               class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-person-extract"
-            >
+              id="btn-person-extract">
               🔍 Extract
             </button>
-            <button
-              onclick="openPersonExtractModal()"
+            <button onclick="openPersonExtractModal()"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-person-extract-custom"
-            >
+              id="btn-person-extract-custom">
               Options...
             </button>
           </div>
@@ -344,68 +274,139 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              onclick="runPersonLoad()"
+            <button onclick="runPersonLoad()"
               class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-              id="btn-person-load"
-            >
+              id="btn-person-load">
               📤 Load
             </button>
-            <button
-              onclick="openPersonLoadModal()"
+            <button onclick="openPersonLoadModal()"
               class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
-              id="btn-person-load-options"
-            >
+              id="btn-person-load-options">
               Options...
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Podcast Data Subsection -->
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>🎙️</span> Podcast Data
+        </h3>
+
+        <p class="text-sm text-surface-400 mb-4">
+          Two-step process: (1) Download database from PodcastIndex, (2) Load
+          podcasts into Redis index.
+        </p>
+
+        <!-- Step 1: Extract/Download -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📥</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 1: Download Database</p>
+              <p class="text-sm text-surface-500">
+                Download podcastindex_feeds.db from PodcastIndex
+                <span id="podcast-db-info" class="text-surface-400 ml-2"></span>
+              </p>
+            </div>
+          </div>
+          <button onclick="runPodcastExtract()"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-podcast-extract">
+            📥 Extract
+          </button>
+        </div>
+
+        <!-- Step 2: Load -->
+        <div class="flex items-center justify-between py-3">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📤</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 2: Load</p>
+              <p class="text-sm text-surface-500">
+                podcastindex_feeds.db →
+                <span class="text-brand-400">index:podcasts</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runPodcastLoad()"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-podcast-load">
+              Load All
+            </button>
+            <button onclick="openPodcastLoadModal()"
+              class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 border border-surface-600"
+              id="btn-podcast-load-custom">
+              Load Custom...
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Podcast Extract Status -->
+      <div id="podcast-extract-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissPodcastExtractStatus()" id="podcast-extract-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
+            ✕
+          </button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🎙️</span>
+            <span id="podcast-extract-indicator" class="animate-spin">⏳</span>
+            <span id="podcast-extract-label" class="font-medium text-amber-400">Downloading...</span>
+          </div>
+          <pre id="podcast-extract-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
+      <!-- Podcast Load Status -->
+      <div id="podcast-load-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
+          <button onclick="dismissPodcastLoadStatus()" id="podcast-load-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
+            ✕
+          </button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🎙️</span>
+            <span id="podcast-load-indicator" class="animate-spin">⏳</span>
+            <span id="podcast-load-label" class="font-medium text-brand-400">Loading...</span>
+          </div>
+          <pre id="podcast-load-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
       <!-- Person Download Status -->
       <div id="person-download-status" class="hidden mb-4">
-        <div
-          class="bg-surface-800 rounded-lg p-4 border border-blue-500/30 relative"
-        >
-          <button
-            onclick="dismissPersonDownloadStatus()"
-            id="person-download-dismiss"
-            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
-          >
+        <div class="bg-surface-800 rounded-lg p-4 border border-blue-500/30 relative">
+          <button onclick="dismissPersonDownloadStatus()" id="person-download-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
             ✕
           </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📥</span>
             <span id="person-download-indicator" class="animate-spin">⏳</span>
-            <span id="person-download-label" class="font-medium text-blue-400"
-              >Downloading...</span
-            >
+            <span id="person-download-label" class="font-medium text-blue-400">Downloading...</span>
           </div>
-          <pre
-            id="person-download-output"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="person-download-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
 
       <!-- Person Extract Status -->
       <div id="person-extract-status" class="hidden mb-4">
-        <div
-          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
-        >
-          <button
-            onclick="dismissPersonExtractStatus()"
-            id="person-extract-dismiss"
-            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
-          >
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissPersonExtractStatus()" id="person-extract-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
             ✕
           </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🔍</span>
             <span id="person-extract-indicator" class="animate-spin">⏳</span>
-            <span id="person-extract-label" class="font-medium text-amber-400"
-              >Extracting...</span
-            >
+            <span id="person-extract-label" class="font-medium text-amber-400">Extracting...</span>
           </div>
 
           <!-- Progress Bar -->
@@ -415,65 +416,44 @@
               <span id="person-extract-batch-label">0 / 0</span>
             </div>
             <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-              <div
-                id="person-extract-batch-bar"
-                class="h-full bg-amber-500 transition-all duration-300"
-                style="width: 0%"
-              ></div>
+              <div id="person-extract-batch-bar" class="h-full bg-amber-500 transition-all duration-300"
+                style="width: 0%"></div>
             </div>
           </div>
 
-          <pre
-            id="person-extract-output"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="person-extract-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
 
       <!-- Person Load Status -->
       <div id="person-load-status" class="hidden mb-4">
-        <div
-          class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative"
-        >
-          <button
-            onclick="dismissPersonLoadStatus()"
-            id="person-load-dismiss"
-            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
-          >
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
+          <button onclick="dismissPersonLoadStatus()" id="person-load-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
             ✕
           </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📤</span>
             <span id="person-load-indicator" class="animate-spin">⏳</span>
-            <span id="person-load-label" class="font-medium text-brand-400"
-              >Loading...</span
-            >
+            <span id="person-load-label" class="font-medium text-brand-400">Loading...</span>
           </div>
-          <pre
-            id="person-load-output"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="person-load-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
 
       <!-- Extract Task Status -->
       <div id="extract-status-tv" class="hidden mb-4">
-        <div
-          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
-        >
-          <button
-            onclick="dismissExtractStatus('tv')"
-            id="extract-dismiss-tv"
-            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
-          >
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissExtractStatus('tv')" id="extract-dismiss-tv"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
             ✕
           </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">📺</span>
             <span id="extract-indicator-tv" class="animate-spin">⏳</span>
-            <span id="extract-label-tv" class="font-medium text-amber-400"
-              >Extracting TV Shows...</span
-            >
+            <span id="extract-label-tv" class="font-medium text-amber-400">Extracting TV Shows...</span>
           </div>
 
           <!-- Progress Bars -->
@@ -485,11 +465,8 @@
                 <span id="extract-month-label-tv">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div
-                  id="extract-month-bar-tv"
-                  class="h-full bg-amber-500 transition-all duration-300"
-                  style="width: 0%"
-                ></div>
+                <div id="extract-month-bar-tv" class="h-full bg-amber-500 transition-all duration-300"
+                  style="width: 0%"></div>
               </div>
             </div>
 
@@ -500,39 +477,27 @@
                 <span id="extract-batch-label-tv">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div
-                  id="extract-batch-bar-tv"
-                  class="h-full bg-green-500 transition-all duration-300"
-                  style="width: 0%"
-                ></div>
+                <div id="extract-batch-bar-tv" class="h-full bg-green-500 transition-all duration-300"
+                  style="width: 0%"></div>
               </div>
             </div>
           </div>
 
-          <pre
-            id="extract-output-tv"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="extract-output-tv"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
 
       <div id="extract-status-movie" class="hidden mb-4">
-        <div
-          class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative"
-        >
-          <button
-            onclick="dismissExtractStatus('movie')"
-            id="extract-dismiss-movie"
-            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden"
-          >
+        <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
+          <button onclick="dismissExtractStatus('movie')" id="extract-dismiss-movie"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
             ✕
           </button>
           <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🎥</span>
             <span id="extract-indicator-movie" class="animate-spin">⏳</span>
-            <span id="extract-label-movie" class="font-medium text-amber-400"
-              >Extracting Movies...</span
-            >
+            <span id="extract-label-movie" class="font-medium text-amber-400">Extracting Movies...</span>
           </div>
 
           <!-- Progress Bars -->
@@ -544,11 +509,8 @@
                 <span id="extract-month-label-movie">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div
-                  id="extract-month-bar-movie"
-                  class="h-full bg-amber-500 transition-all duration-300"
-                  style="width: 0%"
-                ></div>
+                <div id="extract-month-bar-movie" class="h-full bg-amber-500 transition-all duration-300"
+                  style="width: 0%"></div>
               </div>
             </div>
 
@@ -559,33 +521,23 @@
                 <span id="extract-batch-label-movie">0 / 0</span>
               </div>
               <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
-                <div
-                  id="extract-batch-bar-movie"
-                  class="h-full bg-green-500 transition-all duration-300"
-                  style="width: 0%"
-                ></div>
+                <div id="extract-batch-bar-movie" class="h-full bg-green-500 transition-all duration-300"
+                  style="width: 0%"></div>
               </div>
             </div>
           </div>
 
-          <pre
-            id="extract-output-movie"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"
-          ></pre>
+          <pre id="extract-output-movie"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
         </div>
       </div>
 
       <!-- ETL Task Status -->
-      <div
-        id="etl-status"
-        class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}"
-      >
+      <div id="etl-status"
+        class="{% if not task_status.running and not task_status.output and not task_status.error %}hidden{% endif %}">
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-3">
-            <span
-              id="etl-indicator"
-              class="{% if task_status.running %}animate-spin{% endif %}"
-            >
+            <span id="etl-indicator" class="{% if task_status.running %}animate-spin{% endif %}">
               {% if task_status.running %}⏳{% elif task_status.error %}❌{%
               else %}✅{% endif %}
             </span>
@@ -595,37 +547,24 @@
             </span>
           </div>
 
-          <pre
-            id="etl-output"
-            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap"
-          >
-{{ task_status.output }}{{ task_status.error }}</pre
-          >
+          <pre id="etl-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-48 overflow-auto whitespace-pre-wrap">
+{{ task_status.output }}{{ task_status.error }}</pre>
         </div>
       </div>
     </section>
 
     <!-- ETL Custom Modal -->
-    <div
-      id="etl-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
-      >
+    <div id="etl-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span id="modal-icon">📺</span>
             <span>Load <span id="modal-type-label">TV</span> Data</span>
           </h3>
-          <button
-            onclick="closeEtlModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closeEtlModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -636,33 +575,19 @@
 
           <!-- Filter Mode -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-2"
-              >Filter Mode</label
-            >
+            <label class="block text-sm font-medium text-surface-300 mb-2">Filter Mode</label>
             <div class="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onclick="setFilterMode('exact')"
-                id="filter-exact"
+              <button type="button" onclick="setFilterMode('exact')" id="filter-exact"
                 class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
-                data-active="true"
-              >
+                data-active="true">
                 Exact Date
               </button>
-              <button
-                type="button"
-                onclick="setFilterMode('range')"
-                id="filter-range"
-                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
-              >
+              <button type="button" onclick="setFilterMode('range')" id="filter-range"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
                 Date Range
               </button>
-              <button
-                type="button"
-                onclick="setFilterMode('all')"
-                id="filter-all"
-                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10"
-              >
+              <button type="button" onclick="setFilterMode('all')" id="filter-all"
+                class="px-3 py-2 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors border-2 border-transparent data-[active=true]:border-brand-500 data-[active=true]:bg-brand-500/10">
                 All Files
               </button>
             </div>
@@ -672,26 +597,14 @@
           <div id="exact-fields" class="space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1"
-                  >Year</label
-                >
-                <input
-                  type="number"
-                  id="etl-year"
-                  placeholder="e.g. 2025"
-                  min="2000"
-                  max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                />
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year</label>
+                <input type="number" id="etl-year" placeholder="e.g. 2025" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1"
-                  >Month (optional)</label
-                >
-                <select
-                  id="etl-month"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                >
+                <label class="block text-sm font-medium text-surface-300 mb-1">Month (optional)</label>
+                <select id="etl-month"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
                   <option value="">All months</option>
                   <option value="1">January</option>
                   <option value="2">February</option>
@@ -714,30 +627,14 @@
           <div id="range-fields" class="space-y-3 hidden">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1"
-                  >Year From (≥)</label
-                >
-                <input
-                  type="number"
-                  id="etl-year-gte"
-                  placeholder="e.g. 2020"
-                  min="2000"
-                  max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                />
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year From (≥)</label>
+                <input type="number" id="etl-year-gte" placeholder="e.g. 2020" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-surface-300 mb-1"
-                  >Year To (≤)</label
-                >
-                <input
-                  type="number"
-                  id="etl-year-lte"
-                  placeholder="e.g. 2025"
-                  min="2000"
-                  max="2030"
-                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                />
+                <label class="block text-sm font-medium text-surface-300 mb-1">Year To (≤)</label>
+                <input type="number" id="etl-year-lte" placeholder="e.g. 2025" min="2000" max="2030"
+                  class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
               </div>
             </div>
             <p class="text-xs text-surface-500">
@@ -748,9 +645,7 @@
 
           <!-- All Files Message -->
           <div id="all-fields" class="hidden">
-            <div
-              class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
-            >
+            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
               <p class="text-sm text-yellow-400">
                 ⚠️ This will load <strong>all</strong> files for this media
                 type. This may take a while.
@@ -761,11 +656,8 @@
           <!-- Options -->
           <div class="flex items-center gap-3 pt-2">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                id="etl-skip-gcs"
-                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
-              />
+              <input type="checkbox" id="etl-skip-gcs"
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500" />
               <span class="text-sm text-surface-300">Skip GCS upload</span>
             </label>
           </div>
@@ -773,17 +665,12 @@
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closeEtlModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closeEtlModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="runCustomEtl()"
-            id="btn-run-custom-etl"
-            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="runCustomEtl()" id="btn-run-custom-etl"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
             Run ETL
           </button>
         </div>
@@ -791,29 +678,17 @@
     </div>
 
     <!-- Extract Modal -->
-    <div
-      id="extract-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
-      >
+    <div id="extract-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span id="extract-modal-icon">📺</span>
-            <span
-              >Extract <span id="extract-modal-type-label">TV</span> Data from
-              TMDB</span
-            >
+            <span>Extract <span id="extract-modal-type-label">TV</span> Data from
+              TMDB</span>
           </h3>
-          <button
-            onclick="closeExtractModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closeExtractModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -829,14 +704,9 @@
 
           <!-- Start Date -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1"
-              >Start Date (YYYY-MM)</label
-            >
-            <input
-              type="month"
-              id="extract-start-date"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-            />
+            <label class="block text-sm font-medium text-surface-300 mb-1">Start Date (YYYY-MM)</label>
+            <input type="month" id="extract-start-date"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
             <p class="text-xs text-surface-500 mt-1">
               The month to start extracting from
             </p>
@@ -844,32 +714,18 @@
 
           <!-- Months Back -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1"
-              >Months Back</label
-            >
-            <input
-              type="number"
-              id="extract-months-back"
-              value="1"
-              min="1"
-              max="60"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-            />
+            <label class="block text-sm font-medium text-surface-300 mb-1">Months Back</label>
+            <input type="number" id="extract-months-back" value="1" min="1" max="60"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
             <p class="text-xs text-surface-500 mt-1">
               Number of months to process (going backwards from start date)
             </p>
           </div>
 
           <!-- Preview -->
-          <div
-            id="extract-preview"
-            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
-          >
+          <div id="extract-preview" class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
             <p class="text-xs text-surface-400 mb-1">Will extract data for:</p>
-            <p
-              id="extract-preview-text"
-              class="text-sm text-surface-200 font-medium"
-            >
+            <p id="extract-preview-text" class="text-sm text-surface-200 font-medium">
               -
             </p>
           </div>
@@ -877,17 +733,12 @@
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closeExtractModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closeExtractModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="runExtract()"
-            id="btn-run-extract"
-            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="runExtract()" id="btn-run-extract"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
             🔍 Start Extraction
           </button>
         </div>
@@ -895,26 +746,16 @@
     </div>
 
     <!-- Person Extract Modal -->
-    <div
-      id="person-extract-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
-      >
+    <div id="person-extract-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>👤</span>
             <span>Extract Person Data Options</span>
           </h3>
-          <button
-            onclick="closePersonExtractModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closePersonExtractModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -928,25 +769,16 @@
 
           <!-- Limit -->
           <div>
-            <label class="block text-sm font-medium text-surface-300 mb-1"
-              >Record Limit (Optional)</label
-            >
-            <input
-              type="number"
-              id="person-extract-limit"
-              min="1"
-              placeholder="Leave empty for all records"
-              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-            />
+            <label class="block text-sm font-medium text-surface-300 mb-1">Record Limit (Optional)</label>
+            <input type="number" id="person-extract-limit" min="1" placeholder="Leave empty for all records"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
             <p class="text-xs text-surface-500 mt-1">
               Limit the number of records to process (for testing)
             </p>
           </div>
 
           <!-- Info -->
-          <div
-            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
-          >
+          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
             <p class="text-xs text-surface-400 mb-1">Note:</p>
             <p class="text-sm text-surface-300">
               This process filters by popularity (&gt; 1.0) and enriches each
@@ -958,17 +790,12 @@
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closePersonExtractModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closePersonExtractModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="startPersonExtractFromModal()"
-            id="btn-run-person-extract"
-            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="startPersonExtractFromModal()" id="btn-run-person-extract"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors">
             🔍 Start Extraction
           </button>
         </div>
@@ -976,26 +803,16 @@
     </div>
 
     <!-- Person Load Options Modal -->
-    <div
-      id="person-load-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
-      >
+    <div id="person-load-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>📤</span>
             <span>Load Person Data Options</span>
           </h3>
-          <button
-            onclick="closePersonLoadModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closePersonLoadModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -1009,22 +826,14 @@
           <!-- Clean Load Option -->
           <div class="flex items-center gap-3">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                id="person-load-clean"
-                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
-              />
-              <span class="text-sm text-surface-300"
-                >Clean load (delete existing person data first)</span
-              >
+              <input type="checkbox" id="person-load-clean"
+                class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500" />
+              <span class="text-sm text-surface-300">Clean load (delete existing person data first)</span>
             </label>
           </div>
 
           <!-- Info about clean load -->
-          <div
-            id="clean-load-warning"
-            class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 hidden"
-          >
+          <div id="clean-load-warning" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 hidden">
             <p class="text-sm text-yellow-400">
               ⚠️ This will delete all existing
               <code class="bg-surface-800 px-1 rounded">person:*</code> keys
@@ -1034,9 +843,7 @@
           </div>
 
           <!-- Source File Info -->
-          <div
-            class="bg-surface-800/50 rounded-lg p-3 border border-surface-700"
-          >
+          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
             <p class="text-xs text-surface-400 mb-1">Source File:</p>
             <p class="text-sm text-surface-300 font-mono">
               data/person/enriched_person_*.json
@@ -1049,17 +856,67 @@
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closePersonLoadModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closePersonLoadModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="startPersonLoadFromModal()"
-            id="btn-run-person-load-modal"
-            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="startPersonLoadFromModal()" id="btn-run-person-load-modal"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+            📤 Start Load
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Podcast Load Modal -->
+    <div id="podcast-load-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
+          <h3 class="text-lg font-semibold flex items-center gap-2">
+            <span>🎙️</span>
+            <span>Load Podcast Data - Custom</span>
+          </h3>
+          <button onclick="closePodcastLoadModal()" class="text-surface-400 hover:text-white p-1 rounded">
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-4 space-y-4">
+          <p class="text-sm text-surface-400">
+            Load podcasts from local database into Redis. Use the limit option
+            to load a subset for testing.
+          </p>
+
+          <!-- Limit Option -->
+          <div>
+            <label class="block text-sm font-medium text-surface-300 mb-2">Record Limit (optional)</label>
+            <input type="number" id="podcast-load-limit" placeholder="e.g. 1000 (leave empty for all)" min="1"
+              max="200000"
+              class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
+            <p class="text-xs text-surface-500 mt-1">
+              Leave empty to load all ~147K podcasts (popularity ≥ 3)
+            </p>
+          </div>
+
+          <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+            <p class="text-sm text-blue-400">
+              💡 Tip: Use a smaller limit (e.g. 1000) for testing before
+              loading all records.
+            </p>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
+          <button onclick="closePodcastLoadModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button onclick="startPodcastLoadFromModal()" id="btn-run-podcast-load-modal"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
             📤 Start Load
           </button>
         </div>
@@ -1067,26 +924,16 @@
     </div>
 
     <!-- Promote to Dev Modal -->
-    <div
-      id="promote-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
-      >
+    <div id="promote-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>🚀</span>
             <span>Promote to Dev</span>
           </h3>
-          <button
-            onclick="closePromoteModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closePromoteModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -1095,27 +942,19 @@
         <div class="p-4 space-y-4">
           <p class="text-sm text-surface-400">
             Select the indices to promote from local Redis to public/dev Redis.
-            <strong class="text-yellow-400"
-              >This is a complete replacement</strong
-            >
+            <strong class="text-yellow-400">This is a complete replacement</strong>
             - selected indices will be deleted on dev and recreated with fresh
             data from local.
           </p>
 
           <!-- Loading state -->
-          <div
-            id="promote-indices-loading"
-            class="flex items-center justify-center py-8"
-          >
+          <div id="promote-indices-loading" class="flex items-center justify-center py-8">
             <span class="animate-spin mr-2">⏳</span>
             <span class="text-surface-400">Loading available indices...</span>
           </div>
 
           <!-- Error state -->
-          <div
-            id="promote-indices-error"
-            class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4"
-          >
+          <div id="promote-indices-error" class="hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4">
             <p class="text-sm text-red-400" id="promote-indices-error-msg">
               Failed to load indices
             </p>
@@ -1124,33 +963,20 @@
           <!-- Indices list -->
           <div id="promote-indices-list" class="hidden space-y-3">
             <!-- Select All -->
-            <div
-              class="flex items-center justify-between pb-2 border-b border-surface-700"
-            >
+            <div class="flex items-center justify-between pb-2 border-b border-surface-700">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="promote-select-all"
-                  onchange="toggleAllPromoteIndices()"
-                  class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500"
-                />
-                <span class="text-sm font-medium text-surface-300"
-                  >Select All</span
-                >
+                <input type="checkbox" id="promote-select-all" onchange="toggleAllPromoteIndices()"
+                  class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500" />
+                <span class="text-sm font-medium text-surface-300">Select All</span>
               </label>
             </div>
 
             <!-- Index checkboxes will be inserted here -->
-            <div
-              id="promote-indices-container"
-              class="space-y-2 max-h-64 overflow-y-auto"
-            ></div>
+            <div id="promote-indices-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
           </div>
 
           <!-- Warning -->
-          <div
-            class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
-          >
+          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
             <p class="text-sm text-yellow-400">
               ⚠️ <strong>Warning:</strong> This will completely replace the
               selected indices on dev. All existing data for selected indices
@@ -1161,18 +987,13 @@
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closePromoteModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closePromoteModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="startPromoteFromModal()"
-            id="btn-run-promote-modal"
+          <button onclick="startPromoteFromModal()" id="btn-run-promote-modal"
             class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled
-          >
+            disabled>
             🚀 Promote Selected
           </button>
         </div>
@@ -1180,26 +1001,16 @@
     </div>
 
     <!-- Copy to Local Modal -->
-    <div
-      id="copy-to-local-modal"
-      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
-      style="display: none"
-    >
-      <div
-        class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4"
-      >
+    <div id="copy-to-local-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+      style="display: none">
+      <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-lg mx-4">
         <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between p-4 border-b border-surface-700"
-        >
+        <div class="flex items-center justify-between p-4 border-b border-surface-700">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <span>📥</span>
             <span>Copy to Local</span>
           </h3>
-          <button
-            onclick="closeCopyToLocalModal()"
-            class="text-surface-400 hover:text-white p-1 rounded"
-          >
+          <button onclick="closeCopyToLocalModal()" class="text-surface-400 hover:text-white p-1 rounded">
             ✕
           </button>
         </div>
@@ -1213,35 +1024,22 @@
             data from public.
           </p>
 
-          <div
-            class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-300"
-          >
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-300">
             <strong>⚠️ Warning:</strong> This will overwrite your local data
             with public data.
           </div>
 
           <!-- Loading State -->
-          <div
-            id="copy-indices-loading"
-            class="py-4 text-center text-surface-400"
-          >
+          <div id="copy-indices-loading" class="py-4 text-center text-surface-400">
             <span class="animate-pulse">Loading available indices...</span>
           </div>
 
           <!-- Index Selection -->
           <div id="copy-indices-list" class="space-y-2 hidden">
-            <div
-              class="flex items-center gap-2 pb-2 border-b border-surface-700"
-            >
-              <label
-                class="flex items-center gap-2 cursor-pointer text-sm text-surface-300"
-              >
-                <input
-                  type="checkbox"
-                  id="copy-select-all"
-                  onchange="toggleCopySelectAll()"
-                  class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500"
-                />
+            <div class="flex items-center gap-2 pb-2 border-b border-surface-700">
+              <label class="flex items-center gap-2 cursor-pointer text-sm text-surface-300">
+                <input type="checkbox" id="copy-select-all" onchange="toggleCopySelectAll()"
+                  class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500" />
                 <span>Select All</span>
               </label>
             </div>
@@ -1249,28 +1047,20 @@
           </div>
 
           <!-- Error State -->
-          <div
-            id="copy-indices-error"
-            class="hidden py-4 text-center text-red-400"
-          >
+          <div id="copy-indices-error" class="hidden py-4 text-center text-red-400">
             Failed to load indices
           </div>
         </div>
 
         <!-- Modal Footer -->
         <div class="flex justify-end gap-3 p-4 border-t border-surface-700">
-          <button
-            onclick="closeCopyToLocalModal()"
-            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
-          >
+          <button onclick="closeCopyToLocalModal()"
+            class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button
-            onclick="startCopyToLocalFromModal()"
-            id="btn-run-copy-modal"
+          <button onclick="startCopyToLocalFromModal()" id="btn-run-copy-modal"
             class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled
-          >
+            disabled>
             📥 Copy Selected
           </button>
         </div>
@@ -1283,11 +1073,8 @@
         <h2 class="text-xl font-semibold flex items-center gap-2">
           <span class="text-2xl">🗂️</span> Index Management
         </h2>
-        <button
-          onclick="refreshStatsWithFeedback()"
-          id="btn-refresh-stats"
-          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
+        <button onclick="refreshStatsWithFeedback()" id="btn-refresh-stats"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
           <span id="refresh-icon">🔄</span> Refresh
         </button>
       </div>
@@ -1298,9 +1085,7 @@
       </p>
 
       <!-- Media Index -->
-      <div
-        class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4"
-      >
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h3 class="font-semibold text-lg text-surface-200">
@@ -1309,18 +1094,14 @@
             <p class="text-sm text-surface-500">idx:media • Prefix: media:*</p>
           </div>
           <div class="flex flex-wrap gap-3">
-            <button
-              onclick="deleteIndex('media')"
+            <button onclick="deleteIndex('media')"
               class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-delete-index-media"
-            >
+              id="btn-delete-index-media">
               🗑️ Delete Index
             </button>
-            <button
-              onclick="createIndex('media')"
+            <button onclick="createIndex('media')"
               class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-create-index-media"
-            >
+              id="btn-create-index-media">
               ➕ Create Index
             </button>
           </div>
@@ -1328,18 +1109,14 @@
 
         <!-- Index Stats - values loaded async via JavaScript -->
         <div class="grid md:grid-cols-2 gap-4 mt-4">
-          <div
-            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
-          >
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
             <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
             <p id="stat-num-docs" class="text-3xl font-bold text-brand-400">
               Loading...
             </p>
           </div>
 
-          <div
-            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
-          >
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
             <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
             <p id="stat-index-memory" class="text-3xl font-bold text-brand-400">
               Loading...
@@ -1348,19 +1125,14 @@
         </div>
 
         <div class="mt-4">
-          <a
-            href="/admin/index_info"
-            class="text-brand-400 hover:text-brand-300 text-sm"
-          >
+          <a href="/admin/index_info" class="text-brand-400 hover:text-brand-300 text-sm">
             View Full Index Info →
           </a>
         </div>
       </div>
 
       <!-- People Index -->
-      <div
-        class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4"
-      >
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h3 class="font-semibold text-lg text-surface-200">
@@ -1371,18 +1143,14 @@
             </p>
           </div>
           <div class="flex flex-wrap gap-3">
-            <button
-              onclick="deleteIndex('people')"
+            <button onclick="deleteIndex('people')"
               class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-delete-index-people"
-            >
+              id="btn-delete-index-people">
               🗑️ Delete Index
             </button>
-            <button
-              onclick="createIndex('people')"
+            <button onclick="createIndex('people')"
               class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
-              id="btn-create-index-people"
-            >
+              id="btn-create-index-people">
               ➕ Create Index
             </button>
           </div>
@@ -1390,26 +1158,59 @@
 
         <!-- Index Stats - values loaded async via JavaScript -->
         <div class="grid md:grid-cols-2 gap-4 mt-4">
-          <div
-            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
-          >
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
             <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
-            <p
-              id="stat-people-num-docs"
-              class="text-3xl font-bold text-brand-400"
-            >
+            <p id="stat-people-num-docs" class="text-3xl font-bold text-brand-400">
               Loading...
             </p>
           </div>
 
-          <div
-            class="bg-surface-900/50 rounded-lg p-4 border border-surface-700"
-          >
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
             <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
-            <p
-              id="stat-people-index-memory"
-              class="text-3xl font-bold text-brand-400"
-            >
+            <p id="stat-people-index-memory" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Podcasts Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">podcasts</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:podcasts • Prefix: podcast:*
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('podcasts')"
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-podcasts">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('podcasts')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-podcasts">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Index Stats - values loaded async via JavaScript -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-podcasts-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-podcasts-index-memory" class="text-3xl font-bold text-brand-400">
               Loading...
             </p>
           </div>
@@ -1421,10 +1222,7 @@
         <div class="bg-surface-800 rounded-lg p-4">
           <div class="flex items-center gap-2">
             <span id="index-indicator">⏳</span>
-            <span
-              id="index-message"
-              class="font-medium text-surface-300"
-            ></span>
+            <span id="index-message" class="font-medium text-surface-300"></span>
           </div>
         </div>
       </div>
@@ -1461,7 +1259,7 @@
       <h3 class="text-lg font-medium mb-3 text-surface-300">
         🔑 Key Breakdown
       </h3>
-      <div class="grid md:grid-cols-5 gap-4 mb-6">
+      <div class="grid md:grid-cols-6 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
           <p id="stat-media-keys" class="text-2xl font-bold text-green-400">
@@ -1476,6 +1274,14 @@
             ...
           </p>
           <p class="text-xs text-surface-500">person:*</p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Podcast Keys</p>
+          <p id="stat-podcast-keys" class="text-2xl font-bold text-pink-400">
+            ...
+          </p>
+          <p class="text-xs text-surface-500">podcast:*</p>
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1551,6 +1357,16 @@
           peopleIndexMemoryEl.textContent = formatMB(data.people_index_stats.index_memory_bytes || 0);
         }
 
+        // Update podcasts index stats
+        const podcastsNumDocsEl = document.getElementById('stat-podcasts-num-docs');
+        if (podcastsNumDocsEl) {
+          podcastsNumDocsEl.textContent = formatNumber(data.podcasts_num_docs || 0);
+        }
+        const podcastsIndexMemoryEl = document.getElementById('stat-podcasts-index-memory');
+        if (podcastsIndexMemoryEl && data.podcasts_index_stats) {
+          podcastsIndexMemoryEl.textContent = formatMB(data.podcasts_index_stats.index_memory_bytes || 0);
+        }
+
         // Update overall Redis memory stats
         document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
         document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
@@ -1560,6 +1376,10 @@
         const personKeysEl = document.getElementById('stat-person-keys');
         if (personKeysEl) {
           personKeysEl.textContent = formatNumber(data.cache_breakdown.person || 0);
+        }
+        const podcastKeysEl = document.getElementById('stat-podcast-keys');
+        if (podcastKeysEl) {
+          podcastKeysEl.textContent = formatNumber(data.cache_breakdown.podcast || 0);
         }
         document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
         document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
@@ -2316,7 +2136,7 @@
 
   function getMonthName(monthNum) {
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
-                    'July', 'August', 'September', 'October', 'November', 'December'];
+      'July', 'August', 'September', 'October', 'November', 'December'];
     return months[monthNum - 1] || '';
   }
 
@@ -2827,7 +2647,7 @@
 
     // Add listener for clean load checkbox
     const cleanCheckbox = document.getElementById('person-load-clean');
-    cleanCheckbox.onchange = function() {
+    cleanCheckbox.onchange = function () {
       document.getElementById('clean-load-warning').classList.toggle('hidden', !this.checked);
     };
 
@@ -2898,6 +2718,218 @@
       document.getElementById('btn-person-load-options').disabled = false;
     }
   }
+
+  // ============================================================
+  // Podcast ETL Functions
+  // ============================================================
+
+  function setPodcastButtonsDisabled(disabled) {
+    const btns = ['btn-podcast-extract', 'btn-podcast-load', 'btn-podcast-load-custom'];
+    btns.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  // Load podcast DB info on page load
+  async function loadPodcastDbInfo() {
+    try {
+      const res = await fetch('/api/podcast/db-info');
+      const data = await res.json();
+      const infoEl = document.getElementById('podcast-db-info');
+      if (infoEl) {
+        if (data.exists) {
+          infoEl.innerHTML = `• Last download: <span class="text-green-400">${data.modified}</span> (${data.size_mb} MB)`;
+        } else {
+          infoEl.innerHTML = `<span class="text-amber-400">• Not downloaded yet</span>`;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load podcast DB info:', e);
+    }
+  }
+
+  // Step 1: Extract/Download
+  async function runPodcastExtract() {
+    setPodcastButtonsDisabled(true);
+
+    const statusEl = document.getElementById('podcast-extract-status');
+    const indicatorEl = document.getElementById('podcast-extract-indicator');
+    const labelEl = document.getElementById('podcast-extract-label');
+    const outputEl = document.getElementById('podcast-extract-output');
+    const dismissBtn = document.getElementById('podcast-extract-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = 'Downloading podcast database...';
+    labelEl.className = 'font-medium text-amber-400';
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/podcast/extract', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPodcastExtractStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = e.message;
+      setPodcastButtonsDisabled(false);
+    }
+  }
+
+  async function pollPodcastExtractStatus() {
+    const indicatorEl = document.getElementById('podcast-extract-indicator');
+    const labelEl = document.getElementById('podcast-extract-label');
+    const outputEl = document.getElementById('podcast-extract-output');
+    const dismissBtn = document.getElementById('podcast-extract-dismiss');
+
+    try {
+      const res = await fetch('/api/podcast/extract-status');
+      const data = await res.json();
+
+      outputEl.textContent = data.output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(pollPodcastExtractStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+          outputEl.textContent += '\n\nError: ' + data.error;
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Download Complete!';
+          labelEl.className = 'font-medium text-green-400';
+          // Refresh DB info
+          loadPodcastDbInfo();
+        }
+        setPodcastButtonsDisabled(false);
+      }
+    } catch (e) {
+      setTimeout(pollPodcastExtractStatus, 1000);
+    }
+  }
+
+  function dismissPodcastExtractStatus() {
+    document.getElementById('podcast-extract-status').classList.add('hidden');
+  }
+
+  // Step 2: Load
+  async function runPodcastLoad(limit = null) {
+    setPodcastButtonsDisabled(true);
+
+    const statusEl = document.getElementById('podcast-load-status');
+    const indicatorEl = document.getElementById('podcast-load-indicator');
+    const labelEl = document.getElementById('podcast-load-label');
+    const outputEl = document.getElementById('podcast-load-output');
+    const dismissBtn = document.getElementById('podcast-load-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = limit ? `Loading ${limit} podcasts...` : 'Loading all podcasts...';
+    labelEl.className = 'font-medium text-brand-400';
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+
+    try {
+      const params = new URLSearchParams();
+      if (limit) params.set('limit', limit);
+
+      const res = await fetch(`/api/podcast/load?${params.toString()}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollPodcastLoadStatus();
+    } catch (e) {
+      indicatorEl.textContent = '❌';
+      indicatorEl.className = '';
+      labelEl.textContent = 'Error';
+      labelEl.className = 'font-medium text-red-400';
+      outputEl.textContent = e.message;
+      setPodcastButtonsDisabled(false);
+    }
+  }
+
+  async function pollPodcastLoadStatus() {
+    const indicatorEl = document.getElementById('podcast-load-indicator');
+    const labelEl = document.getElementById('podcast-load-label');
+    const outputEl = document.getElementById('podcast-load-output');
+    const dismissBtn = document.getElementById('podcast-load-dismiss');
+
+    try {
+      const res = await fetch('/api/podcast/load-status');
+      const data = await res.json();
+
+      outputEl.textContent = data.output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(pollPodcastLoadStatus, 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+          outputEl.textContent += '\n\nError: ' + data.error;
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = 'Load Complete!';
+          labelEl.className = 'font-medium text-green-400';
+          // Refresh stats
+          await refreshStats();
+        }
+        setPodcastButtonsDisabled(false);
+      }
+    } catch (e) {
+      setTimeout(pollPodcastLoadStatus, 1000);
+    }
+  }
+
+  function dismissPodcastLoadStatus() {
+    document.getElementById('podcast-load-status').classList.add('hidden');
+  }
+
+  // Podcast Load Modal
+  function openPodcastLoadModal() {
+    const modal = document.getElementById('podcast-load-modal');
+    document.getElementById('podcast-load-limit').value = '';
+    modal.style.display = 'flex';
+  }
+
+  function closePodcastLoadModal() {
+    document.getElementById('podcast-load-modal').style.display = 'none';
+  }
+
+  function startPodcastLoadFromModal() {
+    const limitInput = document.getElementById('podcast-load-limit').value;
+    const limit = limitInput ? parseInt(limitInput, 10) : null;
+    closePodcastLoadModal();
+    runPodcastLoad(limit);
+  }
+
+  // Load podcast DB info on page load
+  loadPodcastDbInfo();
 
   // Refresh Redis connection status
   async function refreshConnectionStatus() {

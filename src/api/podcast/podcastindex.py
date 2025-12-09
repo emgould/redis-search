@@ -66,6 +66,7 @@ class PodcastFeed:
     itunes_id: int | None
     trend_score: int | None
     language: str | None
+    popularity_score: int | None = None  # 0-29 scale from PodcastIndex
     categories: dict[str, str] = field(default_factory=dict)
     dead: int | None = None
     locked: int | None = None
@@ -101,6 +102,9 @@ class PodcastFeed:
             itunes_id=(int(d["itunesId"]) if d.get("itunesId") is not None else None),
             trend_score=(int(d["trendScore"]) if d.get("trendScore") is not None else None),
             language=d.get("language"),
+            popularity_score=(
+                int(d["popularityScore"]) if d.get("popularityScore") is not None else None
+            ),
             categories={str(k): str(v) for k, v in (d.get("categories") or {}).items()},
             dead=(int(d["dead"]) if d.get("dead") is not None else None),
             locked=(int(d["locked"]) if d.get("locked") is not None else None),
@@ -305,7 +309,9 @@ class PodcastIndexClient(BaseAPIClient):
                     raise RuntimeError(f"Event loop is closed, cannot complete request to {url}")
             except RuntimeError:
                 # No running loop or loop is closed
-                raise RuntimeError(f"Event loop shutdown detected, cannot complete request to {url}")
+                raise RuntimeError(
+                    f"Event loop shutdown detected, cannot complete request to {url}"
+                )
             # Create a minimal error response - simplified to avoid complex RequestInfo construction
             raise RuntimeError(f"Request to {url} failed after all retries")
 
@@ -330,8 +336,14 @@ class PodcastIndexClient(BaseAPIClient):
         except (RuntimeError, AttributeError) as e:
             # Handle event loop shutdown or other runtime errors gracefully
             error_msg = str(e).lower()
-            if "cannot schedule" in error_msg or "event loop is closed" in error_msg or "shutdown" in error_msg:
-                logger.warning(f"Event loop shutdown detected in search_podcasts, returning empty list: {e}")
+            if (
+                "cannot schedule" in error_msg
+                or "event loop is closed" in error_msg
+                or "shutdown" in error_msg
+            ):
+                logger.warning(
+                    f"Event loop shutdown detected in search_podcasts, returning empty list: {e}"
+                )
                 return []
             # Re-raise other RuntimeErrors
             raise

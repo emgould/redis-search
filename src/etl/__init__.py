@@ -24,7 +24,7 @@ from etl.etl_runner import (
     run_full_etl,
     run_single_etl,
 )
-from etl.tmdb_changes_etl import (
+from etl.tmdb_nightly_etl import (
     ChangesETLStats,
     TMDBChangesETL,
     run_nightly_etl,
