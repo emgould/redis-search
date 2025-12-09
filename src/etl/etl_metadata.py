@@ -220,7 +220,29 @@ class ETLMetadataStore:
     @property
     def client(self) -> storage.Client:
         if self._client is None:
-            self._client = storage.Client()
+            # On GCE VMs, use default credentials (service account)
+            # If GOOGLE_APPLICATION_CREDENTIALS is set to empty string, unset it
+            # to allow default credentials to work
+            creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if creds_path == "":
+                # Temporarily unset to allow default credentials
+                os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+
+            try:
+                # Use default credentials (works on GCE VMs with service accounts)
+                self._client = storage.Client()
+            except Exception:
+                # If default credentials fail, try with explicit project from env
+                project = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+                if project:
+                    self._client = storage.Client(project=project)
+                else:
+                    # Re-raise the original error if we can't resolve it
+                    raise
+            finally:
+                # Restore original value if we unset it
+                if creds_path == "":
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ""
         return self._client
 
     @property

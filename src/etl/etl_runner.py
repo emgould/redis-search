@@ -24,7 +24,8 @@ from etl.etl_metadata import (
     JobRunResult,
     create_run_metadata,
 )
-from etl.tmdb_changes_etl import ChangesETLStats, run_nightly_etl
+from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
+from etl.tmdb_nightly_etl import ChangesETLStats, run_nightly_etl
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -144,8 +145,9 @@ class ETLConfig:
 
 
 # Registry of available ETL functions
-ETL_FUNCTIONS = {
-    "tmdb_changes_etl": run_nightly_etl,
+ETL_FUNCTIONS: dict[str, Any] = {
+    "tmdb_nightly_etl": run_nightly_etl,
+    "pi_nightly_etl": run_pi_nightly_etl,
 }
 
 
@@ -245,24 +247,35 @@ class ETLRunner:
 
             logger.info(f"Running {job_name}: {start_date} to {end_date}")
 
-            # Validate media_type
-            if params.media_type not in ("tv", "movie", "person"):
-                raise ValueError(f"Invalid media_type: {params.media_type}")
+            # Handle different ETL types
+            if job.target == "pi_nightly_etl":
+                # PodcastIndex ETL - doesn't use media_type/dates, uses since_hours
+                stats: ChangesETLStats | PIETLStats = await etl_func(
+                    media_type="podcast",
+                    redis_host=self.config.redis_host,
+                    redis_port=self.config.redis_port,
+                    redis_password=self.config.redis_password,
+                    max_batches=params.max_batches,
+                )
+            else:
+                # TMDB ETL - validate media_type
+                if params.media_type not in ("tv", "movie", "person"):
+                    raise ValueError(f"Invalid media_type: {params.media_type}")
 
-            # Cast media_type to the literal type
-            media_type_literal: Literal["tv", "movie", "person"] = params.media_type  # type: ignore[assignment]
-            stats: ChangesETLStats = await etl_func(
-                media_type=media_type_literal,
-                start_date=start_date,
-                end_date=end_date,
-                redis_host=self.config.redis_host,
-                redis_port=self.config.redis_port,
-                redis_password=self.config.redis_password,
-                verbose=params.verbose,
-                max_batches=params.max_batches,
-            )
+                # Cast media_type to the literal type
+                media_type_literal: Literal["tv", "movie", "person"] = params.media_type  # type: ignore[assignment]
+                stats = await etl_func(
+                    media_type=media_type_literal,
+                    start_date=start_date,
+                    end_date=end_date,
+                    redis_host=self.config.redis_host,
+                    redis_port=self.config.redis_port,
+                    redis_password=self.config.redis_password,
+                    verbose=params.verbose,
+                    max_batches=params.max_batches,
+                )
 
-            # Update result from stats
+            # Update result from stats (both ETL types have compatible interfaces)
             load_errors = stats.load_phase.items_failed
             result.status = "success" if load_errors == 0 else "partial"
             result.changes_found = stats.total_changes_found
@@ -279,13 +292,15 @@ class ETLRunner:
                 )
 
         except Exception as e:
+            import traceback
             result.status = "failed"
             result.error_message = str(e)
             result.errors.append(str(e))
-            logger.error(f"Job {job_name} failed: {e}")
+            error_traceback = traceback.format_exc()
+            logger.error(f"Job {job_name} failed: {e}\n{error_traceback}")
 
             if self._run_metadata:
-                self._run_metadata.add_log(f"FAILED {job_name}: {e}")
+                self._run_metadata.add_log(f"FAILED {job_name}: {e}\n{error_traceback}")
 
         finally:
             result.completed_at = datetime.now()
