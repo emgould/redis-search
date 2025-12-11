@@ -202,8 +202,8 @@ def build_authors_autocomplete_query(q: str) -> str:
 
 def build_books_autocomplete_query(q: str) -> str:
     """
-    Build a prefix search query for books (OpenLibrary works) autocomplete.
-    Searches search_title (title), title, and author_search fields.
+    Build a search query for books (OpenLibrary works) autocomplete.
+    Uses simple word matching - BM25 scorer in repository handles ranking.
     """
     words = q.lower().split()
     # Filter out stopwords and empty strings
@@ -228,17 +228,15 @@ def build_books_autocomplete_query(q: str) -> str:
     if not words:
         return "*"
 
-    # For multi-word: match documents containing all words (last word as prefix)
     if len(words) == 1:
-        # Search title and author
-        return f"(@search_title:{words[0]}*) | (@title:{words[0]}*) | (@author_search:{words[0]}*)"
+        # Single word - use prefix for autocomplete
+        return f"@search_title:{words[0]}*"
     else:
-        # All words except last should be exact, last word is prefix
-        exact_words = " ".join(words[:-1])
-        prefix_word = words[-1]
-        title_query = f"@search_title:({exact_words} {prefix_word}*)"
-        author_query = f"@author_search:({exact_words} {prefix_word}*)"
-        return f"({title_query}) | ({author_query})"
+        # Multiple words - require all words, last word as prefix for autocomplete
+        # BM25 scorer will rank shorter/exact matches higher
+        parts = [f"@search_title:{w}" for w in words[:-1]]
+        parts.append(f"@search_title:{words[-1]}*")
+        return " ".join(parts)
 
 
 async def autocomplete(q: str) -> dict[str, list]:

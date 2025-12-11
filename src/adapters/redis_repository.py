@@ -124,7 +124,9 @@ class RedisRepository:
             sort_by: Field to sort by (first_publish_year, ratings_average, etc.)
             sort_asc: Sort ascending if True, descending if False
         """
-        query = Query(query_str).paging(0, limit)
+        # Use BM25 scorer for better ranking - normalizes by document length
+        # so shorter exact matches rank higher than longer titles containing the terms
+        query = Query(query_str).paging(0, limit).scorer("BM25")
 
         # Sort by the specified field if provided
         if sort_by:
