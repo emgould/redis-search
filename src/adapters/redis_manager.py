@@ -44,7 +44,7 @@ class RedisManager:
                 host=os.getenv("REDIS_HOST", "localhost"),
                 port=int(os.getenv("REDIS_PORT", "6380")),
                 password=os.getenv("REDIS_PASSWORD") or None,
-                name="Local Redis (Docker)"
+                name="Local Redis (Docker)",
             )
         else:
             host = os.getenv("PUBLIC_REDIS_HOST", "localhost")
@@ -55,10 +55,7 @@ class RedisManager:
             else:
                 name = f"Public Redis (GCE VM at {host})"
             return RedisConfig(
-                host=host,
-                port=port,
-                password=os.getenv("PUBLIC_REDIS_PASSWORD") or None,
-                name=name
+                host=host, port=port, password=os.getenv("PUBLIC_REDIS_PASSWORD") or None, name=name
             )
 
     @classmethod
@@ -86,6 +83,8 @@ class RedisManager:
                 port=config.port,
                 password=config.password,
                 decode_responses=True,
+                socket_timeout=10.0,
+                socket_connect_timeout=5.0,
             )
 
         return cls._connections[env]
@@ -100,6 +99,8 @@ class RedisManager:
                 port=config.port,
                 password=config.password,
                 decode_responses=True,
+                socket_timeout=5.0,
+                socket_connect_timeout=5.0,
             )
             await client.ping()  # type: ignore[misc]
             info = await client.info("server")
@@ -127,4 +128,3 @@ class RedisManager:
 def get_redis() -> Redis:
     """Get the current Redis client."""
     return RedisManager.get_redis()
-

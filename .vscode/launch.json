@@ -2,6 +2,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Python: API Debug",
       "type": "python",
@@ -22,6 +23,20 @@
       "request": "launch",
       "program": "web/app.py",
       "console": "integratedTerminal"
-    }
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/firebase/python_functions",
+      "env": {  
+        "PYTHONPATH": "${workspaceFolder}/firebase/python_functions",
+        "FIREBASE_AUTH_EMULATOR_HOST": "localhost:9099"
+      },
+      "envFile": "${workspaceFolder}/firebase/python_functions/.env",
+      "justMyCode": false
+    },
   ]
 }

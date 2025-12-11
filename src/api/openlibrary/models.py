@@ -5,6 +5,8 @@ Follows the TMDB pattern with Pydantic 2.0
 
 from typing import Any
 
+from pydantic import Field, model_validator
+
 from contracts.models import (
     MCBaseItem,
     MCSearchResponse,
@@ -13,8 +15,6 @@ from contracts.models import (
     MCType,
     generate_mc_id,
 )
-from pydantic import Field, model_validator
-
 from utils.pydantic_tools import BaseModelWithMethods
 
 
@@ -103,7 +103,6 @@ class MCBookItem(MCBaseItem):
         # Populate images array from cover_urls if available and images is empty
         if not self.images and self.cover_urls:
             from contracts.models import MCImage, MCUrlType
-
             from utils.get_logger import get_logger
 
             logger = get_logger(__name__)
@@ -180,6 +179,7 @@ class MCAuthorItem(MCBaseItem):
         default_factory=list
     )  # OpenLibrary-specific links (not MCBaseItem.links)
     birth_date: str | None = None
+    death_date: str | None = None
     full_name: str | None = None
 
     # Derived properties

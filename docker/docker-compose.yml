@@ -13,7 +13,7 @@ services:
     environment:
       - RIPROXYEULA=true
       # volatile-lru only evicts keys with TTL (cache), NEVER permanent data (media, person, indices)
-      - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 4gb --maxmemory-policy volatile-lru
+      - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 8gb --maxmemory-policy volatile-lru
 
   web:
     build:
