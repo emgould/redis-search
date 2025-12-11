@@ -42,10 +42,9 @@ jobs:
     enabled: true
     runs:
       - params:
-          media_type: "podcast"  # Required but not used by PI ETL
+          media_type: "podcast" # Required but not used by PI ETL
           verbose: false
           # max_batches: 100  # Uncomment to limit records for testing
-
 # Redis configuration (can be overridden by environment variables)
 # redis:
 #   host: localhost

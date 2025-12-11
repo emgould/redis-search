@@ -42,7 +42,7 @@ class OpenLibraryService(BaseAPIClient):
 
     # Rate limiter configuration: OpenLibrary API limits
     # API zone: 180 requests per minute = 3 per second
-    _rate_limit_max = 3
+    _rate_limit_max = 20
     _rate_limit_period = 1
 
     # Cover zone: 400 requests per minute ≈ 6.67 per second

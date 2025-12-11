@@ -194,7 +194,9 @@ class PodcastIndexNightlyETL:
                 mb_downloaded = downloaded / (1024 * 1024)
                 mb_total = total_size / (1024 * 1024)
                 if block_num % 1000 == 0:  # Log every ~8MB
-                    logger.info(f"  Download progress: {percent:.1f}% ({mb_downloaded:.1f}/{mb_total:.1f} MB)")
+                    logger.info(
+                        f"  Download progress: {percent:.1f}% ({mb_downloaded:.1f}/{mb_total:.1f} MB)"
+                    )
 
         urllib.request.urlretrieve(DB_DOWNLOAD_URL, str(tgz_path), reporthook=report_progress)
 
@@ -419,7 +421,9 @@ class PodcastIndexNightlyETL:
                     if dry_run:
                         stats.documents_loaded += 1
                         if stats.documents_loaded <= 5:
-                            logger.info(f"  [DRY RUN] Would load: {search_doc.search_title[:50]} -> {key}")
+                            logger.info(
+                                f"  [DRY RUN] Would load: {search_doc.search_title[:50]} -> {key}"
+                            )
                     else:
                         pipeline.json().set(key, "$", redis_doc)  # type: ignore
                         batch_count += 1

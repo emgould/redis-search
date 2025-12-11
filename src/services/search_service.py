@@ -54,10 +54,12 @@ def parse_doc(doc):
             result[key] = value
 
     # Fix legacy person data that may be missing tmdb_ prefix and source_id
+    # BUT skip this for OpenLibrary authors (mc_subtype === "author")
     doc_id = result.get("id", "")
     mc_type = result.get("mc_type", "")
+    mc_subtype = result.get("mc_subtype", "")
 
-    if mc_type == "person":
+    if mc_type == "person" and mc_subtype != "author":
         # Fix id if missing tmdb_ prefix (e.g., "person_17419" -> "tmdb_person_17419")
         if doc_id.startswith("person_") and not doc_id.startswith("tmdb_"):
             result["id"] = f"tmdb_{doc_id}"
@@ -157,15 +159,95 @@ def build_podcasts_autocomplete_query(q: str) -> str:
         return f"({title_query}) | ({author_query})"
 
 
+def build_authors_autocomplete_query(q: str) -> str:
+    """
+    Build a prefix search query for authors (OpenLibrary) autocomplete.
+    Searches both search_title (name) and name fields.
+    """
+    words = q.lower().split()
+    # Filter out stopwords and empty strings
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "is",
+        "it",
+    }
+    words = [w for w in words if w and w not in stopwords]
+
+    if not words:
+        return "*"
+
+    # For multi-word: match documents containing all words (last word as prefix)
+    if len(words) == 1:
+        # Search both search_title and name
+        return f"(@search_title:{words[0]}*) | (@name:{words[0]}*)"
+    else:
+        # All words except last should be exact, last word is prefix
+        exact_words = " ".join(words[:-1])
+        prefix_word = words[-1]
+        title_query = f"@search_title:({exact_words} {prefix_word}*)"
+        name_query = f"@name:({exact_words} {prefix_word}*)"
+        return f"({title_query}) | ({name_query})"
+
+
+def build_books_autocomplete_query(q: str) -> str:
+    """
+    Build a search query for books (OpenLibrary works) autocomplete.
+    Uses simple word matching - BM25 scorer in repository handles ranking.
+    """
+    words = q.lower().split()
+    # Filter out stopwords and empty strings
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "is",
+        "it",
+    }
+    words = [w for w in words if w and w not in stopwords]
+
+    if not words:
+        return "*"
+
+    if len(words) == 1:
+        # Single word - use prefix for autocomplete
+        return f"@search_title:{words[0]}*"
+    else:
+        # Multiple words - require all words, last word as prefix for autocomplete
+        # BM25 scorer will rank shorter/exact matches higher
+        parts = [f"@search_title:{w}" for w in words[:-1]]
+        parts.append(f"@search_title:{words[-1]}*")
+        return " ".join(parts)
+
+
 async def autocomplete(q: str) -> dict[str, list]:
     """
     Autocomplete search that returns categorized results.
 
     Returns:
-        dict with keys: tv, movie, person, podcast - each containing list of results
+        dict with keys: tv, movie, person, podcast, author, book - each containing list of results
     """
     if not q or len(q) < 2:
-        return {"tv": [], "movie": [], "person": [], "podcast": []}
+        return {"tv": [], "movie": [], "person": [], "podcast": [], "author": [], "book": []}
 
     repo = get_repo()
 
@@ -173,6 +255,8 @@ async def autocomplete(q: str) -> dict[str, list]:
     media_query = build_autocomplete_query(q)
     people_query = build_people_autocomplete_query(q)
     podcasts_query = build_podcasts_autocomplete_query(q)
+    authors_query = build_authors_autocomplete_query(q)
+    books_query = build_books_autocomplete_query(q)
 
     # Create empty result placeholder
     empty_result = type("obj", (object,), {"docs": []})()
@@ -182,9 +266,11 @@ async def autocomplete(q: str) -> dict[str, list]:
         media_task = repo.search(media_query, limit=20)
         people_task = repo.search_people(people_query, limit=10)
         podcasts_task = repo.search_podcasts(podcasts_query, limit=10)
+        authors_task = repo.search_authors(authors_query, limit=10)
+        books_task = repo.search_books(books_query, limit=10)
 
-        media_res, people_res, podcasts_res = await asyncio.gather(
-            media_task, people_task, podcasts_task, return_exceptions=True
+        media_res, people_res, podcasts_res, authors_res, books_res = await asyncio.gather(
+            media_task, people_task, podcasts_task, authors_task, books_task, return_exceptions=True
         )
     except Exception:
         # If concurrent search fails, try individually
@@ -203,6 +289,16 @@ async def autocomplete(q: str) -> dict[str, list]:
         except Exception:
             podcasts_res = empty_result
 
+        try:
+            authors_res = await repo.search_authors(authors_query, limit=10)
+        except Exception:
+            authors_res = empty_result
+
+        try:
+            books_res = await repo.search_books(books_query, limit=10)
+        except Exception:
+            books_res = empty_result
+
     # Handle exceptions from gather
     if isinstance(media_res, Exception):
         media_res = empty_result
@@ -210,6 +306,10 @@ async def autocomplete(q: str) -> dict[str, list]:
         people_res = empty_result
     if isinstance(podcasts_res, Exception):
         podcasts_res = empty_result
+    if isinstance(authors_res, Exception):
+        authors_res = empty_result
+    if isinstance(books_res, Exception):
+        books_res = empty_result
 
     # Parse and categorize media results
     tv_results = []
@@ -229,11 +329,19 @@ async def autocomplete(q: str) -> dict[str, list]:
     # Parse podcast results
     podcast_results = [parse_doc(doc) for doc in podcasts_res.docs]
 
+    # Parse author results
+    author_results = [parse_doc(doc) for doc in authors_res.docs]
+
+    # Parse book results
+    book_results = [parse_doc(doc) for doc in books_res.docs]
+
     return {
         "tv": tv_results[:10],  # Limit each category
         "movie": movie_results[:10],
         "person": person_results[:10],
         "podcast": podcast_results[:10],
+        "author": author_results[:10],
+        "book": book_results[:10],
     }
 
 
@@ -353,9 +461,18 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
     """
     redis = get_redis()
     mc_type = request.mc_type.lower()
+    mc_subtype = (request.mc_subtype or "").lower()
+
+    # Check if this is an author (OpenLibrary) - they have mc_type=person, mc_subtype=author
+    is_author = mc_subtype == "author"
+    is_book = mc_type == "book"
 
     # Determine the Redis key prefix and index based on type
-    if mc_type == "person":
+    if is_author:
+        key_prefix = "author:"
+    elif is_book:
+        key_prefix = "book:"
+    elif mc_type == "person":
         key_prefix = "person:"
     elif mc_type == "podcast":
         key_prefix = "podcast:"
@@ -374,7 +491,11 @@ async def get_details(request: DetailsRequest) -> dict[str, Any]:
         logger.warning(f"Error fetching from Redis: {e}")
 
     # Handle different content types
-    if mc_type == "person":
+    if is_author:
+        return await _get_author_details(request, index_data)
+    elif is_book:
+        return await _get_book_details(request, index_data)
+    elif mc_type == "person":
         return await _get_person_details(request, index_data)
     elif mc_type == "podcast":
         return await _get_podcast_details(request, index_data)
@@ -603,7 +724,10 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
     try:
         feed_id = int(request.source_id)
     except ValueError:
-        return {"error": f"Invalid source_id: {request.source_id}. Expected numeric feed ID.", "status_code": 400}
+        return {
+            "error": f"Invalid source_id: {request.source_id}. Expected numeric feed ID.",
+            "status_code": 400,
+        }
 
     # Use the existing podcast wrapper (same as mobile app)
     try:
@@ -612,9 +736,14 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
         if result.status_code != 200 or result.error:
             # Fall back to index data if API fails
             if index_data:
-                logger.warning(f"API failed for podcast {feed_id}, using index data: {result.error}")
+                logger.warning(
+                    f"API failed for podcast {feed_id}, using index data: {result.error}"
+                )
                 return {**index_data, "id": request.mc_id, "mc_type": "podcast"}
-            return {"error": result.error or "Podcast not found", "status_code": result.status_code or 404}
+            return {
+                "error": result.error or "Podcast not found",
+                "status_code": result.status_code or 404,
+            }
 
         # Convert to dict and ensure proper identifiers
         podcast_data: dict[str, Any] = result.model_dump()
@@ -629,3 +758,94 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
         if index_data:
             return {**index_data, "id": request.mc_id, "mc_type": "podcast"}
         return {"error": str(e), "status_code": 500}
+
+
+async def _get_author_details(request: DetailsRequest, index_data: dict | None) -> dict[str, Any]:
+    """
+    Get detailed metadata for an author from OpenLibrary.
+
+    Authors are stored in the idx:author index with author: prefix.
+    Unlike TMDB persons, we don't need to fetch external API data -
+    all the data is already in Redis from the OpenLibrary dump.
+    """
+    if not index_data:
+        return {
+            "error": f"Author not found: {request.mc_id}",
+            "status_code": 404,
+        }
+
+    # Build result from index data
+    result: dict[str, Any] = {**index_data}
+
+    # Ensure proper identifiers
+    result["id"] = request.mc_id
+    result["mc_type"] = "person"
+    result["mc_subtype"] = "author"
+
+    # Use author_links from index data (already built during ETL)
+    result["author_links"] = index_data.get("author_links", [])
+
+    # Format display fields
+    result["search_title"] = index_data.get("name", "Unknown Author")
+    result["name"] = index_data.get("name", "Unknown Author")
+
+    # Full overview is the bio
+    if index_data.get("bio"):
+        result["full_overview"] = index_data["bio"]
+        result["overview"] = index_data["bio"]
+
+    return result
+
+
+async def _get_book_details(request: DetailsRequest, index_data: dict | None) -> dict[str, Any]:
+    """
+    Get detailed metadata for a book from OpenLibrary.
+
+    Books are stored in the idx:book index with book: prefix.
+    All the data is already in Redis from the OpenLibrary dump.
+    """
+    if not index_data:
+        return {
+            "error": f"Book not found: {request.mc_id}",
+            "status_code": 404,
+        }
+
+    # Build result from index data
+    result: dict[str, Any] = {**index_data}
+
+    # Ensure proper identifiers
+    result["id"] = request.mc_id
+    result["mc_type"] = "book"
+
+    # Format display fields
+    result["search_title"] = index_data.get("title", "Unknown Title")
+    result["name"] = index_data.get("title", "Unknown Title")
+
+    # Use description as full_overview
+    if index_data.get("description"):
+        result["full_overview"] = index_data["description"]
+        result["overview"] = index_data["description"]
+
+    # Build cover image URLs if cover_i is available
+    cover_i = index_data.get("cover_i")
+    if cover_i:
+        result["cover_urls"] = {
+            "small": f"https://covers.openlibrary.org/b/id/{cover_i}-S.jpg",
+            "medium": f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg",
+            "large": f"https://covers.openlibrary.org/b/id/{cover_i}-L.jpg",
+        }
+        result["image"] = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg"
+
+    # Build OpenLibrary URL if openlibrary_key is available
+    ol_key = index_data.get("openlibrary_key") or index_data.get("key")
+    if ol_key:
+        # Key format is /works/OL123W
+        key_id = ol_key.replace("/works/", "")
+        result["openlibrary_url"] = f"https://openlibrary.org/works/{key_id}"
+
+    # Format subjects for display
+    subjects = index_data.get("subjects", [])
+    if subjects:
+        result["subjects_display"] = subjects[:10]  # Limit to 10 for display
+
+    return result

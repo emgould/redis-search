@@ -345,6 +345,166 @@
         </div>
       </div>
 
+      <!-- Author Data Subsection -->
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>✍️</span> Author Data (OpenLibrary)
+        </h3>
+
+        <p class="text-sm text-surface-400 mb-4">
+          Three-step process: (1) Download OpenLibrary dump files, (2) Extract authors from dumps,
+          (3) Load into Redis index.
+        </p>
+
+        <!-- Step 1: Download Dumps -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📥</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 1: Download Dumps</p>
+              <p class="text-sm text-surface-500">
+                Download ol_dump_authors & ol_dump_wikidata from OpenLibrary
+              </p>
+            </div>
+          </div>
+          <button onclick="runAuthorDownload()"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-author-download">
+            📥 Download
+          </button>
+        </div>
+
+        <!-- Step 2: Extract -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🔍</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 2: Extract Authors</p>
+              <p class="text-sm text-surface-500">
+                Process dumps → mc_authors.jsonl
+              </p>
+            </div>
+          </div>
+          <button onclick="runAuthorExtract()"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-author-extract">
+            🔍 Extract
+          </button>
+        </div>
+
+        <!-- Step 3: Load -->
+        <div class="flex items-center justify-between py-3">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📤</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 3: Load</p>
+              <p class="text-sm text-surface-500">
+                mc_authors.jsonl →
+                <span class="text-brand-400">idx:author</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="runAuthorLoad()"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-author-load">
+              📤 Load
+            </button>
+            <button onclick="runAuthorFullPipeline()"
+              class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+              id="btn-author-full">
+              🚀 Full Pipeline
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Author Status -->
+      <div id="author-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
+          <button onclick="dismissAuthorStatus()" id="author-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
+            ✕
+          </button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">✍️</span>
+            <span id="author-indicator" class="animate-spin">⏳</span>
+            <span id="author-label" class="font-medium text-brand-400">Processing...</span>
+          </div>
+          <pre id="author-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
+      <!-- Book Data Subsection -->
+      <div class="bg-surface-800/50 rounded-lg border border-surface-700 p-4 mb-4">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>📚</span> Book Data (OpenLibrary)
+        </h3>
+
+        <p class="text-sm text-surface-400 mb-4">
+          Two-step process: (1) Extract books from works dump for known authors,
+          (2) Load into Redis index. Requires authors to be loaded first.
+        </p>
+
+        <!-- Step 1: Extract Books -->
+        <div class="flex items-center justify-between py-3 border-b border-surface-700">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🔍</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 1: Extract Books</p>
+              <p class="text-sm text-surface-500">
+                ol_dump_works + mc_authors.jsonl → mc_books.jsonl
+              </p>
+              <p class="text-xs text-surface-600">
+                Quality filter: cover AND (description OR subjects)
+              </p>
+            </div>
+          </div>
+          <button onclick="runBookExtract()"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-book-extract">
+            🔍 Extract
+          </button>
+        </div>
+
+        <!-- Step 2: Load Books -->
+        <div class="flex items-center justify-between py-3">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📤</span>
+            <div>
+              <p class="font-medium text-surface-200">Step 2: Load Books</p>
+              <p class="text-sm text-surface-500">
+                mc_books.jsonl →
+                <span class="text-brand-400">idx:book</span>
+              </p>
+            </div>
+          </div>
+          <button onclick="runBookLoad()"
+            class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+            id="btn-book-load">
+            📤 Load
+          </button>
+        </div>
+      </div>
+
+      <!-- Book Status -->
+      <div id="book-status" class="hidden mb-4">
+        <div class="bg-surface-800 rounded-lg p-4 border border-brand-500/30 relative">
+          <button onclick="dismissBookStatus()" id="book-dismiss"
+            class="absolute top-2 right-2 text-surface-400 hover:text-white p-1 rounded hidden">
+            ✕
+          </button>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">📚</span>
+            <span id="book-indicator" class="animate-spin">⏳</span>
+            <span id="book-label" class="font-medium text-brand-400">Processing...</span>
+          </div>
+          <pre id="book-output"
+            class="text-xs text-surface-400 bg-surface-900 rounded p-3 max-h-64 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
       <!-- Podcast Extract Status -->
       <div id="podcast-extract-status" class="hidden mb-4">
         <div class="bg-surface-800 rounded-lg p-4 border border-amber-500/30 relative">
@@ -1217,6 +1377,92 @@
         </div>
       </div>
 
+      <!-- Author Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">author</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:author • Prefix: author:*
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('author')"
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-author">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('author')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-author">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Index Stats - values loaded async via JavaScript -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-author-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-author-index-memory" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Book Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">book</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:book • Prefix: book:*
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('book')"
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-book">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('book')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-book">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Index Stats - values loaded async via JavaScript -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-book-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-book-index-memory" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Index Operation Status -->
       <div id="index-status" class="hidden">
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1259,7 +1505,7 @@
       <h3 class="text-lg font-medium mb-3 text-surface-300">
         🔑 Key Breakdown
       </h3>
-      <div class="grid md:grid-cols-6 gap-4 mb-6">
+      <div class="grid md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
           <p id="stat-media-keys" class="text-2xl font-bold text-green-400">
@@ -1282,6 +1528,22 @@
             ...
           </p>
           <p class="text-xs text-surface-500">podcast:*</p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Author Keys</p>
+          <p id="stat-author-keys" class="text-2xl font-bold text-cyan-400">
+            ...
+          </p>
+          <p class="text-xs text-surface-500">author:*</p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Book Keys</p>
+          <p id="stat-book-keys" class="text-2xl font-bold text-indigo-400">
+            ...
+          </p>
+          <p class="text-xs text-surface-500">book:*</p>
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1367,6 +1629,26 @@
           podcastsIndexMemoryEl.textContent = formatMB(data.podcasts_index_stats.index_memory_bytes || 0);
         }
 
+        // Update author index stats
+        const authorNumDocsEl = document.getElementById('stat-author-num-docs');
+        if (authorNumDocsEl) {
+          authorNumDocsEl.textContent = formatNumber(data.author_num_docs || 0);
+        }
+        const authorIndexMemoryEl = document.getElementById('stat-author-index-memory');
+        if (authorIndexMemoryEl && data.author_index_stats) {
+          authorIndexMemoryEl.textContent = formatMB(data.author_index_stats.index_memory_bytes || 0);
+        }
+
+        // Update book index stats
+        const bookNumDocsEl = document.getElementById('stat-book-num-docs');
+        if (bookNumDocsEl) {
+          bookNumDocsEl.textContent = formatNumber(data.book_num_docs || 0);
+        }
+        const bookIndexMemoryEl = document.getElementById('stat-book-index-memory');
+        if (bookIndexMemoryEl && data.book_index_stats) {
+          bookIndexMemoryEl.textContent = formatMB(data.book_index_stats.index_memory_bytes || 0);
+        }
+
         // Update overall Redis memory stats
         document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
         document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
@@ -1380,6 +1662,14 @@
         const podcastKeysEl = document.getElementById('stat-podcast-keys');
         if (podcastKeysEl) {
           podcastKeysEl.textContent = formatNumber(data.cache_breakdown.podcast || 0);
+        }
+        const authorKeysEl = document.getElementById('stat-author-keys');
+        if (authorKeysEl) {
+          authorKeysEl.textContent = formatNumber(data.cache_breakdown.author || 0);
+        }
+        const bookKeysEl = document.getElementById('stat-book-keys');
+        if (bookKeysEl) {
+          bookKeysEl.textContent = formatNumber(data.cache_breakdown.book || 0);
         }
         document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
         document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
@@ -2930,6 +3220,306 @@
 
   // Load podcast DB info on page load
   loadPodcastDbInfo();
+
+  // ==========================================
+  // Author ETL Functions (OpenLibrary)
+  // ==========================================
+
+  function setAuthorButtonsDisabled(disabled) {
+    ['btn-author-download', 'btn-author-extract', 'btn-author-load', 'btn-author-full'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = disabled;
+    });
+  }
+
+  async function runAuthorDownload() {
+    setAuthorButtonsDisabled(true);
+    showAuthorStatus('Downloading OpenLibrary dumps...', 'blue');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/download', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollAuthorStatus(data.task_id, 'download');
+    } catch (e) {
+      showAuthorError(e.message);
+      setAuthorButtonsDisabled(false);
+    }
+  }
+
+  async function runAuthorExtract() {
+    setAuthorButtonsDisabled(true);
+    showAuthorStatus('Extracting authors from dumps...', 'amber');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/extract', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollAuthorStatus(data.task_id, 'extract');
+    } catch (e) {
+      showAuthorError(e.message);
+      setAuthorButtonsDisabled(false);
+    }
+  }
+
+  async function runAuthorLoad() {
+    setAuthorButtonsDisabled(true);
+    showAuthorStatus('Loading authors to Redis...', 'brand');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/load', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollAuthorStatus(data.task_id, 'load');
+    } catch (e) {
+      showAuthorError(e.message);
+      setAuthorButtonsDisabled(false);
+    }
+  }
+
+  async function runAuthorFullPipeline() {
+    setAuthorButtonsDisabled(true);
+    showAuthorStatus('Running full pipeline (download → extract → load)...', 'purple');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/full', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollAuthorStatus(data.task_id, 'full');
+    } catch (e) {
+      showAuthorError(e.message);
+      setAuthorButtonsDisabled(false);
+    }
+  }
+
+  function showAuthorStatus(message, colorClass) {
+    const statusEl = document.getElementById('author-status');
+    const indicatorEl = document.getElementById('author-indicator');
+    const labelEl = document.getElementById('author-label');
+    const outputEl = document.getElementById('author-output');
+    const dismissBtn = document.getElementById('author-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = message;
+    labelEl.className = `font-medium text-${colorClass}-400`;
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+  }
+
+  function showAuthorError(message) {
+    const indicatorEl = document.getElementById('author-indicator');
+    const labelEl = document.getElementById('author-label');
+    const outputEl = document.getElementById('author-output');
+    const dismissBtn = document.getElementById('author-dismiss');
+
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent = message;
+    if (dismissBtn) dismissBtn.classList.remove('hidden');
+  }
+
+  async function pollAuthorStatus(taskId, operation) {
+    const indicatorEl = document.getElementById('author-indicator');
+    const labelEl = document.getElementById('author-label');
+    const outputEl = document.getElementById('author-output');
+    const dismissBtn = document.getElementById('author-dismiss');
+
+    try {
+      const res = await fetch(`/api/openlibrary/etl/status/${taskId}`);
+      const data = await res.json();
+
+      // Build output text from progress and result
+      let output = '';
+      if (data.progress) {
+        output += `Stage: ${data.progress.stage || 'processing'}\n`;
+      }
+      if (data.result) {
+        output += '\nResult:\n' + JSON.stringify(data.result, null, 2);
+      }
+      if (data.error) {
+        output += '\nError: ' + data.error;
+      }
+      outputEl.textContent = output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(() => pollAuthorStatus(taskId, operation), 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = `${operation.charAt(0).toUpperCase() + operation.slice(1)} Complete!`;
+          labelEl.className = 'font-medium text-green-400';
+          // Refresh stats
+          await refreshStats();
+        }
+        setAuthorButtonsDisabled(false);
+      }
+    } catch (e) {
+      setTimeout(() => pollAuthorStatus(taskId, operation), 1000);
+    }
+  }
+
+  function dismissAuthorStatus() {
+    document.getElementById('author-status').classList.add('hidden');
+  }
+
+  // ==========================================
+  // Book ETL Functions (OpenLibrary)
+  // ==========================================
+
+  function setBookButtonsDisabled(disabled) {
+    ['btn-book-extract', 'btn-book-load'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = disabled;
+    });
+  }
+
+  async function runBookExtract() {
+    setBookButtonsDisabled(true);
+    showBookStatus('Extracting books from works dump...', 'amber');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/extract-books', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollBookStatus(data.task_id, 'extract');
+    } catch (e) {
+      showBookError(e.message);
+      setBookButtonsDisabled(false);
+    }
+  }
+
+  async function runBookLoad() {
+    setBookButtonsDisabled(true);
+    showBookStatus('Loading books to Redis...', 'brand');
+
+    try {
+      const res = await fetch('/api/openlibrary/etl/load-books', { method: 'POST' });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      pollBookStatus(data.task_id, 'load');
+    } catch (e) {
+      showBookError(e.message);
+      setBookButtonsDisabled(false);
+    }
+  }
+
+  function showBookStatus(message, colorClass) {
+    const statusEl = document.getElementById('book-status');
+    const indicatorEl = document.getElementById('book-indicator');
+    const labelEl = document.getElementById('book-label');
+    const outputEl = document.getElementById('book-output');
+    const dismissBtn = document.getElementById('book-dismiss');
+
+    statusEl.classList.remove('hidden');
+    indicatorEl.textContent = '⏳';
+    indicatorEl.className = 'animate-spin';
+    labelEl.textContent = message;
+    labelEl.className = `font-medium text-${colorClass}-400`;
+    outputEl.textContent = '';
+    if (dismissBtn) dismissBtn.classList.add('hidden');
+  }
+
+  function showBookError(message) {
+    const indicatorEl = document.getElementById('book-indicator');
+    const labelEl = document.getElementById('book-label');
+    const outputEl = document.getElementById('book-output');
+    const dismissBtn = document.getElementById('book-dismiss');
+
+    indicatorEl.textContent = '❌';
+    indicatorEl.className = '';
+    labelEl.textContent = 'Error';
+    labelEl.className = 'font-medium text-red-400';
+    outputEl.textContent = message;
+    if (dismissBtn) dismissBtn.classList.remove('hidden');
+  }
+
+  async function pollBookStatus(taskId, operation) {
+    const indicatorEl = document.getElementById('book-indicator');
+    const labelEl = document.getElementById('book-label');
+    const outputEl = document.getElementById('book-output');
+    const dismissBtn = document.getElementById('book-dismiss');
+
+    try {
+      const res = await fetch(`/api/openlibrary/etl/status/${taskId}`);
+      const data = await res.json();
+
+      // Build output text from progress and result
+      let output = '';
+      if (data.progress) {
+        output += `Stage: ${data.progress.stage || 'processing'}\n`;
+      }
+      if (data.result) {
+        output += '\nResult:\n' + JSON.stringify(data.result, null, 2);
+      }
+      if (data.error) {
+        output += '\nError: ' + data.error;
+      }
+      outputEl.textContent = output;
+      outputEl.scrollTop = outputEl.scrollHeight;
+
+      if (data.running) {
+        setTimeout(() => pollBookStatus(taskId, operation), 1000);
+      } else {
+        indicatorEl.className = '';
+        if (dismissBtn) dismissBtn.classList.remove('hidden');
+
+        if (data.error) {
+          indicatorEl.textContent = '❌';
+          labelEl.textContent = 'Error';
+          labelEl.className = 'font-medium text-red-400';
+        } else {
+          indicatorEl.textContent = '✅';
+          labelEl.textContent = `${operation.charAt(0).toUpperCase() + operation.slice(1)} Complete!`;
+          labelEl.className = 'font-medium text-green-400';
+          // Refresh stats
+          await refreshStats();
+        }
+        setBookButtonsDisabled(false);
+      }
+    } catch (e) {
+      setTimeout(() => pollBookStatus(taskId, operation), 1000);
+    }
+  }
+
+  function dismissBookStatus() {
+    document.getElementById('book-status').classList.add('hidden');
+  }
 
   // Refresh Redis connection status
   async function refreshConnectionStatus() {

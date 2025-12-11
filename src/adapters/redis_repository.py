@@ -9,6 +9,8 @@ class RedisRepository:
         self.idx = self.redis.ft("idx:media")
         self.people_idx = self.redis.ft("idx:people")
         self.podcasts_idx = self.redis.ft("idx:podcasts")
+        self.author_idx = self.redis.ft("idx:author")
+        self.book_idx = self.redis.ft("idx:book")
 
     async def search(
         self,
@@ -81,6 +83,56 @@ class RedisRepository:
             query = query.sort_by(sort_by, asc=sort_asc)
 
         return await self.podcasts_idx.search(query)
+
+    async def search_authors(
+        self,
+        query_str: str,
+        limit: int = 10,
+        sort_by: str | None = None,
+        sort_asc: bool = False,
+    ):
+        """
+        Search the authors index (OpenLibrary authors).
+
+        Args:
+            query_str: Redis Search query string
+            limit: Maximum results to return
+            sort_by: Field to sort by (optional, no default for authors)
+            sort_asc: Sort ascending if True, descending if False
+        """
+        query = Query(query_str).paging(0, limit)
+
+        # Sort by the specified field if provided
+        if sort_by:
+            query = query.sort_by(sort_by, asc=sort_asc)
+
+        return await self.author_idx.search(query)
+
+    async def search_books(
+        self,
+        query_str: str,
+        limit: int = 10,
+        sort_by: str | None = None,
+        sort_asc: bool = False,
+    ):
+        """
+        Search the books index (OpenLibrary books/works).
+
+        Args:
+            query_str: Redis Search query string
+            limit: Maximum results to return
+            sort_by: Field to sort by (first_publish_year, ratings_average, etc.)
+            sort_asc: Sort ascending if True, descending if False
+        """
+        # Use BM25 scorer for better ranking - normalizes by document length
+        # so shorter exact matches rank higher than longer titles containing the terms
+        query = Query(query_str).paging(0, limit).scorer("BM25")
+
+        # Sort by the specified field if provided
+        if sort_by:
+            query = query.sort_by(sort_by, asc=sort_asc)
+
+        return await self.book_idx.search(query)
 
     async def set_document(self, key: str, value: dict) -> None:
         await self.redis.json().set(key, "$", value)  # type: ignore[misc]
@@ -196,31 +248,91 @@ class RedisRepository:
             podcasts_num_docs = 0
             podcasts_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
-        # Count keys by prefix using optimized SCAN with pattern matching
-        cache_breakdown = {}
+        # Get author index document count and memory stats
+        author_index_stats = {}
+        author_num_docs = 0
+        try:
+            author_index_info = await self.author_idx.info()
+            author_num_docs = int(author_index_info.get("num_docs", 0))
+            # Get index memory usage in bytes
+            inverted_sz_mb = float(author_index_info.get("inverted_sz_mb", 0))
+            offset_vectors_sz_mb = float(author_index_info.get("offset_vectors_sz_mb", 0))
+            doc_table_size_mb = float(author_index_info.get("doc_table_size_mb", 0))
+            sortable_values_size_mb = float(author_index_info.get("sortable_values_size_mb", 0))
+            key_table_size_mb = float(author_index_info.get("key_table_size_mb", 0))
 
-        # Count each prefix separately (more efficient than scanning all keys)
-        prefix_patterns = [
-            ("media", "media:*"),
-            ("person", "person:*"),
-            ("podcast", "podcast:*"),
-            ("tmdb_request", "tmdb_request:*"),
-            ("tmdb", "tmdb:*"),
-        ]
+            total_index_mb = (
+                inverted_sz_mb
+                + offset_vectors_sz_mb
+                + doc_table_size_mb
+                + sortable_values_size_mb
+                + key_table_size_mb
+            )
+            index_memory_bytes = int(total_index_mb * 1024 * 1024)
 
-        for prefix_name, pattern in prefix_patterns:
-            count = 0
-            cursor = 0
-            while True:
-                cursor, keys = await self.redis.scan(cursor=cursor, match=pattern, count=10000)
-                count += len(keys)
-                if cursor == 0:
-                    break
-            cache_breakdown[prefix_name] = count
+            author_index_stats = {
+                "num_docs": author_num_docs,
+                "index_memory_bytes": index_memory_bytes,
+                "inverted_sz_mb": inverted_sz_mb,
+                "offset_vectors_sz_mb": offset_vectors_sz_mb,
+                "doc_table_size_mb": doc_table_size_mb,
+                "sortable_values_size_mb": sortable_values_size_mb,
+                "key_table_size_mb": key_table_size_mb,
+            }
+        except Exception:
+            author_num_docs = 0
+            author_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
-        # Calculate 'other' as the remainder
+        # Get book index document count and memory stats
+        book_index_stats = {}
+        book_num_docs = 0
+        try:
+            book_index_info = await self.book_idx.info()
+            book_num_docs = int(book_index_info.get("num_docs", 0))
+            # Get index memory usage in bytes
+            inverted_sz_mb = float(book_index_info.get("inverted_sz_mb", 0))
+            offset_vectors_sz_mb = float(book_index_info.get("offset_vectors_sz_mb", 0))
+            doc_table_size_mb = float(book_index_info.get("doc_table_size_mb", 0))
+            sortable_values_size_mb = float(book_index_info.get("sortable_values_size_mb", 0))
+            key_table_size_mb = float(book_index_info.get("key_table_size_mb", 0))
+
+            total_index_mb = (
+                inverted_sz_mb
+                + offset_vectors_sz_mb
+                + doc_table_size_mb
+                + sortable_values_size_mb
+                + key_table_size_mb
+            )
+            index_memory_bytes = int(total_index_mb * 1024 * 1024)
+
+            book_index_stats = {
+                "num_docs": book_num_docs,
+                "index_memory_bytes": index_memory_bytes,
+                "inverted_sz_mb": inverted_sz_mb,
+                "offset_vectors_sz_mb": offset_vectors_sz_mb,
+                "doc_table_size_mb": doc_table_size_mb,
+                "sortable_values_size_mb": sortable_values_size_mb,
+                "key_table_size_mb": key_table_size_mb,
+            }
+        except Exception:
+            book_num_docs = 0
+            book_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
+
+        # Use index doc counts for cache breakdown (fast, no SCAN needed)
+        # This is accurate because each index corresponds to keys with that prefix
+        cache_breakdown = {
+            "media": num_docs,  # media:* keys
+            "person": people_num_docs,  # person:* keys
+            "podcast": podcasts_num_docs,  # podcast:* keys
+            "author": author_num_docs,  # author:* keys
+            "book": book_num_docs,  # book:* keys
+            "tmdb_request": 0,  # Cache keys, not indexed
+            "tmdb": 0,  # Cache keys, not indexed
+        }
+
+        # Calculate 'other' as the remainder (includes tmdb cache keys, etc.)
         total_counted = sum(cache_breakdown.values())
-        cache_breakdown["other"] = dbsize - total_counted
+        cache_breakdown["other"] = max(0, dbsize - total_counted)
 
         return {
             "info": info,
@@ -231,5 +343,9 @@ class RedisRepository:
             "people_index_stats": people_index_stats,
             "podcasts_num_docs": podcasts_num_docs,
             "podcasts_index_stats": podcasts_index_stats,
+            "author_num_docs": author_num_docs,
+            "author_index_stats": author_index_stats,
+            "book_num_docs": book_num_docs,
+            "book_index_stats": book_index_stats,
             "cache_breakdown": cache_breakdown,
         }

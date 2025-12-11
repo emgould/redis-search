@@ -28,6 +28,7 @@ from services.search_service import (
     get_details,
     reset_repo,
 )
+from web.routes.openlibrary_etl import router as openlibrary_etl_router
 
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
@@ -155,6 +156,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include OpenLibrary ETL routes
+app.include_router(openlibrary_etl_router)
 
 templates = Jinja2Templates(directory="web/templates")
 
@@ -417,6 +421,10 @@ async def redis_stats():
                 "people_index_stats": stats.get("people_index_stats", {}),
                 "podcasts_num_docs": stats.get("podcasts_num_docs", 0),
                 "podcasts_index_stats": stats.get("podcasts_index_stats", {}),
+                "author_num_docs": stats.get("author_num_docs", 0),
+                "author_index_stats": stats.get("author_index_stats", {}),
+                "book_num_docs": stats.get("book_num_docs", 0),
+                "book_index_stats": stats.get("book_index_stats", {}),
             }
         )
     except Exception as e:
@@ -2313,6 +2321,59 @@ INDEX_CONFIGS = {
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),
+        ),
+    },
+    "author": {
+        "redis_name": "idx:author",
+        "prefix": "author:",
+        "schema": (
+            # Primary search field (name) with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            TextField("$.name", as_name="name", weight=4.0),
+            # Bio - searchable but lower weight
+            TextField("$.bio", as_name="bio", weight=1.0),
+            # Type filters
+            TagField("$.mc_type", as_name="mc_type"),
+            TagField("$.mc_subtype", as_name="mc_subtype"),
+            TagField("$.source", as_name="source"),
+            # External IDs as tags (exact match)
+            TagField("$.wikidata_id", as_name="wikidata_id"),
+            TagField("$.openlibrary_key", as_name="openlibrary_key"),
+            # Sortable numeric fields
+            NumericField("$.work_count", as_name="work_count", sortable=True),
+            NumericField("$.quality_score", as_name="quality_score", sortable=True),
+            NumericField("$.wikidata_birth_year", as_name="birth_year", sortable=True),
+        ),
+    },
+    "book": {
+        "redis_name": "idx:book",
+        "prefix": "book:",
+        "schema": (
+            # Primary search field (title) with high weight
+            TextField("$.search_title", as_name="search_title", weight=5.0),
+            TextField("$.title", as_name="title", weight=4.0),
+            # Author search
+            TextField("$.author_search", as_name="author_search", weight=3.0),
+            TextField("$.author", as_name="author", weight=2.0),
+            # Description - searchable but lower weight
+            TextField("$.description", as_name="description", weight=1.0),
+            # Subject search
+            TextField("$.subjects_search", as_name="subjects_search", weight=1.0),
+            # Type filters
+            TagField("$.mc_type", as_name="mc_type"),
+            TagField("$.source", as_name="source"),
+            # External IDs as tags (exact match)
+            TagField("$.openlibrary_key", as_name="openlibrary_key"),
+            TagField("$.primary_isbn13", as_name="primary_isbn13"),
+            TagField("$.primary_isbn10", as_name="primary_isbn10"),
+            # Boolean fields
+            TagField("$.cover_available", as_name="cover_available"),
+            # Sortable numeric fields
+            NumericField("$.first_publish_year", as_name="first_publish_year", sortable=True),
+            NumericField("$.ratings_average", as_name="ratings_average", sortable=True),
+            NumericField("$.ratings_count", as_name="ratings_count", sortable=True),
+            NumericField("$.readinglog_count", as_name="readinglog_count", sortable=True),
+            NumericField("$.number_of_pages", as_name="number_of_pages", sortable=True),
         ),
     },
 }

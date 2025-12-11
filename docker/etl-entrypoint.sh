@@ -18,6 +18,7 @@ export_env_for_cron() {
     # Write all relevant env vars to a file that cron job will source
     cat > /app/.env << EOF
 # Auto-generated environment for cron jobs
+export PATH=/usr/local/bin:/usr/bin:/bin
 export PYTHONPATH=/app:/app/src
 export REDIS_HOST=${REDIS_HOST:-localhost}
 export REDIS_PORT=${REDIS_PORT:-6379}

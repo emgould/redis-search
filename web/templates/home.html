@@ -51,7 +51,7 @@ Shows{% endblock %} {% block body %}
         Find Your Next Watch
       </h1>
       <p class="text-surface-400 text-lg">
-        Search movies and TV shows powered by Redis
+        Search all media powered by MediaCircle
       </p>
     </div>
 
@@ -110,7 +110,7 @@ Shows{% endblock %} {% block body %}
 
   <!-- Footer -->
   <footer class="py-6 text-center text-surface-600 text-sm">
-    <p>Powered by Redis Search • Built for speed</p>
+    <p>Powered by MediaCircle • Built for speed</p>
   </footer>
 </div>
 
@@ -144,6 +144,40 @@ Shows{% endblock %} {% block body %}
 
       <!-- Content Container -->
       <div id="modal-body" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- External Link Iframe Modal -->
+<div id="iframe-modal" class="fixed inset-0 z-[60] hidden">
+  <!-- Backdrop -->
+  <div id="iframe-modal-backdrop" class="absolute inset-0 bg-black/90 backdrop-blur-sm"></div>
+
+  <!-- Modal Content -->
+  <div class="absolute inset-4 md:inset-8 flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="iframe-modal-title" class="text-lg font-semibold text-white"></h3>
+      <div class="flex items-center gap-2">
+        <a id="iframe-open-external" href="#" target="_blank" rel="noopener noreferrer"
+          class="px-3 py-1.5 bg-surface-700 hover:bg-surface-600 rounded-lg text-sm text-white transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Open in New Tab
+        </a>
+        <button id="iframe-modal-close" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Iframe Container -->
+    <div class="flex-1 bg-white rounded-xl overflow-hidden shadow-2xl">
+      <iframe id="iframe-content" class="w-full h-full border-0" src="about:blank"></iframe>
     </div>
   </div>
 </div>
@@ -252,13 +286,35 @@ Shows{% endblock %} {% block body %}
   }
 
   // Track expanded state for each category
-  const expandedCategories = { tv: false, movie: false, person: false };
+  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false };
 
   function toggleCategoryExpand(category) {
     expandedCategories[category] = !expandedCategories[category];
-    // Re-render with current results
-    if (window._lastResults && window._lastQuery) {
-      renderResults(window._lastResults, window._lastQuery);
+    const isExpanded = expandedCategories[category];
+
+    // Find the category section in the DOM
+    const section = document.querySelector(`.category-section[data-category="${category}"]`);
+    if (!section) return;
+
+    // Toggle visibility of hidden items (items with data-hidden="true")
+    const hiddenItems = section.querySelectorAll('.category-item[data-hidden="true"]');
+    hiddenItems.forEach(item => {
+      if (isExpanded) {
+        item.classList.remove('hidden');
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+
+    // Update the toggle button text and icon
+    const toggleBtn = section.querySelector('.expand-toggle-btn');
+    if (toggleBtn) {
+      const hiddenCount = hiddenItems.length;
+      if (isExpanded) {
+        toggleBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg> Show less`;
+      } else {
+        toggleBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Show ${hiddenCount} more`;
+      }
     }
   }
 
@@ -311,6 +367,24 @@ Shows{% endblock %} {% block body %}
           color: "pink",
         });
       }
+      if (results.author && results.author.length > 0) {
+        categories.push({
+          key: "author",
+          label: "✍️ Authors",
+          items: results.author,
+          topPopularity: parseFloat(results.author[0]?.work_count) || 0,
+          color: "amber",
+        });
+      }
+      if (results.book && results.book.length > 0) {
+        categories.push({
+          key: "book",
+          label: "📚 Books",
+          items: results.book,
+          topPopularity: parseFloat(results.book[0]?.ratings_count) || 0,
+          color: "emerald",
+        });
+      }
 
       // Sort categories by top popularity (highest first)
       categories.sort((a, b) => b.topPopularity - a.topPopularity);
@@ -341,14 +415,17 @@ Shows{% endblock %} {% block body %}
     resultsList.innerHTML = categories
       .map((category, catIndex) => {
         const isExpanded = expandedCategories[category.key] || false;
-        const displayItems = isExpanded
-          ? category.items
-          : category.items.slice(0, 3);
         const hasMore = category.items.length > 3;
         const hiddenCount = category.items.length - 3;
 
-        const itemsHtml = displayItems
-          .map((item, index) => renderResultItem(item, index, query))
+        // Render ALL items, but mark items beyond index 2 as hidden (unless expanded)
+        const itemsHtml = category.items
+          .map((item, index) => {
+            const isHiddenItem = index >= 3;
+            const hiddenClass = isHiddenItem && !isExpanded ? 'hidden' : '';
+            const hiddenAttr = isHiddenItem ? 'data-hidden="true"' : '';
+            return `<div class="category-item ${hiddenClass}" ${hiddenAttr}>${renderResultItem(item, index, query)}</div>`;
+          })
           .join("");
 
         return `
@@ -369,7 +446,7 @@ Shows{% endblock %} {% block body %}
           ${hasMore
             ? `
             <button onclick="toggleCategoryExpand('${category.key}')" 
-                    class="w-full py-2 text-sm text-${category.color
+                    class="expand-toggle-btn w-full py-2 text-sm text-${category.color
             }-400 hover:text-${category.color
             }-300 hover:bg-surface-800/50 transition-colors flex items-center justify-center gap-1">
               ${isExpanded
@@ -393,9 +470,21 @@ Shows{% endblock %} {% block body %}
     const rating = getRating(item);
     const overview = item.overview || "";
     const isPerson = item.mc_type === "person";
+    const isAuthor = item.mc_subtype === "author";
     const isPodcast = item.mc_type === "podcast";
+    const isBook = item.mc_type === "book";
 
-    // For persons, show different info
+    // For authors (OpenLibrary), show author-specific info
+    if (isAuthor) {
+      return renderAuthorItem(item, index, query);
+    }
+
+    // For books (OpenLibrary), show book-specific info
+    if (isBook) {
+      return renderBookItem(item, index, query);
+    }
+
+    // For persons (TMDB), show different info
     if (isPerson) {
       return renderPersonItem(item, index, query);
     }
@@ -656,6 +745,177 @@ Shows{% endblock %} {% block body %}
     `;
   }
 
+  function renderAuthorItem(item, index, query) {
+    const name = item.search_title || item.name || "Unknown Author";
+    const photoUrls = item.photo_urls || {};
+    // Use photo_urls.openlibrary first, then item.image, then wikidata as fallback
+    const image = photoUrls.openlibrary || item.image || "";
+    const fallbackImage = photoUrls.wikidata || "";
+    const birthDate = item.birth_date || "";
+    const deathDate = item.death_date || "";
+    const bio = item.bio || "";
+    const openlibraryUrl = item.openlibrary_url || "";
+
+    // Format life dates
+    let lifeDates = "";
+    if (birthDate) {
+      lifeDates = `Born ${birthDate}`;
+      if (deathDate) {
+        lifeDates += ` · Died ${deathDate}`;
+      }
+    }
+
+    // Truncate bio for display
+    const bioSnippet = bio.length > 100 ? bio.substring(0, 100) + "..." : bio;
+
+    // source_id for detail view
+    const sourceId = item.source_id || "";
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.id}"
+             data-source-id="${sourceId}"
+             data-mc-type="${item.mc_type || "person"}"
+             data-mc-subtype="${item.mc_subtype || "author"}"
+             ${openlibraryUrl ? `data-external-url="${openlibraryUrl}"` : ""}
+             style="animation-delay: ${index * 30}ms">
+            <!-- Author Photo -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-surface-800">
+                ${image
+        ? `<img src="${image}" alt="${name}" class="w-full h-full object-cover" loading="lazy" data-fallback="${fallbackImage}" onload="var img=this; setTimeout(function(){ if(img.naturalWidth<=1||img.naturalHeight<=1){ if(img.dataset.fallback&&!img.dataset.triedFallback){ img.dataset.triedFallback='true'; img.src=img.dataset.fallback; } else { img.style.display='none'; img.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-amber-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>'; }}},0);" onerror="if(this.dataset.fallback && !this.dataset.triedFallback) { this.dataset.triedFallback='true'; this.src=this.dataset.fallback; } else { this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-amber-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>'; }'">`
+        : `<div class="w-full h-full flex items-center justify-center text-amber-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-amber-400 transition-colors truncate text-sm">
+                            ${highlightMatch(name, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            <span class="text-amber-500 font-medium">Author</span>
+                            ${lifeDates
+        ? `<span class="text-surface-500">${lifeDates}</span>`
+        : ""
+      }
+                        </div>
+                    </div>
+                </div>
+                ${bioSnippet
+        ? `<p class="mt-1 text-xs text-surface-400 line-clamp-2">${bioSnippet}</p>`
+        : ""
+      }
+            </div>
+            
+            <!-- Arrow / OpenLibrary link -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </div>
+        </div>
+    `;
+  }
+
+  function renderBookItem(item, index, query) {
+    const title = item.search_title || item.title || "Unknown Book";
+    const author = item.author || item.author_search || "";
+    const cover_i = item.cover_i;
+    const coverUrl = cover_i ? `https://covers.openlibrary.org/b/id/${cover_i}-M.jpg` : "";
+    const firstPublishYear = item.first_publish_year;
+    const description = item.description || "";
+    const subjects = item.subjects || [];
+    const ratingsAverage = item.ratings_average;
+    const ratingsCount = item.ratings_count;
+    const openlibraryKey = item.openlibrary_key || item.key;
+    const openlibraryUrl = openlibraryKey ? `https://openlibrary.org${openlibraryKey}` : "";
+
+    // Format year display
+    const yearDisplay = firstPublishYear ? `${firstPublishYear}` : "";
+
+    // Truncate description for display
+    const descSnippet = description.length > 100 ? description.substring(0, 100) + "..." : description;
+
+    // Format rating display
+    let ratingDisplay = "";
+    if (ratingsAverage && ratingsCount) {
+      ratingDisplay = `${ratingsAverage.toFixed(1)} (${ratingsCount.toLocaleString()} ratings)`;
+    }
+
+    // Format subjects
+    const subjectsDisplay = subjects.slice(0, 3).join(", ");
+
+    // source_id for detail view
+    const sourceId = item.source_id || "";
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.id}"
+             data-source-id="${sourceId}"
+             data-mc-type="book"
+             ${openlibraryUrl ? `data-external-url="${openlibraryUrl}"` : ""}
+             style="animation-delay: ${index * 30}ms">
+            <!-- Book Cover -->
+            <div class="flex-shrink-0 w-12 h-16 rounded overflow-hidden bg-surface-800">
+                ${coverUrl
+        ? `<img src="${coverUrl}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-emerald-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>';">`
+        : `<div class="w-full h-full flex items-center justify-center text-emerald-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-emerald-400 transition-colors truncate text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            ${author
+        ? `<span class="text-emerald-500 font-medium truncate max-w-32">${author}</span>`
+        : ""
+      }
+                            ${yearDisplay
+        ? `<span class="text-surface-500">${yearDisplay}</span>`
+        : ""
+      }
+                            ${ratingDisplay
+        ? `<span class="text-yellow-500">★ ${ratingDisplay}</span>`
+        : ""
+      }
+                        </div>
+                    </div>
+                </div>
+                ${descSnippet
+        ? `<p class="mt-1 text-xs text-surface-400 line-clamp-2">${descSnippet}</p>`
+        : ""
+      }
+                ${subjectsDisplay
+        ? `<p class="mt-0.5 text-xs text-surface-500 truncate">${subjectsDisplay}</p>`
+        : ""
+      }
+            </div>
+            
+            <!-- Arrow -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </div>
+        </div>
+    `;
+  }
+
   async function performSearch(query) {
     if (!query || query.length < 2) {
       resultsContainer.classList.add("hidden");
@@ -671,6 +931,10 @@ Shows{% endblock %} {% block body %}
       const results = await response.json();
 
       if (query === currentQuery) {
+        // Reset expanded state for new search results
+        Object.keys(expandedCategories).forEach(key => {
+          expandedCategories[key] = false;
+        });
         renderResults(results, query);
         resultsContainer.classList.remove("hidden");
       }
@@ -748,9 +1012,43 @@ Shows{% endblock %} {% block body %}
 
   modalBackdrop.addEventListener("click", closeModal);
   modalClose.addEventListener("click", closeModal);
+
+  // Iframe modal elements
+  const iframeModal = document.getElementById("iframe-modal");
+  const iframeModalBackdrop = document.getElementById("iframe-modal-backdrop");
+  const iframeModalClose = document.getElementById("iframe-modal-close");
+  const iframeContent = document.getElementById("iframe-content");
+  const iframeModalTitle = document.getElementById("iframe-modal-title");
+  const iframeOpenExternal = document.getElementById("iframe-open-external");
+
+  function openExternalLinkModal(url, title) {
+    iframeModalTitle.textContent = title;
+    iframeContent.src = url;
+    iframeOpenExternal.href = url;
+    iframeModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  // Make it globally accessible for onclick handlers
+  window.openExternalLinkModal = openExternalLinkModal;
+
+  function closeIframeModal() {
+    iframeModal.classList.add("hidden");
+    iframeContent.src = "about:blank";
+    document.body.style.overflow = "";
+  }
+
+  iframeModalBackdrop.addEventListener("click", closeIframeModal);
+  iframeModalClose.addEventListener("click", closeIframeModal);
+
+  // Handle Escape key for both modals
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
-      closeModal();
+    if (e.key === "Escape") {
+      if (!iframeModal.classList.contains("hidden")) {
+        closeIframeModal();
+      } else if (!modal.classList.contains("hidden")) {
+        closeModal();
+      }
     }
   });
 
@@ -770,7 +1068,11 @@ Shows{% endblock %} {% block body %}
       const data = await response.json();
 
       if (response.ok) {
-        if (mcType === "person") {
+        if (mcSubtype === "author") {
+          renderAuthorDetail(data);
+        } else if (mcType === "book") {
+          renderBookDetail(data);
+        } else if (mcType === "person") {
           renderPersonDetail(data);
         } else if (mcType === "podcast") {
           renderPodcastDetail(data);
@@ -1457,75 +1759,68 @@ Shows{% endblock %} {% block body %}
         <div class="flex flex-col md:flex-row gap-6 mb-8">
           <!-- Podcast Artwork -->
           <div class="flex-shrink-0 mx-auto md:mx-0">
-            ${
-              image
-                ? `<img src="${image}" alt="${title}" class="w-40 md:w-48 rounded-xl shadow-2xl border border-surface-700">`
-                : `<div class="w-40 md:w-48 h-40 md:h-48 rounded-xl bg-surface-800 flex items-center justify-center border border-surface-700">
+            ${image
+        ? `<img src="${image}" alt="${title}" class="w-40 md:w-48 rounded-xl shadow-2xl border border-surface-700">`
+        : `<div class="w-40 md:w-48 h-40 md:h-48 rounded-xl bg-surface-800 flex items-center justify-center border border-surface-700">
                     <svg class="w-16 h-16 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                     </svg>
                   </div>`
-            }
+      }
           </div>
           
           <!-- Info -->
           <div class="flex-1 min-w-0">
             <h2 class="text-2xl md:text-3xl font-bold text-white">${title}</h2>
             
-            ${
-              author
-                ? `<p class="mt-2 text-lg text-pink-400 font-medium">${author}</p>`
-                : ""
-            }
+            ${author
+        ? `<p class="mt-2 text-lg text-pink-400 font-medium">${author}</p>`
+        : ""
+      }
             
             <div class="flex flex-wrap items-center gap-3 mt-4">
               <span class="px-3 py-1 rounded-full text-sm font-medium bg-pink-500/20 text-pink-400">
                 🎙️ Podcast
               </span>
-              ${
-                episodeCount > 0
-                  ? `<span class="text-surface-400">${episodeCount.toLocaleString()} episodes</span>`
-                  : ""
-              }
-              ${
-                language
-                  ? `<span class="text-surface-500 uppercase text-sm">${language}</span>`
-                  : ""
-              }
+              ${episodeCount > 0
+        ? `<span class="text-surface-400">${episodeCount.toLocaleString()} episodes</span>`
+        : ""
+      }
+              ${language
+        ? `<span class="text-surface-500 uppercase text-sm">${language}</span>`
+        : ""
+      }
             </div>
             
-            ${
-              trendScore
-                ? `
+            ${trendScore
+        ? `
               <div class="flex items-center gap-2 mt-3">
                 <span class="text-surface-500 text-sm">Trend Score:</span>
                 <span class="text-pink-400 font-medium">${trendScore.toFixed(1)}</span>
               </div>
             `
-                : ""
-            }
+        : ""
+      }
             
-            ${
-              lastUpdateDisplay
-                ? `<p class="mt-2 text-surface-500 text-sm">Last updated: ${lastUpdateDisplay}</p>`
-                : ""
-            }
+            ${lastUpdateDisplay
+        ? `<p class="mt-2 text-surface-500 text-sm">Last updated: ${lastUpdateDisplay}</p>`
+        : ""
+      }
             
             <!-- Categories -->
-            ${
-              categoryTags.length > 0
-                ? `
+            ${categoryTags.length > 0
+        ? `
               <div class="flex flex-wrap gap-2 mt-4">
                 ${categoryTags
-                  .map(
-                    (cat) =>
-                      `<span class="px-3 py-1 bg-surface-800 rounded-full text-sm text-surface-300">${cat}</span>`
-                  )
-                  .join("")}
+          .map(
+            (cat) =>
+              `<span class="px-3 py-1 bg-surface-800 rounded-full text-sm text-surface-300">${cat}</span>`
+          )
+          .join("")}
               </div>
             `
-                : ""
-            }
+        : ""
+      }
           </div>
         </div>
         
@@ -1536,15 +1831,13 @@ Shows{% endblock %} {% block body %}
         </div>
         
         <!-- Listen Links -->
-        ${
-          spotifyUrl || site || url
-            ? `
+        ${spotifyUrl || site || url
+        ? `
           <div class="mb-8">
             <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Listen</h3>
             <div class="flex flex-wrap gap-3">
-              ${
-                spotifyUrl
-                  ? `
+              ${spotifyUrl
+          ? `
                 <a href="${spotifyUrl}" target="_blank" rel="noopener noreferrer"
                    class="flex items-center gap-2 px-4 py-2 bg-[#1DB954] hover:bg-[#1ed760] rounded-lg text-white font-medium transition-colors">
                   <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -1553,11 +1846,10 @@ Shows{% endblock %} {% block body %}
                   Spotify
                 </a>
               `
-                  : ""
-              }
-              ${
-                site
-                  ? `
+          : ""
+        }
+              ${site
+          ? `
                 <a href="${site}" target="_blank" rel="noopener noreferrer"
                    class="flex items-center gap-2 px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg text-white font-medium transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1566,11 +1858,10 @@ Shows{% endblock %} {% block body %}
                   Website
                 </a>
               `
-                  : ""
-              }
-              ${
-                url
-                  ? `
+          : ""
+        }
+              ${url
+          ? `
                 <a href="${url}" target="_blank" rel="noopener noreferrer"
                    class="flex items-center gap-2 px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg text-white font-medium transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1579,13 +1870,13 @@ Shows{% endblock %} {% block body %}
                   RSS Feed
                 </a>
               `
-                  : ""
-              }
+          : ""
+        }
             </div>
           </div>
         `
-            : ""
-        }
+        : ""
+      }
         
         <!-- Technical Details -->
         <div class="pt-6 border-t border-surface-800">
@@ -1595,26 +1886,24 @@ Shows{% endblock %} {% block body %}
               <span class="text-surface-500">Feed ID</span>
               <p class="text-surface-300 mt-1">${data.id || "N/A"}</p>
             </div>
-            ${
-              itunesId
-                ? `
+            ${itunesId
+        ? `
               <div>
                 <span class="text-surface-500">iTunes ID</span>
                 <p class="text-surface-300 mt-1">${itunesId}</p>
               </div>
             `
-                : ""
-            }
-            ${
-              podcastGuid
-                ? `
+        : ""
+      }
+            ${podcastGuid
+        ? `
               <div>
                 <span class="text-surface-500">GUID</span>
                 <p class="text-surface-300 font-mono text-xs mt-1 truncate" title="${podcastGuid}">${podcastGuid.substring(0, 20)}...</p>
               </div>
             `
-                : ""
-            }
+        : ""
+      }
             <div>
               <span class="text-surface-500">Source</span>
               <p class="text-surface-300 mt-1">${data.source || "PodcastIndex"}</p>
@@ -1628,10 +1917,364 @@ Shows{% endblock %} {% block body %}
             View Raw JSON
           </summary>
           <pre class="mt-3 p-4 bg-surface-950 rounded-lg overflow-x-auto text-xs text-surface-400 max-h-64 overflow-y-auto"><code>${JSON.stringify(
-            data,
-            null,
-            2
-          )}</code></pre>
+        data,
+        null,
+        2
+      )}</code></pre>
+        </details>
+      </div>
+    `;
+  }
+
+  function renderAuthorDetail(data) {
+    const name = data.name || data.search_title || "Unknown Author";
+    const bio = data.bio || data.full_overview || data.overview || "";
+    const image = data.image || null;
+    const photoUrls = data.photo_urls || {};
+    const fallbackImage = photoUrls.wikidata || null;
+    const birthDate = data.birth_date || "";
+    const deathDate = data.death_date || "";
+    const openlibraryUrl = data.openlibrary_url || "";
+    const authorLinks = data.author_links || [];
+    const remoteIds = data.remote_ids || {};
+    const wikidataId = data.wikidata_id || remoteIds.wikidata || "";
+
+    // Format life dates
+    let lifeDates = "";
+    if (birthDate) {
+      lifeDates = `Born ${birthDate}`;
+      if (deathDate) {
+        lifeDates += ` — Died ${deathDate}`;
+      }
+    }
+
+    modalBody.innerHTML = `
+      <div class="p-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+          <!-- Author Photo -->
+          <div class="flex-shrink-0 mx-auto md:mx-0">
+            ${image
+        ? `<img src="${image}" alt="${name}" class="w-40 md:w-48 h-40 md:h-48 object-cover rounded-full shadow-2xl border-4 border-amber-500/30" data-fallback="${fallbackImage || ''}" onload="var img=this; setTimeout(function(){ if(img.naturalWidth<=1||img.naturalHeight<=1){ if(img.dataset.fallback&&!img.dataset.triedFallback){ img.dataset.triedFallback='true'; img.src=img.dataset.fallback; } else { img.style.display='none'; img.parentElement.innerHTML='<div class=\\'w-40 md:w-48 h-40 md:h-48 rounded-full bg-surface-800 flex items-center justify-center border-4 border-amber-500/30\\'><svg class=\\'w-16 h-16 text-amber-500\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>'; }}},0);" onerror="if(this.dataset.fallback && !this.dataset.triedFallback) { this.dataset.triedFallback='true'; this.src=this.dataset.fallback; } else { this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-40 md:w-48 h-40 md:h-48 rounded-full bg-surface-800 flex items-center justify-center border-4 border-amber-500/30\\'><svg class=\\'w-16 h-16 text-amber-500\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>'; }'">`
+        : `<div class="w-40 md:w-48 h-40 md:h-48 rounded-full bg-surface-800 flex items-center justify-center border-4 border-amber-500/30">
+                    <svg class="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                  </div>`
+      }
+          </div>
+          
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <h2 class="text-2xl md:text-3xl font-bold text-white">${name}</h2>
+            
+            <div class="flex flex-wrap items-center gap-3 mt-4">
+              <span class="px-3 py-1 rounded-full text-sm font-medium bg-amber-500/20 text-amber-400">
+                📚 Author
+              </span>
+              ${lifeDates
+        ? `<span class="text-surface-400">${lifeDates}</span>`
+        : ""
+      }
+            </div>
+            
+            ${data.wikidata_name && data.wikidata_name !== name
+        ? `<p class="mt-2 text-surface-500 text-sm">Also known as: ${data.wikidata_name}</p>`
+        : ""
+      }
+          </div>
+        </div>
+        
+        <!-- Biography -->
+        ${bio
+        ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Biography</h3>
+            <p class="text-surface-300 leading-relaxed whitespace-pre-line">${bio}</p>
+          </div>
+        `
+        : ""
+      }
+        
+        <!-- External Links -->
+        ${authorLinks.length > 0
+        ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">External Links</h3>
+            <div class="flex flex-wrap gap-3">
+              ${authorLinks.map(link => `
+                <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+                   class="flex items-center gap-2 px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg text-white font-medium transition-colors">
+                  ${link.title}
+                  <svg class="w-3 h-3 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </a>
+              `).join('')}
+            </div>
+          </div>
+        `
+        : ""
+      }
+        
+        <!-- Details -->
+        <div class="pt-6 border-t border-surface-800">
+          <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Details</h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span class="text-surface-500">Source</span>
+              <p class="text-surface-300 mt-1">${data.source || "OpenLibrary"}</p>
+            </div>
+            ${data.openlibrary_key
+        ? `
+              <div>
+                <span class="text-surface-500">OpenLibrary ID</span>
+                <p class="text-surface-300 mt-1 font-mono text-xs">${data.openlibrary_key.replace('/authors/', '')}</p>
+              </div>
+            `
+        : ""
+      }
+            ${wikidataId
+        ? `
+              <div>
+                <span class="text-surface-500">Wikidata ID</span>
+                <p class="text-surface-300 mt-1 font-mono text-xs">${wikidataId}</p>
+              </div>
+            `
+        : ""
+      }
+            ${data.work_count > 0
+        ? `
+              <div>
+                <span class="text-surface-500">Works</span>
+                <p class="text-surface-300 mt-1">${data.work_count.toLocaleString()}</p>
+              </div>
+            `
+        : ""
+      }
+          </div>
+        </div>
+        
+        <!-- Raw JSON Toggle -->
+        <details class="mt-6">
+          <summary class="cursor-pointer text-sm text-surface-500 hover:text-surface-300 transition-colors">
+            View Raw JSON
+          </summary>
+          <pre class="mt-3 p-4 bg-surface-950 rounded-lg overflow-x-auto text-xs text-surface-400 max-h-64 overflow-y-auto"><code>${JSON.stringify(
+        data,
+        null,
+        2
+      )}</code></pre>
+        </details>
+      </div>
+    `;
+  }
+
+  function renderBookDetail(data) {
+    const title = data.title || data.search_title || "Unknown Book";
+    const author = data.author || data.author_search || "";
+    const authorNames = data.author_name || [];
+    const description = data.description || data.full_overview || data.overview || "";
+    const cover_i = data.cover_i;
+    const coverUrl = cover_i ? `https://covers.openlibrary.org/b/id/${cover_i}-L.jpg` : "";
+    const firstPublishYear = data.first_publish_year;
+    const subjects = data.subjects || data.subject || [];
+    const ratingsAverage = data.ratings_average;
+    const ratingsCount = data.ratings_count;
+    const readinglogCount = data.readinglog_count;
+    const openlibraryKey = data.openlibrary_key || data.key;
+    const openlibraryUrl = openlibraryKey ? `https://openlibrary.org${openlibraryKey}` : "";
+    const firstSentence = data.first_sentence;
+    const numberOfPages = data.number_of_pages;
+    const publisher = data.publisher;
+    const isbn13 = data.primary_isbn13;
+    const isbn10 = data.primary_isbn10;
+
+    // Format first sentence
+    let firstSentenceText = "";
+    if (firstSentence) {
+      if (Array.isArray(firstSentence)) {
+        firstSentenceText = firstSentence[0] || "";
+      } else {
+        firstSentenceText = firstSentence;
+      }
+    }
+
+    modalBody.innerHTML = `
+      <div class="p-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+          <!-- Book Cover -->
+          <div class="flex-shrink-0 mx-auto md:mx-0">
+            ${coverUrl
+        ? `<img src="${coverUrl}" alt="${title}" class="w-40 md:w-48 h-auto max-h-72 object-contain rounded-lg shadow-2xl border-2 border-emerald-500/30" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-40 md:w-48 h-64 rounded-lg bg-surface-800 flex items-center justify-center border-2 border-emerald-500/30\\'><svg class=\\'w-16 h-16 text-emerald-500\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253\\'/></svg></div>';">`
+        : `<div class="w-40 md:w-48 h-64 rounded-lg bg-surface-800 flex items-center justify-center border-2 border-emerald-500/30">
+                    <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                  </div>`
+      }
+          </div>
+          
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <h2 class="text-2xl md:text-3xl font-bold text-white">${title}</h2>
+            
+            ${author || authorNames.length > 0
+        ? `<p class="mt-2 text-lg text-emerald-400">${author || authorNames.join(", ")}</p>`
+        : ""
+      }
+            
+            <div class="flex flex-wrap items-center gap-3 mt-4">
+              <span class="px-3 py-1 rounded-full text-sm font-medium bg-emerald-500/20 text-emerald-400">
+                📚 Book
+              </span>
+              ${firstPublishYear
+        ? `<span class="text-surface-400">Published ${firstPublishYear}</span>`
+        : ""
+      }
+              ${numberOfPages
+        ? `<span class="text-surface-500">${numberOfPages} pages</span>`
+        : ""
+      }
+            </div>
+            
+            <!-- Ratings -->
+            ${ratingsAverage || ratingsCount
+        ? `
+              <div class="flex items-center gap-4 mt-4">
+                ${ratingsAverage
+          ? `<div class="flex items-center gap-1">
+                      <span class="text-yellow-400 text-lg">★</span>
+                      <span class="text-white font-semibold">${ratingsAverage.toFixed(1)}</span>
+                      <span class="text-surface-500">/5</span>
+                    </div>`
+          : ""
+        }
+                ${ratingsCount
+          ? `<span class="text-surface-500">${ratingsCount.toLocaleString()} ratings</span>`
+          : ""
+        }
+                ${readinglogCount
+          ? `<span class="text-surface-500">${readinglogCount.toLocaleString()} readers</span>`
+          : ""
+        }
+              </div>
+            `
+        : ""
+      }
+            
+            <!-- OpenLibrary Link -->
+            ${openlibraryUrl
+        ? `
+              <a href="${openlibraryUrl}" target="_blank" rel="noopener noreferrer"
+                 class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium transition-colors">
+                View on OpenLibrary
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+              </a>
+            `
+        : ""
+      }
+          </div>
+        </div>
+        
+        <!-- First Sentence -->
+        ${firstSentenceText
+        ? `
+          <div class="mb-8 p-4 bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-lg">
+            <p class="text-surface-300 italic">"${firstSentenceText}"</p>
+            <p class="text-surface-500 text-sm mt-2">— First sentence</p>
+          </div>
+        `
+        : ""
+      }
+        
+        <!-- Description -->
+        ${description
+        ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Description</h3>
+            <p class="text-surface-300 leading-relaxed whitespace-pre-line">${description}</p>
+          </div>
+        `
+        : ""
+      }
+        
+        <!-- Subjects -->
+        ${subjects.length > 0
+        ? `
+          <div class="mb-8">
+            <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Subjects</h3>
+            <div class="flex flex-wrap gap-2">
+              ${subjects.slice(0, 15).map(subject => `
+                <span class="px-3 py-1 bg-surface-800 text-surface-300 rounded-full text-sm">${subject}</span>
+              `).join('')}
+              ${subjects.length > 15 ? `<span class="px-3 py-1 text-surface-500 text-sm">+${subjects.length - 15} more</span>` : ''}
+            </div>
+          </div>
+        `
+        : ""
+      }
+        
+        <!-- Details -->
+        <div class="pt-6 border-t border-surface-800">
+          <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Details</h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span class="text-surface-500">Source</span>
+              <p class="text-surface-300 mt-1">${data.source || "OpenLibrary"}</p>
+            </div>
+            ${openlibraryKey
+        ? `
+              <div>
+                <span class="text-surface-500">OpenLibrary ID</span>
+                <p class="text-surface-300 mt-1 font-mono text-xs">${openlibraryKey.replace('/works/', '')}</p>
+              </div>
+            `
+        : ""
+      }
+            ${isbn13
+        ? `
+              <div>
+                <span class="text-surface-500">ISBN-13</span>
+                <p class="text-surface-300 mt-1 font-mono text-xs">${isbn13}</p>
+              </div>
+            `
+        : ""
+      }
+            ${isbn10
+        ? `
+              <div>
+                <span class="text-surface-500">ISBN-10</span>
+                <p class="text-surface-300 mt-1 font-mono text-xs">${isbn10}</p>
+              </div>
+            `
+        : ""
+      }
+            ${publisher
+        ? `
+              <div>
+                <span class="text-surface-500">Publisher</span>
+                <p class="text-surface-300 mt-1">${Array.isArray(publisher) ? publisher[0] : publisher}</p>
+              </div>
+            `
+        : ""
+      }
+          </div>
+        </div>
+        
+        <!-- Raw JSON Toggle -->
+        <details class="mt-6">
+          <summary class="cursor-pointer text-sm text-surface-500 hover:text-surface-300 transition-colors">
+            View Raw JSON
+          </summary>
+          <pre class="mt-3 p-4 bg-surface-950 rounded-lg overflow-x-auto text-xs text-surface-400 max-h-64 overflow-y-auto"><code>${JSON.stringify(
+        data,
+        null,
+        2
+      )}</code></pre>
         </details>
       </div>
     `;
