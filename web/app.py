@@ -148,6 +148,25 @@ def get_latest_person_ids_file() -> dict | None:
 
 app = FastAPI()
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Print startup message with server info."""
+    # Cloud Run sets PORT (usually 8080), local dev uses 9001
+    is_cloud_run = bool(os.getenv("K_SERVICE"))
+    port = os.getenv("PORT", "8080") if is_cloud_run else "9001"
+    
+    print("\n" + "=" * 60)
+    print("  🚀 MEDIA CIRCLE SEARCH SERVICE")
+    print("=" * 60)
+    print(f"  Listening on port: {port}")
+    if not is_cloud_run:
+        print(f"  Web UI:  http://localhost:{port}")
+        print(f"  API:     http://localhost:{port}/api/autocomplete?q=test")
+        print(f"  Health:  http://localhost:{port}/health")
+    print("=" * 60 + "\n")
+
+
 # Enable CORS for all origins (allows local dev to hit public API)
 app.add_middleware(
     CORSMiddleware,
