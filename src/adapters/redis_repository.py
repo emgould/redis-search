@@ -316,33 +316,21 @@ class RedisRepository:
             book_num_docs = 0
             book_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
-        # Count keys by prefix using optimized SCAN with pattern matching
-        cache_breakdown = {}
+        # Use index doc counts for cache breakdown (fast, no SCAN needed)
+        # This is accurate because each index corresponds to keys with that prefix
+        cache_breakdown = {
+            "media": num_docs,  # media:* keys
+            "person": people_num_docs,  # person:* keys
+            "podcast": podcasts_num_docs,  # podcast:* keys
+            "author": author_num_docs,  # author:* keys
+            "book": book_num_docs,  # book:* keys
+            "tmdb_request": 0,  # Cache keys, not indexed
+            "tmdb": 0,  # Cache keys, not indexed
+        }
 
-        # Count each prefix separately (more efficient than scanning all keys)
-        prefix_patterns = [
-            ("media", "media:*"),
-            ("person", "person:*"),
-            ("podcast", "podcast:*"),
-            ("author", "author:*"),
-            ("book", "book:*"),
-            ("tmdb_request", "tmdb_request:*"),
-            ("tmdb", "tmdb:*"),
-        ]
-
-        for prefix_name, pattern in prefix_patterns:
-            count = 0
-            cursor = 0
-            while True:
-                cursor, keys = await self.redis.scan(cursor=cursor, match=pattern, count=10000)
-                count += len(keys)
-                if cursor == 0:
-                    break
-            cache_breakdown[prefix_name] = count
-
-        # Calculate 'other' as the remainder
+        # Calculate 'other' as the remainder (includes tmdb cache keys, etc.)
         total_counted = sum(cache_breakdown.values())
-        cache_breakdown["other"] = dbsize - total_counted
+        cache_breakdown["other"] = max(0, dbsize - total_counted)
 
         return {
             "info": info,
