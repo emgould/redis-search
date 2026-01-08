@@ -24,10 +24,10 @@ from typing import Any
 
 from redis.asyncio import Redis
 
-from src.adapters.config import load_env
-from src.api.tmdb.person import TMDBPersonService
-from src.contracts.models import MCSources, MCType
-from src.core.normalize import SearchDocument, document_to_redis
+from adapters.config import load_env
+from api.tmdb.person import TMDBPersonService
+from contracts.models import MCSources, MCType
+from core.normalize import SearchDocument, document_to_redis
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)

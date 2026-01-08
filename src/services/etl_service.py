@@ -20,9 +20,9 @@ from pathlib import Path
 from google.cloud import storage  # type: ignore[attr-defined]
 from redis.asyncio import Redis
 
-from src.adapters.config import load_env
-from src.contracts.models import MCSources, MCType
-from src.core.normalize import document_to_redis, normalize_document
+from adapters.config import load_env
+from contracts.models import MCSources, MCType
+from core.normalize import document_to_redis, normalize_document
 
 # Major streaming platforms for filtering
 MAJOR_STREAMING_PROVIDERS = {

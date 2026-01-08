@@ -21,8 +21,24 @@
       "name": "Python: Web Debug",
       "type": "python",
       "request": "launch",
-      "program": "web/app.py",
-      "console": "integratedTerminal"
+      "module": "uvicorn",
+      "args": [
+        "web.app:app",
+        "--reload",
+        "--port",
+        "9001",
+        "--host",
+        "0.0.0.0"
+      ],
+      "preLaunchTask": "Load Secrets for Web Debug",
+      "env": {  
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}",
+        "ENVIRONMENT": "local",
+        "LOCAL_DEV": "true"
+      },
+      "envFile": "${workspaceFolder}/.env.debug",
+      "console": "integratedTerminal",
+      "justMyCode": false
     },
     {
       "name": "Python: Current File",
@@ -37,6 +53,6 @@
       },
       "envFile": "${workspaceFolder}/firebase/python_functions/.env",
       "justMyCode": false
-    },
+    }
   ]
 }
