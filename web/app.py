@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import re
 import subprocess
@@ -152,10 +153,17 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     """Print startup message with server info."""
+    # Configure logging to show INFO level and above
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     # Cloud Run sets PORT (usually 8080), local dev uses 9001
     is_cloud_run = bool(os.getenv("K_SERVICE"))
     port = os.getenv("PORT", "8080") if is_cloud_run else "9001"
-    
+
     print("\n" + "=" * 60)
     print("  🚀 MEDIA CIRCLE SEARCH SERVICE")
     print("=" * 60)
@@ -387,11 +395,28 @@ async def switch_redis(env: str = Query(...)):
     """Switch Redis environment (local or public)."""
     try:
         new_env = RedisEnvironment(env)
+        msg = f"Switching Redis environment from {RedisManager.get_current_env().value} to {new_env.value}"
+        logging.info(msg)
+        print(f"[API] {msg}")  # Fallback to print
         RedisManager.set_current_env(new_env)
         reset_repo()  # Reset search service repository
 
+        # Verify the switch took effect
+        current_env_after_switch = RedisManager.get_current_env()
+        if current_env_after_switch != new_env:
+            logging.error(
+                f"Environment switch failed! Expected {new_env.value}, got {current_env_after_switch.value}"
+            )
+            return JSONResponse(
+                status_code=500,
+                content={"success": False, "error": "Failed to switch environment"},
+            )
+
         # Test new connection
         status = await RedisManager.test_connection(new_env)
+        logging.info(
+            f"Redis environment switched to {new_env.value}, connection status: {status.get('status')}"
+        )
         return JSONResponse(
             content={
                 "success": True,
@@ -409,12 +434,18 @@ async def switch_redis(env: str = Query(...)):
 async def redis_status():
     """Get status of both Redis environments."""
     current_env = RedisManager.get_current_env()
+    current_config = RedisManager.get_config(current_env)
     local_status = await RedisManager.test_connection(RedisEnvironment.LOCAL)
     public_status = await RedisManager.test_connection(RedisEnvironment.PUBLIC)
 
     return JSONResponse(
         content={
             "current_env": current_env.value,
+            "current_config": {
+                "host": current_config.host,
+                "port": current_config.port,
+                "name": current_config.name,
+            },
             "local": local_status,
             "public": public_status,
         }
@@ -425,6 +456,13 @@ async def redis_status():
 async def redis_stats():
     """Get current Redis stats for the active connection."""
     try:
+        # Ensure we're using the current environment
+        current_env = RedisManager.get_current_env()
+        current_config = RedisManager.get_config(current_env)
+        msg = f"Getting Redis stats - Environment: {current_env.value}, Config: {current_config.host}:{current_config.port}"
+        logging.info(msg)
+        print(f"[API] {msg}")  # Fallback to print
+
         repo = RedisRepository()
         stats = await repo.stats()
         return JSONResponse(
@@ -447,7 +485,13 @@ async def redis_stats():
             }
         )
     except Exception as e:
-        return JSONResponse(content={"success": False, "error": str(e)})
+        import traceback
+
+        current_env = RedisManager.get_current_env()
+        current_config = RedisManager.get_config(current_env)
+        error_msg = f"Error getting Redis stats for {current_env.value} ({current_config.host}:{current_config.port}): {e}"
+        logging.error(f"{error_msg}\n{traceback.format_exc()}")
+        return JSONResponse(content={"success": False, "error": error_msg})
 
 
 def run_gcs_load_task(
@@ -793,7 +837,7 @@ async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
         for idx_name in indices_raw or []:
             try:
                 info = await redis.ft(idx_name).info()
-                num_docs = int(info.get("num_docs", 0))
+                num_docs = int(info.get("num_docs", 0))  # type: ignore[attr-defined]
                 friendly_name = idx_name[4:] if idx_name.startswith("idx:") else idx_name
                 indices.append(
                     {

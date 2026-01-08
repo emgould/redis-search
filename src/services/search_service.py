@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import get_person_credits_async
 from contracts.models import MCType
-from src.adapters.redis_client import get_redis
-from src.adapters.redis_repository import RedisRepository
-from src.core.search_queries import (
+from adapters.redis_client import get_redis
+from adapters.redis_repository import RedisRepository
+from core.search_queries import (
     build_autocomplete_query,
     build_fuzzy_fulltext_query,
 )
