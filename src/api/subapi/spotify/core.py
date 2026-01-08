@@ -25,7 +25,7 @@ SpotifyRequestCache = RedisCache(
     prefix="spotify_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Version bump for Redis migration
+    version="1.0.2",  # Fixed: default_image now uses largest image (index 0) instead of smallest
 )
 
 SpotifyCache = RedisCache(
@@ -33,7 +33,7 @@ SpotifyCache = RedisCache(
     prefix="spotify",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Version bump for Redis migration
+    version="1.0.2",  # Fixed: default_image now uses largest image (index 0) instead of smallest
 )
 
 # Rate limiter configuration: Spotify API limits
@@ -173,8 +173,8 @@ def process_spotify_images(images_data: list[dict[str, Any]]) -> tuple[list[MCIm
             )
         )
 
-    # Return the largest image (last in Spotify's sorted order) as default
-    default_image = images[-1].url if images else None
+    # Return the largest image (first in Spotify's sorted order) as default
+    default_image = images[0].url if images else None
     return images, default_image
 
 

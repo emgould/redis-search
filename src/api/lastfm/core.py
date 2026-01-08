@@ -7,9 +7,9 @@ import os
 from typing import Any, cast
 
 import aiohttp
-from contracts.models import MCType, generate_mc_id
 
 from api.lastfm.auth import Auth
+from contracts.models import MCType, generate_mc_id
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
@@ -30,7 +30,7 @@ LastFMCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="lastfm",
     verbose=True,
-    version="2.3.0",  # Updated album search sorting to use weighted title matching with Levenshtein distance
+    version="2.4.0",  # Fixed: image fallback now uses largest image (index 0) instead of smallest
 )
 
 logger = get_logger(__name__)
