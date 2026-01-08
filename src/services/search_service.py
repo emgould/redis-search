@@ -5,11 +5,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from adapters.redis_client import get_redis
+from adapters.redis_repository import RedisRepository
 from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import get_person_credits_async
 from contracts.models import MCType
-from adapters.redis_client import get_redis
-from adapters.redis_repository import RedisRepository
 from core.search_queries import (
     build_autocomplete_query,
     build_fuzzy_fulltext_query,
