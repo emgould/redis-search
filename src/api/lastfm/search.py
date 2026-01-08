@@ -289,10 +289,10 @@ class LastFMSearchService(LastFMEnrichmentService):
                 # Get best quality image - prefer default_image, fallback to last image in images array
                 image_url = spotify_album.get("default_image")
                 if not image_url:
-                    # Fallback to last image in images array (largest, as processed by Spotify)
+                    # Fallback to first image in images array (largest in Spotify's order)
                     images_list = spotify_album.get("images", [])
                     if isinstance(images_list, list) and len(images_list) > 0:
-                        image_obj = images_list[-1]
+                        image_obj = images_list[0]
                         if isinstance(image_obj, dict):
                             image_url = image_obj.get("url")
                         else:
@@ -730,10 +730,10 @@ class LastFMSearchService(LastFMEnrichmentService):
                 if not album.get("image"):
                     image_url = album.get("default_image")
                     if not image_url:
-                        # Fallback to last image in images array (largest, as processed by Spotify)
+                        # Fallback to first image in images array (largest in Spotify's order)
                         images_list = album.get("images", [])
                         if isinstance(images_list, list) and len(images_list) > 0:
-                            image_obj = images_list[-1]
+                            image_obj = images_list[0]
                             if isinstance(image_obj, dict):
                                 image_url = image_obj.get("url")
                             else:
