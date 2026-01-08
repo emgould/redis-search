@@ -5,6 +5,8 @@ Follows the TMDB pattern with Pydantic 2.0.
 
 from typing import Any
 
+from pydantic import Field, model_validator
+
 from contracts.models import (
     MCBaseItem,
     MCImage,
@@ -16,8 +18,6 @@ from contracts.models import (
     MCUrlType,
     generate_mc_id,
 )
-from pydantic import Field, model_validator
-
 from utils.pydantic_tools import BaseModelWithMethods
 
 # ========== Algolia API Response Models ==========

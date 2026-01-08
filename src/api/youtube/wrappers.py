@@ -6,6 +6,13 @@ Provides async wrappers for Firebase Functions integration using ApiWrapperRespo
 from datetime import UTC, datetime
 from typing import cast
 
+from api.youtube.core import YouTubeService, youtube_service
+from api.youtube.models import (
+    YouTubeCategoriesResponse,
+    YouTubePopularResponse,
+    YouTubeSearchResponse,
+    YouTubeTrendingResponse,
+)
 from contracts.models import (
     MCBaseItem,
     MCPersonSearchRequest,
@@ -13,14 +20,6 @@ from contracts.models import (
     MCSearchResponse,
     MCSources,
     MCType,
-)
-
-from api.youtube.core import YouTubeService, youtube_service
-from api.youtube.models import (
-    YouTubeCategoriesResponse,
-    YouTubePopularResponse,
-    YouTubeSearchResponse,
-    YouTubeTrendingResponse,
 )
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
@@ -33,7 +32,7 @@ YouTubeWrapperCache = RedisCache(
     prefix="youtube_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.0.3",  # Version bump for Redis migration
+    version="4.3.0",  # Version bump: official API first, fallback to unofficial INNERTUBE
 )
 
 
@@ -102,9 +101,23 @@ class YouTubeWrapper:
         published_after: str | None = None,
         region_code: str = "US",
         language: str = "en",
+        enrich: bool = False,  # Default to False for fast autocomplete
     ) -> YouTubeSearchResponse:
         """
-        Async wrapper function to search YouTube videos via the api, very expensive
+        Search YouTube videos - tries official API first, falls back to unofficial INNERTUBE API.
+
+        The official API provides richer data but has strict quota limits (10,000 units/day).
+        If quota is exceeded, automatically falls back to the unofficial API.
+
+        Args:
+            query: Search query string
+            max_results: Maximum number of results to return
+            order: Ordering method (official API only)
+            published_after: Filter by publish date (official API only)
+            region_code: Region code for localization
+            language: Language code for localization
+            enrich: If True, fetch additional details for each video (slower but more data).
+                    If False, return basic info only (faster, good for autocomplete).
 
         Returns:
             YouTubeSearchResponse: MCBaseItem derivative containing search results or error information
@@ -121,7 +134,9 @@ class YouTubeWrapper:
             )
             return error_response
 
+        # Try official API first (better data quality)
         try:
+            logger.info(f"Trying official YouTube API for: {query}")
             data = await self.service.search_videos(
                 query=query,
                 max_results=max_results,
@@ -131,15 +146,37 @@ class YouTubeWrapper:
                 language=language,
             )
 
+            # Check if we got a quota error
+            if data.error and "quota" in str(data.error).lower():
+                raise Exception("Quota exceeded, falling back to unofficial API")
+
+            if not data.error:
+                data.status_code = 200
+                logger.info(f"Official API returned {len(data.results)} results")
+                return cast(YouTubeSearchResponse, data)
+
+        except Exception as e:
+            logger.warning(f"Official API failed ({e}), falling back to unofficial INNERTUBE API")
+
+        # Fallback to unofficial INNERTUBE API (no quota limits)
+        try:
+            logger.info(f"Using unofficial INNERTUBE API for: {query}")
+            data = await self.service.search_videos_async(
+                query=query,
+                max_results=max_results,
+                enrich=enrich,
+            )
+
             if data.error:
                 data.status_code = 500
                 return cast(YouTubeSearchResponse, data)
 
             data.status_code = 200
+            logger.info(f"Unofficial API returned {len(data.results)} results")
             return cast(YouTubeSearchResponse, data)
 
         except Exception as e:
-            logger.error(f"Error in search_videos: {e}")
+            logger.error(f"Both YouTube APIs failed: {e}")
             error_response = YouTubeSearchResponse(
                 date=datetime.now(UTC).strftime("%Y-%m-%d"),
                 results=[],

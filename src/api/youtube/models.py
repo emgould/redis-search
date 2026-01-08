@@ -5,9 +5,9 @@ Follows Pydantic 2.0 patterns with full type safety.
 
 from typing import Any
 
-from contracts.models import MCBaseItem, MCImage, MCSearchResponse, MCSources, MCSubType, MCType
 from pydantic import BaseModel, Field, model_validator
 
+from contracts.models import MCBaseItem, MCImage, MCSearchResponse, MCSources, MCSubType, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

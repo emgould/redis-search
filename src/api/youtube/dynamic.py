@@ -4,9 +4,9 @@ import asyncio
 import re
 
 import aiohttp
-from contracts.models import MCImage, MCUrlType
 
 from api.youtube.models import DynamicYouTubeVideo, YouTubeCreator, YouTubeVideo
+from contracts.models import MCImage, MCUrlType
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -459,14 +459,24 @@ async def get_person(query: str, limit: int = 1) -> list[YouTubeCreator]:
 # -------------------------------
 # Core async search function
 # -------------------------------
-YOUTUBE_SEARCH_URL = (
-    "https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SL0o6vPO3VxZrZ5kZ6lZ2X2aH60"
-)
 
 
-async def search_videos_async(query: str, limit: int = 10) -> list[YouTubeVideo]:
+async def search_videos_async(
+    query: str, limit: int = 10, enrich: bool = True
+) -> list[YouTubeVideo]:
+    """
+    Search YouTube videos using the unofficial INNERTUBE API.
+
+    Args:
+        query: Search query string
+        limit: Maximum number of results to return
+        enrich: If True, fetch additional details for each video (slower but more data).
+                If False, return basic info only (faster, good for autocomplete).
+    """
     try:
-        await get_api_key()
+        api_key = await get_api_key()
+        search_url = f"https://www.youtube.com/youtubei/v1/search?key={api_key}"
+
         payload = {
             "context": {
                 "client": {
@@ -480,7 +490,7 @@ async def search_videos_async(query: str, limit: int = 10) -> list[YouTubeVideo]
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(YOUTUBE_SEARCH_URL, headers=HEADERS, json=payload) as resp:
+            async with session.post(search_url, headers=HEADERS, json=payload) as resp:
                 data = await resp.json()
 
             # Navigate into the deeply nested YouTube JSON structure
@@ -517,6 +527,9 @@ async def search_videos_async(query: str, limit: int = 10) -> list[YouTubeVideo]
                 # Store thumbnails for enrichment
                 thumbnails_map[vid] = thumbs
 
+                # Process thumbnails to MCImage objects for basic results
+                images = images_from_thumbnails(thumbs) if thumbs else []
+
                 results.append(
                     DynamicYouTubeVideo(
                         video_id=vid,
@@ -526,6 +539,7 @@ async def search_videos_async(query: str, limit: int = 10) -> list[YouTubeVideo]
                         view_count=view_count,
                         thumbnail_url=thumb_url,
                         url=f"https://www.youtube.com/watch?v={vid}",
+                        images=images,  # Include basic thumbnails
                     )
                 )
 
@@ -533,19 +547,20 @@ async def search_videos_async(query: str, limit: int = 10) -> list[YouTubeVideo]
                     break
 
             # ----------------------------------------
-            # Enrich each video concurrently
+            # Enrich each video concurrently (optional)
             # ----------------------------------------
-            tasks = [
-                get_video_details(session, v.video_id, thumbnails_map.get(v.video_id))
-                for v in results
-            ]
-            details_list = await asyncio.gather(*tasks, return_exceptions=True)
+            if enrich and results:
+                tasks = [
+                    get_video_details(session, v.video_id, thumbnails_map.get(v.video_id))
+                    for v in results
+                ]
+                details_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Merge data back into results
-            for v, d in zip(results, details_list, strict=False):
-                if isinstance(d, dict) and not d.get("error"):
-                    for key, val in d.items():
-                        setattr(v, key, val)
+                # Merge data back into results
+                for v, d in zip(results, details_list, strict=False):
+                    if isinstance(d, dict) and not d.get("error"):
+                        for key, val in d.items():
+                            setattr(v, key, val)
 
         # Convert DynamicYouTubeVideo objects to YouTubeVideo objects
         # Filter out any videos that have errors (check error attribute, not dict.get)

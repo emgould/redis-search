@@ -6,8 +6,6 @@ Handles trending videos, search, and other YouTube-related functionality.
 import re
 from datetime import UTC, datetime
 
-from contracts.models import MCSearchResponse, MCType
-
 # YouTube Data API client
 from googleapiclient.errors import HttpError
 
@@ -26,6 +24,7 @@ from api.youtube.models import (
     YouTubeTrendingResponse,
     YouTubeVideo,
 )
+from contracts.models import MCSearchResponse, MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -637,11 +636,19 @@ class YouTubeService(Auth):
                 error=str(e),
             )
 
-    async def search_videos_async(self, query: str, max_results: int = 10) -> VideoSearchResponse:
+    async def search_videos_async(
+        self, query: str, max_results: int = 10, enrich: bool = True
+    ) -> VideoSearchResponse:
         """
-        Search for videos on YouTube asynchronously.
+        Search for videos on YouTube asynchronously using unofficial INNERTUBE API.
+
+        Args:
+            query: Search query string
+            max_results: Maximum number of results to return
+            enrich: If True, fetch additional details for each video (slower but more data).
+                    If False, return basic info only (faster, good for autocomplete).
         """
-        videos = await search_videos_async(query, max_results)
+        videos = await search_videos_async(query, max_results, enrich=enrich)
         return VideoSearchResponse(
             date=datetime.now(UTC).strftime("%Y-%m-%d"),
             results=videos,
