@@ -32,8 +32,8 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
 
     The document is stored as JSON and indexed by Redis Search.
     """
-    # Extract metadata for convenience
-    matching_authors = book.pop("_matching_author_olids", [])
+    # Extract author OLIDs for indexing (enables O(1) author->books lookup)
+    author_olids = book.pop("_matching_author_olids", [])
 
     # Build search-optimized document
     doc = {
@@ -49,6 +49,7 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
         "author": book.get("author"),
         "author_name": book.get("author_name", []),
         "author_search": " ".join(book.get("author_name", [])),  # For text search
+        "matching_author_olids": author_olids,  # TagField indexed for O(1) relational queries
         # Type tags
         "mc_type": book.get("mc_type", "book"),
         "source": book.get("source", "openlibrary"),
@@ -82,8 +83,6 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
         "readinglog_count": book.get("readinglog_count", 0),
         # Physical details
         "number_of_pages": book.get("number_of_pages"),
-        # Metadata
-        "matching_author_olids": matching_authors,
     }
 
     return doc
@@ -103,6 +102,8 @@ async def create_book_index(redis: Redis) -> bool:
         # Author search
         TextField("$.author_search", as_name="author_search", weight=3.0),
         TextField("$.author", as_name="author", weight=2.0),
+        # Author OLID - O(1) lookup for relational queries (books by author)
+        TagField("$.matching_author_olids[*]", as_name="author_olid"),
         # Description - searchable but lower weight
         TextField("$.description", as_name="description", weight=1.0),
         # Subject search
