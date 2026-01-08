@@ -134,6 +134,38 @@ class RedisRepository:
 
         return await self.book_idx.search(query)
 
+    async def get_books_by_author_olid(
+        self,
+        author_olid: str,
+        limit: int = 50,
+        sort_by: str = "ratings_average",
+        sort_asc: bool = False,
+    ):
+        """
+        Get books by author OpenLibrary ID using O(1) TagField lookup.
+
+        This is the most performant way to find all books by an author.
+        Uses the indexed author_olid TagField for instant relational queries.
+
+        Args:
+            author_olid: OpenLibrary author ID (e.g., "OL2162284A" for Stephen King)
+            limit: Maximum results to return
+            sort_by: Field to sort by (ratings_average, first_publish_year, etc.)
+            sort_asc: Sort ascending if True, descending if False
+
+        Returns:
+            Search results with books by the specified author
+        """
+        # TagField query uses inverted index for O(1) lookup
+        query_str = f"@author_olid:{{{author_olid}}}"
+        query = Query(query_str).paging(0, limit)
+
+        # Sort by the specified field (default: highest rated first)
+        if sort_by:
+            query = query.sort_by(sort_by, asc=sort_asc)
+
+        return await self.book_idx.search(query)
+
     async def set_document(self, key: str, value: dict) -> None:
         await self.redis.json().set(key, "$", value)  # type: ignore[misc]
 
