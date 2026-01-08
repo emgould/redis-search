@@ -1,0 +1,714 @@
+# MediaCircle Search API - React Native Integration Guide
+
+## Overview
+
+This guide covers integrating the MediaCircle Search API into a React Native mobile application. The API provides autocomplete and full search functionality across multiple media sources including TV shows, movies, people, music, videos, news, and more.
+
+---
+
+## API Configuration
+
+### Base URL
+
+```typescript
+// Production API
+const API_BASE_URL = "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app";
+```
+
+### Available Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/autocomplete` | GET | Fast autocomplete for type-ahead search |
+| `/api/autocomplete/stream` | GET | SSE streaming autocomplete (results arrive as available) |
+| `/api/search` | GET | Full search with source filtering |
+| `/health` | GET | Health check endpoint |
+
+---
+
+## TypeScript Types
+
+```typescript
+// types/search.ts
+
+/**
+ * Valid source types for filtering searches
+ */
+export type SearchSource = 
+  | "tv" 
+  | "movie" 
+  | "person" 
+  | "podcast" 
+  | "author" 
+  | "book" 
+  | "news" 
+  | "video" 
+  | "ratings" 
+  | "artist" 
+  | "album";
+
+/**
+ * Base item interface - all results conform to this structure
+ */
+export interface MCBaseItem {
+  mc_id: string;           // Unique MediaCircle ID (e.g., "tmdb_tv_2288")
+  mc_type: string;         // Content type (tv, movie, person, etc.)
+  mc_subtype?: string;     // Optional subtype
+  source: string;          // Data source (tmdb, spotify, youtube, etc.)
+  source_id: string;       // ID in the source system
+  
+  // Display fields
+  search_title?: string;   // Display title
+  name?: string;           // Alternative name field (for people, artists)
+  title?: string;          // Alternative title field (for videos, news)
+  
+  // Media metadata
+  year?: number;
+  popularity?: string | number;
+  rating?: number;
+  image?: string;          // Poster/thumbnail URL
+  thumbnail_url?: string;  // Alternative image field
+  overview?: string;       // Description/synopsis
+  
+  // Additional fields vary by source type
+  cast?: string[];
+  genres?: string[];
+  
+  // Links and external IDs
+  links?: Array<{ url: string; type: string }>;
+  external_ids?: Record<string, string>;
+}
+
+/**
+ * Search/Autocomplete response structure
+ */
+export interface SearchResponse {
+  tv: MCBaseItem[];
+  movie: MCBaseItem[];
+  person: MCBaseItem[];
+  podcast: MCBaseItem[];
+  author: MCBaseItem[];
+  book: MCBaseItem[];
+  news: MCBaseItem[];
+  video: MCBaseItem[];
+  ratings: MCBaseItem[];
+  artist: MCBaseItem[];
+  album: MCBaseItem[];
+}
+
+/**
+ * Streaming event data structure
+ */
+export interface StreamEvent {
+  source: SearchSource;
+  results: MCBaseItem[];
+  latency_ms: number;
+}
+```
+
+---
+
+## API Service Implementation
+
+```typescript
+// services/searchService.ts
+
+import { SearchResponse, SearchSource, StreamEvent, MCBaseItem } from "../types/search";
+
+const API_BASE_URL = "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app";
+
+/**
+ * Search service for MediaCircle API
+ */
+class SearchService {
+  private abortController: AbortController | null = null;
+
+  /**
+   * Cancel any in-flight requests
+   */
+  cancelPendingRequests(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  /**
+   * Autocomplete search - returns all sources
+   * 
+   * @param query - Search query (minimum 2 characters)
+   * @param sources - Optional array of sources to filter by
+   * @returns Promise<SearchResponse>
+   * 
+   * @example
+   * const results = await searchService.autocomplete("breaking bad");
+   * const tvOnly = await searchService.autocomplete("breaking", ["tv", "movie"]);
+   */
+  async autocomplete(
+    query: string,
+    sources?: SearchSource[]
+  ): Promise<SearchResponse> {
+    if (!query || query.length < 2) {
+      return this.emptyResponse();
+    }
+
+    // Cancel previous request
+    this.cancelPendingRequests();
+    this.abortController = new AbortController();
+
+    const params = new URLSearchParams({ q: query });
+    if (sources && sources.length > 0) {
+      params.append("sources", sources.join(","));
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/autocomplete?${params}`,
+      { signal: this.abortController.signal }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Full search with more options
+   * 
+   * @param query - Search query (minimum 2 characters)
+   * @param options - Search options
+   * @returns Promise<SearchResponse>
+   * 
+   * @example
+   * const results = await searchService.search("star wars", {
+   *   sources: ["tv", "movie"],
+   *   limit: 20
+   * });
+   */
+  async search(
+    query: string,
+    options?: {
+      sources?: SearchSource[];
+      limit?: number;
+    }
+  ): Promise<SearchResponse> {
+    if (!query || query.length < 2) {
+      return this.emptyResponse();
+    }
+
+    this.cancelPendingRequests();
+    this.abortController = new AbortController();
+
+    const params = new URLSearchParams({ q: query });
+    
+    if (options?.sources && options.sources.length > 0) {
+      params.append("sources", options.sources.join(","));
+    }
+    
+    if (options?.limit) {
+      params.append("limit", String(options.limit));
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/search?${params}`,
+      { signal: this.abortController.signal }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Returns empty response structure
+   */
+  private emptyResponse(): SearchResponse {
+    return {
+      tv: [],
+      movie: [],
+      person: [],
+      podcast: [],
+      author: [],
+      book: [],
+      news: [],
+      video: [],
+      ratings: [],
+      artist: [],
+      album: [],
+    };
+  }
+}
+
+export const searchService = new SearchService();
+```
+
+---
+
+## React Native Hook Implementation
+
+```typescript
+// hooks/useSearch.ts
+
+import { useState, useCallback, useRef, useEffect } from "react";
+import { searchService } from "../services/searchService";
+import { SearchResponse, SearchSource, MCBaseItem } from "../types/search";
+
+interface UseSearchOptions {
+  debounceMs?: number;
+  sources?: SearchSource[];
+  minQueryLength?: number;
+}
+
+interface UseSearchResult {
+  query: string;
+  setQuery: (query: string) => void;
+  results: SearchResponse | null;
+  isLoading: boolean;
+  error: Error | null;
+  clearResults: () => void;
+}
+
+/**
+ * Custom hook for search functionality with debouncing
+ * 
+ * @example
+ * const { query, setQuery, results, isLoading } = useSearch({
+ *   debounceMs: 300,
+ *   sources: ["tv", "movie"]
+ * });
+ */
+export function useSearch(options: UseSearchOptions = {}): UseSearchResult {
+  const {
+    debounceMs = 300,
+    sources,
+    minQueryLength = 2,
+  } = options;
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const performSearch = useCallback(async (searchQuery: string) => {
+    if (searchQuery.length < minQueryLength) {
+      setResults(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await searchService.autocomplete(searchQuery, sources);
+      setResults(data);
+    } catch (err) {
+      // Ignore abort errors (user typed new query)
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      setError(err instanceof Error ? err : new Error("Search failed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sources, minQueryLength]);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (query.length >= minQueryLength) {
+      setIsLoading(true);
+      debounceTimerRef.current = setTimeout(() => {
+        performSearch(query);
+      }, debounceMs);
+    } else {
+      setResults(null);
+      setIsLoading(false);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [query, debounceMs, minQueryLength, performSearch]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      searchService.cancelPendingRequests();
+    };
+  }, []);
+
+  const clearResults = useCallback(() => {
+    setQuery("");
+    setResults(null);
+    setError(null);
+  }, []);
+
+  return {
+    query,
+    setQuery,
+    results,
+    isLoading,
+    error,
+    clearResults,
+  };
+}
+```
+
+---
+
+## Example React Native Component
+
+```tsx
+// components/SearchScreen.tsx
+
+import React, { useMemo } from "react";
+import {
+  View,
+  TextInput,
+  FlatList,
+  Text,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
+import { useSearch } from "../hooks/useSearch";
+import { MCBaseItem, SearchSource } from "../types/search";
+
+interface SearchScreenProps {
+  sources?: SearchSource[];
+  onItemPress?: (item: MCBaseItem) => void;
+}
+
+export function SearchScreen({ sources, onItemPress }: SearchScreenProps) {
+  const { query, setQuery, results, isLoading, error } = useSearch({
+    debounceMs: 300,
+    sources,
+  });
+
+  // Flatten results into a single list with section headers
+  const flattenedResults = useMemo(() => {
+    if (!results) return [];
+
+    const sections: Array<{ type: "header" | "item"; data: string | MCBaseItem }> = [];
+    
+    const sourceOrder: SearchSource[] = [
+      "tv", "movie", "person", "artist", "album", 
+      "video", "podcast", "book", "author", "news", "ratings"
+    ];
+
+    const sourceLabels: Record<SearchSource, string> = {
+      tv: "📺 TV Shows",
+      movie: "🎬 Movies",
+      person: "👤 People",
+      artist: "🎤 Artists",
+      album: "💿 Albums",
+      video: "▶️ Videos",
+      podcast: "🎙️ Podcasts",
+      book: "📚 Books",
+      author: "✍️ Authors",
+      news: "📰 News",
+      ratings: "🍅 Ratings",
+    };
+
+    for (const source of sourceOrder) {
+      const items = results[source];
+      if (items && items.length > 0) {
+        sections.push({ type: "header", data: sourceLabels[source] });
+        items.forEach(item => sections.push({ type: "item", data: item }));
+      }
+    }
+
+    return sections;
+  }, [results]);
+
+  const renderItem = ({ item }: { item: { type: "header" | "item"; data: string | MCBaseItem } }) => {
+    if (item.type === "header") {
+      return (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionHeaderText}>{item.data as string}</Text>
+        </View>
+      );
+    }
+
+    const mediaItem = item.data as MCBaseItem;
+    const title = mediaItem.search_title || mediaItem.name || mediaItem.title || "Unknown";
+    const imageUrl = mediaItem.image || mediaItem.thumbnail_url;
+    const subtitle = mediaItem.year ? String(mediaItem.year) : mediaItem.overview?.slice(0, 50);
+
+    return (
+      <TouchableOpacity
+        style={styles.resultItem}
+        onPress={() => onItemPress?.(mediaItem)}
+      >
+        {imageUrl && (
+          <Image source={{ uri: imageUrl }} style={styles.thumbnail} />
+        )}
+        <View style={styles.itemContent}>
+          <Text style={styles.itemTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle && (
+            <Text style={styles.itemSubtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search movies, TV, music..."
+          placeholderTextColor="#666"
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {isLoading && (
+          <ActivityIndicator style={styles.loader} color="#007AFF" />
+        )}
+      </View>
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Search failed. Please try again.</Text>
+        </View>
+      )}
+
+      <FlatList
+        data={flattenedResults}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => 
+          item.type === "header" 
+            ? `header-${item.data}` 
+            : `item-${(item.data as MCBaseItem).mc_id}-${index}`
+        }
+        style={styles.resultsList}
+        keyboardShouldPersistTaps="handled"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  searchInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: "#fff",
+  },
+  loader: {
+    marginLeft: 12,
+  },
+  errorContainer: {
+    padding: 16,
+    backgroundColor: "#ff3b3020",
+  },
+  errorText: {
+    color: "#ff3b30",
+    textAlign: "center",
+  },
+  resultsList: {
+    flex: 1,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#111",
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#888",
+  },
+  resultItem: {
+    flexDirection: "row",
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#333",
+  },
+  thumbnail: {
+    width: 50,
+    height: 75,
+    borderRadius: 4,
+    backgroundColor: "#333",
+  },
+  itemContent: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: "center",
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#fff",
+  },
+  itemSubtitle: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 4,
+  },
+});
+```
+
+---
+
+## Filtering by Source
+
+Use the `sources` parameter to limit which categories are searched:
+
+```typescript
+// Search only TV and Movies
+const tvAndMovies = await searchService.autocomplete("star wars", ["tv", "movie"]);
+
+// Search only music
+const music = await searchService.autocomplete("beatles", ["artist", "album"]);
+
+// Search only video content
+const videos = await searchService.autocomplete("tutorial", ["video"]);
+
+// Search for people across categories
+const people = await searchService.search("tom hanks", {
+  sources: ["person", "author", "artist"],
+  limit: 20
+});
+```
+
+---
+
+## Best Practices
+
+### 1. Debouncing
+Always debounce user input to avoid excessive API calls:
+```typescript
+// Recommended: 200-400ms debounce for autocomplete
+const { setQuery } = useSearch({ debounceMs: 300 });
+```
+
+### 2. Request Cancellation
+The service automatically cancels previous requests when a new one is made. This prevents race conditions where an older response arrives after a newer one.
+
+### 3. Minimum Query Length
+The API requires at least 2 characters. The hook handles this automatically:
+```typescript
+const { setQuery } = useSearch({ minQueryLength: 2 });
+```
+
+### 4. Error Handling
+Always handle errors gracefully:
+```typescript
+const { error } = useSearch();
+if (error) {
+  // Show user-friendly error message
+  // Consider retry logic for network errors
+}
+```
+
+### 5. Loading States
+Show loading indicators during searches:
+```typescript
+const { isLoading } = useSearch();
+// Show spinner or skeleton while isLoading is true
+```
+
+---
+
+## API Response Examples
+
+### Autocomplete Response
+```json
+GET /api/autocomplete?q=breaking+bad&sources=tv,person
+
+{
+  "tv": [
+    {
+      "mc_id": "tmdb_tv_1396",
+      "mc_type": "tv",
+      "source": "tmdb",
+      "source_id": "1396",
+      "search_title": "Breaking Bad",
+      "year": 2008,
+      "popularity": "100.5",
+      "rating": 8.9,
+      "image": "https://image.tmdb.org/t/p/w185/...",
+      "cast": ["Bryan Cranston", "Aaron Paul"],
+      "overview": "A high school chemistry teacher diagnosed with..."
+    }
+  ],
+  "person": [
+    {
+      "mc_id": "tmdb_person_17419",
+      "mc_type": "person",
+      "source": "tmdb",
+      "source_id": "17419",
+      "name": "Bryan Cranston",
+      "image": "https://image.tmdb.org/t/p/w185/..."
+    }
+  ],
+  "movie": [],
+  "podcast": [],
+  "author": [],
+  "book": [],
+  "news": [],
+  "video": [],
+  "ratings": [],
+  "artist": [],
+  "album": []
+}
+```
+
+---
+
+## Health Check
+
+Verify API availability before searches:
+
+```typescript
+async function checkApiHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+```
+
+---
+
+## Support
+
+For issues or questions about the Search API, contact the MediaCircle team.

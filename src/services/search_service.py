@@ -245,14 +245,23 @@ def build_books_autocomplete_query(q: str) -> str:
         return " ".join(parts)
 
 
-async def autocomplete(q: str) -> dict[str, list]:
+async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, list]:
     """
     Autocomplete search that returns categorized results.
+
+    Args:
+        q: Search query string
+        sources: Optional set of sources to search. If None, searches all sources.
+                 Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
 
     Returns:
         dict with keys: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
         Note: news, video, ratings, artist, album results come from external APIs (cached via Redis), not from Redis search indices
     """
+    all_sources = {"tv", "movie", "person", "podcast", "author", "book", "news", "video", "ratings", "artist", "album"}
+    if sources is None:
+        sources = all_sources
+
     if not q or len(q) < 2:
         return {"tv": [], "movie": [], "person": [], "podcast": [], "author": [], "book": [], "news": [], "video": [], "ratings": [], "artist": [], "album": []}
 
@@ -275,20 +284,33 @@ async def autocomplete(q: str) -> dict[str, list]:
         # External API timeout - YouTube INNERTUBE API takes ~1.2s minimum, add buffer for Docker network
         api_timeout = 2.5
 
-        timed_tasks = [
-            # RediSearch (local) - no timeout needed
-            timed_task("media", repo.search(media_query, limit=20)),
-            timed_task("person", repo.search_people(people_query, limit=10)),
-            timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)),
-            timed_task("author", repo.search_authors(authors_query, limit=10)),
-            timed_task("book", repo.search_books(books_query, limit=10)),
-            # External APIs - apply timeout
-            timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout),
-            timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout),
-            timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout),
-            timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout),
-            timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout),
-        ]
+        # Build task list based on requested sources
+        timed_tasks = []
+
+        # RediSearch (local) - no timeout needed
+        # "media" covers both tv and movie
+        if "tv" in sources or "movie" in sources:
+            timed_tasks.append(timed_task("media", repo.search(media_query, limit=20)))
+        if "person" in sources:
+            timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=10)))
+        if "podcast" in sources:
+            timed_tasks.append(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))
+        if "author" in sources:
+            timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=10)))
+        if "book" in sources:
+            timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=10)))
+
+        # External APIs - apply timeout
+        if "news" in sources:
+            timed_tasks.append(timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout))
+        if "video" in sources:
+            timed_tasks.append(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout))
+        if "ratings" in sources:
+            timed_tasks.append(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout))
+        if "artist" in sources:
+            timed_tasks.append(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout))
+        if "album" in sources:
+            timed_tasks.append(timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout))
 
         timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
         total_elapsed = (time.perf_counter() - total_start) * 1000
@@ -390,16 +412,16 @@ async def autocomplete(q: str) -> dict[str, list]:
     if isinstance(album_res, BaseException):
         album_res = None
 
-    # Parse and categorize media results
+    # Parse and categorize media results (respecting source filters)
     tv_results: list[dict] = []
     movie_results: list[dict] = []
 
     for doc in media_res.docs:  # type: ignore[union-attr]
         parsed = parse_doc(doc)
         mc_type = parsed.get("mc_type", "")
-        if mc_type == "tv":
+        if mc_type == "tv" and "tv" in sources:
             tv_results.append(parsed)
-        elif mc_type == "movie":
+        elif mc_type == "movie" and "movie" in sources:
             movie_results.append(parsed)
 
     # Parse person results
@@ -479,7 +501,7 @@ async def autocomplete(q: str) -> dict[str, list]:
     }
 
 
-async def autocomplete_stream(q: str) -> AsyncIterator[tuple[str, list, float]]:
+async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncIterator[tuple[str, list, float]]:
     """
     Streaming autocomplete that yields results as they become available.
 
@@ -488,10 +510,16 @@ async def autocomplete_stream(q: str) -> AsyncIterator[tuple[str, list, float]]:
 
     Args:
         q: Search query string
+        sources: Optional set of sources to search. If None, searches all sources.
+                 Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
 
     Yields:
         tuple of (source_name, results, latency_ms) as each source completes
     """
+    all_sources = {"tv", "movie", "person", "podcast", "author", "book", "news", "video", "ratings", "artist", "album"}
+    if sources is None:
+        sources = all_sources
+
     if not q or len(q) < 2:
         return
 
@@ -507,22 +535,37 @@ async def autocomplete_stream(q: str) -> AsyncIterator[tuple[str, list, float]]:
     # External API timeout - YouTube INNERTUBE API takes ~1.2s minimum, add buffer for Docker network
     api_timeout = 2.5
 
-    # Create named tasks
+    # Create named tasks based on requested sources
     tasks_dict: dict[asyncio.Task, str] = {}  # type: ignore[type-arg]
 
     # RediSearch tasks (local) - no timeout
-    tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = "media"
-    tasks_dict[asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=10)))] = "person"
-    tasks_dict[asyncio.create_task(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))] = "podcast"
-    tasks_dict[asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))] = "author"
-    tasks_dict[asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))] = "book"
+    # "media" covers both tv and movie
+    if "tv" in sources or "movie" in sources:
+        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = "media"
+    if "person" in sources:
+        tasks_dict[asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=10)))] = "person"
+    if "podcast" in sources:
+        tasks_dict[asyncio.create_task(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))] = "podcast"
+    if "author" in sources:
+        tasks_dict[asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))] = "author"
+    if "book" in sources:
+        tasks_dict[asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))] = "book"
 
     # External API tasks - with timeout
-    tasks_dict[asyncio.create_task(timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout))] = "news"
-    tasks_dict[asyncio.create_task(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout))] = "video"
-    tasks_dict[asyncio.create_task(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout))] = "ratings"
-    tasks_dict[asyncio.create_task(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout))] = "artist"
-    tasks_dict[asyncio.create_task(timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout))] = "album"
+    if "news" in sources:
+        tasks_dict[asyncio.create_task(timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout))] = "news"
+    if "video" in sources:
+        tasks_dict[asyncio.create_task(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout))] = "video"
+    if "ratings" in sources:
+        tasks_dict[asyncio.create_task(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout))] = "ratings"
+    if "artist" in sources:
+        tasks_dict[asyncio.create_task(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout))] = "artist"
+    if "album" in sources:
+        tasks_dict[asyncio.create_task(timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout))] = "album"
+
+    # If no tasks, return early
+    if not tasks_dict:
+        return
 
     total_start = time.perf_counter()
     timing_parts: list[str] = []
@@ -547,14 +590,14 @@ async def autocomplete_stream(q: str) -> AsyncIterator[tuple[str, list, float]]:
                     for doc in data.docs:
                         parsed = parse_doc(doc)
                         mc_type = parsed.get("mc_type", "")
-                        if mc_type == "tv":
+                        if mc_type == "tv" and "tv" in sources:
                             tv_results.append(parsed)
-                        elif mc_type == "movie":
+                        elif mc_type == "movie" and "movie" in sources:
                             movie_results.append(parsed)
-                    # Yield TV and movie separately
-                    if tv_results:
+                    # Yield TV and movie separately (only if requested)
+                    if tv_results and "tv" in sources:
                         yield ("tv", tv_results[:10], elapsed)
-                    if movie_results:
+                    if movie_results and "movie" in sources:
                         yield ("movie", movie_results[:10], elapsed)
                 continue  # Already yielded tv/movie
 

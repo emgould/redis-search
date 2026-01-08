@@ -347,16 +347,38 @@ async def etl_page(
 
 
 @app.get("/api/autocomplete")
-async def api_autocomplete(q: str = Query(default="")):
+async def api_autocomplete(
+    q: str = Query(default=""),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated list of sources to search. "
+        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "If not provided, searches all sources.",
+    ),
+):
     """JSON API endpoint for autocomplete search."""
     if not q or len(q) < 2:
         return JSONResponse(content=[])
-    results = await autocomplete(q)
+
+    # Parse sources if provided
+    sources_set: set[str] | None = None
+    if sources:
+        sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+
+    results = await autocomplete(q, sources_set)
     return JSONResponse(content=results)
 
 
 @app.get("/api/autocomplete/stream")
-async def api_autocomplete_stream(q: str = Query(default="")):
+async def api_autocomplete_stream(
+    q: str = Query(default=""),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated list of sources to search. "
+        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "If not provided, searches all sources.",
+    ),
+):
     """
     Streaming autocomplete endpoint using Server-Sent Events (SSE).
 
@@ -373,8 +395,13 @@ async def api_autocomplete_stream(q: str = Query(default="")):
             media_type="text/event-stream",
         )
 
+    # Parse sources if provided
+    sources_set: set[str] | None = None
+    if sources:
+        sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+
     async def event_generator():
-        async for source, results, latency_ms in autocomplete_stream(q):
+        async for source, results, latency_ms in autocomplete_stream(q, sources_set):
             event_data = json.dumps(
                 {
                     "source": source,
