@@ -58,28 +58,105 @@ Shows{% endblock %} {% block body %}
     <div class="w-full max-w-2xl">
       <!-- Search Container -->
       <div class="relative" id="search-container">
-        <!-- Search Input -->
-        <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <!-- Search Input with Stream Toggle -->
+        <div class="flex items-center gap-3">
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input type="text" id="search-input" placeholder="Search for movies, TV shows..." autocomplete="off"
+              class="w-full pl-12 pr-4 py-4 bg-surface-800 border border-surface-700 rounded-2xl text-white placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-lg transition-all" />
+            <div id="loading-spinner" class="absolute inset-y-0 right-0 pr-4 flex items-center hidden">
+              <svg class="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+            </div>
           </div>
-          <input type="text" id="search-input" placeholder="Search for movies, TV shows..." autocomplete="off"
-            class="w-full pl-12 pr-4 py-4 bg-surface-800 border border-surface-700 rounded-2xl text-white placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-lg transition-all" />
-          <div id="loading-spinner" class="absolute inset-y-0 right-0 pr-4 flex items-center hidden">
-            <svg class="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-              </path>
-            </svg>
+          <!-- Stream Toggle -->
+          <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl">
+            <label for="stream-toggle" class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
+              Stream
+            </label>
+            <button type="button" id="stream-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600"
+              onclick="toggleStreamMode()">
+              <span class="sr-only">Enable streaming</span>
+              <span id="stream-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
           </div>
         </div>
 
+        <!-- Filter Buttons -->
+        <div id="filter-buttons" class="mt-3 flex flex-wrap gap-2 justify-center">
+          <button data-filter="tv" onclick="toggleFilter('tv')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-blue-500 hover:text-blue-400">
+            📺 TV
+          </button>
+          <button data-filter="movie" onclick="toggleFilter('movie')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-purple-500 hover:text-purple-400">
+            🎬 Movies
+          </button>
+          <button data-filter="person" onclick="toggleFilter('person')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-green-500 hover:text-green-400">
+            👤 People
+          </button>
+          <button data-filter="artist" onclick="toggleFilter('artist')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-lime-500 hover:text-lime-400">
+            🎤 Artists
+          </button>
+          <button data-filter="album" onclick="toggleFilter('album')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-violet-500 hover:text-violet-400">
+            💿 Albums
+          </button>
+          <button data-filter="video" onclick="toggleFilter('video')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-red-500 hover:text-red-400">
+            ▶️ Videos
+          </button>
+          <button data-filter="podcast" onclick="toggleFilter('podcast')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-pink-500 hover:text-pink-400">
+            🎙️ Podcasts
+          </button>
+          <button data-filter="book" onclick="toggleFilter('book')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-emerald-500 hover:text-emerald-400">
+            📚 Books
+          </button>
+          <button data-filter="author" onclick="toggleFilter('author')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-amber-500 hover:text-amber-400">
+            ✍️ Authors
+          </button>
+          <button data-filter="news" onclick="toggleFilter('news')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-cyan-500 hover:text-cyan-400">
+            📰 News
+          </button>
+          <button data-filter="ratings" onclick="toggleFilter('ratings')"
+            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-rose-500 hover:text-rose-400">
+            🍅 Ratings
+          </button>
+        </div>
+        <p id="filter-hint" class="text-center text-xs text-surface-500 mt-2">
+          Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search all sources, or select filters above
+        </p>
+
         <!-- Results Dropdown -->
-        <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden">
+        <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden" style="top: calc(100% + 80px);">
           <div
             class="bg-surface-900 border border-surface-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden search-results-enter">
             <div id="results-list" class="max-h-[70vh] overflow-y-auto">
@@ -194,7 +271,7 @@ Shows{% endblock %} {% block body %}
     local: "",
     public: "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app",
   };
-  let currentApiBaseKey = "public";
+  let currentApiBaseKey = "local";
 
   function connectionLabel() {
     return currentApiBaseKey === "public" ? "Public Cloud Run" : "Local API";
@@ -227,6 +304,164 @@ Shows{% endblock %} {% block body %}
 
   let debounceTimer;
   let currentQuery = "";
+  let abortController = null; // For canceling in-flight requests
+  let eventSource = null; // For streaming mode
+  let streamingEnabled = false; // Toggle state
+  
+  // Filter state - tracks which source filters are active
+  const activeFilters = new Set();
+  
+  // Filter color mappings for visual feedback
+  const filterColors = {
+    tv: { border: 'border-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/20' },
+    movie: { border: 'border-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/20' },
+    person: { border: 'border-green-500', text: 'text-green-400', bg: 'bg-green-500/20' },
+    artist: { border: 'border-lime-500', text: 'text-lime-400', bg: 'bg-lime-500/20' },
+    album: { border: 'border-violet-500', text: 'text-violet-400', bg: 'bg-violet-500/20' },
+    video: { border: 'border-red-500', text: 'text-red-400', bg: 'bg-red-500/20' },
+    podcast: { border: 'border-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/20' },
+    book: { border: 'border-emerald-500', text: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+    author: { border: 'border-amber-500', text: 'text-amber-400', bg: 'bg-amber-500/20' },
+    news: { border: 'border-cyan-500', text: 'text-cyan-400', bg: 'bg-cyan-500/20' },
+    ratings: { border: 'border-rose-500', text: 'text-rose-400', bg: 'bg-rose-500/20' },
+  };
+  
+  function toggleFilter(filter) {
+    const btn = document.querySelector(`[data-filter="${filter}"]`);
+    const colors = filterColors[filter];
+    
+    if (activeFilters.has(filter)) {
+      // Deactivate filter
+      activeFilters.delete(filter);
+      btn.classList.remove(colors.border, colors.text, colors.bg);
+      btn.classList.add('border-surface-600', 'text-surface-400');
+    } else {
+      // Activate filter
+      activeFilters.add(filter);
+      btn.classList.remove('border-surface-600', 'text-surface-400');
+      btn.classList.add(colors.border, colors.text, colors.bg);
+    }
+    
+    updateFilterHint();
+  }
+  
+  function updateFilterHint() {
+    const hint = document.getElementById('filter-hint');
+    if (activeFilters.size === 0) {
+      hint.innerHTML = `Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search all sources, or select filters above`;
+    } else {
+      const filterList = Array.from(activeFilters).join(', ');
+      hint.innerHTML = `Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search: <span class="text-brand-400">${filterList}</span> <button onclick="clearAllFilters()" class="ml-2 text-xs text-surface-500 hover:text-surface-300 underline">(clear)</button>`;
+    }
+  }
+  
+  function clearAllFilters() {
+    activeFilters.forEach(filter => {
+      const btn = document.querySelector(`[data-filter="${filter}"]`);
+      const colors = filterColors[filter];
+      btn.classList.remove(colors.border, colors.text, colors.bg);
+      btn.classList.add('border-surface-600', 'text-surface-400');
+    });
+    activeFilters.clear();
+    updateFilterHint();
+  }
+  
+  // Make filter functions globally accessible
+  window.toggleFilter = toggleFilter;
+  window.clearAllFilters = clearAllFilters;
+  
+  function getActiveFiltersParam() {
+    if (activeFilters.size === 0) return null;
+    return Array.from(activeFilters).join(',');
+  }
+  
+  // Full search using /api/search endpoint (called on Enter)
+  async function performFullSearch(query) {
+    if (!query || query.length < 2) {
+      resultsContainer.classList.add("hidden");
+      return;
+    }
+    
+    // Cancel any in-flight request/stream
+    if (abortController) {
+      abortController.abort();
+    }
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    
+    loadingSpinner.classList.remove("hidden");
+    abortController = new AbortController();
+    
+    // Reset expanded state
+    Object.keys(expandedCategories).forEach(key => {
+      expandedCategories[key] = false;
+    });
+    
+    try {
+      const sourcesParam = getActiveFiltersParam();
+      let url = getApiUrl(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
+      if (sourcesParam) {
+        url += `&sources=${encodeURIComponent(sourcesParam)}`;
+      }
+      
+      console.log(`[Search] Fetching: ${url}`);
+      const response = await fetch(url, { signal: abortController.signal });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`[Search] Got results:`, Object.keys(data).map(k => `${k}:${data[k]?.length || 0}`).join(', '));
+      
+      renderResults(data, query);
+      resultsContainer.classList.remove("hidden");
+      
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('[Search] Request cancelled');
+        return;
+      }
+      console.error('[Search] Error:', error);
+      resultsList.innerHTML = `
+        <div class="p-8 text-center text-red-400">
+          <p>Search failed. Please try again.</p>
+          <p class="text-sm text-surface-500 mt-2">${error.message}</p>
+        </div>
+      `;
+      resultsContainer.classList.remove("hidden");
+    } finally {
+      loadingSpinner.classList.add("hidden");
+    }
+  }
+
+  // Stream mode toggle
+  function toggleStreamMode() {
+    streamingEnabled = !streamingEnabled;
+    const toggle = document.getElementById("stream-toggle");
+    const dot = document.getElementById("stream-toggle-dot");
+
+    if (streamingEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-brand-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+    } else {
+      toggle.classList.remove("bg-brand-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+
+    // If there's an active query, re-search with new mode
+    if (currentQuery && currentQuery.length >= 2) {
+      performSearch(currentQuery);
+    }
+  }
 
   function searchFor(query) {
     searchInput.value = query;
@@ -271,6 +506,18 @@ Shows{% endblock %} {% block body %}
     if (type === "movie") return "bg-purple-500/20 text-purple-400";
     if (type === "person") return "bg-green-500/20 text-green-400";
     return "bg-surface-500/20 text-surface-400";
+  }
+
+  // Normalize a string for exact match comparison
+  // Removes common prefixes like "The", converts to lowercase, removes special chars
+  function normalizeForMatch(str) {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .replace(/^the\s+/i, "")  // Remove leading "The "
+      .replace(/[^a-z0-9\s]/g, "")  // Remove special characters
+      .replace(/\s+/g, " ")  // Normalize whitespace
+      .trim();
   }
 
   function highlightMatch(text, query) {
@@ -330,7 +577,11 @@ Shows{% endblock %} {% block body %}
     const categories = [];
 
     if (results && typeof results === "object" && !Array.isArray(results)) {
-      // Build category objects with items and top popularity
+      // Build category objects with items, popularity, and tier
+      // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
+      // Tier 2: People (Person, Author) - sorted by popularity within tier
+      // Tier 3: News - fixed position
+      // Tier 4: Video - fixed position (last)
       if (results.tv && results.tv.length > 0) {
         categories.push({
           key: "tv",
@@ -338,6 +589,7 @@ Shows{% endblock %} {% block body %}
           items: results.tv,
           topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
           color: "blue",
+          tier: 1,  // Media tier
         });
       }
       if (results.movie && results.movie.length > 0) {
@@ -347,6 +599,7 @@ Shows{% endblock %} {% block body %}
           items: results.movie,
           topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
           color: "purple",
+          tier: 1,  // Media tier
         });
       }
       if (results.person && results.person.length > 0) {
@@ -356,6 +609,7 @@ Shows{% endblock %} {% block body %}
           items: results.person,
           topPopularity: parseFloat(results.person[0]?.popularity) || 0,
           color: "green",
+          tier: 2,  // People tier
         });
       }
       if (results.podcast && results.podcast.length > 0) {
@@ -365,6 +619,7 @@ Shows{% endblock %} {% block body %}
           items: results.podcast,
           topPopularity: parseFloat(results.podcast[0]?.popularity) || 0,
           color: "pink",
+          tier: 1,  // Media tier
         });
       }
       if (results.author && results.author.length > 0) {
@@ -374,6 +629,7 @@ Shows{% endblock %} {% block body %}
           items: results.author,
           topPopularity: parseFloat(results.author[0]?.work_count) || 0,
           color: "amber",
+          tier: 2,  // People tier
         });
       }
       if (results.book && results.book.length > 0) {
@@ -383,11 +639,98 @@ Shows{% endblock %} {% block body %}
           items: results.book,
           topPopularity: parseFloat(results.book[0]?.ratings_count) || 0,
           color: "emerald",
+          tier: 1,  // Media tier
+        });
+      }
+      if (results.news && results.news.length > 0) {
+        categories.push({
+          key: "news",
+          label: "📰 News",
+          items: results.news,
+          topPopularity: parseFloat(results.news[0]?.relevance) || 0,
+          color: "cyan",
+          tier: 3,  // News tier
+        });
+      }
+      if (results.video && results.video.length > 0) {
+        categories.push({
+          key: "video",
+          label: "▶️ Videos",
+          items: results.video,
+          topPopularity: parseFloat(results.video[0]?.view_count) || 0,
+          color: "red",
+          tier: 4,  // Video tier (last)
+        });
+      }
+      if (results.ratings && results.ratings.length > 0) {
+        categories.push({
+          key: "ratings",
+          label: "🍅 Ratings",
+          items: results.ratings,
+          // Use critics_score for sorting priority
+          topPopularity: parseFloat(results.ratings[0]?.critics_score) || 0,
+          color: "rose",
+          tier: 5,  // Ratings tier (after video)
+        });
+      }
+      if (results.artist && results.artist.length > 0) {
+        categories.push({
+          key: "artist",
+          label: "🎤 Artists",
+          items: results.artist,
+          // Use popularity for sorting (Spotify popularity 0-100)
+          topPopularity: parseFloat(results.artist[0]?.popularity) || 0,
+          color: "lime",
+          tier: 2,  // People tier (with Person, Author)
+        });
+      }
+      if (results.album && results.album.length > 0) {
+        categories.push({
+          key: "album",
+          label: "💿 Albums",
+          items: results.album,
+          // Albums don't have popularity, use 0
+          topPopularity: 0,
+          color: "violet",
+          tier: 1,  // Media tier (with TV, Movie, Podcast, Book)
         });
       }
 
-      // Sort categories by top popularity (highest first)
-      categories.sort((a, b) => b.topPopularity - a.topPopularity);
+      // Check for exact name matches in person-type categories (artist, author, person)
+      // If found, promote that category to tier 0 (top)
+      const personCategories = ["artist", "author", "person"];
+      const normalizedQuery = normalizeForMatch(query);
+      
+      for (const cat of categories) {
+        if (personCategories.includes(cat.key) && cat.items.length > 0) {
+          // Check if first item is an exact match
+          const firstItem = cat.items[0];
+          const itemName = firstItem.name || firstItem.search_title || firstItem.title || "";
+          const normalizedName = normalizeForMatch(itemName);
+          
+          if (normalizedQuery && normalizedName && normalizedQuery === normalizedName) {
+            // Exact match found - promote to tier 0
+            cat.tier = 0;
+            cat.exactMatch = true;
+          }
+        }
+      }
+
+      // Sort categories by tier first, then by popularity within each tier
+      // Tier 0: Exact person match (promoted dynamically)
+      // Tier 1: Media (TV, Movie, Podcast, Book, Album) - sorted by popularity
+      // Tier 2: People (Person, Author, Artist) - sorted by popularity
+      // Tier 3: News - fixed position
+      // Tier 4: Video - fixed position
+      // Tier 5: Ratings - fixed position (last)
+      categories.sort((a, b) => {
+        // First sort by tier
+        if (a.tier !== b.tier) {
+          return a.tier - b.tier;
+        }
+        // Within same tier, sort by popularity (highest first)
+        return b.topPopularity - a.topPopularity;
+      });
     } else if (Array.isArray(results) && results.length > 0) {
       // Fallback for flat array format
       categories.push({
@@ -473,6 +816,11 @@ Shows{% endblock %} {% block body %}
     const isAuthor = item.mc_subtype === "author";
     const isPodcast = item.mc_type === "podcast";
     const isBook = item.mc_type === "book";
+    const isNews = item.mc_type === "news_article";
+    const isVideo = item.mc_type === "video" || item.mc_type === "youtube_video";
+    const isRating = item.source === "rottentomatoes" || item.critics_score !== undefined;
+    const isMusicArtist = item.mc_subtype === "music_artist" || (item.source === "spotify" && item.mc_type === "person");
+    const isMusicAlbum = item.mc_type === "music_album" || (item.source === "spotify" && item.title && item.artist);
 
     // For authors (OpenLibrary), show author-specific info
     if (isAuthor) {
@@ -484,6 +832,11 @@ Shows{% endblock %} {% block body %}
       return renderBookItem(item, index, query);
     }
 
+    // For Spotify music artists (check BEFORE isPerson since music artists have mc_type=person)
+    if (isMusicArtist) {
+      return renderMusicArtistItem(item, index, query);
+    }
+
     // For persons (TMDB), show different info
     if (isPerson) {
       return renderPersonItem(item, index, query);
@@ -492,6 +845,26 @@ Shows{% endblock %} {% block body %}
     // For podcasts, show podcast-specific info
     if (isPodcast) {
       return renderPodcastItem(item, index, query);
+    }
+
+    // For news articles (from NewsAI API)
+    if (isNews) {
+      return renderNewsItem(item, index, query);
+    }
+
+    // For YouTube videos (from YouTube API)
+    if (isVideo) {
+      return renderVideoItem(item, index, query);
+    }
+
+    // For RottenTomatoes ratings (from RT API)
+    if (isRating) {
+      return renderRatingItem(item, index, query);
+    }
+
+    // For Spotify music albums
+    if (isMusicAlbum) {
+      return renderMusicAlbumItem(item, index, query);
     }
 
     // Cast is stored as array of strings directly
@@ -745,6 +1118,453 @@ Shows{% endblock %} {% block body %}
     `;
   }
 
+  function renderNewsItem(item, index, query) {
+    const title = item.title || "Unknown Article";
+    const description = item.description || "";
+    const url = item.url || "#";
+    const image = item.url_to_image || "";
+    const publishedAt = item.published_at || "";
+    const author = item.author || "";
+    const newsSource = item.news_source || {};
+    const sourceName = newsSource.name || "Unknown Source";
+
+    // Format publication date
+    let dateDisplay = "";
+    if (publishedAt) {
+      try {
+        const date = new Date(publishedAt);
+        const now = new Date();
+        const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
+        if (diffHours < 1) {
+          dateDisplay = "Just now";
+        } else if (diffHours < 24) {
+          dateDisplay = `${diffHours}h ago`;
+        } else {
+          const diffDays = Math.floor(diffHours / 24);
+          if (diffDays === 1) {
+            dateDisplay = "Yesterday";
+          } else if (diffDays < 7) {
+            dateDisplay = `${diffDays}d ago`;
+          } else {
+            dateDisplay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+        }
+      } catch (e) {
+        dateDisplay = "";
+      }
+    }
+
+    // Truncate description to ~100 chars with ellipsis
+    let descSnippet = "";
+    if (description) {
+      if (description.length > 100) {
+        descSnippet = description.substring(0, 100).trim() + "...";
+      } else {
+        descSnippet = description;
+      }
+    }
+
+    return `
+        <a href="${url}" target="_blank" rel="noopener noreferrer" 
+           class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+           style="animation-delay: ${index * 30}ms">
+            <!-- Article Image -->
+            <div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden bg-surface-800">
+                ${image
+        ? `<img src="${image}" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-cyan-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z\\'/></svg></div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-cyan-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-cyan-400 transition-colors line-clamp-2 text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            <span class="text-cyan-400 font-medium truncate max-w-[120px]">${sourceName}</span>
+                            ${dateDisplay
+        ? `<span class="text-surface-500">${dateDisplay}</span>`
+        : ""
+      }
+                            ${author
+        ? `<span class="text-surface-500 truncate max-w-[100px]">by ${author}</span>`
+        : ""
+      }
+                        </div>
+                    </div>
+                </div>
+                ${descSnippet
+        ? `<p class="mt-1 text-xs text-surface-400 line-clamp-2">${descSnippet}</p>`
+        : ""
+      }
+            </div>
+            
+            <!-- External link icon -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+            </div>
+        </a>
+    `;
+  }
+
+  function renderVideoItem(item, index, query) {
+    const title = item.title || "Unknown Video";
+    const channelTitle = item.channel_title || "";
+    const url = item.url || "#";
+    const thumbnail = item.thumbnail_url || "";
+    const viewCount = item.view_count || 0;
+    const publishedAt = item.published_at || "";
+    const duration = item.duration || "";
+
+    // Format view count (e.g., 1.2M, 500K, 1,234)
+    let viewDisplay = "";
+    if (viewCount > 0) {
+      if (viewCount >= 1000000) {
+        viewDisplay = `${(viewCount / 1000000).toFixed(1)}M views`;
+      } else if (viewCount >= 1000) {
+        viewDisplay = `${(viewCount / 1000).toFixed(0)}K views`;
+      } else {
+        viewDisplay = `${viewCount.toLocaleString()} views`;
+      }
+    }
+
+    // Format publication date (relative time)
+    let dateDisplay = "";
+    if (publishedAt) {
+      try {
+        const date = new Date(publishedAt);
+        const now = new Date();
+        const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
+        if (diffHours < 1) {
+          dateDisplay = "Just now";
+        } else if (diffHours < 24) {
+          dateDisplay = `${diffHours}h ago`;
+        } else {
+          const diffDays = Math.floor(diffHours / 24);
+          if (diffDays === 1) {
+            dateDisplay = "Yesterday";
+          } else if (diffDays < 7) {
+            dateDisplay = `${diffDays}d ago`;
+          } else if (diffDays < 30) {
+            dateDisplay = `${Math.floor(diffDays / 7)}w ago`;
+          } else if (diffDays < 365) {
+            dateDisplay = `${Math.floor(diffDays / 30)}mo ago`;
+          } else {
+            dateDisplay = `${Math.floor(diffDays / 365)}y ago`;
+          }
+        }
+      } catch (e) {
+        dateDisplay = "";
+      }
+    }
+
+    // Format duration (PT1H2M30S -> 1:02:30)
+    let durationDisplay = "";
+    if (duration) {
+      try {
+        const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+        if (match) {
+          const hours = parseInt(match[1] || 0);
+          const minutes = parseInt(match[2] || 0);
+          const seconds = parseInt(match[3] || 0);
+          if (hours > 0) {
+            durationDisplay = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          } else {
+            durationDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          }
+        }
+      } catch (e) {
+        durationDisplay = "";
+      }
+    }
+
+    return `
+        <a href="${url}" target="_blank" rel="noopener noreferrer" 
+           class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+           style="animation-delay: ${index * 30}ms">
+            <!-- Video Thumbnail -->
+            <div class="flex-shrink-0 w-24 h-14 rounded-lg overflow-hidden bg-surface-800 relative">
+                ${thumbnail
+        ? `<img src="${thumbnail}" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-red-500\\'><svg class=\\'w-8 h-8\\' fill=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path d=\\'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z\\'/></svg></div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-red-500">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                    </div>`
+      }
+                ${durationDisplay
+        ? `<span class="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">${durationDisplay}</span>`
+        : ""
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-red-400 transition-colors line-clamp-2 text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            ${channelTitle
+        ? `<span class="text-red-400 font-medium truncate max-w-[150px]">${channelTitle}</span>`
+        : ""
+      }
+                            ${viewDisplay
+        ? `<span class="text-surface-500">${viewDisplay}</span>`
+        : ""
+      }
+                            ${dateDisplay
+        ? `<span class="text-surface-500">${dateDisplay}</span>`
+        : ""
+      }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- YouTube icon / External link -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+            </div>
+        </a>
+    `;
+  }
+
+  function renderRatingItem(item, index, query) {
+    const title = item.title || "Unknown Title";
+    const year = item.release_year || "";
+    const poster = item.poster_url || "";
+    const rtUrl = item.rt_url || "#";
+    const criticsScore = item.critics_score;
+    const audienceScore = item.audience_score;
+    const criticsSentiment = item.critics_sentiment || "";
+    const audienceSentiment = item.audience_sentiment || "";
+    const certifiedFresh = item.certified_fresh || false;
+    const mediaType = item.mc_type === "tv" || item.mc_type === "tv_series" ? "TV" : "Movie";
+    const genres = (item.genres || []).slice(0, 2).join(", ");
+
+    // Determine tomato icon/color based on critics sentiment
+    let tomatoIcon = "🍅";  // Fresh
+    let tomatoColor = "text-red-500";
+    if (criticsScore !== null && criticsScore !== undefined) {
+      if (certifiedFresh) {
+        tomatoIcon = "🏆";  // Certified Fresh
+        tomatoColor = "text-yellow-500";
+      } else if (criticsScore < 60) {
+        tomatoIcon = "🟢";  // Rotten (using green splat emoji)
+        tomatoColor = "text-green-600";
+      }
+    }
+
+    // Determine audience icon
+    let audienceIcon = "🍿";
+    let audienceColor = "text-yellow-400";
+    if (audienceScore !== null && audienceScore !== undefined && audienceScore < 60) {
+      audienceIcon = "🍿";
+      audienceColor = "text-surface-500";
+    }
+
+    return `
+        <a href="${rtUrl}" target="_blank" rel="noopener noreferrer" 
+           class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+           style="animation-delay: ${index * 30}ms">
+            <!-- Poster -->
+            <div class="flex-shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-surface-800">
+                ${poster
+        ? `<img src="${poster}" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-rose-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z\\'/></svg></div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-rose-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-rose-400 transition-colors truncate text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            ${year ? `<span class="text-surface-500">${year}</span>` : ""}
+                            ${mediaType ? `<span class="text-rose-400">${mediaType}</span>` : ""}
+                            ${genres ? `<span class="text-surface-500">${genres}</span>` : ""}
+                        </div>
+                    </div>
+                    
+                    <!-- Scores -->
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        ${criticsScore !== null && criticsScore !== undefined
+        ? `<div class="flex items-center gap-1">
+                                <span class="text-sm">${tomatoIcon}</span>
+                                <span class="${criticsScore >= 60 ? 'text-red-400' : 'text-green-600'} font-bold text-sm">${criticsScore}%</span>
+                            </div>`
+        : ""
+      }
+                        ${audienceScore !== null && audienceScore !== undefined
+        ? `<div class="flex items-center gap-1">
+                                <span class="text-sm">${audienceIcon}</span>
+                                <span class="${audienceScore >= 60 ? 'text-yellow-400' : 'text-surface-500'} font-bold text-sm">${audienceScore}%</span>
+                            </div>`
+        : ""
+      }
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RT Link icon -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+            </div>
+        </a>
+    `;
+  }
+
+  function renderMusicArtistItem(item, index, query) {
+    const name = item.name || item.title || "Unknown Artist";
+    const image = item.default_image || item.image || "";
+    const spotifyUrl = item.spotify_url || "#";
+    const popularity = item.popularity || 0;
+    const followers = item.followers || 0;
+    const genres = (item.genres || []).slice(0, 3).join(", ");
+    const knownFor = item.known_for || item.top_track_track || "";
+
+    // Format followers count
+    let followersDisplay = "";
+    if (followers > 0) {
+      if (followers >= 1000000) {
+        followersDisplay = `${(followers / 1000000).toFixed(1)}M followers`;
+      } else if (followers >= 1000) {
+        followersDisplay = `${(followers / 1000).toFixed(0)}K followers`;
+      } else {
+        followersDisplay = `${followers.toLocaleString()} followers`;
+      }
+    }
+
+    return `
+        <a href="${spotifyUrl}" target="_blank" rel="noopener noreferrer" 
+           class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+           style="animation-delay: ${index * 30}ms">
+            <!-- Artist Photo -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-surface-800">
+                ${image
+        ? `<img src="${image}" alt="${name}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-lime-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3\\'/></svg></div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-lime-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-lime-400 transition-colors truncate text-sm">
+                            ${highlightMatch(name, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            ${genres ? `<span class="text-lime-400">${genres}</span>` : ""}
+                            ${followersDisplay ? `<span class="text-surface-500">${followersDisplay}</span>` : ""}
+                        </div>
+                        ${knownFor ? `<div class="text-xs text-surface-500 mt-0.5 truncate">Known for: ${knownFor}</div>` : ""}
+                    </div>
+                    
+                    <!-- Popularity indicator -->
+                    ${popularity > 0
+        ? `<div class="flex-shrink-0 flex items-center gap-1">
+                            <div class="w-8 h-1.5 bg-surface-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-lime-500 rounded-full" style="width: ${popularity}%"></div>
+                            </div>
+                        </div>`
+        : ""
+      }
+                </div>
+            </div>
+            
+            <!-- Spotify icon -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-5 h-5 text-lime-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+            </div>
+        </a>
+    `;
+  }
+
+  function renderMusicAlbumItem(item, index, query) {
+    const title = item.title || "Unknown Album";
+    const artist = item.artist || "Unknown Artist";
+    const image = item.default_image || "";
+    const spotifyUrl = item.spotify_url || "#";
+    const releaseDate = item.release_date || "";
+    const totalTracks = item.total_tracks || 0;
+
+    // Format release year from date
+    let releaseYear = "";
+    if (releaseDate) {
+      releaseYear = releaseDate.split("-")[0];
+    }
+
+    return `
+        <a href="${spotifyUrl}" target="_blank" rel="noopener noreferrer" 
+           class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+           style="animation-delay: ${index * 30}ms">
+            <!-- Album Cover -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-surface-800">
+                ${image
+        ? `<img src="${image}" alt="${title}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-violet-500\\'><svg class=\\'w-6 h-6\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1.5\\' d=\\'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3\\'/></svg></div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-violet-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                    </div>`
+      }
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h3 class="font-medium text-white group-hover:text-violet-400 transition-colors truncate text-sm">
+                            ${highlightMatch(title, query)}
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5 text-xs flex-wrap">
+                            <span class="text-violet-400 truncate max-w-[150px]">${artist}</span>
+                            ${releaseYear ? `<span class="text-surface-500">${releaseYear}</span>` : ""}
+                            ${totalTracks > 0 ? `<span class="text-surface-500">${totalTracks} tracks</span>` : ""}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Spotify icon -->
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-5 h-5 text-violet-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+            </div>
+        </a>
+    `;
+  }
+
   function renderAuthorItem(item, index, query) {
     const name = item.search_title || item.name || "Unknown Author";
     const photoUrls = item.photo_urls || {};
@@ -922,23 +1742,51 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
+    // Cancel any in-flight request/stream before starting a new one
+    if (abortController) {
+      abortController.abort();
+    }
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+
     loadingSpinner.classList.remove("hidden");
+
+    // Reset expanded state for new search
+    Object.keys(expandedCategories).forEach(key => {
+      expandedCategories[key] = false;
+    });
+
+    if (streamingEnabled) {
+      performStreamingSearch(query);
+    } else {
+      performRegularSearch(query);
+    }
+  }
+
+  // Regular (non-streaming) search
+  async function performRegularSearch(query) {
+    abortController = new AbortController();
+    const signal = abortController.signal;
 
     try {
       const response = await fetch(
-        getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}`)
+        getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}`),
+        { signal }
       );
       const results = await response.json();
 
       if (query === currentQuery) {
-        // Reset expanded state for new search results
-        Object.keys(expandedCategories).forEach(key => {
-          expandedCategories[key] = false;
-        });
         renderResults(results, query);
         resultsContainer.classList.remove("hidden");
       }
     } catch (error) {
+      // Ignore abort errors - they're expected when user types quickly
+      if (error.name === 'AbortError') {
+        console.debug(`Request for "${query}" was cancelled`);
+        return;
+      }
       console.error("Search error:", error);
       resultsList.innerHTML = `
             <div class="p-8 text-center text-red-400">
@@ -949,6 +1797,74 @@ Shows{% endblock %} {% block body %}
     } finally {
       loadingSpinner.classList.add("hidden");
     }
+  }
+
+  // Streaming search using Server-Sent Events
+  function performStreamingSearch(query) {
+    // Initialize empty results structure
+    const streamingResults = {
+      tv: [],
+      movie: [],
+      person: [],
+      podcast: [],
+      author: [],
+      book: [],
+      news: [],
+      video: [],
+      ratings: [],
+      artist: [],
+      album: []
+    };
+    let sourcesReceived = 0;
+    const startTime = performance.now();
+
+    // Show empty results container immediately
+    renderResults(streamingResults, query);
+    resultsContainer.classList.remove("hidden");
+
+    const url = getApiUrl(`/api/autocomplete/stream?q=${encodeURIComponent(query)}`);
+    eventSource = new EventSource(url);
+
+    eventSource.addEventListener('result', (e) => {
+      if (query !== currentQuery) {
+        // Query changed, ignore this result
+        return;
+      }
+
+      try {
+        const { source, results, latency_ms } = JSON.parse(e.data);
+        sourcesReceived++;
+
+        // Update streaming results
+        if (streamingResults.hasOwnProperty(source)) {
+          streamingResults[source] = results;
+        }
+
+        // Re-render with updated results
+        renderResults(streamingResults, query);
+
+        console.debug(`[Stream] ${source}: ${results.length} results in ${latency_ms}ms (${sourcesReceived} sources)`);
+      } catch (err) {
+        console.error("Error parsing stream event:", err);
+      }
+    });
+
+    eventSource.addEventListener('done', () => {
+      const totalTime = Math.round(performance.now() - startTime);
+      console.log(`[Stream] Complete: ${sourcesReceived} sources in ${totalTime}ms`);
+      loadingSpinner.classList.add("hidden");
+      eventSource.close();
+      eventSource = null;
+    });
+
+    eventSource.addEventListener('error', (e) => {
+      console.error("Stream error:", e);
+      loadingSpinner.classList.add("hidden");
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+    });
   }
 
   searchInput.addEventListener("input", (e) => {
@@ -974,11 +1890,21 @@ Shows{% endblock %} {% block body %}
     }
   });
 
-  // Handle escape key
+  // Handle keyboard shortcuts
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       resultsContainer.classList.add("hidden");
       searchInput.blur();
+    }
+    // Enter key triggers full search with filters
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const query = searchInput.value.trim();
+      if (query.length >= 2) {
+        // Clear debounce timer to prevent autocomplete from running
+        clearTimeout(debounceTimer);
+        performFullSearch(query);
+      }
     }
   });
 

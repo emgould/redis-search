@@ -7,9 +7,9 @@ import logging
 from typing import Any, cast
 
 import aiohttp
-from contracts.models import MCImage, MCLink, MCUrlType
 
 from api.subapi.spotify.auth import spotify_auth
+from contracts.models import MCImage, MCLink, MCUrlType
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache

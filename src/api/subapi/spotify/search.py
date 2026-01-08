@@ -415,19 +415,23 @@ class SpotifySearchService(SpotifyService):
                 error=str(e),
             )
 
-    async def search_artists(self, query: str, limit: int = 20) -> SpotifyArtistSearchResponse:
+    async def search_artists(
+        self, query: str, limit: int = 20, enrich_with_top_tracks: bool = True
+    ) -> SpotifyArtistSearchResponse:
         """
         Search for artists by name using Spotify.
 
         Args:
             query: Search query string (artist name)
             limit: Number of results to return (default=20)
+            enrich_with_top_tracks: If True, fetch top track for each artist (slower but richer data).
+                                    Set to False for autocomplete/fast searches.
 
         Returns:
             SpotifyArtistSearchResponse with validated artist models including top track information
         """
         try:
-            logger.info(f"Searching artists on Spotify for query: '{query}' (limit={limit})")
+            logger.info(f"Searching artists on Spotify for query: '{query}' (limit={limit}, enrich={enrich_with_top_tracks})")
             async with aiohttp.ClientSession() as session:
                 search_url = "https://api.spotify.com/v1/search"
                 params = {"q": query, "type": "artist", "limit": str(limit)}
@@ -441,7 +445,14 @@ class SpotifySearchService(SpotifyService):
                     logger.warning(f"No artists found for query: '{query}'")
                     return SpotifyArtistSearchResponse(results=[], total_results=0, query=query)
 
-                # Get top tracks for each artist to help identify
+                # Fast path: skip top track enrichment for autocomplete
+                if not enrich_with_top_tracks:
+                    final_artists = [SpotifyArtist.from_spotify_artistdata(a) for a in artists]
+                    return SpotifyArtistSearchResponse(
+                        results=final_artists, total_results=len(final_artists), query=query
+                    )
+
+                # Slow path: Get top tracks for each artist to help identify
                 top_tracks_tasks = [self.get_top_track(artist.get("id")) for artist in artists]
                 top_tracks_results = await asyncio.gather(*top_tracks_tasks, return_exceptions=True)
                 final_artists = []

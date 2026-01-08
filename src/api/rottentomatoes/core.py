@@ -5,8 +5,6 @@ Handles core API communication and search operations.
 
 from typing import Any, cast
 
-from contracts.models import MCType
-
 from api.rottentomatoes.models import (
     AlgoliaMultiQueryResponse,
     ContentRtHit,
@@ -18,6 +16,7 @@ from api.rottentomatoes.models import (
     SearchResultContent,
     SearchResultPeople,
 )
+from contracts.models import MCType
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache

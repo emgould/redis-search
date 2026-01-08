@@ -6,7 +6,9 @@ Provides backward-compatible async wrappers for Firebase Functions integration.
 import logging
 
 from api.subapi.spotify.models import (
+    SpotifyAlbum,
     SpotifyAlbumSearchResponse,
+    SpotifyArtist,
     SpotifyArtistSearchResponse,
     SpotifyMultiSearchResponse,
     SpotifyTopTrackResponse,
@@ -14,6 +16,7 @@ from api.subapi.spotify.models import (
 from api.subapi.spotify.search import spotify_search_service
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
+from utils.soft_comparison import soft_compare
 
 logger = get_logger(__name__, level=logging.WARNING)
 
@@ -23,7 +26,7 @@ SpotifyWrapperCache = RedisCache(
     prefix="spotify_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.1.1",  # Version bump for Redis migration
+    version="1.3.0",  # Version bump: added enrich_with_top_tracks option for fast autocomplete
 )
 
 
@@ -33,7 +36,7 @@ class SpotifyWrapper:
 
     @RedisCache.use_cache(SpotifyWrapperCache, prefix="search_albums_wrapper")
     async def search_albums(
-        self, query: str, type: str = "album", limit: int = 20, **kwargs
+        self, query: str, type: str = "album", limit: int = 20, filter_results: bool = True, **kwargs
     ) -> SpotifyAlbumSearchResponse:
         """
         Async wrapper function to search albums.
@@ -42,15 +45,57 @@ class SpotifyWrapper:
             query: Search query string
             type: Type of search (default=album) (album, artist, playlist, track)
             limit: Number of results to return (default=20)
+            filter_results: Whether to filter results using soft_compare (default=True)
             **kwargs: Additional arguments (for compatibility)
 
         Returns:
             SpotifyAlbumSearchResponse: MCBaseItem derivative containing search results or error information
         """
         try:
+            # Fetch more results if filtering, to ensure we have enough after filtering
+            fetch_limit = limit * 2 if filter_results else limit
             data: SpotifyAlbumSearchResponse = await self.service.search_albums(
-                query=query, type=type, limit=limit
+                query=query, type=type, limit=fetch_limit
             )
+
+            if not data.results or data.error:
+                return data
+
+            # Apply filtering if enabled
+            if filter_results:
+                filtered_albums: list[SpotifyAlbum] = []
+                query_lower = query.lower()
+                for album in data.results:
+                    album_title = album.title if hasattr(album, "title") else ""
+                    album_artist = album.artist if hasattr(album, "artist") else ""
+
+                    if album_title:
+                        title_lower = album_title.lower()
+                        artist_lower = album_artist.lower() if album_artist else ""
+
+                        # Check if query is contained in title/artist OR use soft_compare
+                        # This allows "beatles" to match "The Beatles" albums
+                        title_contains = query_lower in title_lower or title_lower in query_lower
+                        artist_contains = query_lower in artist_lower or artist_lower in query_lower
+                        title_soft, _ = soft_compare(query, album_title)
+                        artist_soft, _ = soft_compare(query, album_artist) if album_artist else (False, False)
+
+                        if title_contains or artist_contains or title_soft or artist_soft:
+                            filtered_albums.append(album)
+                        else:
+                            logger.debug(
+                                f"Filtered out album '{album_title}' by '{album_artist}' - does not match query '{query}'"
+                            )
+
+                # Return filtered results (limited to requested amount)
+                return SpotifyAlbumSearchResponse(
+                    results=filtered_albums[:limit],
+                    total_results=len(filtered_albums),
+                    query=query,
+                    data_source="Spotify Album Search (filtered)",
+                    status_code=200,
+                )
+
             return data
 
         except Exception as e:
@@ -127,7 +172,12 @@ class SpotifyWrapper:
 
     @RedisCache.use_cache(SpotifyWrapperCache, prefix="search_artists_wrapper")
     async def search_artists(
-        self, query: str, limit: int = 20, **kwargs
+        self,
+        query: str,
+        limit: int = 20,
+        filter_results: bool = True,
+        enrich_with_top_tracks: bool = False,
+        **kwargs,
     ) -> SpotifyArtistSearchResponse:
         """
         Async wrapper function to search artists by name.
@@ -135,15 +185,62 @@ class SpotifyWrapper:
         Args:
             query: Search query string (artist name)
             limit: Number of results to return (default=20)
+            filter_results: Whether to filter results using soft_compare (default=True)
+            enrich_with_top_tracks: If True, fetch top track for each artist (slower).
+                                    Default False for fast autocomplete searches.
             **kwargs: Additional arguments (for compatibility)
 
         Returns:
             SpotifyArtistSearchResponse: MCBaseItem derivative containing search results or error information
         """
         try:
+            # Fetch more results if filtering, to ensure we have enough after filtering
+            fetch_limit = limit * 2 if filter_results else limit
             data: SpotifyArtistSearchResponse = await self.service.search_artists(
-                query=query, limit=limit
+                query=query, limit=fetch_limit, enrich_with_top_tracks=enrich_with_top_tracks
             )
+
+            if not data.results or data.error:
+                return data
+
+            # Apply filtering if enabled
+            if filter_results:
+                filtered_artists: list[SpotifyArtist] = []
+                query_lower = query.lower()
+                for artist in data.results:
+                    artist_name = artist.name if hasattr(artist, "name") else ""
+                    artist_popularity = getattr(artist, "popularity", 0)
+
+                    if artist_name:
+                        artist_name_lower = artist_name.lower()
+                        # Check if query is contained in artist name OR use soft_compare
+                        # This allows "beatles" to match "The Beatles"
+                        contains_match = query_lower in artist_name_lower or artist_name_lower in query_lower
+                        soft_match, _ = soft_compare(query, artist_name)
+                        names_match = contains_match or soft_match
+
+                        if names_match:
+                            # Filter out very low popularity artists (< 10)
+                            if artist_popularity >= 10:
+                                filtered_artists.append(artist)
+                            else:
+                                logger.debug(
+                                    f"Filtered out artist '{artist_name}' - popularity too low ({artist_popularity})"
+                                )
+                        else:
+                            logger.debug(
+                                f"Filtered out artist '{artist_name}' - does not match query '{query}'"
+                            )
+
+                # Return filtered results (limited to requested amount)
+                return SpotifyArtistSearchResponse(
+                    results=filtered_artists[:limit],
+                    total_results=len(filtered_artists),
+                    query=query,
+                    data_source="Spotify Artist Search (filtered)",
+                    status_code=200,
+                )
+
             return data
 
         except Exception as e:

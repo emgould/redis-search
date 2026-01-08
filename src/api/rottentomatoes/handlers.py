@@ -6,10 +6,10 @@ Handles search functionality for movies, TV shows, and people via Algolia.
 import json
 import logging
 
-from contracts.models import MCType
 from firebase_functions import https_fn
 
 from api.rottentomatoes.wrappers import get_rt_metrics, rottentomatoes_wrapper
+from contracts.models import MCType
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -85,9 +85,7 @@ class RottenTomatoesHandler:
                     headers={"Content-Type": "application/json"},
                 )
 
-            logger.info(
-                f"Successfully found {len(result.results)} RottenTomatoes content items"
-            )
+            logger.info(f"Successfully found {len(result.results)} RottenTomatoes content items")
 
             return https_fn.Response(
                 json.dumps(result.model_dump()),
@@ -260,7 +258,6 @@ class RottenTomatoesHandler:
                 headers={"Content-Type": "application/json"},
             )
 
-
     async def get_metrics(self, req: https_fn.Request) -> https_fn.Response:
         """
         Get RottenTomatoes critic and audience scores for a title.
@@ -339,4 +336,3 @@ class RottenTomatoesHandler:
 
 # Create global handler instance
 rottentomatoes_handler = RottenTomatoesHandler()
-

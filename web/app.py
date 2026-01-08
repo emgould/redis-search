@@ -12,7 +12,7 @@ from typing import Any, cast
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
@@ -24,10 +24,13 @@ from etl.etl_metadata import ETLMetadataStore
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
+    VALID_SOURCES,
     DetailsRequest,
     autocomplete,
+    autocomplete_stream,
     get_details,
     reset_repo,
+    search,
 )
 from web.routes.openlibrary_etl import router as openlibrary_etl_router
 
@@ -349,6 +352,100 @@ async def api_autocomplete(q: str = Query(default="")):
     if not q or len(q) < 2:
         return JSONResponse(content=[])
     results = await autocomplete(q)
+    return JSONResponse(content=results)
+
+
+@app.get("/api/autocomplete/stream")
+async def api_autocomplete_stream(q: str = Query(default="")):
+    """
+    Streaming autocomplete endpoint using Server-Sent Events (SSE).
+
+    Results are streamed as they become available, so fast sources
+    (video, ratings) appear immediately while slow ones (news) load later.
+
+    Each event contains:
+    - event: "result" for data, "done" when complete
+    - data: JSON with {source: string, results: array, latency_ms: number}
+    """
+    if not q or len(q) < 2:
+        return StreamingResponse(
+            iter(["event: done\ndata: {}\n\n"]),
+            media_type="text/event-stream",
+        )
+
+    async def event_generator():
+        async for source, results, latency_ms in autocomplete_stream(q):
+            event_data = json.dumps(
+                {
+                    "source": source,
+                    "results": results,
+                    "latency_ms": round(latency_ms),
+                }
+            )
+            yield f"event: result\ndata: {event_data}\n\n"
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
+
+
+@app.get("/api/search")
+async def api_search(
+    q: str = Query(default="", description="Search query string"),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated list of sources to search. "
+        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "If not provided, searches all sources.",
+    ),
+    limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
+):
+    """
+    Unified search API that returns categorized results from multiple sources.
+
+    Each result item follows the MCBaseItem contract with standard fields:
+    mc_id, mc_type, mc_subtype, source, source_id, links, images, metrics, etc.
+
+    Sources are divided into two categories:
+    - Indexed (RediSearch): tv, movie, person, podcast, author, book
+    - Brokered (Redis-cached APIs): artist, album, video, news, ratings
+
+    Examples:
+    - /api/search?q=beatles - Search all sources
+    - /api/search?q=beatles&sources=artist,album - Search only music
+    - /api/search?q=matrix&sources=tv,movie,ratings - Search indexed media + RT scores
+    """
+    if not q or len(q) < 2:
+        # Return empty dict with all valid source keys or requested ones
+        if sources:
+            requested = {s.strip().lower() for s in sources.split(",")}
+            requested = requested & VALID_SOURCES
+        else:
+            requested = VALID_SOURCES
+        return JSONResponse(content={src: [] for src in requested})
+
+    # Parse sources parameter
+    source_set: set[str] | None = None
+    if sources:
+        source_set = {s.strip().lower() for s in sources.split(",")}
+        # Filter to only valid sources
+        source_set = source_set & VALID_SOURCES
+        if not source_set:
+            return JSONResponse(
+                content={
+                    "error": f"No valid sources specified. Valid sources: {', '.join(sorted(VALID_SOURCES))}"
+                },
+                status_code=400,
+            )
+
+    results = await search(q=q, sources=source_set, limit=limit)
     return JSONResponse(content=results)
 
 

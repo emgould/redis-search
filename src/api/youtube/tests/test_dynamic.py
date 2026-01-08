@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
-from contracts.models import MCImage, MCUrlType
 
 from api.youtube.dynamic import (
     get_api_key,
@@ -20,6 +19,7 @@ from api.youtube.dynamic import (
     search_videos_async,
 )
 from api.youtube.models import DynamicYouTubeVideo, YouTubeCreator, YouTubeVideo
+from contracts.models import MCImage, MCUrlType
 
 pytestmark = pytest.mark.unit
 

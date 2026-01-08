@@ -3,10 +3,10 @@ Spotify Models - Pydantic models for Spotify music data structures
 Follows Pydantic 2.0 patterns with full type safety and MCBaseItem integration.
 """
 
-from contracts.models import MCBaseItem, MCLink, MCSources, MCSubType, MCType
 from pydantic import Field, model_validator
 
 from api.subapi.spotify.core import process_spotify_images, process_spotify_links
+from contracts.models import MCBaseItem, MCLink, MCSources, MCSubType, MCType
 
 
 class SpotifyArtist(MCBaseItem):

@@ -5,14 +5,13 @@ Provides async wrappers for Firebase Functions integration using MCSearchRespons
 
 from typing import Any, TypedDict, cast
 
-from contracts.models import MCType
-
 from api.rottentomatoes.core import RottenTomatoesService
 from api.rottentomatoes.models import (
     MCRottenTomatoesItem,
     RottenTomatoesPeopleSearchResponse,
     RottenTomatoesSearchResponse,
 )
+from contracts.models import MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 

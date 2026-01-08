@@ -7,9 +7,9 @@ import os
 from unittest.mock import PropertyMock, patch
 
 import pytest
-from contracts.models import MCType
 
 from api.youtube.wrappers import YouTubeWrapper
+from contracts.models import MCType
 
 pytestmark = pytest.mark.integration
 

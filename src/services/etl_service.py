@@ -42,7 +42,12 @@ MAJOR_STREAMING_PROVIDERS = {
     "Fubo",
     "FuboTV",
     "fuboTV",
+    "YouTube TV",  # Added - American Idol, etc.
 }
+
+# Thresholds for "significant" TV shows that bypass recency/streaming filters
+SIGNIFICANT_SHOW_EPISODES = 50  # Shows with 50+ episodes are significant
+SIGNIFICANT_SHOW_SEASONS = 3    # Shows with 3+ seasons are significant
 
 
 @dataclass
@@ -504,7 +509,7 @@ class TMDBETLService:
                 skipped_in_file += 1
                 continue
 
-            # 5. Either released in last 10 years OR on major streaming platform
+            # 5. Either released in last 10 years OR on major streaming platform OR significant show
             release_date = item.get("release_date") or item.get("first_air_date") or ""
             release_year = int(release_date[:4]) if len(release_date) >= 4 else 0
             is_recent = release_year >= cutoff_year
@@ -520,7 +525,16 @@ class TMDBETLService:
                 if is_on_major_platform:
                     break
 
-            if not is_recent and not is_on_major_platform:
+            # Check if it's a significant show (many episodes/seasons)
+            # This catches long-running shows like American Idol that may not be on major platforms
+            num_episodes = item.get("number_of_episodes") or 0
+            num_seasons = item.get("number_of_seasons") or 0
+            is_significant_show = (
+                num_episodes >= SIGNIFICANT_SHOW_EPISODES
+                or num_seasons >= SIGNIFICANT_SHOW_SEASONS
+            )
+
+            if not is_recent and not is_on_major_platform and not is_significant_show:
                 skipped_in_file += 1
                 continue
 

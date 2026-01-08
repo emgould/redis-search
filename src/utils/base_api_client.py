@@ -365,7 +365,10 @@ class BaseAPIClient:
                             return None
                         # Re-raise if it's a different RuntimeError
                         raise
-                    except (TimeoutError, aiohttp.ClientError, asyncio.CancelledError) as e:
+                    except asyncio.CancelledError:
+                        # Don't retry on cancellation - propagate it immediately
+                        raise
+                    except (TimeoutError, aiohttp.ClientError) as e:
                         attempt += 1
                         is_last_attempt = attempt >= max_retries
 
@@ -587,7 +590,10 @@ class BaseAPIClient:
                                 # Empty response body is acceptable
                                 return None, status
 
-                except (TimeoutError, aiohttp.ClientError, asyncio.CancelledError) as e:
+                except asyncio.CancelledError:
+                    # Don't retry on cancellation - propagate it immediately
+                    raise
+                except (TimeoutError, aiohttp.ClientError) as e:
                     attempt += 1
                     is_last_attempt = attempt >= max_retries
 
