@@ -54,6 +54,10 @@ def parse_doc(doc):
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Ensure mc_id is always set - prefer parsed id over doc.id (which has Redis key prefix)
+    if "mc_id" not in result:
+        result["mc_id"] = result.get("id", doc.id)
+
     # Also include any direct attributes
     for key, value in doc.__dict__.items():
         if key not in ("id", "payload", "json") and value is not None:
