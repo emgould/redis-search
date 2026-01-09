@@ -2,9 +2,135 @@
 Soft comparison utility using Levenshtein distance for fuzzy string matching.
 
 Provides normalized string comparison with configurable thresholds for matching.
+Also includes autocomplete-specific prefix matching for typeahead functionality.
 """
 
 from utils.normalize import normalize
+
+
+def is_autocomplete_match(query: str, name: str) -> bool:
+    """
+    Check if name is a valid autocomplete match for the query.
+
+    For autocomplete/typeahead, we need prefix matching where:
+    - Each complete word in the query must match a word in the name
+    - The last word in the query can be a prefix of a word in the name
+    - Once the user has typed past a name, it should no longer match
+
+    Examples:
+        - "Rhea" matches "Rhea Seehorn" ✓
+        - "Rhea S" matches "Rhea Seehorn" ✓
+        - "Rhea Se" matches "Rhea Seehorn" ✓
+        - "Rhea Se" does NOT match "Rhea Sun" ✗
+        - "Rhea Seeh" does NOT match "Rhea Sun" ✗
+        - "Rhea Seeh" does NOT match "RHEA" ✗ (query is longer/more specific)
+        - "The Beat" matches "The Beatles" ✓
+        - "Beatles" matches "The Beatles" ✓
+
+    Args:
+        query: The user's search query (partial input)
+        name: The candidate name to match against
+
+    Returns:
+        True if name is a valid autocomplete match for query
+    """
+    if not query or not name:
+        return not query  # Empty query matches everything, empty name matches nothing
+
+    query_lower = query.lower().strip()
+    name_lower = name.lower().strip()
+
+    # Quick exact match check
+    if query_lower == name_lower:
+        return True
+
+    # If query is a prefix of the full name string, it's a match
+    if name_lower.startswith(query_lower):
+        return True
+
+    # Word-by-word matching for more complex cases
+    query_words = query_lower.split()
+    name_words = name_lower.split()
+
+    if not query_words:
+        return True  # Empty query matches everything
+
+    # Single word query: check if any name word starts with the query
+    if len(query_words) == 1:
+        return any(word.startswith(query_words[0]) for word in name_words)
+
+    # Multi-word query: need to match words in sequence
+    # All query words except the last must have a matching word in name
+    # The last query word can be a prefix of a name word
+
+    # Try to find a matching sequence in the name
+    return _match_word_sequence(query_words, name_words)
+
+
+def _match_word_sequence(query_words: list[str], name_words: list[str]) -> bool:
+    """
+    Check if query words can be matched against name words in sequence.
+
+    The matching is greedy - it tries to match each query word with a name word,
+    where earlier query words must match completely and the last query word
+    can be a prefix.
+
+    Args:
+        query_words: List of words from the query (lowercase)
+        name_words: List of words from the name (lowercase)
+
+    Returns:
+        True if the query words match a subsequence of name words
+    """
+    if not query_words:
+        return True
+    if not name_words:
+        return False
+
+    # Try matching starting from each position in name_words
+    for start_idx in range(len(name_words)):
+        if _try_match_from(query_words, name_words, start_idx):
+            return True
+
+    return False
+
+
+def _try_match_from(
+    query_words: list[str], name_words: list[str], start_idx: int
+) -> bool:
+    """
+    Try to match query words starting from a specific position in name words.
+
+    Args:
+        query_words: List of words from the query
+        name_words: List of words from the name
+        start_idx: Starting index in name_words
+
+    Returns:
+        True if all query words can be matched starting from start_idx
+    """
+    name_idx = start_idx
+
+    for i, query_word in enumerate(query_words):
+        if name_idx >= len(name_words):
+            return False
+
+        is_last_word = i == len(query_words) - 1
+        name_word = name_words[name_idx]
+
+        if is_last_word:
+            # Last query word: can be a prefix
+            if not name_word.startswith(query_word):
+                return False
+        else:
+            # Not last word: must match (as a prefix that covers entire query word)
+            # e.g., query "the" should match name word "the" or "theater"
+            if not name_word.startswith(query_word):
+                return False
+
+        name_idx += 1
+
+    return True
 
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
