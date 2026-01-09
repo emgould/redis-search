@@ -45,6 +45,19 @@ jobs:
           media_type: "podcast" # Required but not used by PI ETL
           verbose: false
           # max_batches: 100  # Uncomment to limit records for testing
+
+  # Bestseller Author ETL - Add new authors from NYTimes bestseller lists
+  # This job fetches current fiction/nonfiction bestsellers from mediacircle API,
+  # finds authors not already in the author index, and loads them from OpenLibrary.
+  - name: bestseller_authors
+    target: bestseller_author_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "book" # Required but not used by bestseller ETL
+          verbose: false
+          # max_batches: 10  # Uncomment to limit new authors for testing
+
 # Redis configuration (can be overridden by environment variables)
 # redis:
 #   host: localhost
