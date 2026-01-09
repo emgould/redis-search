@@ -33,7 +33,9 @@ from utils.get_logger import get_logger
 logger = get_logger(__name__)
 
 # Minimum popularity score to include in the index
-MIN_POPULARITY = 1.0
+# Lowered from 1.0 to 0.5 to capture more celebrities (e.g., Cher, Beyoncé, Adele, Prince)
+# whose TMDB popularity can temporarily dip below 1.0
+MIN_POPULARITY = 0.5
 
 # TMDB image base URL
 IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"

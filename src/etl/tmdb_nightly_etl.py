@@ -55,7 +55,9 @@ MAX_RETRY_DELAY = 10.0
 RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 
 # Filtering thresholds
-MIN_PERSON_POPULARITY = 1.0
+# Lowered from 1.0 to 0.5 to capture more celebrities (e.g., Cher, Beyoncé, Adele, Prince)
+# whose TMDB popularity can temporarily dip below 1.0
+MIN_PERSON_POPULARITY = 0.5
 IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
 
 MAJOR_STREAMING_PROVIDERS = {
