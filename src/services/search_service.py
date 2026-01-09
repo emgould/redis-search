@@ -21,6 +21,7 @@ from core.search_queries import (
     build_fuzzy_fulltext_query,
 )
 from utils.get_logger import get_logger
+from utils.soft_comparison import is_autocomplete_match
 
 logger = get_logger(__name__)
 
@@ -89,6 +90,10 @@ def build_people_autocomplete_query(q: str) -> str:
     """
     Build a prefix search query for people autocomplete.
     Searches both search_title (name) and also_known_as fields.
+
+    Note: RediSearch requires minimum 2 characters for prefix search.
+    Single-character last words are handled by searching complete words only
+    and relying on post-query filtering.
     """
     words = q.lower().split()
     # Filter out stopwords and empty strings
@@ -115,14 +120,30 @@ def build_people_autocomplete_query(q: str) -> str:
 
     # For multi-word: match documents containing all words (last word as prefix)
     if len(words) == 1:
-        # Search both name and also_known_as
-        return f"(@search_title:{words[0]}*) | (@also_known_as:{words[0]}*)"
+        # Single word - use as prefix (must be 2+ chars for RediSearch)
+        if len(words[0]) >= 2:
+            return f"(@search_title:{words[0]}*) | (@also_known_as:{words[0]}*)"
+        else:
+            # Single character - too short for prefix, return broad match
+            return "*"
     else:
-        # All words except last should be exact, last word is prefix
-        exact_words = " ".join(words[:-1])
+        # Multi-word query
         prefix_word = words[-1]
-        name_query = f"@search_title:({exact_words} {prefix_word}*)"
-        aka_query = f"@also_known_as:({exact_words} {prefix_word}*)"
+
+        # RediSearch minimum prefix length is 2 characters
+        # If last word is only 1 char, search on complete words only
+        # Post-query filtering will handle the prefix matching
+        if len(prefix_word) < 2:
+            # Only use complete words, skip the 1-char prefix
+            exact_words = " ".join(words[:-1])
+            name_query = f"@search_title:({exact_words})"
+            aka_query = f"@also_known_as:({exact_words})"
+        else:
+            # All words except last should be exact, last word is prefix
+            exact_words = " ".join(words[:-1])
+            name_query = f"@search_title:({exact_words} {prefix_word}*)"
+            aka_query = f"@also_known_as:({exact_words} {prefix_word}*)"
+
         return f"({name_query}) | ({aka_query})"
 
 
@@ -296,7 +317,8 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         if "tv" in sources or "movie" in sources:
             timed_tasks.append(timed_task("media", repo.search(media_query, limit=20)))
         if "person" in sources:
-            timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=10)))
+            # Fetch more results for post-query filtering (handles 1-char prefix case)
+            timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
         if "podcast" in sources:
             timed_tasks.append(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))
         if "author" in sources:
@@ -350,7 +372,7 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
             media_res = empty_result
 
         try:
-            people_res = await repo.search_people(people_query, limit=10)
+            people_res = await repo.search_people(people_query, limit=20)
         except Exception:
             people_res = empty_result
 
@@ -428,8 +450,13 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         elif mc_type == "movie" and "movie" in sources:
             movie_results.append(parsed)
 
-    # Parse person results
-    person_results = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
+    # Parse person results and filter using autocomplete prefix matching
+    # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
+    person_results_raw = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
+    person_results = [
+        p for p in person_results_raw
+        if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+    ]
 
     # Parse podcast results
     podcast_results = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
@@ -547,7 +574,8 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
     if "tv" in sources or "movie" in sources:
         tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = "media"
     if "person" in sources:
-        tasks_dict[asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=10)))] = "person"
+        # Fetch more results for post-query filtering (handles 1-char prefix case)
+        tasks_dict[asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))] = "person"
     if "podcast" in sources:
         tasks_dict[asyncio.create_task(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))] = "podcast"
     if "author" in sources:
@@ -605,7 +633,16 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
                         yield ("movie", movie_results[:10], elapsed)
                 continue  # Already yielded tv/movie
 
-            elif name in ("person", "podcast", "author", "book"):
+            elif name == "person":
+                # Person results need autocomplete prefix filtering
+                if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+                    parsed_all = [parse_doc(doc) for doc in data.docs]
+                    parsed_results = [
+                        p for p in parsed_all
+                        if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+                    ][:10]
+
+            elif name in ("podcast", "author", "book"):
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_results = [parse_doc(doc) for doc in data.docs][:10]
 
@@ -709,7 +746,8 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
     if "tv" in requested_sources or "movie" in requested_sources:
         timed_tasks.append(timed_task("media", repo.search(media_query, limit=limit * 2)))
     if "person" in requested_sources:
-        timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=limit)))
+        # Fetch more results for post-query filtering (handles 1-char prefix case)
+        timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=limit * 2)))
     if "podcast" in requested_sources:
         timed_tasks.append(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=limit)))
     if "author" in requested_sources:
@@ -778,12 +816,17 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
         if "movie" in requested_sources:
             final_results["movie"] = movie_results[:limit]
 
-    # Process person results
+    # Process person results with autocomplete prefix filtering
     if "person" in results_map:
         person_res = results_map["person"]
         if isinstance(person_res, BaseException):
             person_res = empty_result
-        final_results["person"] = [parse_doc(doc) for doc in person_res.docs][:limit]
+        parsed_people = [parse_doc(doc) for doc in person_res.docs]
+        # Filter using autocomplete prefix matching (handles 1-char prefix case)
+        final_results["person"] = [
+            p for p in parsed_people
+            if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+        ][:limit]
 
     # Process podcast results
     if "podcast" in results_map:

@@ -16,7 +16,7 @@ from api.subapi.spotify.models import (
 from api.subapi.spotify.search import spotify_search_service
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
-from utils.soft_comparison import soft_compare
+from utils.soft_comparison import is_autocomplete_match
 
 logger = get_logger(__name__, level=logging.WARNING)
 
@@ -26,7 +26,7 @@ SpotifyWrapperCache = RedisCache(
     prefix="spotify_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.3.0",  # Version bump: added enrich_with_top_tracks option for fast autocomplete
+    version="1.4.0",  # Version bump: use prefix matching for autocomplete filtering
 )
 
 
@@ -64,23 +64,17 @@ class SpotifyWrapper:
             # Apply filtering if enabled
             if filter_results:
                 filtered_albums: list[SpotifyAlbum] = []
-                query_lower = query.lower()
                 for album in data.results:
                     album_title = album.title if hasattr(album, "title") else ""
                     album_artist = album.artist if hasattr(album, "artist") else ""
 
                     if album_title:
-                        title_lower = album_title.lower()
-                        artist_lower = album_artist.lower() if album_artist else ""
+                        # Use autocomplete prefix matching for typeahead behavior
+                        # Match against both title and artist name
+                        title_match = is_autocomplete_match(query, album_title)
+                        artist_match = is_autocomplete_match(query, album_artist) if album_artist else False
 
-                        # Check if query is contained in title/artist OR use soft_compare
-                        # This allows "beatles" to match "The Beatles" albums
-                        title_contains = query_lower in title_lower or title_lower in query_lower
-                        artist_contains = query_lower in artist_lower or artist_lower in query_lower
-                        title_soft, _ = soft_compare(query, album_title)
-                        artist_soft, _ = soft_compare(query, album_artist) if album_artist else (False, False)
-
-                        if title_contains or artist_contains or title_soft or artist_soft:
+                        if title_match or artist_match:
                             filtered_albums.append(album)
                         else:
                             logger.debug(
@@ -206,20 +200,16 @@ class SpotifyWrapper:
             # Apply filtering if enabled
             if filter_results:
                 filtered_artists: list[SpotifyArtist] = []
-                query_lower = query.lower()
                 for artist in data.results:
                     artist_name = artist.name if hasattr(artist, "name") else ""
                     artist_popularity = getattr(artist, "popularity", 0)
 
                     if artist_name:
-                        artist_name_lower = artist_name.lower()
-                        # Check if query is contained in artist name OR use soft_compare
-                        # This allows "beatles" to match "The Beatles"
-                        contains_match = query_lower in artist_name_lower or artist_name_lower in query_lower
-                        soft_match, _ = soft_compare(query, artist_name)
-                        names_match = contains_match or soft_match
+                        # Use autocomplete prefix matching for typeahead behavior
+                        # This ensures "Rhea Seeh" matches "Rhea Seehorn" but NOT "Rhea Sun"
+                        is_match = is_autocomplete_match(query, artist_name)
 
-                        if names_match:
+                        if is_match:
                             # Filter out very low popularity artists (< 10)
                             if artist_popularity >= 10:
                                 filtered_artists.append(artist)
