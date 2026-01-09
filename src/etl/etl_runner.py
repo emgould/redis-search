@@ -144,11 +144,20 @@ class ETLConfig:
         }
 
 
-# Registry of available ETL functions
-ETL_FUNCTIONS: dict[str, Any] = {
-    "tmdb_nightly_etl": run_nightly_etl,
-    "pi_nightly_etl": run_pi_nightly_etl,
-}
+def _get_etl_functions() -> dict[str, Any]:
+    """Get registry of available ETL functions with lazy imports."""
+    # Lazy import to avoid circular import when running bestseller_author_etl as __main__
+    from etl.bestseller_author_etl import run_bestseller_author_etl
+
+    return {
+        "tmdb_nightly_etl": run_nightly_etl,
+        "pi_nightly_etl": run_pi_nightly_etl,
+        "bestseller_author_etl": run_bestseller_author_etl,
+    }
+
+
+# Registry of available ETL functions (lazy loaded)
+ETL_FUNCTIONS: dict[str, Any] = {}
 
 
 class ETLRunner:
@@ -234,8 +243,9 @@ class ETLRunner:
             self._run_metadata.add_log(f"Starting job: {job_name}")
 
         try:
-            # Get the ETL function
-            etl_func = ETL_FUNCTIONS.get(job.target)
+            # Get the ETL function (lazy load to avoid circular imports)
+            etl_functions = _get_etl_functions()
+            etl_func = etl_functions.get(job.target)
             if not etl_func:
                 raise ValueError(f"Unknown ETL function: {job.target}")
 
@@ -257,6 +267,17 @@ class ETLRunner:
                     redis_password=self.config.redis_password,
                     max_batches=params.max_batches,
                 )
+            elif job.target == "bestseller_author_etl":
+                # Bestseller Author ETL - uses start_date for the bestseller list date
+                stats = await etl_func(
+                    media_type="book",
+                    start_date=start_date,
+                    redis_host=self.config.redis_host,
+                    redis_port=self.config.redis_port,
+                    redis_password=self.config.redis_password,
+                    verbose=params.verbose,
+                    max_batches=params.max_batches,
+                )
             else:
                 # TMDB ETL - validate media_type
                 if params.media_type not in ("tv", "movie", "person"):
@@ -275,13 +296,17 @@ class ETLRunner:
                     max_batches=params.max_batches,
                 )
 
-            # Update result from stats (both ETL types have compatible interfaces)
+            # Update result from stats (all ETL types have compatible interfaces)
             load_errors = stats.load_phase.items_failed
             result.status = "success" if load_errors == 0 else "partial"
             result.changes_found = stats.total_changes_found
             result.documents_upserted = stats.load_phase.items_success
             result.documents_skipped = stats.failed_filter
+
+            # Collect all errors - bestseller ETL also has search_phase
             all_errors = stats.fetch_phase.errors + stats.load_phase.errors
+            if hasattr(stats, "search_phase"):
+                all_errors = stats.fetch_phase.errors + stats.search_phase.errors + stats.load_phase.errors
             result.errors_count = len(all_errors)
             result.errors = all_errors
 
