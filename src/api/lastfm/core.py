@@ -30,7 +30,7 @@ LastFMCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="lastfm",
     verbose=True,
-    version="2.4.0",  # Fixed: image fallback now uses largest image (index 0) instead of smallest
+    version="2.5.0",  # Filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
 )
 
 logger = get_logger(__name__)
