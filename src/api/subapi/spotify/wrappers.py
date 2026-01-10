@@ -20,6 +20,45 @@ from utils.soft_comparison import is_autocomplete_match
 
 logger = get_logger(__name__, level=logging.WARNING)
 
+# Patterns that indicate cover/tribute accounts - not real artists
+# These should be filtered out unless the query explicitly includes them
+COVER_TRIBUTE_PATTERNS = [
+    "piano covers",
+    "piano cover",
+    "tribute band",
+    "tribute to",
+    "cover band",
+    "covers band",
+    "karaoke",
+    "made famous by",
+    "in the style of",
+    "originally performed by",
+]
+
+
+def _is_cover_or_tribute_account(artist_name: str, query: str) -> bool:
+    """
+    Check if an artist name appears to be a cover/tribute account.
+
+    Returns True if the artist name contains cover/tribute patterns
+    AND the query doesn't explicitly include those patterns.
+
+    Args:
+        artist_name: The artist's name to check
+        query: The user's search query
+
+    Returns:
+        True if this appears to be a cover/tribute account that should be filtered
+    """
+    name_lower = artist_name.lower()
+    query_lower = query.lower()
+
+    for pattern in COVER_TRIBUTE_PATTERNS:
+        # Filter if pattern is in the name but NOT in the query
+        if pattern in name_lower and pattern not in query_lower:
+            return True
+    return False
+
 
 def _rank_artist_result(artist: SpotifyArtist, query: str) -> tuple[int, int, int]:
     """
@@ -54,7 +93,7 @@ SpotifyWrapperCache = RedisCache(
     prefix="spotify_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.5.0",  # Version bump: re-rank results to prioritize exact matches
+    version="1.6.0",  # Filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
 )
 
 
@@ -233,6 +272,14 @@ class SpotifyWrapper:
                     artist_popularity = getattr(artist, "popularity", 0)
 
                     if artist_name:
+                        # Filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
+                        # unless the query explicitly includes those terms
+                        if _is_cover_or_tribute_account(artist_name, query):
+                            logger.debug(
+                                f"Filtered out artist '{artist_name}' - appears to be cover/tribute account"
+                            )
+                            continue
+
                         # Use autocomplete prefix matching for typeahead behavior
                         # This ensures "Rhea Seeh" matches "Rhea Seehorn" but NOT "Rhea Sun"
                         is_match = is_autocomplete_match(query, artist_name)

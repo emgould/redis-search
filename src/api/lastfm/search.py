@@ -21,7 +21,7 @@ from api.lastfm.models import (
     MCMusicPlaylist,
 )
 from api.subapi.apple.wrapper import apple_wrapper
-from api.subapi.spotify.wrappers import spotify_wrapper
+from api.subapi.spotify.wrappers import _is_cover_or_tribute_account, spotify_wrapper
 from utils.get_logger import get_logger
 from utils.normalize import normalize
 from utils.redis_cache import RedisCache
@@ -835,12 +835,20 @@ class LastFMSearchService(LastFMEnrichmentService):
             # This prevents unrelated results (e.g., "U2 Tribute Band" when searching for "U2")
             # For short queries (<=3 chars), soft_compare requires exact matches
             # Also filter out low-popularity artists (popularity < 10) to remove obscure/tribute bands
+            # And filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
             filtered_artists = []
             for artist in artists_raw:
                 artist_name = artist.name if hasattr(artist, "name") else ""
                 artist_popularity = getattr(artist, "popularity", 0)
 
                 if artist_name:
+                    # Filter out cover/tribute accounts unless query explicitly includes those terms
+                    if _is_cover_or_tribute_account(artist_name, query):
+                        logger.debug(
+                            f"Filtered out artist '{artist_name}' - appears to be cover/tribute account"
+                        )
+                        continue
+
                     names_match, _ = soft_compare(query, artist_name)
                     if names_match:
                         # Additional filter: remove artists with very low popularity (< 10)
