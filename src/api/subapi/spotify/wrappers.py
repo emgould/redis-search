@@ -20,13 +20,41 @@ from utils.soft_comparison import is_autocomplete_match
 
 logger = get_logger(__name__, level=logging.WARNING)
 
+
+def _rank_artist_result(artist: SpotifyArtist, query: str) -> tuple[int, int, int]:
+    """
+    Generate a sort key for ranking artist results.
+
+    Prioritizes:
+    1. Exact matches (query equals name exactly)
+    2. Prefix matches (name starts with query)
+    3. Shorter names (when both match similarly)
+    4. Higher popularity as tiebreaker
+
+    Returns tuple for sorting: (match_type, name_length, -popularity)
+    """
+    name = (artist.name or "").lower().strip()
+    query_lower = query.lower().strip()
+    popularity = artist.popularity or 0
+
+    # Exact match - highest priority
+    if name == query_lower:
+        return (0, len(name), -popularity)
+
+    # Prefix match - name starts with query
+    if name.startswith(query_lower):
+        return (1, len(name), -popularity)
+
+    # Contains match / word match
+    return (2, len(name), -popularity)
+
 # Cache for standalone async functions (not class methods)
 SpotifyWrapperCache = RedisCache(
     defaultTTL=24 * 60 * 60,  # 24 hours
     prefix="spotify_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.4.0",  # Version bump: use prefix matching for autocomplete filtering
+    version="1.5.0",  # Version bump: re-rank results to prioritize exact matches
 )
 
 
@@ -222,9 +250,14 @@ class SpotifyWrapper:
                                 f"Filtered out artist '{artist_name}' - does not match query '{query}'"
                             )
 
-                # Return filtered results (limited to requested amount)
+                # Re-rank to prioritize exact matches and shorter names over pure popularity
+                ranked_artists = sorted(
+                    filtered_artists, key=lambda a: _rank_artist_result(a, query)
+                )
+
+                # Return filtered and ranked results (limited to requested amount)
                 return SpotifyArtistSearchResponse(
-                    results=filtered_artists[:limit],
+                    results=ranked_artists[:limit],
                     total_results=len(filtered_artists),
                     query=query,
                     data_source="Spotify Artist Search (filtered)",

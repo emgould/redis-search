@@ -26,6 +26,37 @@ from utils.soft_comparison import is_autocomplete_match
 logger = get_logger(__name__)
 
 
+def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
+    """
+    Generate a sort key for ranking person results.
+
+    Prioritizes:
+    1. Exact matches (query equals name exactly)
+    2. Prefix matches (name starts with query)
+    3. Shorter names (when both match similarly)
+    4. Higher popularity as tiebreaker
+
+    Returns tuple for sorting: (match_type, name_length, -popularity)
+    - match_type: 0 = exact, 1 = prefix, 2 = contains
+    - name_length: shorter names rank higher
+    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    """
+    name = (person.get("search_title", "") or person.get("name", "") or "").lower().strip()
+    query_lower = query.lower().strip()
+    popularity = float(person.get("popularity", 0) or 0)
+
+    # Exact match - highest priority
+    if name == query_lower:
+        return (0, len(name), -popularity)
+
+    # Prefix match - name starts with query
+    if name.startswith(query_lower):
+        return (1, len(name), -popularity)
+
+    # Contains match / word match
+    return (2, len(name), -popularity)
+
+
 # Lazy initialization
 _repo = None
 
@@ -453,10 +484,12 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     # Parse person results and filter using autocomplete prefix matching
     # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
     person_results_raw = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
-    person_results = [
+    person_results_filtered = [
         p for p in person_results_raw
         if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
     ]
+    # Re-rank to prioritize exact matches and shorter names over pure popularity
+    person_results = sorted(person_results_filtered, key=lambda p: _rank_person_result(p, q))
 
     # Parse podcast results
     podcast_results = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
@@ -634,13 +667,15 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
                 continue  # Already yielded tv/movie
 
             elif name == "person":
-                # Person results need autocomplete prefix filtering
+                # Person results need autocomplete prefix filtering and re-ranking
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
-                    parsed_results = [
+                    filtered = [
                         p for p in parsed_all
                         if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
-                    ][:10]
+                    ]
+                    # Re-rank to prioritize exact matches and shorter names
+                    parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[:10]
 
             elif name in ("podcast", "author", "book"):
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
@@ -816,17 +851,21 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
         if "movie" in requested_sources:
             final_results["movie"] = movie_results[:limit]
 
-    # Process person results with autocomplete prefix filtering
+    # Process person results with autocomplete prefix filtering and re-ranking
     if "person" in results_map:
         person_res = results_map["person"]
         if isinstance(person_res, BaseException):
             person_res = empty_result
         parsed_people = [parse_doc(doc) for doc in person_res.docs]
         # Filter using autocomplete prefix matching (handles 1-char prefix case)
-        final_results["person"] = [
+        filtered_people = [
             p for p in parsed_people
             if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
-        ][:limit]
+        ]
+        # Re-rank to prioritize exact matches and shorter names over pure popularity
+        final_results["person"] = sorted(
+            filtered_people, key=lambda p: _rank_person_result(p, q)
+        )[:limit]
 
     # Process podcast results
     if "podcast" in results_map:
