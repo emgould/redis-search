@@ -200,6 +200,7 @@ class TMDBETLService:
         self.config = config
         self.redis: Redis | None = None
         self.gcs_uploader = GCSUploader(config.gcs_bucket, config.gcs_prefix)
+        self.genre_mapping: dict[int, str] = {}  # Loaded once at ETL start
 
     async def connect(self) -> None:
         """Connect to Redis."""
@@ -370,6 +371,19 @@ class TMDBETLService:
             stats.add_error(f"Redis connection failed: {e}")
             print(f"  ❌ Connection failed: {e}")
             return stats
+
+        # Load genre mapping
+        print()
+        print("🎭 Loading genre mapping...")
+        try:
+            from utils.genre_mapping import get_genre_mapping_with_fallback
+
+            self.genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+            print(f"  ✅ Loaded {len(self.genre_mapping)} genres")
+        except Exception as e:
+            stats.add_error(f"Genre mapping load failed: {e}")
+            print(f"  ⚠️  Genre mapping failed: {e}. Continuing without genre resolution.")
+            self.genre_mapping = {}
 
         # Process each file
         print()
@@ -552,8 +566,10 @@ class TMDBETLService:
                     if cast_member.get("profile_path") or cast_member.get("has_image")
                 ]
 
-            # Normalize the document
-            search_doc = normalize_document(item, source=MCSources.TMDB, mc_type=mc_type)
+            # Normalize the document with genre mapping
+            search_doc = normalize_document(
+                item, source=MCSources.TMDB, mc_type=mc_type, genre_mapping=self.genre_mapping
+            )
 
             if search_doc is None:
                 skipped_in_file += 1

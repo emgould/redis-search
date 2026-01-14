@@ -50,6 +50,12 @@ async def build_index():
         TagField("$.mc_subtype", as_name="mc_subtype"),
         # Source filter
         TagField("$.source", as_name="source"),
+        # Genre filtering (arrays)
+        TagField("$.genre_ids[*]", as_name="genre_ids"),
+        TagField("$.genres[*]", as_name="genres"),
+        # Cast filtering (arrays)
+        TagField("$.cast_ids[*]", as_name="cast_ids"),
+        TagField("$.cast_names[*]", as_name="cast_names"),
         # Sortable numeric fields for ranking
         NumericField("$.popularity", as_name="popularity", sortable=True),
         NumericField("$.rating", as_name="rating", sortable=True),
