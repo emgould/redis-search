@@ -38,6 +38,45 @@ echo ""
 gcloud config set project "$PROJECT_ID" 2>/dev/null
 
 # -----------------------------------------------------------------------------
+# 0. Ensure ETL VM is running (it's usually terminated to save costs)
+# -----------------------------------------------------------------------------
+echo "🔍 Checking ETL VM status..."
+
+VM_STATUS=$(gcloud compute instances describe "${VM_NAME}" \
+    --zone="${ZONE}" \
+    --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
+
+if [ "$VM_STATUS" = "TERMINATED" ] || [ "$VM_STATUS" = "STOPPED" ]; then
+    echo "   VM is ${VM_STATUS}, starting it..."
+    gcloud compute instances start "${VM_NAME}" --zone="${ZONE}" --quiet
+    
+    echo "   Waiting for VM to boot and SSH to become available..."
+    # Wait up to 60 seconds for SSH to be ready
+    for i in {1..12}; do
+        if gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap \
+            --command="echo 'SSH ready'" 2>/dev/null; then
+            echo "   ✅ VM is running and SSH is ready"
+            break
+        fi
+        if [ $i -eq 12 ]; then
+            echo "   ❌ Timeout waiting for SSH. Try again in a minute."
+            exit 1
+        fi
+        echo "   Waiting... ($i/12)"
+        sleep 5
+    done
+elif [ "$VM_STATUS" = "RUNNING" ]; then
+    echo "   ✅ VM is already running"
+elif [ "$VM_STATUS" = "NOT_FOUND" ]; then
+    echo "   ❌ VM '${VM_NAME}' not found. Run scripts/create_etl_vm.sh first."
+    exit 1
+else
+    echo "   ⚠️  VM status: ${VM_STATUS}. Attempting to continue..."
+fi
+
+echo ""
+
+# -----------------------------------------------------------------------------
 # 1. Build Docker Image (for linux/amd64 - VM architecture)
 # -----------------------------------------------------------------------------
 echo "📦 Building ETL Docker image for linux/amd64..."
