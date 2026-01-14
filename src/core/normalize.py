@@ -37,8 +37,14 @@ class SearchDocument:
     rating: float  # Rating score (0-10)
     # Display fields (stored, not indexed)
     image: str | None  # Medium poster/profile image URL
-    cast: list[str]  # First two actor names (for movies/TV)
     overview: str | None  # Truncated description/bio
+    # Genre fields (indexed as TagFields - must be strings for Redis)
+    genre_ids: list[str]  # TMDB genre IDs as strings (e.g., ["35", "18", "10751"])
+    genres: list[str]  # Genre names (e.g., ["Comedy", "Drama", "Family"])
+    # Cast fields (indexed as TagFields - must be strings for Redis)
+    cast_ids: list[str]  # TMDB person IDs as strings for cast members
+    cast_names: list[str]  # Cast member names for search/filter
+    cast: list[str]  # Cast member names for display (same as cast_names)
     # Person-specific fields (for people index)
     also_known_as: str | None = None  # Pipe-separated alternate names for search
 
@@ -62,9 +68,16 @@ class BaseNormalizer(ABC):
         return None
 
     @abstractmethod
-    def normalize(self, raw: dict) -> SearchDocument | None:
+    def normalize(
+        self, raw: dict, genre_mapping: dict[int, str] | None = None
+    ) -> SearchDocument | None:
         """
         Transform raw data into a SearchDocument.
+
+        Args:
+            raw: Raw data to normalize
+            genre_mapping: Optional genre ID to name mapping
+
         Returns None if the data cannot be normalized.
         """
 
@@ -183,10 +196,79 @@ class BaseTMDBNormalizer(BaseNormalizer):
                 return url
         return None
 
-    def _extract_cast(self, raw: dict) -> list[str]:
-        """Extract first two actor names from main_cast."""
+    def _extract_genre_ids(self, raw: dict) -> list[str]:
+        """Extract genre IDs from TMDB data as strings for Redis TagField."""
+        genre_ids = raw.get("genre_ids", [])
+        return [str(gid) for gid in genre_ids if isinstance(gid, int)]
+
+    def _extract_genres(self, raw: dict, genre_mapping: dict[int, str] | None = None) -> list[str]:
+        """
+        Extract genre names from TMDB data.
+
+        If genre_mapping is provided, resolves genre_ids to names.
+        Otherwise, uses the 'genres' field if available.
+        """
+        # Try direct genres field first (may already have names)
+        genres = raw.get("genres", [])
+        if genres:
+            # Handle both formats: list of dicts with 'name' or list of strings
+            names = []
+            for g in genres:
+                if isinstance(g, dict) and g.get("name"):
+                    names.append(g["name"])
+                elif isinstance(g, str):
+                    names.append(g)
+            if names:
+                return names
+
+        # Fall back to resolving genre_ids if mapping provided
+        if genre_mapping:
+            genre_ids = self._extract_genre_ids(raw)
+            # genre_ids are strings, convert to int for mapping lookup
+            return [genre_mapping[int(gid)] for gid in genre_ids if int(gid) in genre_mapping]
+
+        return []
+
+    def _extract_cast_data(self, raw: dict, limit: int = 5) -> tuple[list[str], list[str], list[str]]:
+        """
+        Extract cast data from TMDB data.
+
+        Returns:
+            Tuple of (cast_ids, cast_names, cast)
+            - cast_ids: List of TMDB person IDs as strings (for Redis TagField)
+            - cast_names: List of actor names (for Redis TagField filtering)
+            - cast: List of actor names (for display, same as cast_names)
+        """
+        cast_ids: list[str] = []
+        cast_names: list[str] = []
+
+        # Try main_cast first, then tmdb_cast.cast
         main_cast = raw.get("main_cast", [])
-        return [actor.get("name") for actor in main_cast[:2] if actor.get("name")]
+        if not main_cast:
+            tmdb_cast = raw.get("tmdb_cast", {})
+            if isinstance(tmdb_cast, dict):
+                main_cast = tmdb_cast.get("cast", [])
+
+        for actor in main_cast[:limit]:
+            if not actor.get("name"):
+                continue
+
+            actor_id = actor.get("id")
+            actor_name = actor.get("name")
+
+            if actor_id:
+                cast_ids.append(str(actor_id))  # Convert to string for Redis TagField
+            if actor_name:
+                cast_names.append(actor_name)
+
+        # cast is same as cast_names (for display)
+        return cast_ids, cast_names, cast_names
+
+    def _build_profile_url(self, profile_path: str | None) -> str | None:
+        """Build full profile image URL from TMDB path."""
+        if not profile_path:
+            return None
+        return f"https://image.tmdb.org/t/p/w185{profile_path}"
 
     def _extract_overview(self, raw: dict, max_length: int = 200) -> str | None:
         """Extract and truncate overview/description."""
@@ -205,7 +287,9 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
     def mc_type(self) -> MCType:
         return MCType.MOVIE
 
-    def normalize(self, raw: dict) -> SearchDocument | None:
+    def normalize(
+        self, raw: dict, genre_mapping: dict[int, str] | None = None
+    ) -> SearchDocument | None:
         """Transform TMDB movie data into a SearchDocument."""
         doc_id = self.extract_id(raw)
         source_id = self.extract_source_id(raw)
@@ -216,6 +300,9 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
         if not title:
             return None
 
+        # Extract cast data (ids, names, and rich objects)
+        cast_ids, cast_names, cast_objects = self._extract_cast_data(raw)
+
         return SearchDocument(
             id=doc_id,
             search_title=title,
@@ -227,8 +314,12 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             popularity=self._compute_popularity(raw),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
-            cast=self._extract_cast(raw),
             overview=self._extract_overview(raw),
+            genre_ids=self._extract_genre_ids(raw),
+            genres=self._extract_genres(raw, genre_mapping),
+            cast_ids=cast_ids,
+            cast_names=cast_names,
+            cast=cast_objects,
         )
 
 
@@ -239,7 +330,9 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
     def mc_type(self) -> MCType:
         return MCType.TV_SERIES
 
-    def normalize(self, raw: dict) -> SearchDocument | None:
+    def normalize(
+        self, raw: dict, genre_mapping: dict[int, str] | None = None
+    ) -> SearchDocument | None:
         """Transform TMDB TV data into a SearchDocument."""
         doc_id = self.extract_id(raw)
         source_id = self.extract_source_id(raw)
@@ -249,6 +342,9 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
         title = self._extract_title(raw)
         if not title:
             return None
+
+        # Extract cast data (ids, names, and rich objects)
+        cast_ids, cast_names, cast_objects = self._extract_cast_data(raw)
 
         return SearchDocument(
             id=doc_id,
@@ -261,8 +357,12 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             popularity=self._compute_popularity(raw),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
-            cast=self._extract_cast(raw),
             overview=self._extract_overview(raw),
+            genre_ids=self._extract_genre_ids(raw),
+            genres=self._extract_genres(raw, genre_mapping),
+            cast_ids=cast_ids,
+            cast_names=cast_names,
+            cast=cast_objects,
         )
 
 
@@ -286,7 +386,9 @@ class TMDBPersonNormalizer(BaseTMDBNormalizer):
             return MCSubType.PRODUCER
         return MCSubType.PERSON
 
-    def normalize(self, raw: dict) -> SearchDocument | None:
+    def normalize(
+        self, raw: dict, genre_mapping: dict[int, str] | None = None
+    ) -> SearchDocument | None:
         """Transform TMDB person data into a SearchDocument."""
         doc_id = self.extract_id(raw)
         source_id = self.extract_source_id(raw)
@@ -308,8 +410,13 @@ class TMDBPersonNormalizer(BaseTMDBNormalizer):
             popularity=self._compute_popularity(raw),
             rating=0.0,  # Persons don't have ratings
             image=self._extract_image(raw),
-            cast=[],  # Persons don't have cast
             overview=self._extract_overview(raw),  # Uses biography
+            # Persons don't have genres or cast
+            genre_ids=[],
+            genres=[],
+            cast_ids=[],
+            cast_names=[],
+            cast=[],
         )
 
 
@@ -385,6 +492,7 @@ def normalize_document(
     raw: dict,
     source: MCSources | None = None,
     mc_type: MCType | None = None,
+    genre_mapping: dict[int, str] | None = None,
 ) -> SearchDocument | None:
     """
     Normalize a raw document from any supported source.
@@ -393,6 +501,7 @@ def normalize_document(
         raw: The raw document data
         source: Optional source hint. If not provided, will auto-detect.
         mc_type: Optional MCType hint. If not provided, will auto-detect.
+        genre_mapping: Optional genre ID to name mapping for resolving genre names.
 
     Returns:
         SearchDocument if successful, None otherwise
@@ -411,7 +520,7 @@ def normalize_document(
     if normalizer is None:
         return None
 
-    return normalizer.normalize(raw)
+    return normalizer.normalize(raw, genre_mapping=genre_mapping)
 
 
 def document_to_redis(doc: SearchDocument) -> dict:
@@ -429,8 +538,14 @@ def document_to_redis(doc: SearchDocument) -> dict:
         "popularity": doc.popularity,
         "rating": doc.rating,
         "image": doc.image,
-        "cast": doc.cast,
         "overview": doc.overview,
+        # Genre fields (indexed as TagFields)
+        "genre_ids": doc.genre_ids,
+        "genres": doc.genres,
+        # Cast fields (indexed as TagFields)
+        "cast_ids": doc.cast_ids,
+        "cast_names": doc.cast_names,
+        "cast": doc.cast,
     }
     # Add also_known_as for person documents
     if doc.also_known_as is not None:

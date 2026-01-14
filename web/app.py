@@ -25,9 +25,12 @@ from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
     VALID_SOURCES,
+    CastNameSearchRequest,
+    CastNameSearchResponse,
     DetailsRequest,
     autocomplete,
     autocomplete_stream,
+    get_cast_names,
     get_details,
     reset_repo,
     search,
@@ -2029,6 +2032,54 @@ async def api_get_details(
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.get("/api/cast-names", response_model=CastNameSearchResponse)
+async def api_get_cast_names(
+    query: str | None = Query(default=None, description="Title to search for (e.g., 'The Matrix')"),
+    tmdb_id: int | None = Query(default=None, description="Optional: Direct TMDB ID"),
+    media_type: str | None = Query(
+        default=None,
+        description="Optional: 'movie' or 'tv' to restrict search (default: search both)",
+    ),
+):
+    """
+    Get cast names for a movie or TV show with names split into parts.
+
+    Search by title (query) or provide a direct TMDB ID. Returns the title,
+    description, and cast members with their names split into first/last and
+    character_first/character_last. Names are only included if they are
+    between 3-7 characters in length, otherwise null.
+
+    If media_type is not specified, searches both movies and TV shows and
+    returns the best match (exact title match first, then most popular).
+
+    Args:
+        query: Title to search for (e.g., 'The Matrix')
+        tmdb_id: Optional direct TMDB ID (bypasses search)
+        media_type: Optional - 'movie' or 'tv' to restrict search
+
+    Returns:
+        JSON with title, description, and cast_names array
+    """
+    try:
+        if not query and not tmdb_id:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Either 'query' or 'tmdb_id' must be provided"},
+            )
+
+        if media_type and media_type.lower() not in ("movie", "tv"):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "media_type must be 'movie' or 'tv'"},
+            )
+
+        request = CastNameSearchRequest(query=query, tmdb_id=tmdb_id, media_type=media_type)
+        result = await get_cast_names(request)
+        return JSONResponse(content=result.model_dump())
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # ============================================================
 # ETL Runner API Endpoints (for nightly changes-based ETL)
 # ============================================================
@@ -2461,8 +2512,15 @@ INDEX_CONFIGS = {
             # Content type filters (MCType and MCSubType)
             TagField("$.mc_type", as_name="mc_type"),
             TagField("$.mc_subtype", as_name="mc_subtype"),
+            TagField("$.spoken_language", as_name="spoken_language"),
             # Source filter
             TagField("$.source", as_name="source"),
+            # Genre filtering (arrays)
+            TagField("$.genre_ids[*]", as_name="genre_ids"),
+            TagField("$.genres[*]", as_name="genres"),
+            # Cast filtering (arrays)
+            TagField("$.cast_ids[*]", as_name="cast_ids"),
+            TagField("$.cast_names[*]", as_name="cast_names"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),

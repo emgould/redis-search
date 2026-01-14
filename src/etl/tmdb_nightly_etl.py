@@ -464,6 +464,18 @@ class TMDBChangesETL(TMDBService):
             stats.load_phase.completed_at = datetime.now()
             return
 
+        # Load genre mapping for media types
+        genre_mapping: dict[int, str] = {}
+        if media_type in ("movie", "tv"):
+            logger.info("Loading genre mapping...")
+            try:
+                from utils.genre_mapping import get_genre_mapping_with_fallback
+
+                genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+                logger.info(f"Loaded {len(genre_mapping)} genres")
+            except Exception as e:
+                logger.warning(f"Failed to load genre mapping: {e}. Continuing without it.")
+
         # Connect to Redis
         redis = Redis(
             host=redis_host,
@@ -505,7 +517,7 @@ class TMDBChangesETL(TMDBService):
                             key = f"{prefix}{doc_dict['id']}"
                             redis_doc = doc_dict
                         else:
-                            doc = normalize_document(item)
+                            doc = normalize_document(item, genre_mapping=genre_mapping)
                             if doc is None:
                                 stats.load_phase.items_failed += 1
                                 stats.load_phase.errors.append(
