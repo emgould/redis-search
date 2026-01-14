@@ -96,10 +96,7 @@ def build_lookup_from_json(
                 logger.error(f"Error processing {json_file}: {e}")
                 continue
 
-    logger.info(
-        f"Built lookup from {files_processed} files, "
-        f"{items_processed} items indexed"
-    )
+    logger.info(f"Built lookup from {files_processed} files, {items_processed} items indexed")
 
     return lookup
 

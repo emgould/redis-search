@@ -453,7 +453,9 @@ class BestsellerAuthorETL(BaseAPIClient):
                 stats.search_phase.items_processed += 1
 
                 if self.verbose or i % 10 == 0:
-                    logger.info(f"Searching OpenLibrary [{i}/{len(missing_authors)}]: {author_name}")
+                    logger.info(
+                        f"Searching OpenLibrary [{i}/{len(missing_authors)}]: {author_name}"
+                    )
 
                 author = await self._search_author_openlibrary(author_name, stats)
 
@@ -675,4 +677,3 @@ if __name__ == "__main__":
             date=args.date,
         )
     )
-

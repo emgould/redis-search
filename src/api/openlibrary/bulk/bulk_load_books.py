@@ -121,26 +121,26 @@ def cleanse_description(desc: str | None) -> str | None:
         return desc
 
     # Remove markdown links to openlibrary: [text](https://openlibrary.org/...)
-    desc = re.sub(r'\[([^\]]*)\]\(https?://openlibrary\.org[^\)]*\)', '', desc)
+    desc = re.sub(r"\[([^\]]*)\]\(https?://openlibrary\.org[^\)]*\)", "", desc)
 
     # Remove "See also:" section and everything after if it contained OL links
-    desc = re.sub(r'\n*-{5,}\n*See also:.*', '', desc, flags=re.DOTALL | re.IGNORECASE)
+    desc = re.sub(r"\n*-{5,}\n*See also:.*", "", desc, flags=re.DOTALL | re.IGNORECASE)
 
     # Remove "Contained in:" lines
-    desc = re.sub(r'\n*Contained in:.*', '', desc, flags=re.DOTALL | re.IGNORECASE)
+    desc = re.sub(r"\n*Contained in:.*", "", desc, flags=re.DOTALL | re.IGNORECASE)
 
     # Remove standalone "See also:" sections (without divider)
-    desc = re.sub(r'\n*See also:\s*\n.*', '', desc, flags=re.DOTALL | re.IGNORECASE)
+    desc = re.sub(r"\n*See also:\s*\n.*", "", desc, flags=re.DOTALL | re.IGNORECASE)
 
     # Remove any remaining openlibrary.org URLs
-    desc = re.sub(r'https?://openlibrary\.org[^\s\)]*', '', desc)
+    desc = re.sub(r"https?://openlibrary\.org[^\s\)]*", "", desc)
 
     # Clean up multiple newlines and trailing whitespace
-    desc = re.sub(r'\n{3,}', '\n\n', desc)
+    desc = re.sub(r"\n{3,}", "\n\n", desc)
     desc = desc.strip()
 
     # If description is now empty or just whitespace/dashes, return None
-    if not desc or desc.replace('-', '').replace('\n', '').strip() == '':
+    if not desc or desc.replace("-", "").replace("\n", "").strip() == "":
         return None
 
     return desc
@@ -266,9 +266,17 @@ def passes_quality_filter(work: dict[str, Any]) -> bool:
 
     # Reject split editions and adaptations
     split_patterns = [
-        "[1/2]", "[2/2]", "[1/3]", "[2/3]", "[3/3]",
-        "[1/4]", "[2/4]", "[3/4]", "[4/4]",
-        "[adaptation]", "[Adaptation]",
+        "[1/2]",
+        "[2/2]",
+        "[1/3]",
+        "[2/3]",
+        "[3/3]",
+        "[1/4]",
+        "[2/4]",
+        "[3/4]",
+        "[4/4]",
+        "[adaptation]",
+        "[Adaptation]",
     ]
     for pattern in split_patterns:
         if pattern in title:
@@ -495,9 +503,7 @@ def main(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Bulk load OpenLibrary works for known authors"
-    )
+    parser = argparse.ArgumentParser(description="Bulk load OpenLibrary works for known authors")
     parser.add_argument(
         "--authors-jsonl",
         default="data/openlibrary/mc_authors.jsonl",
@@ -531,4 +537,3 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info(f"Final: {stats['works_found']:,} books extracted")
     logger.info("=" * 60)
-

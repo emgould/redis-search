@@ -229,7 +229,9 @@ class BaseTMDBNormalizer(BaseNormalizer):
 
         return []
 
-    def _extract_cast_data(self, raw: dict, limit: int = 5) -> tuple[list[str], list[str], list[str]]:
+    def _extract_cast_data(
+        self, raw: dict, limit: int = 5
+    ) -> tuple[list[str], list[str], list[str]]:
         """
         Extract cast data from TMDB data.
 
