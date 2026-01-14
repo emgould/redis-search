@@ -47,7 +47,7 @@ MAJOR_STREAMING_PROVIDERS = {
 
 # Thresholds for "significant" TV shows that bypass recency/streaming filters
 SIGNIFICANT_SHOW_EPISODES = 50  # Shows with 50+ episodes are significant
-SIGNIFICANT_SHOW_SEASONS = 3    # Shows with 3+ seasons are significant
+SIGNIFICANT_SHOW_SEASONS = 3  # Shows with 3+ seasons are significant
 
 
 @dataclass
@@ -544,8 +544,7 @@ class TMDBETLService:
             num_episodes = item.get("number_of_episodes") or 0
             num_seasons = item.get("number_of_seasons") or 0
             is_significant_show = (
-                num_episodes >= SIGNIFICANT_SHOW_EPISODES
-                or num_seasons >= SIGNIFICANT_SHOW_SEASONS
+                num_episodes >= SIGNIFICANT_SHOW_EPISODES or num_seasons >= SIGNIFICANT_SHOW_SEASONS
             )
 
             if not is_recent and not is_on_major_platform and not is_significant_show:

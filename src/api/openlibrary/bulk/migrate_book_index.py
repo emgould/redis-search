@@ -189,11 +189,11 @@ async def migrate_book_index(
             # Try a sample query
             from redis.commands.search.query import Query
 
-            result = await redis.ft(INDEX_NAME).search(
-                Query("@author_olid:{OL*}").paging(0, 1)
-            )
+            result = await redis.ft(INDEX_NAME).search(Query("@author_olid:{OL*}").paging(0, 1))
             if result.total > 0:
-                logger.info(f"  ✓ author_olid field working - found {result.total:,} books with author OLIDs")
+                logger.info(
+                    f"  ✓ author_olid field working - found {result.total:,} books with author OLIDs"
+                )
             else:
                 logger.warning("  ⚠ No books found with author_olid - field may be empty")
         except Exception as e:
@@ -211,9 +211,7 @@ async def migrate_book_index(
 
 
 async def main():
-    parser = argparse.ArgumentParser(
-        description="Migrate book index to add author_olid TagField"
-    )
+    parser = argparse.ArgumentParser(description="Migrate book index to add author_olid TagField")
     parser.add_argument(
         "--redis-host",
         default=os.getenv("REDIS_HOST", "localhost"),
@@ -261,4 +259,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

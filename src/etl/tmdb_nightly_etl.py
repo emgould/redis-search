@@ -340,7 +340,7 @@ class TMDBChangesETL(TMDBService):
             for tmdb_id, result in zip(batch, results, strict=True):
                 stats.fetch_phase.items_processed += 1
 
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     stats.fetch_phase.items_failed += 1
                     stats.fetch_phase.errors.append(f"{tmdb_id}: {result}")
                     logger.error(f"Exception for {tmdb_id}: {result}")

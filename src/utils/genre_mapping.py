@@ -48,8 +48,9 @@ async def fetch_genre_mapping() -> dict[int, str]:
         tv_endpoint = "genre/tv/list"
         params = {"language": "en-US"}
 
-        movie_data = await service._make_request(movie_endpoint, params, no_cache=True)
-        tv_data = await service._make_request(tv_endpoint, params, no_cache=True)
+        # Calling _make_request directly bypasses the Redis cache decorator
+        movie_data = await service._make_request(movie_endpoint, params)
+        tv_data = await service._make_request(tv_endpoint, params)
 
         if not movie_data or not tv_data:
             logger.error("TMDB API returned empty response for genres")

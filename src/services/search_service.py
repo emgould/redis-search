@@ -314,12 +314,36 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         dict with keys: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
         Note: news, video, ratings, artist, album results come from external APIs (cached via Redis), not from Redis search indices
     """
-    all_sources = {"tv", "movie", "person", "podcast", "author", "book", "news", "video", "ratings", "artist", "album"}
+    all_sources = {
+        "tv",
+        "movie",
+        "person",
+        "podcast",
+        "author",
+        "book",
+        "news",
+        "video",
+        "ratings",
+        "artist",
+        "album",
+    }
     if sources is None:
         sources = all_sources
 
     if not q or len(q) < 2:
-        return {"tv": [], "movie": [], "person": [], "podcast": [], "author": [], "book": [], "news": [], "video": [], "ratings": [], "artist": [], "album": []}
+        return {
+            "tv": [],
+            "movie": [],
+            "person": [],
+            "podcast": [],
+            "author": [],
+            "book": [],
+            "news": [],
+            "video": [],
+            "ratings": [],
+            "artist": [],
+            "album": [],
+        }
 
     repo = get_repo()
 
@@ -351,7 +375,9 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
         if "podcast" in sources:
-            timed_tasks.append(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))
+            timed_tasks.append(
+                timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
+            )
         if "author" in sources:
             timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=10)))
         if "book" in sources:
@@ -359,15 +385,29 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
 
         # External APIs - apply timeout
         if "news" in sources:
-            timed_tasks.append(timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout))
+            timed_tasks.append(
+                timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout)
+            )
         if "video" in sources:
-            timed_tasks.append(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout))
+            timed_tasks.append(
+                timed_task(
+                    "video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout
+                )
+            )
         if "ratings" in sources:
-            timed_tasks.append(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout))
+            timed_tasks.append(
+                timed_task(
+                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout
+                )
+            )
         if "artist" in sources:
-            timed_tasks.append(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout))
+            timed_tasks.append(
+                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout)
+            )
         if "album" in sources:
-            timed_tasks.append(timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout))
+            timed_tasks.append(
+                timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout)
+            )
 
         timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
         total_elapsed = (time.perf_counter() - total_start) * 1000
@@ -381,8 +421,12 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
                 results_by_name[name] = result
                 timing_map[name] = elapsed
 
-        timing_parts = [f"{k}={v:.0f}ms" for k, v in sorted(timing_map.items(), key=lambda x: -x[1])]
-        logger.info(f"Autocomplete '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}")
+        timing_parts = [
+            f"{k}={v:.0f}ms" for k, v in sorted(timing_map.items(), key=lambda x: -x[1])
+        ]
+        logger.info(
+            f"Autocomplete '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
+        )
 
         # Map to original variable names
         media_res = results_by_name.get("media", empty_result)
@@ -485,7 +529,8 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
     person_results_raw = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
     person_results_filtered = [
-        p for p in person_results_raw
+        p
+        for p in person_results_raw
         if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
     ]
     # Re-rank to prioritize exact matches and shorter names over pure popularity
@@ -565,7 +610,9 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     }
 
 
-async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncIterator[tuple[str, list, float]]:
+async def autocomplete_stream(
+    q: str, sources: set[str] | None = None
+) -> AsyncIterator[tuple[str, list, float]]:
     """
     Streaming autocomplete that yields results as they become available.
 
@@ -580,7 +627,19 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
     Yields:
         tuple of (source_name, results, latency_ms) as each source completes
     """
-    all_sources = {"tv", "movie", "person", "podcast", "author", "book", "news", "video", "ratings", "artist", "album"}
+    all_sources = {
+        "tv",
+        "movie",
+        "person",
+        "podcast",
+        "author",
+        "book",
+        "news",
+        "video",
+        "ratings",
+        "artist",
+        "album",
+    }
     if sources is None:
         sources = all_sources
 
@@ -605,28 +664,64 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
     # RediSearch tasks (local) - no timeout
     # "media" covers both tv and movie
     if "tv" in sources or "movie" in sources:
-        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = "media"
+        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = (
+            "media"
+        )
     if "person" in sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
-        tasks_dict[asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))] = "person"
+        tasks_dict[
+            asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))
+        ] = "person"
     if "podcast" in sources:
-        tasks_dict[asyncio.create_task(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10)))] = "podcast"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
+            )
+        ] = "podcast"
     if "author" in sources:
-        tasks_dict[asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))] = "author"
+        tasks_dict[
+            asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))
+        ] = "author"
     if "book" in sources:
-        tasks_dict[asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))] = "book"
+        tasks_dict[
+            asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))
+        ] = "book"
 
     # External API tasks - with timeout
     if "news" in sources:
-        tasks_dict[asyncio.create_task(timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout))] = "news"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout)
+            )
+        ] = "news"
     if "video" in sources:
-        tasks_dict[asyncio.create_task(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout))] = "video"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task(
+                    "video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout
+                )
+            )
+        ] = "video"
     if "ratings" in sources:
-        tasks_dict[asyncio.create_task(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout))] = "ratings"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task(
+                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout
+                )
+            )
+        ] = "ratings"
     if "artist" in sources:
-        tasks_dict[asyncio.create_task(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout))] = "artist"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout)
+            )
+        ] = "artist"
     if "album" in sources:
-        tasks_dict[asyncio.create_task(timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout))] = "album"
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout)
+            )
+        ] = "album"
 
     # If no tasks, return early
     if not tasks_dict:
@@ -671,7 +766,8 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     filtered = [
-                        p for p in parsed_all
+                        p
+                        for p in parsed_all
                         if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
                     ]
                     # Re-rank to prioritize exact matches and shorter names
@@ -701,15 +797,26 @@ async def autocomplete_stream(q: str, sources: set[str] | None = None) -> AsyncI
 
     # Log total timing
     total_elapsed = (time.perf_counter() - total_start) * 1000
-    logger.info(f"Autocomplete stream '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}")
+    logger.info(
+        f"Autocomplete stream '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
+    )
 
 
 # Valid source types for the search API
 VALID_SOURCES = {
     # Indexed in RediSearch
-    "tv", "movie", "person", "podcast", "author", "book",
+    "tv",
+    "movie",
+    "person",
+    "podcast",
+    "author",
+    "book",
     # Brokered via Redis-cached API calls
-    "artist", "album", "video", "news", "ratings"
+    "artist",
+    "album",
+    "video",
+    "news",
+    "ratings",
 }
 
 
@@ -792,15 +899,29 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     if "news" in requested_sources:
-        timed_tasks.append(timed_task("news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout))
+        timed_tasks.append(
+            timed_task("news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout)
+        )
     if "video" in requested_sources:
-        timed_tasks.append(timed_task("video", youtube_wrapper.search_videos(query=q, max_results=limit), api_timeout))
+        timed_tasks.append(
+            timed_task(
+                "video", youtube_wrapper.search_videos(query=q, max_results=limit), api_timeout
+            )
+        )
     if "ratings" in requested_sources:
-        timed_tasks.append(timed_task("ratings", rottentomatoes_wrapper.search_content(query=q, limit=limit), api_timeout))
+        timed_tasks.append(
+            timed_task(
+                "ratings", rottentomatoes_wrapper.search_content(query=q, limit=limit), api_timeout
+            )
+        )
     if "artist" in requested_sources:
-        timed_tasks.append(timed_task("artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout))
+        timed_tasks.append(
+            timed_task("artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout)
+        )
     if "album" in requested_sources:
-        timed_tasks.append(timed_task("album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout))
+        timed_tasks.append(
+            timed_task("album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout)
+        )
 
     # Execute all tasks concurrently
     total_start = time.perf_counter()
@@ -859,13 +980,14 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
         parsed_people = [parse_doc(doc) for doc in person_res.docs]
         # Filter using autocomplete prefix matching (handles 1-char prefix case)
         filtered_people = [
-            p for p in parsed_people
+            p
+            for p in parsed_people
             if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
         ]
         # Re-rank to prioritize exact matches and shorter names over pure popularity
-        final_results["person"] = sorted(
-            filtered_people, key=lambda p: _rank_person_result(p, q)
-        )[:limit]
+        final_results["person"] = sorted(filtered_people, key=lambda p: _rank_person_result(p, q))[
+            :limit
+        ]
 
     # Process podcast results
     if "podcast" in results_map:
@@ -1465,3 +1587,261 @@ async def _get_book_details(request: DetailsRequest, index_data: dict | None) ->
         result["subjects_display"] = subjects[:10]  # Limit to 10 for display
 
     return result
+
+
+# ============================================================
+# Cast Name Search Models and Functions
+# ============================================================
+
+
+class CastNameItem(BaseModel):
+    """Model for a cast member's name parts."""
+
+    first: str | None = None
+    last: str | None = None
+    character_first: str | None = None
+    character_last: str | None = None
+
+
+class CastNameSearchResponse(BaseModel):
+    """Response model for cast name search endpoint."""
+
+    title: str
+    description: str | None
+    cast_names: list[CastNameItem]
+
+
+def _filter_name_by_length(name: str | None) -> str | None:
+    """
+    Return the name only if its length is between 3 and 7 characters (inclusive).
+
+    Args:
+        name: The name string to check
+
+    Returns:
+        The name if length is 3-7, otherwise None
+    """
+    if name is None:
+        return None
+    name = name.strip()
+    if 3 <= len(name) <= 7:
+        return name
+    return None
+
+
+def _split_name(full_name: str | None) -> tuple[str | None, str | None]:
+    """
+    Split a full name into first and last name parts.
+
+    Handles common name patterns:
+    - "John Smith" -> ("John", "Smith")
+    - "John" -> ("John", None)
+    - "John Paul Smith" -> ("John", "Smith") - first word as first, last word as last
+
+    Args:
+        full_name: The full name to split
+
+    Returns:
+        Tuple of (first_name, last_name), with length filtering applied
+    """
+    if not full_name:
+        return (None, None)
+
+    parts = full_name.strip().split()
+    if len(parts) == 0:
+        return (None, None)
+    elif len(parts) == 1:
+        return (_filter_name_by_length(parts[0]), None)
+    else:
+        # First word as first name, last word as last name
+        first = _filter_name_by_length(parts[0])
+        last = _filter_name_by_length(parts[-1])
+        return (first, last)
+
+
+def _process_cast_names(cast_list: list[dict[str, Any]]) -> list[CastNameItem]:
+    """
+    Process cast list and extract name parts with length filtering.
+
+    Args:
+        cast_list: List of cast member dictionaries with 'name' and 'character' fields
+
+    Returns:
+        List of CastNameItem with filtered name parts
+    """
+    result: list[CastNameItem] = []
+
+    for cast_member in cast_list:
+        actor_name = cast_member.get("name", "")
+        character_name = cast_member.get("character", "")
+
+        # Split actor name
+        first, last = _split_name(actor_name)
+
+        # Split character name
+        char_first, char_last = _split_name(character_name)
+
+        result.append(
+            CastNameItem(
+                first=first,
+                last=last,
+                character_first=char_first,
+                character_last=char_last,
+            )
+        )
+
+    return result
+
+
+class CastNameSearchRequest(BaseModel):
+    """Request model for cast name search."""
+
+    query: str | None = None  # Text title to search for
+    tmdb_id: int | None = None  # Optional direct TMDB ID
+    media_type: str | None = None  # Optional: "movie" or "tv" (None = search both)
+
+
+async def get_cast_names(request: CastNameSearchRequest) -> CastNameSearchResponse:
+    """
+    Get movie/TV show details with cast names split into first/last parts.
+
+    Names are only included if they are between 3-7 characters in length.
+
+    Flow:
+    1. Search Redis index by title (both movie and TV unless media_type specified)
+    2. Pick best match: exact title match first, then most popular
+    3. Fetch full cast with character names from TMDB API
+
+    Args:
+        request: CastNameSearchRequest with query (text) or tmdb_id, and optional media_type
+
+    Returns:
+        CastNameSearchResponse with title, description, and cast_names
+    """
+    from core.search_queries import build_autocomplete_query
+
+    tmdb_service = TMDBService()
+    repo = get_repo()
+
+    # Get TMDB ID - either from request or by searching Redis
+    tmdb_id: int | None = request.tmdb_id
+    mc_type_enum: MCType = MCType.MOVIE  # Default, will be set from search result
+    title_from_index: str | None = None
+    overview_from_index: str | None = None
+
+    if tmdb_id is None and request.query:
+        # Search Redis index for the title
+        search_query = build_autocomplete_query(request.query)
+
+        # Add media type filter if specified, otherwise search both
+        if request.media_type:
+            mc_type_filter = request.media_type.lower()
+            search_query = f"({search_query}) @mc_type:{{{mc_type_filter}}}"
+        else:
+            # Search both movie and tv
+            search_query = f"({search_query}) @mc_type:{{movie|tv}}"
+
+        # Get multiple results to find best match
+        search_results = await repo.search(search_query, limit=10)
+
+        if not search_results.docs:
+            return CastNameSearchResponse(
+                title="Not Found",
+                description=f"No results found for '{request.query}'",
+                cast_names=[],
+            )
+
+        # Find best match: exact title match first, then most popular
+        query_lower = request.query.lower().strip()
+        best_match: dict[str, Any] | None = None
+        exact_match: dict[str, Any] | None = None
+
+        for doc in search_results.docs:
+            parsed = parse_doc(doc)
+            title = (parsed.get("search_title") or "").lower().strip()
+
+            # Check for exact match
+            if title == query_lower:
+                exact_match = parsed
+                break
+
+        # Use exact match if found, otherwise first result (sorted by popularity)
+        best_match = exact_match or parse_doc(search_results.docs[0])
+
+        source_id = best_match.get("source_id")
+        mc_type_str = best_match.get("mc_type", "movie")
+
+        if not source_id:
+            return CastNameSearchResponse(
+                title="Error",
+                description="Could not find source_id in search result",
+                cast_names=[],
+            )
+
+        try:
+            tmdb_id = int(source_id)
+        except ValueError:
+            return CastNameSearchResponse(
+                title="Error",
+                description=f"Invalid source_id: {source_id}",
+                cast_names=[],
+            )
+
+        # Determine media type from the matched result
+        if mc_type_str == "tv":
+            mc_type_enum = MCType.TV_SERIES
+        else:
+            mc_type_enum = MCType.MOVIE
+
+        # Get title and overview from Redis result
+        title_from_index = best_match.get("search_title")
+        overview_from_index = best_match.get("overview")
+
+    elif tmdb_id is not None:
+        # Direct TMDB ID lookup - need media_type
+        if request.media_type and request.media_type.lower() == "tv":
+            mc_type_enum = MCType.TV_SERIES
+        else:
+            mc_type_enum = MCType.MOVIE
+
+    else:
+        return CastNameSearchResponse(
+            title="Error",
+            description="Either 'query' or 'tmdb_id' must be provided",
+            cast_names=[],
+        )
+
+    # Fetch full cast with character names from TMDB
+    # (Redis only stores first 2 actor names without character info)
+    detailed = await tmdb_service.get_media_details(
+        tmdb_id=tmdb_id,
+        media_type=mc_type_enum,
+        include_cast=True,
+        include_videos=False,
+        include_watch_providers=False,
+        include_keywords=False,
+        cast_limit=50,
+    )
+
+    if detailed.error:
+        return CastNameSearchResponse(
+            title="Error",
+            description=detailed.error,
+            cast_names=[],
+        )
+
+    # Use title/overview from Redis if available, fallback to TMDB
+    title = title_from_index or detailed.title or detailed.name or "Unknown"
+    description = overview_from_index or detailed.overview
+
+    # Get cast list from tmdb_cast
+    cast_list = detailed.tmdb_cast.get("cast", []) if detailed.tmdb_cast else []
+
+    # Process cast names
+    cast_names = _process_cast_names(cast_list)
+
+    return CastNameSearchResponse(
+        title=title,
+        description=description,
+        cast_names=cast_names,
+    )
