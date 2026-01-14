@@ -1,0 +1,178 @@
+---
+description: Reference documentation for Search and Autocomplete API endpoints
+globs: ["**/search*.py", "**/app.py", "**/autocomplete*"]
+alwaysApply: false
+---
+
+# Search API Reference
+
+## Overview
+
+The Redis Search service provides multiple endpoints for searching across media content. Results are sourced from two types of backends:
+
+- **Indexed (RediSearch)**: tv, movie, person, podcast, author, book
+- **Brokered (Redis-cached APIs)**: artist, album, video, news, ratings
+
+## Endpoints
+
+### 1. Autocomplete (JSON)
+
+```
+GET /api/autocomplete?q={query}&sources={sources}
+```
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | Yes | Search query (min 2 characters) |
+| `sources` | string | No | Comma-separated list of sources to search |
+
+**Valid Sources:** `tv`, `movie`, `person`, `podcast`, `author`, `book`, `news`, `video`, `ratings`, `artist`, `album`
+
+**Example:**
+```
+/api/autocomplete?q=breaking+bad
+/api/autocomplete?q=beatles&sources=artist,album
+/api/autocomplete?q=matrix&sources=tv,movie
+```
+
+**Response:** JSON object with results grouped by source type.
+
+---
+
+### 2. Autocomplete (Streaming/SSE)
+
+```
+GET /api/autocomplete/stream?q={query}&sources={sources}
+```
+
+Same parameters as above, but returns **Server-Sent Events (SSE)** where results stream as they become available. Faster sources (indexed) return first, slower sources (API-backed) return later.
+
+**Event Types:**
+- `result` - Contains results from one source: `{source, results, latency_ms}`
+- `done` - Indicates all sources have completed
+
+**Example JavaScript:**
+```javascript
+const es = new EventSource('/api/autocomplete/stream?q=breaking+bad');
+
+es.addEventListener('result', (e) => {
+  const data = JSON.parse(e.data);
+  console.log(`${data.source}: ${data.results.length} results (${data.latency_ms}ms)`);
+});
+
+es.addEventListener('done', () => es.close());
+```
+
+---
+
+### 3. Full Search
+
+```
+GET /api/search?q={query}&sources={sources}&limit={limit}
+```
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `q` | string | Yes | - | Search query (min 2 characters) |
+| `sources` | string | No | all | Comma-separated list of sources |
+| `limit` | int | No | 10 | Max results per source (1-50) |
+
+**Example:**
+```
+/api/search?q=beatles
+/api/search?q=beatles&sources=artist,album&limit=20
+/api/search?q=matrix&sources=tv,movie,ratings
+```
+
+---
+
+### 4. Media Details
+
+```
+POST /api/details?mc_id={id}&source_id={id}&mc_type={type}
+```
+
+Get detailed information for a specific media item, including watch providers, full cast, trailers, and keywords.
+
+---
+
+### 5. Cast Names Search
+
+```
+GET /api/cast-names?query={title}&media_type={type}
+```
+
+Search for a movie/TV show and return cast names split into first/last parts. Useful for trivia and game applications.
+
+---
+
+## Query Behavior
+
+### Prefix Matching (Autocomplete)
+The autocomplete uses **prefix matching** on the last word:
+
+| Query | Behavior |
+|-------|----------|
+| `break` | Matches titles starting with "break*" |
+| `breaking b` | Matches titles containing "breaking" AND starting with "b*" |
+| `the matrix` | "the" is a stopword, matches "matrix*" |
+
+### Stopwords
+These common words are filtered from queries:
+`the`, `a`, `an`, `and`, `or`, `but`, `in`, `on`, `at`, `to`, `for`, `of`, `is`, `it`
+
+### Minimum Query Length
+All search endpoints require at least **2 characters** to return results.
+
+---
+
+## Indexed Fields (RediSearch)
+
+The `idx:media` index supports filtering and sorting on these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `search_title` | TEXT | Primary search field (weighted 5x) |
+| `mc_type` | TAG | Content type: movie, tv |
+| `mc_subtype` | TAG | Subtype (for persons: actor, director, etc.) |
+| `source` | TAG | Data source: tmdb |
+| `genre_ids` | TAG | TMDB genre IDs as strings |
+| `genres` | TAG | Genre names |
+| `cast_ids` | TAG | TMDB person IDs as strings |
+| `cast_names` | TAG | Cast member names |
+| `popularity` | NUMERIC | Sortable popularity score |
+| `rating` | NUMERIC | Sortable rating (0-10) |
+| `year` | NUMERIC | Release/first air year |
+
+---
+
+## Response Format
+
+All search results follow the **MCBaseItem** contract:
+
+```json
+{
+  "mc_id": "tmdb_tv_1396",
+  "mc_type": "tv",
+  "mc_subtype": null,
+  "source": "tmdb",
+  "source_id": "1396",
+  "search_title": "Breaking Bad",
+  "year": 2008,
+  "popularity": 156.789,
+  "rating": 8.9,
+  "image": "https://image.tmdb.org/t/p/w185/...",
+  "cast": ["Bryan Cranston", "Aaron Paul", ...],
+  "genres": ["Drama", "Crime"],
+  "overview": "A high school chemistry teacher diagnosed with..."
+}
+```
+
+---
+
+## Public URLs
+
+- **Dev:** `https://redis-search-api-dev-wabm4u2pza-uc.a.run.app`
+- **Local:** `http://localhost:9001`
