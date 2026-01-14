@@ -175,7 +175,7 @@ async def enrich_redis_documents(
 
             try:
                 # Get current document
-                doc = await redis.json().get(key)
+                doc = await redis.json().get(key)  # type: ignore[misc]
 
                 if not doc:
                     stats["errors"] += 1
@@ -234,7 +234,7 @@ async def enrich_redis_documents(
                 if not dry_run:
                     # Update each field individually
                     for field, value in updates.items():
-                        await redis.json().set(key, f"$.{field}", value)
+                        await redis.json().set(key, f"$.{field}", value)  # type: ignore[misc]
 
                 if source == "json":
                     stats["enriched_from_json"] += 1
@@ -316,7 +316,7 @@ async def main():
     )
 
     try:
-        await redis.ping()
+        await redis.ping()  # type: ignore[misc]
         print("  Connected!")
 
         # Run enrichment
