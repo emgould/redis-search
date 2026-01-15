@@ -466,6 +466,12 @@ async def api_search(
     mc_type: str | None = Query(
         default=None, description="Filter by media type: movie, tv"
     ),
+    ratings_sort: str | None = Query(
+        default=None,
+        description="Sort order for ratings results when ratings source is requested with tv/movie. "
+        "Options: 'popularity' (default), 'audience_score', 'critics_score'. "
+        "Sorts in descending order (highest first).",
+    ),
 ):
     """
     Unified search API that returns categorized results from multiple sources.
@@ -480,10 +486,16 @@ async def api_search(
     Field filters (genre_ids, year_min/max, rating_min/max, mc_type) only apply to
     indexed sources. Brokered sources require a text query (q parameter).
 
+    Ratings Sorting:
+    When ratings source is requested along with tv/movie, use ratings_sort parameter
+    to control sort order. Options: "popularity" (default), "audience_score", "critics_score".
+    Results are sorted in descending order (highest first).
+
     Examples:
     - /api/search?q=beatles - Search all sources
     - /api/search?q=beatles&sources=artist,album - Search only music
     - /api/search?q=matrix&sources=tv,movie,ratings - Search indexed media + RT scores
+    - /api/search?q=matrix&sources=movie,ratings&ratings_sort=audience_score - Sort ratings by audience score
     - /api/search?sources=movie&genre_ids=878&year_min=2020 - Browse sci-fi movies from 2020+
     - /api/search?sources=tv&rating_min=8 - Browse highly-rated TV shows
     """
@@ -536,20 +548,39 @@ async def api_search(
             return JSONResponse(content={src: [] for src in VALID_SOURCES})
 
         # Filters provided without query - restrict to indexed sources
+        # Exception: ratings can be enriched from indexed tv/movie results
         if source_set:
             # Check if any brokered sources were requested
             requested_brokered = source_set & BROKERED_SOURCES
             if requested_brokered:
-                return JSONResponse(
-                    content={
-                        "error": f"Brokered sources ({', '.join(sorted(requested_brokered))}) require a text query (q parameter). "
-                        f"Field filters only work with indexed sources: {', '.join(sorted(INDEXED_SOURCES))}"
-                    },
-                    status_code=400,
-                )
+                # Allow ratings if tv/movie are also requested (will be enriched from indexed results)
+                if requested_brokered == {"ratings"} and (
+                    "tv" in source_set or "movie" in source_set
+                ):
+                    # Ratings will be enriched from indexed results, so allow it
+                    pass
+                else:
+                    # Other brokered sources or ratings without tv/movie require a query
+                    return JSONResponse(
+                        content={
+                            "error": f"Brokered sources ({', '.join(sorted(requested_brokered))}) require a text query (q parameter). "
+                            f"Field filters only work with indexed sources: {', '.join(sorted(INDEXED_SOURCES))}. "
+                            f"Note: ratings can be enriched from indexed tv/movie results when requested together."
+                        },
+                        status_code=400,
+                    )
         else:
             # No sources specified - default to indexed sources for filter-only queries
             source_set = INDEXED_SOURCES.copy()
+
+    # Validate ratings_sort parameter
+    if ratings_sort and ratings_sort not in ("popularity", "audience_score", "critics_score"):
+        return JSONResponse(
+            content={
+                "error": "ratings_sort must be one of: 'popularity', 'audience_score', 'critics_score'"
+            },
+            status_code=400,
+        )
 
     results = await search(
         q=q if has_query else None,
@@ -564,6 +595,7 @@ async def api_search(
         rating_min=rating_min,
         rating_max=rating_max,
         mc_type=mc_type,
+        ratings_sort=ratings_sort or "popularity",  # Default to popularity
     )
     return JSONResponse(content=results)
 
