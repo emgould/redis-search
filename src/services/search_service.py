@@ -18,6 +18,7 @@ from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
 from core.search_queries import (
     build_autocomplete_query,
+    build_filter_query,
     build_fuzzy_fulltext_query,
 )
 from utils.get_logger import get_logger
@@ -841,20 +842,44 @@ async def timed_task(
         return (name, e, elapsed)
 
 
-async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> dict[str, list]:
+async def search(
+    q: str | None,
+    sources: set[str] | None = None,
+    limit: int = 10,
+    genre_ids: list[str] | None = None,
+    genre_match: str = "any",
+    year_min: int | None = None,
+    year_max: int | None = None,
+    rating_min: float | None = None,
+    rating_max: float | None = None,
+    mc_type: str | None = None,
+) -> dict[str, list]:
     """
     Unified search API that returns categorized results.
 
+    Supports text search, field filtering, or both combined.
+
     Args:
-        q: Search query string (required)
+        q: Search query string (optional if filters provided)
         sources: Set of source types to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings
         limit: Maximum results per source (default: 10)
+        genre_ids: List of TMDB genre IDs to filter by
+        genre_match: "any" for OR logic (default), "all" for AND logic
+        year_min: Minimum release year (inclusive)
+        year_max: Maximum release year (inclusive)
+        rating_min: Minimum rating 0-10 (inclusive)
+        rating_max: Maximum rating 0-10 (inclusive)
+        mc_type: Filter by media type (movie, tv)
 
     Returns:
         dict with keys for each requested source, each containing list of MCBaseItem-compliant results
     """
-    if not q or len(q) < 2:
+    # Check if we have filters or query
+    has_filters = any([genre_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_query = q and len(q) >= 2
+
+    if not has_query and not has_filters:
         # Return empty dict with all requested source keys
         requested = sources if sources else VALID_SOURCES
         return {src: [] for src in requested}
@@ -870,11 +895,35 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
     repo = get_repo()
 
     # Build queries for indexed sources
-    media_query = build_autocomplete_query(q)
-    people_query = build_people_autocomplete_query(q)
-    podcasts_query = build_podcasts_autocomplete_query(q)
-    authors_query = build_authors_autocomplete_query(q)
-    books_query = build_books_autocomplete_query(q)
+    # Use filter query if we have filters OR if we have a query to combine with filters
+    if has_filters:
+        media_query = build_filter_query(
+            q=q if has_query else None,
+            genre_ids=genre_ids,
+            genre_match=genre_match,
+            year_min=year_min,
+            year_max=year_max,
+            rating_min=rating_min,
+            rating_max=rating_max,
+            mc_type=mc_type,
+        )
+    elif has_query and q:  # q check needed for type narrowing
+        media_query = build_autocomplete_query(q)
+    else:
+        media_query = "*"
+
+    # For other indices, only build query if we have a text query
+    if has_query and q:  # q check needed for type narrowing
+        people_query = build_people_autocomplete_query(q)
+        podcasts_query = build_podcasts_autocomplete_query(q)
+        authors_query = build_authors_autocomplete_query(q)
+        books_query = build_books_autocomplete_query(q)
+    else:
+        # Filter-only mode: use match-all for indices without specific filters
+        people_query = "*"
+        podcasts_query = "*"
+        authors_query = "*"
+        books_query = "*"
 
     # Create empty result placeholder for indexed searches
     empty_result = type("obj", (object,), {"docs": []})()
@@ -898,30 +947,32 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
         timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=limit)))
 
     # Brokered sources (Redis-cached API calls) - apply timeout
-    if "news" in requested_sources:
-        timed_tasks.append(
-            timed_task("news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout)
-        )
-    if "video" in requested_sources:
-        timed_tasks.append(
-            timed_task(
-                "video", youtube_wrapper.search_videos(query=q, max_results=limit), api_timeout
+    # These require a text query - skip if no query provided
+    if has_query:
+        if "news" in requested_sources:
+            timed_tasks.append(
+                timed_task("news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout)
             )
-        )
-    if "ratings" in requested_sources:
-        timed_tasks.append(
-            timed_task(
-                "ratings", rottentomatoes_wrapper.search_content(query=q, limit=limit), api_timeout
+        if "video" in requested_sources:
+            timed_tasks.append(
+                timed_task(
+                    "video", youtube_wrapper.search_videos(query=q, max_results=limit), api_timeout
+                )
             )
-        )
-    if "artist" in requested_sources:
-        timed_tasks.append(
-            timed_task("artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout)
-        )
-    if "album" in requested_sources:
-        timed_tasks.append(
-            timed_task("album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout)
-        )
+        if "ratings" in requested_sources:
+            timed_tasks.append(
+                timed_task(
+                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=limit), api_timeout
+                )
+            )
+        if "artist" in requested_sources:
+            timed_tasks.append(
+                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout)
+            )
+        if "album" in requested_sources:
+            timed_tasks.append(
+                timed_task("album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout)
+            )
 
     # Execute all tasks concurrently
     total_start = time.perf_counter()
@@ -945,7 +996,8 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
 
     # Sort by slowest first to highlight bottlenecks
     timing_parts = [f"{k}={v:.0f}ms" for k, v in sorted(timing_map.items(), key=lambda x: -x[1])]
-    logger.info(f"Search '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}")
+    query_desc = f"'{q}'" if q else "[filters only]"
+    logger.info(f"Search {query_desc} latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}")
 
     # Handle exceptions and parse results
     final_results: dict[str, list] = {}
@@ -978,16 +1030,21 @@ async def search(q: str, sources: set[str] | None = None, limit: int = 10) -> di
         if isinstance(person_res, BaseException):
             person_res = empty_result
         parsed_people = [parse_doc(doc) for doc in person_res.docs]
-        # Filter using autocomplete prefix matching (handles 1-char prefix case)
-        filtered_people = [
-            p
-            for p in parsed_people
-            if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
-        ]
-        # Re-rank to prioritize exact matches and shorter names over pure popularity
-        final_results["person"] = sorted(filtered_people, key=lambda p: _rank_person_result(p, q))[
-            :limit
-        ]
+
+        if has_query and q:
+            # Filter using autocomplete prefix matching (handles 1-char prefix case)
+            filtered_people = [
+                p
+                for p in parsed_people
+                if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+            ]
+            # Re-rank to prioritize exact matches and shorter names over pure popularity
+            final_results["person"] = sorted(
+                filtered_people, key=lambda p: _rank_person_result(p, q)
+            )[:limit]
+        else:
+            # Filter-only mode: return results as-is (sorted by popularity from Redis)
+            final_results["person"] = parsed_people[:limit]
 
     # Process podcast results
     if "podcast" in results_map:
