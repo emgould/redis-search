@@ -426,9 +426,15 @@ async def api_autocomplete_stream(
     )
 
 
+# Sources that support field-only filtering (indexed in RediSearch)
+INDEXED_SOURCES = {"tv", "movie", "person", "podcast", "author", "book"}
+# Sources that require a text query (brokered via external APIs)
+BROKERED_SOURCES = {"artist", "album", "video", "news", "ratings"}
+
+
 @app.get("/api/search")
 async def api_search(
-    q: str = Query(default="", description="Search query string"),
+    q: str = Query(default="", description="Search query string (optional if filters provided)"),
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
@@ -436,6 +442,30 @@ async def api_search(
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
+    # Field filters (for indexed sources only: tv, movie)
+    genre_ids: str | None = Query(
+        default=None, description="Comma-separated TMDB genre IDs (e.g., 35,18 for Comedy,Drama)"
+    ),
+    genre_match: str = Query(
+        default="any", description="Genre matching: 'any' (OR, default) or 'all' (AND)"
+    ),
+    cast_ids: str | None = Query(
+        default=None, description="Comma-separated TMDB person IDs (e.g., 287,1461 for Brad Pitt, George Clooney)"
+    ),
+    cast_match: str = Query(
+        default="any", description="Cast matching: 'any' (OR, default) or 'all' (AND)"
+    ),
+    year_min: int | None = Query(default=None, description="Minimum release year"),
+    year_max: int | None = Query(default=None, description="Maximum release year"),
+    rating_min: float | None = Query(
+        default=None, ge=0, le=10, description="Minimum rating (0-10)"
+    ),
+    rating_max: float | None = Query(
+        default=None, ge=0, le=10, description="Maximum rating (0-10)"
+    ),
+    mc_type: str | None = Query(
+        default=None, description="Filter by media type: movie, tv"
+    ),
 ):
     """
     Unified search API that returns categorized results from multiple sources.
@@ -447,19 +477,41 @@ async def api_search(
     - Indexed (RediSearch): tv, movie, person, podcast, author, book
     - Brokered (Redis-cached APIs): artist, album, video, news, ratings
 
+    Field filters (genre_ids, year_min/max, rating_min/max, mc_type) only apply to
+    indexed sources. Brokered sources require a text query (q parameter).
+
     Examples:
     - /api/search?q=beatles - Search all sources
     - /api/search?q=beatles&sources=artist,album - Search only music
     - /api/search?q=matrix&sources=tv,movie,ratings - Search indexed media + RT scores
+    - /api/search?sources=movie&genre_ids=878&year_min=2020 - Browse sci-fi movies from 2020+
+    - /api/search?sources=tv&rating_min=8 - Browse highly-rated TV shows
     """
-    if not q or len(q) < 2:
-        # Return empty dict with all valid source keys or requested ones
-        if sources:
-            requested = {s.strip().lower() for s in sources.split(",")}
-            requested = requested & VALID_SOURCES
-        else:
-            requested = VALID_SOURCES
-        return JSONResponse(content={src: [] for src in requested})
+    # Check if any filters are provided
+    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_query = q and len(q) >= 2
+
+    # Validate match parameters
+    if genre_match not in ("any", "all"):
+        return JSONResponse(
+            content={"error": "genre_match must be 'any' or 'all'"},
+            status_code=400,
+        )
+    if cast_match not in ("any", "all"):
+        return JSONResponse(
+            content={"error": "cast_match must be 'any' or 'all'"},
+            status_code=400,
+        )
+
+    # Parse genre_ids if provided
+    genre_id_list: list[str] | None = None
+    if genre_ids:
+        genre_id_list = [gid.strip() for gid in genre_ids.split(",") if gid.strip()]
+
+    # Parse cast_ids if provided
+    cast_id_list: list[str] | None = None
+    if cast_ids:
+        cast_id_list = [cid.strip() for cid in cast_ids.split(",") if cid.strip()]
 
     # Parse sources parameter
     source_set: set[str] | None = None
@@ -475,7 +527,44 @@ async def api_search(
                 status_code=400,
             )
 
-    results = await search(q=q, sources=source_set, limit=limit)
+    # Handle field-only filtering (no text query)
+    if not has_query:
+        if not has_filters:
+            # No query and no filters - return empty results
+            if source_set:
+                return JSONResponse(content={src: [] for src in source_set})
+            return JSONResponse(content={src: [] for src in VALID_SOURCES})
+
+        # Filters provided without query - restrict to indexed sources
+        if source_set:
+            # Check if any brokered sources were requested
+            requested_brokered = source_set & BROKERED_SOURCES
+            if requested_brokered:
+                return JSONResponse(
+                    content={
+                        "error": f"Brokered sources ({', '.join(sorted(requested_brokered))}) require a text query (q parameter). "
+                        f"Field filters only work with indexed sources: {', '.join(sorted(INDEXED_SOURCES))}"
+                    },
+                    status_code=400,
+                )
+        else:
+            # No sources specified - default to indexed sources for filter-only queries
+            source_set = INDEXED_SOURCES.copy()
+
+    results = await search(
+        q=q if has_query else None,
+        sources=source_set,
+        limit=limit,
+        genre_ids=genre_id_list,
+        genre_match=genre_match,
+        cast_ids=cast_id_list,
+        cast_match=cast_match,
+        year_min=year_min,
+        year_max=year_max,
+        rating_min=rating_min,
+        rating_max=rating_max,
+        mc_type=mc_type,
+    )
     return JSONResponse(content=results)
 
 

@@ -75,15 +75,48 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `q` | string | Yes | - | Search query (min 2 characters) |
+| `q` | string | No* | - | Search query (min 2 characters) |
 | `sources` | string | No | all | Comma-separated list of sources |
 | `limit` | int | No | 10 | Max results per source (1-50) |
+| `genre_ids` | string | No | - | Comma-separated TMDB genre IDs (e.g., 35,18) |
+| `genre_match` | string | No | any | Genre matching: "any" (OR) or "all" (AND) |
+| `cast_ids` | string | No | - | Comma-separated TMDB person IDs (e.g., 287,1461) |
+| `cast_match` | string | No | any | Cast matching: "any" (OR) or "all" (AND) |
+| `year_min` | int | No | - | Minimum release year |
+| `year_max` | int | No | - | Maximum release year |
+| `rating_min` | float | No | - | Minimum rating (0-10) |
+| `rating_max` | float | No | - | Maximum rating (0-10) |
+| `mc_type` | string | No | - | Filter by type: movie, tv |
+
+*`q` is required for brokered sources (artist, album, video, news, ratings). Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
+
+**Field Filters:**
+- Filters only apply to indexed sources (tv, movie)
+- When using filters without `q`, sources default to indexed sources only
+- Multiple genre IDs: use `genre_match=any` for OR (default) or `genre_match=all` for AND
+- Numeric ranges are inclusive
 
 **Example:**
 ```
 /api/search?q=beatles
 /api/search?q=beatles&sources=artist,album&limit=20
 /api/search?q=matrix&sources=tv,movie,ratings
+
+# Field-only filtering (no text query)
+/api/search?sources=movie&genre_ids=878&year_min=2020
+/api/search?sources=tv&rating_min=8
+/api/search?sources=movie&year_min=2000&year_max=2010&rating_min=7
+
+# Multiple genres with OR/AND logic
+/api/search?sources=movie&genre_ids=35,18                    # Comedy OR Drama
+/api/search?sources=movie&genre_ids=35,18&genre_match=all    # Comedy AND Drama
+
+# Filter by cast (TMDB person IDs)
+/api/search?sources=movie&cast_ids=287                       # Movies with Brad Pitt
+/api/search?sources=movie&cast_ids=287,1461&cast_match=all   # Movies with Brad Pitt AND George Clooney
+
+# Combined text search + filters
+/api/search?q=action&sources=movie&year_min=2020&rating_min=7
 ```
 
 ---
@@ -124,7 +157,7 @@ These common words are filtered from queries:
 `the`, `a`, `an`, `and`, `or`, `but`, `in`, `on`, `at`, `to`, `for`, `of`, `is`, `it`
 
 ### Minimum Query Length
-All search endpoints require at least **2 characters** to return results.
+Text search (`q` parameter) requires at least **2 characters**. However, the `/api/search` endpoint supports field-only filtering without a text query for indexed sources.
 
 ---
 
@@ -145,6 +178,22 @@ The `idx:media` index supports filtering and sorting on these fields:
 | `popularity` | NUMERIC | Sortable popularity score |
 | `rating` | NUMERIC | Sortable rating (0-10) |
 | `year` | NUMERIC | Release/first air year |
+
+---
+
+## Common TMDB Genre IDs
+
+| ID | Genre | ID | Genre |
+|----|-------|----|-------|
+| 28 | Action | 18 | Drama |
+| 12 | Adventure | 10751 | Family |
+| 16 | Animation | 14 | Fantasy |
+| 35 | Comedy | 27 | Horror |
+| 80 | Crime | 10402 | Music |
+| 99 | Documentary | 9648 | Mystery |
+| 10749 | Romance | 878 | Science Fiction |
+| 53 | Thriller | 10752 | War |
+| 37 | Western | 10770 | TV Movie |
 
 ---
 
