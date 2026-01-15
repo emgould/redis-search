@@ -20,6 +20,7 @@ from core.search_queries import (
     build_autocomplete_query,
     build_filter_query,
     build_fuzzy_fulltext_query,
+    escape_redis_search_term,
 )
 from utils.get_logger import get_logger
 from utils.soft_comparison import is_autocomplete_match
@@ -127,7 +128,9 @@ def build_people_autocomplete_query(q: str) -> str:
     Single-character last words are handled by searching complete words only
     and relying on post-query filtering.
     """
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     # Filter out stopwords and empty strings
     stopwords = {
         "the",
@@ -150,29 +153,33 @@ def build_people_autocomplete_query(q: str) -> str:
     if not words:
         return "*"
 
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
     # For multi-word: match documents containing all words (last word as prefix)
-    if len(words) == 1:
+    if len(escaped_words) == 1:
         # Single word - use as prefix (must be 2+ chars for RediSearch)
         if len(words[0]) >= 2:
-            return f"(@search_title:{words[0]}*) | (@also_known_as:{words[0]}*)"
+            return f"(@search_title:{escaped_words[0]}*) | (@also_known_as:{escaped_words[0]}*)"
         else:
             # Single character - too short for prefix, return broad match
             return "*"
     else:
         # Multi-word query
-        prefix_word = words[-1]
+        prefix_word = escaped_words[-1]
+        original_prefix_word = words[-1]
 
         # RediSearch minimum prefix length is 2 characters
         # If last word is only 1 char, search on complete words only
         # Post-query filtering will handle the prefix matching
-        if len(prefix_word) < 2:
+        if len(original_prefix_word) < 2:
             # Only use complete words, skip the 1-char prefix
-            exact_words = " ".join(words[:-1])
+            exact_words = " ".join(escaped_words[:-1])
             name_query = f"@search_title:({exact_words})"
             aka_query = f"@also_known_as:({exact_words})"
         else:
             # All words except last should be exact, last word is prefix
-            exact_words = " ".join(words[:-1])
+            exact_words = " ".join(escaped_words[:-1])
             name_query = f"@search_title:({exact_words} {prefix_word}*)"
             aka_query = f"@also_known_as:({exact_words} {prefix_word}*)"
 
@@ -184,7 +191,9 @@ def build_podcasts_autocomplete_query(q: str) -> str:
     Build a prefix search query for podcasts autocomplete.
     Searches both search_title (podcast name) and author fields.
     """
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     # Filter out stopwords and empty strings
     stopwords = {
         "the",
@@ -209,14 +218,17 @@ def build_podcasts_autocomplete_query(q: str) -> str:
     if not words:
         return "*"
 
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
     # For multi-word: match documents containing all words (last word as prefix)
-    if len(words) == 1:
+    if len(escaped_words) == 1:
         # Search both title and author
-        return f"(@search_title:{words[0]}*) | (@author:{words[0]}*)"
+        return f"(@search_title:{escaped_words[0]}*) | (@author:{escaped_words[0]}*)"
     else:
         # All words except last should be exact, last word is prefix
-        exact_words = " ".join(words[:-1])
-        prefix_word = words[-1]
+        exact_words = " ".join(escaped_words[:-1])
+        prefix_word = escaped_words[-1]
         title_query = f"@search_title:({exact_words} {prefix_word}*)"
         author_query = f"@author:({exact_words} {prefix_word}*)"
         return f"({title_query}) | ({author_query})"
@@ -227,7 +239,9 @@ def build_authors_autocomplete_query(q: str) -> str:
     Build a prefix search query for authors (OpenLibrary) autocomplete.
     Searches both search_title (name) and name fields.
     """
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     # Filter out stopwords and empty strings
     stopwords = {
         "the",
@@ -250,14 +264,17 @@ def build_authors_autocomplete_query(q: str) -> str:
     if not words:
         return "*"
 
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
     # For multi-word: match documents containing all words (last word as prefix)
-    if len(words) == 1:
+    if len(escaped_words) == 1:
         # Search both search_title and name
-        return f"(@search_title:{words[0]}*) | (@name:{words[0]}*)"
+        return f"(@search_title:{escaped_words[0]}*) | (@name:{escaped_words[0]}*)"
     else:
         # All words except last should be exact, last word is prefix
-        exact_words = " ".join(words[:-1])
-        prefix_word = words[-1]
+        exact_words = " ".join(escaped_words[:-1])
+        prefix_word = escaped_words[-1]
         title_query = f"@search_title:({exact_words} {prefix_word}*)"
         name_query = f"@name:({exact_words} {prefix_word}*)"
         return f"({title_query}) | ({name_query})"
@@ -268,7 +285,9 @@ def build_books_autocomplete_query(q: str) -> str:
     Build a search query for books (OpenLibrary works) autocomplete.
     Uses simple word matching - BM25 scorer in repository handles ranking.
     """
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     # Filter out stopwords and empty strings
     stopwords = {
         "the",
@@ -291,14 +310,17 @@ def build_books_autocomplete_query(q: str) -> str:
     if not words:
         return "*"
 
-    if len(words) == 1:
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
+    if len(escaped_words) == 1:
         # Single word - use prefix for autocomplete
-        return f"@search_title:{words[0]}*"
+        return f"@search_title:{escaped_words[0]}*"
     else:
         # Multiple words - require all words, last word as prefix for autocomplete
         # BM25 scorer will rank shorter/exact matches higher
-        parts = [f"@search_title:{w}" for w in words[:-1]]
-        parts.append(f"@search_title:{words[-1]}*")
+        parts = [f"@search_title:{w}" for w in escaped_words[:-1]]
+        parts.append(f"@search_title:{escaped_words[-1]}*")
         return " ".join(parts)
 
 
@@ -354,6 +376,10 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     podcasts_query = build_podcasts_autocomplete_query(q)
     authors_query = build_authors_autocomplete_query(q)
     books_query = build_books_autocomplete_query(q)
+
+    # Debug logging for query with colons
+    if ":" in q:
+        logger.info(f"Autocomplete query for '{q}': media_query='{media_query}'")
 
     # Create empty result placeholder
     empty_result = type("obj", (object,), {"docs": []})()
@@ -855,6 +881,7 @@ async def search(
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
+    ratings_sort: str = "popularity",
 ) -> dict[str, list]:
     """
     Unified search API that returns categorized results.
@@ -875,6 +902,9 @@ async def search(
         rating_min: Minimum rating 0-10 (inclusive)
         rating_max: Maximum rating 0-10 (inclusive)
         mc_type: Filter by media type (movie, tv)
+        ratings_sort: Sort order for ratings results when ratings source is requested.
+                     Options: "popularity" (default), "audience_score", "critics_score".
+                     Sorts in descending order (highest first).
 
     Returns:
         dict with keys for each requested source, each containing list of MCBaseItem-compliant results
@@ -953,7 +983,8 @@ async def search(
         timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=limit)))
 
     # Brokered sources (Redis-cached API calls) - apply timeout
-    # These require a text query - skip if no query provided
+    # Ratings can be enriched from indexed results when no query is provided
+    # Other sources require a text query - skip if no query provided
     if has_query:
         if "news" in requested_sources:
             timed_tasks.append(
@@ -1100,9 +1131,14 @@ async def search(
         final_results["video"] = video_results
 
     # Process ratings results (API)
+    # Two scenarios:
+    # 1. With query: ratings come from direct RT search (already in results_map)
+    # 2. Without query: enrich from indexed tv/movie results
+    ratings_results: list[dict] = []
+
     if "ratings" in results_map:
+        # Scenario 1: Ratings from direct search (has query)
         ratings_res = results_map["ratings"]
-        ratings_results: list[dict] = []
         if (
             ratings_res
             and not isinstance(ratings_res, BaseException)
@@ -1110,7 +1146,122 @@ async def search(
             and ratings_res.results
         ):
             ratings_results = [item.model_dump() for item in ratings_res.results[:limit]]
-        final_results["ratings"] = ratings_results
+    elif not has_query and "ratings" in requested_sources and ("tv" in requested_sources or "movie" in requested_sources):
+        # Scenario 2: Enrich ratings from indexed results (no query, filter-only)
+        # Collect titles from indexed tv/movie results
+        indexed_titles: list[tuple[str, int | None, str]] = []  # (title, year, mc_type)
+
+        if "tv" in final_results:
+            for item in final_results["tv"]:
+                title = item.get("search_title") or item.get("title") or ""
+                year = item.get("year")
+                if title:
+                    indexed_titles.append((title, year, "tv"))
+
+        if "movie" in final_results:
+            for item in final_results["movie"]:
+                title = item.get("search_title") or item.get("title") or ""
+                year = item.get("year")
+                if title:
+                    indexed_titles.append((title, year, "movie"))
+
+        # Search RottenTomatoes for each title and match by title/year
+        if indexed_titles:
+            logger.info(f"Enriching {len(indexed_titles)} titles with RottenTomatoes ratings")
+            rt_tasks = []
+            # Limit to avoid too many API calls
+            titles_to_enrich = indexed_titles[:limit * 2]
+            for title, _year, mc_type_str in titles_to_enrich:
+                mc_type_enum = MCType.TV_SERIES if mc_type_str == "tv" else MCType.MOVIE
+                rt_tasks.append(
+                    timed_task(
+                        f"rt_{title[:20]}",
+                        rottentomatoes_wrapper.search_content(
+                            query=title, limit=5, media_type=mc_type_enum
+                        ),
+                        api_timeout,
+                    )
+                )
+
+            # Execute RT searches concurrently
+            rt_results = await asyncio.gather(*rt_tasks, return_exceptions=True)
+
+            # Track which indexed titles have been matched to avoid duplicates
+            matched_titles: set[str] = set()
+
+            # Match RT results to indexed titles
+            for i, rt_result in enumerate(rt_results):
+                if isinstance(rt_result, BaseException) or not isinstance(rt_result, tuple):
+                    continue
+
+                _, rt_response, _ = rt_result
+                if (
+                    not rt_response
+                    or isinstance(rt_response, BaseException)
+                    or rt_response.status_code != 200
+                    or not rt_response.results
+                ):
+                    continue
+
+                # Get the corresponding indexed title for this RT search
+                if i >= len(titles_to_enrich):
+                    continue
+                idx_title, idx_year, idx_type = titles_to_enrich[i]
+                idx_title_lower = idx_title.lower().strip()
+
+                # Find best match from RT results
+                best_match: dict | None = None
+                best_score = 0
+
+                for rt_item in rt_response.results:
+                    rt_title = (rt_item.title or "").lower().strip()
+                    rt_year = rt_item.release_year
+
+                    # Skip if already matched
+                    if rt_title in matched_titles:
+                        continue
+
+                    # Calculate match score
+                    score = 0
+
+                    # Title match (exact or substring)
+                    if idx_title_lower == rt_title:
+                        score += 100  # Exact match
+                    elif idx_title_lower in rt_title or rt_title in idx_title_lower:
+                        score += 50  # Partial match
+
+                    # Year match (bonus)
+                    if idx_year and rt_year and idx_year == rt_year:
+                        score += 20
+
+                    if score > best_score:
+                        best_score = score
+                        best_match = rt_item.model_dump()
+
+                # Add best match if found
+                if best_match and best_score > 0:
+                    matched_titles.add((best_match.get("title") or "").lower().strip())
+                    ratings_results.append(best_match)
+
+    # Sort ratings results if ratings are requested along with tv/movie
+    if ratings_results and "ratings" in requested_sources and ("tv" in requested_sources or "movie" in requested_sources):
+        if ratings_sort == "audience_score":
+            ratings_results.sort(
+                key=lambda x: int(x.get("audience_score") or -1),
+                reverse=True,
+            )
+        elif ratings_sort == "critics_score":
+            ratings_results.sort(
+                key=lambda x: int(x.get("critics_score") or -1),
+                reverse=True,
+            )
+        else:  # popularity (default)
+            ratings_results.sort(
+                key=lambda x: int(x.get("popularity") or -1),
+                reverse=True,
+            )
+
+    final_results["ratings"] = ratings_results[:limit]
 
     # Process artist results (API)
     if "artist" in results_map:
@@ -1161,7 +1312,9 @@ async def full_search(q: str) -> dict[str, list]:
     # Build queries
     media_query = build_fuzzy_fulltext_query(q)
     # For people, use a simpler fuzzy query on both fields
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     stopwords = {
         "the",
         "a",
@@ -1181,7 +1334,9 @@ async def full_search(q: str) -> dict[str, list]:
     words = [w for w in words if w and w not in stopwords]
 
     if words:
-        fuzzy_terms = " ".join(f"%{w}%" for w in words)
+        # Escape special characters in search terms
+        escaped_words = [escape_redis_search_term(w) for w in words]
+        fuzzy_terms = " ".join(f"%{w}%" for w in escaped_words)
         people_query = f"(@search_title:({fuzzy_terms})) | (@also_known_as:({fuzzy_terms}))"
     else:
         people_query = "*"

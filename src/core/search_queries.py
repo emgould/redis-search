@@ -3,12 +3,67 @@
 STOPWORDS = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "is", "it"}
 
 
+def escape_redis_search_term(term: str) -> str:
+    """
+    Escape special characters in a Redis Search term.
+
+    Redis Search treats certain characters as special. When these appear in search
+    terms (after @field:), they need to be escaped with a backslash.
+
+    Args:
+        term: The search term to escape
+
+    Returns:
+        Escaped search term safe for use in Redis Search queries
+    """
+    # Characters that need escaping in Redis Search queries
+    # Note: We don't escape * since we use it for wildcards
+    special_chars = {
+        ":",
+        ",",
+        ".",
+        "<",
+        ">",
+        "{",
+        "}",
+        "[",
+        "]",
+        '"',
+        "'",
+        ";",
+        "!",
+        "@",
+        "#",
+        "$",
+        "%",
+        "^",
+        "&",
+        "(",
+        ")",
+        "-",
+        "+",
+        "=",
+        "~",
+    }
+    result = ""
+    for char in term:
+        if char in special_chars:
+            result += "\\" + char
+        else:
+            result += char
+    return result
+
+
 def build_autocomplete_query(q: str) -> str:
     """
     Build a prefix search query for autocomplete.
     Handles multi-word queries and filters out stopwords.
+    Also splits on colons to handle titles like "Predator:Badlands".
     """
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    # This handles cases like "Predator:Badlands" or "Predator: Badlands"
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     # Filter out stopwords and empty strings
     words = [w for w in words if w and w not in STOPWORDS]
 
@@ -16,26 +71,34 @@ def build_autocomplete_query(q: str) -> str:
         # If only stopwords, return a broad match
         return "*"
 
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
     # For multi-word: match documents containing all words (last word as prefix)
-    if len(words) == 1:
-        return f"@search_title:{words[0]}*"
+    if len(escaped_words) == 1:
+        return f"@search_title:{escaped_words[0]}*"
     else:
         # All words except last should be exact, last word is prefix
-        exact_words = " ".join(words[:-1])
-        prefix_word = words[-1]
+        exact_words = " ".join(escaped_words[:-1])
+        prefix_word = escaped_words[-1]
         return f"@search_title:({exact_words} {prefix_word}*)"
 
 
 def build_fuzzy_fulltext_query(q: str) -> str:
     """Build a fuzzy full-text search query."""
-    words = q.lower().split()
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
         return "*"
 
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
     # Fuzzy match on each word
-    fuzzy_terms = " ".join(f"%{w}%" for w in words)
+    fuzzy_terms = " ".join(f"%{w}%" for w in escaped_words)
     return f"@search_title:({fuzzy_terms})"
 
 

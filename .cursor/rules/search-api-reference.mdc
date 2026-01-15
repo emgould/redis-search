@@ -87,14 +87,21 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 | `rating_min` | float | No | - | Minimum rating (0-10) |
 | `rating_max` | float | No | - | Maximum rating (0-10) |
 | `mc_type` | string | No | - | Filter by type: movie, tv |
+| `ratings_sort` | string | No | popularity | Sort order for ratings results when ratings source is requested with tv/movie. Options: "popularity" (default), "audience_score", "critics_score". Sorts in descending order (highest first). |
 
-*`q` is required for brokered sources (artist, album, video, news, ratings). Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
+*`q` is required for brokered sources (artist, album, video, news). The `ratings` source is special: when requested together with `tv` or `movie`, it can be enriched from indexed results even without a query parameter. Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
 
 **Field Filters:**
 - Filters only apply to indexed sources (tv, movie)
 - When using filters without `q`, sources default to indexed sources only
 - Multiple genre IDs: use `genre_match=any` for OR (default) or `genre_match=all` for AND
 - Numeric ranges are inclusive
+
+**Ratings Enrichment:**
+- When `ratings` is requested with `tv` or `movie` sources, ratings are enriched in two ways:
+  - **With query**: Direct RottenTomatoes search using the query
+  - **Filter-only (no query)**: Ratings are enriched from indexed tv/movie results by searching RottenTomatoes for each title
+- Ratings results are sorted according to `ratings_sort` parameter (default: popularity)
 
 **Example:**
 ```
@@ -117,6 +124,16 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 
 # Combined text search + filters
 /api/search?q=action&sources=movie&year_min=2020&rating_min=7
+
+# Sort ratings by audience score (when ratings + tv/movie are requested)
+/api/search?q=matrix&sources=movie,ratings&ratings_sort=audience_score
+
+# Sort ratings by critics score
+/api/search?q=breaking&sources=tv,ratings&ratings_sort=critics_score
+
+# Filter-only: Ratings enriched from indexed results (no query needed)
+/api/search?sources=movie,ratings&genre_ids=878&ratings_sort=audience_score
+/api/search?sources=movie,ratings&year_min=2020&rating_min=7&ratings_sort=critics_score
 ```
 
 ---
