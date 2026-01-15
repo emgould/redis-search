@@ -848,6 +848,8 @@ async def search(
     limit: int = 10,
     genre_ids: list[str] | None = None,
     genre_match: str = "any",
+    cast_ids: list[str] | None = None,
+    cast_match: str = "any",
     year_min: int | None = None,
     year_max: int | None = None,
     rating_min: float | None = None,
@@ -866,6 +868,8 @@ async def search(
         limit: Maximum results per source (default: 10)
         genre_ids: List of TMDB genre IDs to filter by
         genre_match: "any" for OR logic (default), "all" for AND logic
+        cast_ids: List of TMDB person IDs to filter by
+        cast_match: "any" for OR logic (default), "all" for AND logic
         year_min: Minimum release year (inclusive)
         year_max: Maximum release year (inclusive)
         rating_min: Minimum rating 0-10 (inclusive)
@@ -876,7 +880,7 @@ async def search(
         dict with keys for each requested source, each containing list of MCBaseItem-compliant results
     """
     # Check if we have filters or query
-    has_filters = any([genre_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
     has_query = q and len(q) >= 2
 
     if not has_query and not has_filters:
@@ -901,6 +905,8 @@ async def search(
             q=q if has_query else None,
             genre_ids=genre_ids,
             genre_match=genre_match,
+            cast_ids=cast_ids,
+            cast_match=cast_match,
             year_min=year_min,
             year_max=year_max,
             rating_min=rating_min,

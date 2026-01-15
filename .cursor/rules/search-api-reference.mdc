@@ -80,6 +80,8 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 | `limit` | int | No | 10 | Max results per source (1-50) |
 | `genre_ids` | string | No | - | Comma-separated TMDB genre IDs (e.g., 35,18) |
 | `genre_match` | string | No | any | Genre matching: "any" (OR) or "all" (AND) |
+| `cast_ids` | string | No | - | Comma-separated TMDB person IDs (e.g., 287,1461) |
+| `cast_match` | string | No | any | Cast matching: "any" (OR) or "all" (AND) |
 | `year_min` | int | No | - | Minimum release year |
 | `year_max` | int | No | - | Maximum release year |
 | `rating_min` | float | No | - | Minimum rating (0-10) |
@@ -108,6 +110,10 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 # Multiple genres with OR/AND logic
 /api/search?sources=movie&genre_ids=35,18                    # Comedy OR Drama
 /api/search?sources=movie&genre_ids=35,18&genre_match=all    # Comedy AND Drama
+
+# Filter by cast (TMDB person IDs)
+/api/search?sources=movie&cast_ids=287                       # Movies with Brad Pitt
+/api/search?sources=movie&cast_ids=287,1461&cast_match=all   # Movies with Brad Pitt AND George Clooney
 
 # Combined text search + filters
 /api/search?q=action&sources=movie&year_min=2020&rating_min=7

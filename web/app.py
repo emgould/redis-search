@@ -449,6 +449,12 @@ async def api_search(
     genre_match: str = Query(
         default="any", description="Genre matching: 'any' (OR, default) or 'all' (AND)"
     ),
+    cast_ids: str | None = Query(
+        default=None, description="Comma-separated TMDB person IDs (e.g., 287,1461 for Brad Pitt, George Clooney)"
+    ),
+    cast_match: str = Query(
+        default="any", description="Cast matching: 'any' (OR, default) or 'all' (AND)"
+    ),
     year_min: int | None = Query(default=None, description="Minimum release year"),
     year_max: int | None = Query(default=None, description="Maximum release year"),
     rating_min: float | None = Query(
@@ -482,13 +488,18 @@ async def api_search(
     - /api/search?sources=tv&rating_min=8 - Browse highly-rated TV shows
     """
     # Check if any filters are provided
-    has_filters = any([genre_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
     has_query = q and len(q) >= 2
 
-    # Validate genre_match parameter
+    # Validate match parameters
     if genre_match not in ("any", "all"):
         return JSONResponse(
             content={"error": "genre_match must be 'any' or 'all'"},
+            status_code=400,
+        )
+    if cast_match not in ("any", "all"):
+        return JSONResponse(
+            content={"error": "cast_match must be 'any' or 'all'"},
             status_code=400,
         )
 
@@ -496,6 +507,11 @@ async def api_search(
     genre_id_list: list[str] | None = None
     if genre_ids:
         genre_id_list = [gid.strip() for gid in genre_ids.split(",") if gid.strip()]
+
+    # Parse cast_ids if provided
+    cast_id_list: list[str] | None = None
+    if cast_ids:
+        cast_id_list = [cid.strip() for cid in cast_ids.split(",") if cid.strip()]
 
     # Parse sources parameter
     source_set: set[str] | None = None
@@ -541,6 +557,8 @@ async def api_search(
         limit=limit,
         genre_ids=genre_id_list,
         genre_match=genre_match,
+        cast_ids=cast_id_list,
+        cast_match=cast_match,
         year_min=year_min,
         year_max=year_max,
         rating_min=rating_min,

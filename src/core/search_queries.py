@@ -43,6 +43,8 @@ def build_filter_query(
     q: str | None = None,
     genre_ids: list[str] | None = None,
     genre_match: str = "any",
+    cast_ids: list[str] | None = None,
+    cast_match: str = "any",
     year_min: int | None = None,
     year_max: int | None = None,
     rating_min: float | None = None,
@@ -58,6 +60,8 @@ def build_filter_query(
         q: Optional text search query (searches search_title field)
         genre_ids: List of TMDB genre IDs to filter by
         genre_match: "any" for OR logic (default), "all" for AND logic
+        cast_ids: List of TMDB person IDs to filter by
+        cast_match: "any" for OR logic (default), "all" for AND logic
         year_min: Minimum release year (inclusive)
         year_max: Maximum release year (inclusive)
         rating_min: Minimum rating 0-10 (inclusive)
@@ -79,6 +83,14 @@ def build_filter_query(
         # Comedy AND Drama movies (must have both)
         build_filter_query(genre_ids=["35", "18"], genre_match="all")
         # Returns: "@genre_ids:{35} @genre_ids:{18}"
+
+        # Movies with Brad Pitt (person ID 287)
+        build_filter_query(cast_ids=["287"], mc_type="movie")
+        # Returns: "@cast_ids:{287} @mc_type:{movie}"
+
+        # Movies with both Brad Pitt AND George Clooney
+        build_filter_query(cast_ids=["287", "1461"], cast_match="all")
+        # Returns: "@cast_ids:{287} @cast_ids:{1461}"
     """
     parts: list[str] = []
 
@@ -100,6 +112,18 @@ def build_filter_query(
             # OR logic (default): join with |
             genre_filter = "|".join(escaped_ids)
             parts.append(f"@genre_ids:{{{genre_filter}}}")
+
+    # Cast filter
+    if cast_ids:
+        escaped_ids = [cid.replace("-", "\\-") for cid in cast_ids]
+        if cast_match == "all":
+            # AND logic: separate clauses for each cast member
+            for cid in escaped_ids:
+                parts.append(f"@cast_ids:{{{cid}}}")
+        else:
+            # OR logic (default): join with |
+            cast_filter = "|".join(escaped_ids)
+            parts.append(f"@cast_ids:{{{cast_filter}}}")
 
     # Year range filter
     if year_min is not None or year_max is not None:
