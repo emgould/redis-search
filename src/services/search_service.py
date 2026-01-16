@@ -59,6 +59,34 @@ def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
     return (2, len(name), -popularity)
 
 
+def _rank_media_result(media: dict, query: str) -> tuple[int, int, float]:
+    """
+    Generate a sort key for ranking movie/TV results.
+
+    Prioritizes:
+    1. Exact title matches ALWAYS come first
+    2. Among exact matches, most recent (by year) comes first
+    3. Popularity breaks ties among exact matches with same year
+    4. Non-exact matches sorted by popularity
+
+    Returns tuple for sorting: (match_type, -year, -popularity)
+    - match_type: 0 = exact match, 1 = non-exact
+    - -year: most recent year ranks higher (negative for ascending sort)
+    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    """
+    title = (media.get("search_title", "") or media.get("title", "") or "").lower().strip()
+    query_lower = query.lower().strip()
+    popularity = float(media.get("popularity", 0) or 0)
+    year = int(media.get("year", 0) or 0)
+
+    # Exact match - highest priority, then by recency, then by popularity
+    if title == query_lower:
+        return (0, -year, -popularity)
+
+    # Everything else - sorted by popularity
+    return (1, 0, -popularity)
+
+
 # Lazy initialization
 _repo = None
 
@@ -552,6 +580,10 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         elif mc_type == "movie" and "movie" in sources:
             movie_results.append(parsed)
 
+    # Re-rank movie and TV results: exact title matches first, then by popularity
+    movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
+    tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
+
     # Parse person results and filter using autocomplete prefix matching
     # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
     person_results_raw = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
@@ -781,6 +813,9 @@ async def autocomplete_stream(
                             tv_results.append(parsed)
                         elif mc_type == "movie" and "movie" in sources:
                             movie_results.append(parsed)
+                    # Re-rank: exact title matches first, then by popularity
+                    tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
+                    movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
                     # Yield TV and movie separately (only if requested)
                     if tv_results and "tv" in sources:
                         yield ("tv", tv_results[:10], elapsed)
@@ -988,7 +1023,9 @@ async def search(
     if has_query:
         if "news" in requested_sources:
             timed_tasks.append(
-                timed_task("news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout)
+                timed_task(
+                    "news", newsai_wrapper.search_news(query=q, page_size=limit), api_timeout
+                )
             )
         if "video" in requested_sources:
             timed_tasks.append(
@@ -999,16 +1036,22 @@ async def search(
         if "ratings" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=limit), api_timeout
+                    "ratings",
+                    rottentomatoes_wrapper.search_content(query=q, limit=limit),
+                    api_timeout,
                 )
             )
         if "artist" in requested_sources:
             timed_tasks.append(
-                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout)
+                timed_task(
+                    "artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout
+                )
             )
         if "album" in requested_sources:
             timed_tasks.append(
-                timed_task("album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout)
+                timed_task(
+                    "album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout
+                )
             )
 
     # Execute all tasks concurrently
@@ -1034,7 +1077,9 @@ async def search(
     # Sort by slowest first to highlight bottlenecks
     timing_parts = [f"{k}={v:.0f}ms" for k, v in sorted(timing_map.items(), key=lambda x: -x[1])]
     query_desc = f"'{q}'" if q else "[filters only]"
-    logger.info(f"Search {query_desc} latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}")
+    logger.info(
+        f"Search {query_desc} latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
+    )
 
     # Handle exceptions and parse results
     final_results: dict[str, list] = {}
@@ -1055,6 +1100,11 @@ async def search(
                 tv_results.append(parsed)
             elif mc_type == "movie" and "movie" in requested_sources:
                 movie_results.append(parsed)
+
+        # Re-rank: exact title matches first, then by popularity
+        if q:
+            tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
+            movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
 
         if "tv" in requested_sources:
             final_results["tv"] = tv_results[:limit]
@@ -1146,7 +1196,11 @@ async def search(
             and ratings_res.results
         ):
             ratings_results = [item.model_dump() for item in ratings_res.results[:limit]]
-    elif not has_query and "ratings" in requested_sources and ("tv" in requested_sources or "movie" in requested_sources):
+    elif (
+        not has_query
+        and "ratings" in requested_sources
+        and ("tv" in requested_sources or "movie" in requested_sources)
+    ):
         # Scenario 2: Enrich ratings from indexed results (no query, filter-only)
         # Collect titles from indexed tv/movie results
         indexed_titles: list[tuple[str, int | None, str]] = []  # (title, year, mc_type)
@@ -1170,7 +1224,7 @@ async def search(
             logger.info(f"Enriching {len(indexed_titles)} titles with RottenTomatoes ratings")
             rt_tasks = []
             # Limit to avoid too many API calls
-            titles_to_enrich = indexed_titles[:limit * 2]
+            titles_to_enrich = indexed_titles[: limit * 2]
             for title, _year, mc_type_str in titles_to_enrich:
                 mc_type_enum = MCType.TV_SERIES if mc_type_str == "tv" else MCType.MOVIE
                 rt_tasks.append(
@@ -1244,7 +1298,11 @@ async def search(
                     ratings_results.append(best_match)
 
     # Sort ratings results if ratings are requested along with tv/movie
-    if ratings_results and "ratings" in requested_sources and ("tv" in requested_sources or "movie" in requested_sources):
+    if (
+        ratings_results
+        and "ratings" in requested_sources
+        and ("tv" in requested_sources or "movie" in requested_sources)
+    ):
         if ratings_sort == "audience_score":
             ratings_results.sort(
                 key=lambda x: int(x.get("audience_score") or -1),
@@ -1369,6 +1427,10 @@ async def full_search(q: str) -> dict[str, list]:
             tv_results.append(parsed)
         elif mc_type == "movie":
             movie_results.append(parsed)
+
+    # Re-rank: exact title matches first, then by popularity
+    tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
+    movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
 
     # Parse person results
     person_results = [parse_doc(doc) for doc in people_res.docs]
