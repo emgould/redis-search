@@ -55,6 +55,9 @@ logger = get_logger(__name__)
 DB_DOWNLOAD_URL = "https://public.podcastindex.org/podcastindex_feeds.db.tgz"
 DB_FILENAME = "podcastindex_feeds.db"
 
+# User-Agent header required by Cloudflare (blocks default Python urllib User-Agent)
+USER_AGENT = "Mozilla/5.0 (compatible; MediaCircle-ETL/1.0; +https://mediacircle.io)"
+
 # Redis batch size
 REDIS_BATCH_SIZE = 100
 
@@ -186,19 +189,30 @@ class PodcastIndexNightlyETL:
         logger.info(f"Downloading database from {DB_DOWNLOAD_URL}")
         logger.info(f"  Target: {tgz_path}")
 
-        # Download with progress
-        def report_progress(block_num: int, block_size: int, total_size: int) -> None:
-            if total_size > 0:
-                downloaded = block_num * block_size
-                percent = min(100, downloaded * 100 / total_size)
-                mb_downloaded = downloaded / (1024 * 1024)
-                mb_total = total_size / (1024 * 1024)
-                if block_num % 1000 == 0:  # Log every ~8MB
-                    logger.info(
-                        f"  Download progress: {percent:.1f}% ({mb_downloaded:.1f}/{mb_total:.1f} MB)"
-                    )
+        # Download with progress using custom User-Agent (required by Cloudflare)
+        request = urllib.request.Request(DB_DOWNLOAD_URL, headers={"User-Agent": USER_AGENT})
+        response = urllib.request.urlopen(request)
+        total_size = int(response.headers.get("Content-Length", 0))
 
-        urllib.request.urlretrieve(DB_DOWNLOAD_URL, str(tgz_path), reporthook=report_progress)
+        downloaded = 0
+        block_size = 8192
+        last_log_mb = 0
+
+        with open(tgz_path, "wb") as f:
+            while True:
+                block = response.read(block_size)
+                if not block:
+                    break
+                f.write(block)
+                downloaded += len(block)
+
+                # Log progress every ~50MB
+                current_mb = downloaded // (1024 * 1024)
+                if total_size > 0 and current_mb >= last_log_mb + 50:
+                    percent = downloaded * 100 / total_size
+                    mb_total = total_size / (1024 * 1024)
+                    logger.info(f"  Download progress: {percent:.1f}% ({current_mb}/{mb_total:.0f} MB)")
+                    last_log_mb = current_mb
 
         # Record download size
         stats.download_size_mb = tgz_path.stat().st_size / (1024 * 1024)
