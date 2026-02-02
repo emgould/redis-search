@@ -49,7 +49,7 @@ TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="tmdb",
     verbose=False,
-    version="1.4.2",  # Rolled for ETL diagnostics test
+    version="1.4.3",  # Added release_dates to get_media_details for theatrical release detection
 )
 
 
@@ -257,6 +257,7 @@ class TMDBService(Auth, BaseAPIClient):
         include_videos: bool = True,
         include_watch_providers: bool = True,
         include_keywords: bool = True,
+        include_release_dates: bool = True,
         cast_limit: int = 5,
         no_cache: bool = False,
         **kwargs: Any,
@@ -335,6 +336,10 @@ class TMDBService(Auth, BaseAPIClient):
         if include_keywords:
             tasks.append(("keywords", self._get_keywords(tmdb_id, media_type)))
 
+        # Only fetch release_dates for movies (TV shows use different air date structure)
+        if include_release_dates and media_type == MCType.MOVIE:
+            tasks.append(("release_dates", self._get_release_dates(tmdb_id)))
+
         if tasks:
             results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
 
@@ -366,6 +371,12 @@ class TMDBService(Auth, BaseAPIClient):
                     ):
                         details.keywords = keywords_result.get("keywords", [])
                         details.keywords_count = keywords_result.get("keywords_count", 0)
+                elif task_name[0] == "release_dates":
+                    release_dates_result = task_result
+                    if not isinstance(release_dates_result, Exception) and isinstance(
+                        release_dates_result, dict
+                    ):
+                        details.release_dates = release_dates_result.get("release_dates", {})
 
         return details
 
@@ -835,6 +846,31 @@ class TMDBService(Auth, BaseAPIClient):
             processed_keywords.append({"id": keyword.get("id"), "name": keyword.get("name")})
 
         return {"keywords": processed_keywords, "keywords_count": len(processed_keywords)}
+
+    async def _get_release_dates(self, tmdb_id: int) -> dict[str, Any]:
+        """Get release dates and certifications for a movie.
+
+        This endpoint provides release dates by country, including release type:
+        - Type 1: Premiere
+        - Type 2: Theatrical (limited)
+        - Type 3: Theatrical
+        - Type 4: Digital
+        - Type 5: Physical
+        - Type 6: TV
+
+        Args:
+            tmdb_id: TMDB movie ID
+
+        Returns:
+            Dict with release dates data in TMDB format
+        """
+        endpoint = f"movie/{tmdb_id}/release_dates"
+
+        data = await self._make_request(endpoint)
+        if not data:
+            return {}
+
+        return {"release_dates": data}
 
     @RedisCache.use_cache(TMDBCache, prefix="keyword_search")
     async def find_keywords_async(self, query: str) -> list[TMDBKeyword]:

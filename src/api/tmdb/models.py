@@ -7,6 +7,15 @@ Follows the same pattern as podcast_models.py with Pydantic 2.0
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from pydantic import Field
+
+from api.tmdb.tmdb_models import (
+    TMDBMovieDetailsResult,
+    TMDBPersonDetailsResult,
+    TMDBSearchMovie,
+    TMDBSearchTv,
+    TMDBTvDetailsResult,
+)
 from contracts.models import (
     MCBaseItem,
     MCImage,
@@ -16,15 +25,6 @@ from contracts.models import (
     MCType,
     MCUrlType,
     generate_mc_id,
-)
-from pydantic import Field
-
-from api.tmdb.tmdb_models import (
-    TMDBMovieDetailsResult,
-    TMDBPersonDetailsResult,
-    TMDBSearchMovie,
-    TMDBSearchTv,
-    TMDBTvDetailsResult,
 )
 from utils.pydantic_tools import BaseModelWithMethods
 
@@ -86,6 +86,7 @@ class MCMovieItem(MCBaseMediaItem):
     revenue: int | None = None
     runtime: int | None = None
     spoken_languages: list[str] = Field(default_factory=list)
+    release_dates: dict[str, Any] = Field(default_factory=dict)  # TMDB release dates by country
 
     @classmethod
     def from_movie_search(
