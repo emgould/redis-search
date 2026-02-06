@@ -50,12 +50,19 @@ async def build_index():
         TagField("$.mc_subtype", as_name="mc_subtype"),
         # Source filter
         TagField("$.source", as_name="source"),
-        # Genre filtering (arrays)
+        # Genre filtering (arrays) - normalized (lowercase, underscores)
         TagField("$.genre_ids[*]", as_name="genre_ids"),
         TagField("$.genres[*]", as_name="genres"),
-        # Cast filtering (arrays)
+        # Cast filtering (arrays) - cast_names normalized
         TagField("$.cast_ids[*]", as_name="cast_ids"),
         TagField("$.cast_names[*]", as_name="cast_names"),
+        # Director fields (normalized)
+        TagField("$.director_id", as_name="director_id"),
+        TagField("$.director_name", as_name="director_name"),
+        # Keywords (IPTC expanded, normalized)
+        TagField("$.keywords[*]", as_name="keywords"),
+        # Origin country (normalized ISO codes)
+        TagField("$.origin_country[*]", as_name="origin_country"),
         # Sortable numeric fields for ranking
         NumericField("$.popularity", as_name="popularity", sortable=True),
         NumericField("$.rating", as_name="rating", sortable=True),

@@ -16,6 +16,7 @@ from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import get_person_credits_async
 from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
+from core.ranking import score_media_result, score_person_result
 from core.search_queries import (
     build_autocomplete_query,
     build_filter_query,
@@ -31,60 +32,19 @@ logger = get_logger(__name__)
 def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
     """
     Generate a sort key for ranking person results.
-
-    Prioritizes:
-    1. Exact matches (query equals name exactly)
-    2. Prefix matches (name starts with query)
-    3. Shorter names (when both match similarly)
-    4. Higher popularity as tiebreaker
-
-    Returns tuple for sorting: (match_type, name_length, -popularity)
-    - match_type: 0 = exact, 1 = prefix, 2 = contains
-    - name_length: shorter names rank higher
-    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    Delegates to score_person_result from core.ranking.
     """
-    name = (person.get("search_title", "") or person.get("name", "") or "").lower().strip()
-    query_lower = query.lower().strip()
-    popularity = float(person.get("popularity", 0) or 0)
-
-    # Exact match - highest priority
-    if name == query_lower:
-        return (0, len(name), -popularity)
-
-    # Prefix match - name starts with query
-    if name.startswith(query_lower):
-        return (1, len(name), -popularity)
-
-    # Contains match / word match
-    return (2, len(name), -popularity)
+    result: tuple[int, int, float] = score_person_result(query, person)
+    return result
 
 
 def _rank_media_result(media: dict, query: str) -> tuple[int, int, float]:
     """
     Generate a sort key for ranking movie/TV results.
-
-    Prioritizes:
-    1. Exact title matches ALWAYS come first
-    2. Among exact matches, most recent (by year) comes first
-    3. Popularity breaks ties among exact matches with same year
-    4. Non-exact matches sorted by popularity
-
-    Returns tuple for sorting: (match_type, -year, -popularity)
-    - match_type: 0 = exact match, 1 = non-exact
-    - -year: most recent year ranks higher (negative for ascending sort)
-    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    Delegates to score_media_result from core.ranking.
     """
-    title = (media.get("search_title", "") or media.get("title", "") or "").lower().strip()
-    query_lower = query.lower().strip()
-    popularity = float(media.get("popularity", 0) or 0)
-    year = int(media.get("year", 0) or 0)
-
-    # Exact match - highest priority, then by recency, then by popularity
-    if title == query_lower:
-        return (0, -year, -popularity)
-
-    # Everything else - sorted by popularity
-    return (1, 0, -popularity)
+    result: tuple[int, int, float] = score_media_result(query, media)
+    return result
 
 
 def _rank_podcast_result(podcast: dict, query: str) -> tuple[int, float, int, float]:

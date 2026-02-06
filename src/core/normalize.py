@@ -6,12 +6,17 @@ TMDB into a unified document format suitable for Redis Search indexing.
 
 Every normalizer MUST set mc_type and mc_subtype because the index
 contains heterogeneous content types (movies, TV, people, etc.).
+
+TAG values are normalized (lowercase, special chars replaced with underscore)
+to ensure consistent filtering in Redis Search.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from src.contracts.models import MCSources, MCSubType, MCType
+from src.core.iptc import expand_keywords, normalize_tag
 
 
 @dataclass
@@ -22,6 +27,8 @@ class SearchDocument:
 
     MCType and MCSubType are required for proper categorization
     in the heterogeneous search index.
+
+    TAG fields are normalized (lowercase, special chars -> underscore).
     """
 
     # Indexed fields
@@ -38,13 +45,20 @@ class SearchDocument:
     # Display fields (stored, not indexed)
     image: str | None  # Medium poster/profile image URL
     overview: str | None  # Truncated description/bio
-    # Genre fields (indexed as TagFields - must be strings for Redis)
+    # Genre fields (indexed as TagFields - normalized)
     genre_ids: list[str]  # TMDB genre IDs as strings (e.g., ["35", "18", "10751"])
-    genres: list[str]  # Genre names (e.g., ["Comedy", "Drama", "Family"])
-    # Cast fields (indexed as TagFields - must be strings for Redis)
+    genres: list[str]  # Genre names normalized (e.g., ["comedy", "drama", "family"])
+    # Cast fields (indexed as TagFields - normalized)
     cast_ids: list[str]  # TMDB person IDs as strings for cast members
-    cast_names: list[str]  # Cast member names for search/filter
-    cast: list[str]  # Cast member names for display (same as cast_names)
+    cast_names: list[str]  # Cast member names normalized for search/filter
+    cast: list[str]  # Cast member names for display (NOT normalized)
+    # Director fields (indexed as TagFields)
+    director_id: str | None = None  # TMDB person ID for director
+    director_name: str | None = None  # Director name normalized
+    # Keywords (indexed as TagFields - IPTC expanded and normalized)
+    keywords: list[str] = field(default_factory=list)
+    # Origin country (indexed as TagFields - normalized ISO codes)
+    origin_country: list[str] = field(default_factory=list)
     # Person-specific fields (for people index)
     also_known_as: str | None = None  # Pipe-separated alternate names for search
 
@@ -203,31 +217,33 @@ class BaseTMDBNormalizer(BaseNormalizer):
 
     def _extract_genres(self, raw: dict, genre_mapping: dict[int, str] | None = None) -> list[str]:
         """
-        Extract genre names from TMDB data.
+        Extract and normalize genre names from TMDB data.
 
         If genre_mapping is provided, resolves genre_ids to names.
         Otherwise, uses the 'genres' field if available.
+
+        All genre names are normalized (lowercase, special chars -> underscore).
         """
+        names: list[str] = []
+
         # Try direct genres field first (may already have names)
         genres = raw.get("genres", [])
         if genres:
             # Handle both formats: list of dicts with 'name' or list of strings
-            names = []
             for g in genres:
                 if isinstance(g, dict) and g.get("name"):
                     names.append(g["name"])
                 elif isinstance(g, str):
                     names.append(g)
-            if names:
-                return names
 
-        # Fall back to resolving genre_ids if mapping provided
-        if genre_mapping:
+        # Fall back to resolving genre_ids if mapping provided and no names found
+        if not names and genre_mapping:
             genre_ids = self._extract_genre_ids(raw)
             # genre_ids are strings, convert to int for mapping lookup
-            return [genre_mapping[int(gid)] for gid in genre_ids if int(gid) in genre_mapping]
+            names = [genre_mapping[int(gid)] for gid in genre_ids if int(gid) in genre_mapping]
 
-        return []
+        # Normalize all genre names for TAG indexing
+        return [normalize_tag(name) for name in names if normalize_tag(name)]
 
     def _extract_cast_data(
         self, raw: dict, limit: int = 5
@@ -238,11 +254,12 @@ class BaseTMDBNormalizer(BaseNormalizer):
         Returns:
             Tuple of (cast_ids, cast_names, cast)
             - cast_ids: List of TMDB person IDs as strings (for Redis TagField)
-            - cast_names: List of actor names (for Redis TagField filtering)
-            - cast: List of actor names (for display, same as cast_names)
+            - cast_names: List of actor names normalized (for Redis TagField filtering)
+            - cast: List of actor names for display (NOT normalized)
         """
         cast_ids: list[str] = []
-        cast_names: list[str] = []
+        cast_names: list[str] = []  # Normalized for TAG indexing
+        cast_display: list[str] = []  # Original for display
 
         # Try main_cast first, then tmdb_cast.cast
         main_cast = raw.get("main_cast", [])
@@ -261,10 +278,76 @@ class BaseTMDBNormalizer(BaseNormalizer):
             if actor_id:
                 cast_ids.append(str(actor_id))  # Convert to string for Redis TagField
             if actor_name:
-                cast_names.append(actor_name)
+                normalized_name = normalize_tag(actor_name)
+                if normalized_name:
+                    cast_names.append(normalized_name)
+                cast_display.append(actor_name)  # Keep original for display
 
-        # cast is same as cast_names (for display)
-        return cast_ids, cast_names, cast_names
+        return cast_ids, cast_names, cast_display
+
+    def _extract_director(self, raw: dict) -> tuple[str | None, str | None]:
+        """
+        Extract director data from TMDB data.
+
+        Returns:
+            Tuple of (director_id, director_name)
+            - director_id: TMDB person ID as string
+            - director_name: Director name normalized
+        """
+        # Try direct director field first
+        director = raw.get("director", {})
+        if isinstance(director, dict) and director.get("id"):
+            director_id = str(director["id"])
+            director_name = director.get("name", "")
+            normalized_name = normalize_tag(director_name) if director_name else None
+            return director_id, normalized_name
+
+        # Try tmdb_cast.director
+        tmdb_cast = raw.get("tmdb_cast", {})
+        if isinstance(tmdb_cast, dict):
+            director = tmdb_cast.get("director", {})
+            if isinstance(director, dict) and director.get("id"):
+                director_id = str(director["id"])
+                director_name = director.get("name", "")
+                normalized_name = normalize_tag(director_name) if director_name else None
+                return director_id, normalized_name
+
+        return None, None
+
+    def _extract_origin_country(self, raw: dict) -> list[str]:
+        """
+        Extract and normalize origin country codes from TMDB data.
+
+        Returns:
+            List of normalized ISO country codes (e.g., ["us"], ["kr", "jp"])
+        """
+        # Try origin_country (TV shows)
+        countries = raw.get("origin_country", [])
+
+        # Try production_countries (movies)
+        if not countries:
+            prod_countries = raw.get("production_countries", [])
+            if prod_countries:
+                countries = [
+                    c.get("iso_3166_1", "") for c in prod_countries if isinstance(c, dict)
+                ]
+
+        # Normalize country codes (lowercase)
+        return [normalize_tag(c) for c in countries if c and normalize_tag(c)]
+
+    def _extract_keywords(self, raw: dict) -> list[str]:
+        """
+        Extract keywords from TMDB data and expand using IPTC aliases.
+
+        Returns:
+            List of normalized, IPTC-expanded keywords.
+        """
+        keywords = raw.get("keywords", [])
+        if not keywords:
+            return []
+
+        # Use IPTC expander to get all aliases
+        return expand_keywords(keywords)
 
     def _build_profile_url(self, profile_path: str | None) -> str | None:
         """Build full profile image URL from TMDB path."""
@@ -302,8 +385,11 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
         if not title:
             return None
 
-        # Extract cast data (ids, names, and rich objects)
-        cast_ids, cast_names, cast_objects = self._extract_cast_data(raw)
+        # Extract cast data (ids, normalized names, display names)
+        cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
+
+        # Extract director
+        director_id, director_name = self._extract_director(raw)
 
         return SearchDocument(
             id=doc_id,
@@ -321,7 +407,11 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             genres=self._extract_genres(raw, genre_mapping),
             cast_ids=cast_ids,
             cast_names=cast_names,
-            cast=cast_objects,
+            cast=cast_display,
+            director_id=director_id,
+            director_name=director_name,
+            keywords=self._extract_keywords(raw),
+            origin_country=self._extract_origin_country(raw),
         )
 
 
@@ -345,8 +435,11 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
         if not title:
             return None
 
-        # Extract cast data (ids, names, and rich objects)
-        cast_ids, cast_names, cast_objects = self._extract_cast_data(raw)
+        # Extract cast data (ids, normalized names, display names)
+        cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
+
+        # Extract director (TV shows may have creators, but we use director field if present)
+        director_id, director_name = self._extract_director(raw)
 
         return SearchDocument(
             id=doc_id,
@@ -364,7 +457,11 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             genres=self._extract_genres(raw, genre_mapping),
             cast_ids=cast_ids,
             cast_names=cast_names,
-            cast=cast_objects,
+            cast=cast_display,
+            director_id=director_id,
+            director_name=director_name,
+            keywords=self._extract_keywords(raw),
+            origin_country=self._extract_origin_country(raw),
         )
 
 
@@ -413,12 +510,13 @@ class TMDBPersonNormalizer(BaseTMDBNormalizer):
             rating=0.0,  # Persons don't have ratings
             image=self._extract_image(raw),
             overview=self._extract_overview(raw),  # Uses biography
-            # Persons don't have genres or cast
+            # Persons don't have genres, cast, director, keywords, or origin_country
             genre_ids=[],
             genres=[],
             cast_ids=[],
             cast_names=[],
             cast=[],
+            # New fields default to None/empty for persons
         )
 
 
@@ -525,11 +623,13 @@ def normalize_document(
     return normalizer.normalize(raw, genre_mapping=genre_mapping)
 
 
-def document_to_redis(doc: SearchDocument) -> dict:
+def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
     """
     Convert a SearchDocument to the dict format stored in Redis.
+
+    TAG fields are already normalized in SearchDocument.
     """
-    result = {
+    result: dict[str, Any] = {
         "id": doc.id,
         "search_title": doc.search_title,
         "mc_type": doc.mc_type.value,
@@ -541,13 +641,20 @@ def document_to_redis(doc: SearchDocument) -> dict:
         "rating": doc.rating,
         "image": doc.image,
         "overview": doc.overview,
-        # Genre fields (indexed as TagFields)
+        # Genre fields (indexed as TagFields - normalized)
         "genre_ids": doc.genre_ids,
         "genres": doc.genres,
-        # Cast fields (indexed as TagFields)
+        # Cast fields (indexed as TagFields - cast_names normalized, cast for display)
         "cast_ids": doc.cast_ids,
         "cast_names": doc.cast_names,
         "cast": doc.cast,
+        # Director fields (indexed as TagFields)
+        "director_id": doc.director_id,
+        "director_name": doc.director_name,
+        # Keywords (indexed as TagFields - IPTC expanded)
+        "keywords": doc.keywords,
+        # Origin country (indexed as TagFields)
+        "origin_country": doc.origin_country,
     }
     # Add also_known_as for person documents
     if doc.also_known_as is not None:

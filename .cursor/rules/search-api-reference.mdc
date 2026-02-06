@@ -189,12 +189,27 @@ The `idx:media` index supports filtering and sorting on these fields:
 | `mc_subtype` | TAG | Subtype (for persons: actor, director, etc.) |
 | `source` | TAG | Data source: tmdb |
 | `genre_ids` | TAG | TMDB genre IDs as strings |
-| `genres` | TAG | Genre names |
+| `genres` | TAG | Genre names (normalized: science_fiction) |
 | `cast_ids` | TAG | TMDB person IDs as strings |
-| `cast_names` | TAG | Cast member names |
+| `cast_names` | TAG | Cast member names (normalized: tom_hanks) |
+| `director_id` | TAG | Director's TMDB person ID |
+| `director_name` | TAG | Director name (normalized: christopher_nolan) |
+| `keywords` | TAG | Content keywords with IPTC expansion (normalized) |
+| `origin_country` | TAG | Origin country codes (normalized: us, gb) |
 | `popularity` | NUMERIC | Sortable popularity score |
 | `rating` | NUMERIC | Sortable rating (0-10) |
 | `year` | NUMERIC | Release/first air year |
+
+### Autocomplete Union Search
+
+Autocomplete queries search across multiple fields using OR (union):
+- `search_title` - Title/name (TEXT with prefix matching)
+- `cast_names` - Actor/actress names (TAG)
+- `director_name` - Director name (TAG)
+- `keywords` - Content keywords (TAG)
+- `genres` - Genre names (TAG)
+
+Example: Searching "spielberg" will match movies directed by Spielberg via the `director_name` field.
 
 ---
 
