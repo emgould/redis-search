@@ -732,9 +732,9 @@ if __name__ == "__main__":
         "--max-batches", type=int, default=0, help="Limit batches for testing (0=no limit)"
     )
     parser.add_argument(
-        "--use-cache",
+        "--no-cache",
         action="store_true",
-        help="Use Redis cache (default: cache disabled for fresh data)",
+        help="Disable Redis cache (default: cache enabled)",
     )
 
     args = parser.parse_args()
@@ -742,11 +742,11 @@ if __name__ == "__main__":
     # Cleanup old files first
     cleanup_old_staging_files(args.staging_dir)
 
-    if not args.use_cache:
-        logger.info("✅ Cache disabled: Fetching fresh data from TMDB API")
+    if args.no_cache:
+        logger.info("⚠️  Cache disabled: Fetching fresh data from TMDB API")
         disable_cache()
     else:
-        logger.info("⚠️  CACHE ENABLED: May return stale data from Redis cache")
+        logger.info("✅ Cache enabled: Using Redis cache (7-day TTL)")
 
     asyncio.run(
         run_nightly_etl(

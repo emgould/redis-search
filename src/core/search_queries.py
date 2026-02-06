@@ -1,6 +1,22 @@
+import re
 
 # Common stopwords that Redis Search ignores
 STOPWORDS = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "is", "it"}
+
+
+def normalize_for_tag(value: str) -> str:
+    """
+    Normalize a value for TAG field search (must match how tags are stored).
+
+    - Lowercase
+    - Replace spaces and special characters with underscore
+    - Remove leading/trailing underscores
+    """
+    if not value:
+        return ""
+    value = value.strip().lower()
+    value = re.sub(r"[^a-z0-9]+", "_", value)
+    return value.strip("_")
 
 
 def escape_redis_search_term(term: str) -> str:
@@ -54,11 +70,18 @@ def escape_redis_search_term(term: str) -> str:
     return result
 
 
-def build_autocomplete_query(q: str) -> str:
+def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     """
     Build a prefix search query for autocomplete.
     Handles multi-word queries and filters out stopwords.
     Also splits on colons to handle titles like "Predator:Badlands".
+
+    When include_tag_fields=True (default), creates a union query that searches:
+    - search_title (TEXT field with prefix matching)
+    - cast_names (TAG field - matches actor names)
+    - director_name (TAG field - matches director name)
+    - keywords (TAG field - matches content keywords)
+    - genres (TAG field - matches genre names)
     """
     # Split on both spaces and colons, then flatten
     # This handles cases like "Predator:Badlands" or "Predator: Badlands"
@@ -74,14 +97,46 @@ def build_autocomplete_query(q: str) -> str:
     # Escape special characters in search terms
     escaped_words = [escape_redis_search_term(w) for w in words]
 
-    # For multi-word: match documents containing all words (last word as prefix)
+    # Build title query (TEXT field with prefix matching)
     if len(escaped_words) == 1:
-        return f"@search_title:{escaped_words[0]}*"
+        title_query = f"@search_title:{escaped_words[0]}*"
     else:
         # All words except last should be exact, last word is prefix
         exact_words = " ".join(escaped_words[:-1])
         prefix_word = escaped_words[-1]
-        return f"@search_title:({exact_words} {prefix_word}*)"
+        title_query = f"@search_title:({exact_words} {prefix_word}*)"
+
+    # If not including TAG fields, return just title query
+    if not include_tag_fields:
+        return title_query
+
+    # Build TAG field queries for union search
+    # Normalize the full query for TAG matching (e.g., "Tom Hanks" -> "tom_hanks")
+    normalized_full = normalize_for_tag(q)
+
+    # Build union query parts
+    query_parts = [title_query]
+
+    # For TAG fields, we search for the normalized full query
+    # TAG fields support prefix matching with * suffix
+    if normalized_full and len(normalized_full) >= 2:
+        # Cast names - search for actor/actress names
+        query_parts.append(f"@cast_names:{{{normalized_full}*}}")
+
+        # Director name - search for director
+        query_parts.append(f"@director_name:{{{normalized_full}*}}")
+
+        # Keywords - search for content keywords
+        query_parts.append(f"@keywords:{{{normalized_full}*}}")
+
+        # Genres - search for genre names (e.g., "science_fiction")
+        query_parts.append(f"@genres:{{{normalized_full}*}}")
+
+    # Combine with OR (union)
+    if len(query_parts) == 1:
+        return query_parts[0]
+
+    return " | ".join(f"({part})" for part in query_parts)
 
 
 def build_fuzzy_fulltext_query(q: str) -> str:
@@ -113,6 +168,7 @@ def build_filter_query(
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
+    include_tag_fields: bool = True,
 ) -> str:
     """
     Build a RediSearch query combining text search and field filters.
@@ -130,6 +186,7 @@ def build_filter_query(
         rating_min: Minimum rating 0-10 (inclusive)
         rating_max: Maximum rating 0-10 (inclusive)
         mc_type: Filter by media type (movie, tv)
+        include_tag_fields: Include TAG field union search (cast_names, director_name, keywords, genres)
 
     Returns:
         RediSearch query string
@@ -157,9 +214,9 @@ def build_filter_query(
     """
     parts: list[str] = []
 
-    # Text query component
+    # Text query component (with TAG field union when enabled)
     if q and len(q.strip()) >= 2:
-        text_query = build_autocomplete_query(q)
+        text_query = build_autocomplete_query(q, include_tag_fields=include_tag_fields)
         # Only add if it's not just "*"
         if text_query != "*":
             parts.append(text_query)
