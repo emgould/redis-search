@@ -1985,7 +1985,7 @@ Shows{% endblock %} {% block body %}
     }
   });
 
-  async function fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype) {
+  async function fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype, options = {}) {
     try {
       // Use the /api/details endpoint with POST
       const params = new URLSearchParams({
@@ -1994,6 +1994,7 @@ Shows{% endblock %} {% block body %}
         mc_type: mcType || "movie",
       });
       if (mcSubtype) params.append("mc_subtype", mcSubtype);
+      if (options.rss_details) params.append("rss_details", "true");
 
       const response = await fetch(`/api/details?${params.toString()}`, {
         method: "POST",
@@ -2008,6 +2009,11 @@ Shows{% endblock %} {% block body %}
         } else if (mcType === "person") {
           renderPersonDetail(data);
         } else if (mcType === "podcast") {
+          // Always fetch RSS details for podcasts
+          if (!options.rss_details) {
+            // Re-fetch with RSS details included
+            return fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype, { rss_details: true });
+          }
           renderPodcastDetail(data);
         } else {
           renderMediaDetail(data);
@@ -2030,6 +2036,17 @@ Shows{% endblock %} {% block body %}
       modalLoading.classList.add("hidden");
       modalBody.classList.remove("hidden");
     }
+  }
+
+  function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return "";
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   }
 
   function formatDate(dateStr) {
@@ -2651,8 +2668,9 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderPodcastDetail(data) {
-    const title = data.title || data.search_title || "Unknown Podcast";
-    const description = data.description || "No description available.";
+    // Prefer RSS feed data (fresher from source) over PodcastIndex cached data
+    const title = data.rss_feed_title || data.title || data.search_title || "Unknown Podcast";
+    const description = data.rss_feed_description || data.description || "No description available.";
     const author = data.author || data.owner_name || "";
     const image = data.artwork || data.image || null;
     const episodeCount = data.episode_count || 0;
@@ -2757,10 +2775,51 @@ Shows{% endblock %} {% block body %}
           </div>
         </div>
         
-        <!-- Description -->
+        <!-- Description - Compare PodcastIndex vs RSS Feed -->
         <div class="mb-8">
           <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">About</h3>
-          <p class="text-surface-300 leading-relaxed">${description}</p>
+          
+          ${data.rss_feed_title || data.rss_feed_description ? `
+            <!-- Show comparison if we have RSS data -->
+            <div class="space-y-4">
+              <!-- Title Comparison -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-surface-800/50 rounded-lg p-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-semibold text-surface-500 uppercase">PodcastIndex Title</span>
+                    ${data.title === data.rss_feed_title ? `<span class="text-xs text-green-500">✓ Match</span>` : `<span class="text-xs text-amber-500">≠ Different</span>`}
+                  </div>
+                  <p class="text-surface-300">${data.title || "N/A"}</p>
+                </div>
+                <div class="bg-pink-500/10 rounded-lg p-4 border border-pink-500/20">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-semibold text-pink-400 uppercase">RSS Feed Title</span>
+                  </div>
+                  <p class="text-surface-300">${data.rss_feed_title || "N/A"}</p>
+                </div>
+              </div>
+              
+              <!-- Description Comparison -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-surface-800/50 rounded-lg p-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-semibold text-surface-500 uppercase">PodcastIndex Description</span>
+                    ${data.description === data.rss_feed_description ? `<span class="text-xs text-green-500">✓ Match</span>` : `<span class="text-xs text-amber-500">≠ Different</span>`}
+                  </div>
+                  <p class="text-sm text-surface-300 leading-relaxed whitespace-pre-line">${data.description || "N/A"}</p>
+                </div>
+                <div class="bg-pink-500/10 rounded-lg p-4 border border-pink-500/20">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-semibold text-pink-400 uppercase">RSS Feed Description</span>
+                  </div>
+                  <p class="text-sm text-surface-300 leading-relaxed whitespace-pre-line">${data.rss_feed_description || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          ` : `
+            <!-- Fallback if no RSS data -->
+            <p class="text-surface-300 leading-relaxed">${description}</p>
+          `}
         </div>
         
         <!-- Listen Links -->
@@ -2811,6 +2870,118 @@ Shows{% endblock %} {% block body %}
         : ""
       }
         
+        <!-- Episodes Section -->
+        ${data.rss_episodes && data.rss_episodes.length > 0 
+          ? `
+            <div class="mb-8" id="podcast-episodes-section">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider">Recent Episodes</h3>
+                <span class="text-xs text-surface-500">${data.rss_episodes.length} of ${data.rss_total_episodes || data.rss_episodes.length} episodes</span>
+              </div>
+              <div class="space-y-3 max-h-[32rem] overflow-y-auto pr-2">
+                ${data.rss_episodes.map((ep, idx) => `
+                  <details class="group bg-surface-800/50 rounded-lg hover:bg-surface-800 transition-colors">
+                    <summary class="p-4 cursor-pointer list-none">
+                      <div class="flex items-start gap-3">
+                        ${ep.audio_url ? `
+                          <a href="${ep.audio_url}" target="_blank" rel="noopener noreferrer" 
+                             class="flex-shrink-0 w-10 h-10 rounded-full bg-pink-500/20 hover:bg-pink-500/40 flex items-center justify-center transition-colors"
+                             title="Play episode"
+                             onclick="event.stopPropagation()">
+                            <svg class="w-5 h-5 text-pink-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </a>
+                        ` : `
+                          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-700 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                            </svg>
+                          </div>
+                        `}
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-start justify-between gap-2">
+                            <h4 class="text-sm font-medium text-white group-open:text-pink-400 transition-colors">${ep.title}</h4>
+                            <svg class="w-4 h-4 text-surface-500 flex-shrink-0 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+                          <div class="flex items-center gap-2 mt-1 text-xs text-surface-500">
+                            ${ep.pub_date ? `<span>${formatDate(ep.pub_date)}</span>` : ""}
+                            ${ep.pub_date && ep.duration_seconds ? `<span>•</span>` : ""}
+                            ${ep.duration_seconds ? `<span>${formatDuration(ep.duration_seconds)}</span>` : ""}
+                          </div>
+                          <p class="mt-2 text-xs text-surface-400 line-clamp-2 group-open:hidden">${ep.description ? ep.description.substring(0, 150) + (ep.description.length > 150 ? "..." : "") : "No description"}</p>
+                        </div>
+                      </div>
+                    </summary>
+                    <div class="px-4 pb-4 pt-2 border-t border-surface-700/50 mt-2">
+                      <!-- Full Description -->
+                      ${ep.description ? `
+                        <div class="mb-4">
+                          <h5 class="text-xs font-semibold text-surface-500 uppercase mb-2">Description</h5>
+                          <p class="text-sm text-surface-300 leading-relaxed whitespace-pre-line">${ep.description}</p>
+                        </div>
+                      ` : ""}
+                      
+                      <!-- Episode Details Grid -->
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        ${ep.audio_url ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3">
+                            <span class="text-surface-500 block mb-1">Audio URL</span>
+                            <a href="${ep.audio_url}" target="_blank" rel="noopener noreferrer" 
+                               class="text-pink-400 hover:text-pink-300 break-all">${ep.audio_url}</a>
+                          </div>
+                        ` : ""}
+                        ${ep.link ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3">
+                            <span class="text-surface-500 block mb-1">Episode Link</span>
+                            <a href="${ep.link}" target="_blank" rel="noopener noreferrer" 
+                               class="text-pink-400 hover:text-pink-300 break-all">${ep.link}</a>
+                          </div>
+                        ` : ""}
+                        ${ep.guid ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3">
+                            <span class="text-surface-500 block mb-1">GUID</span>
+                            <span class="text-surface-300 font-mono text-xs break-all">${ep.guid}</span>
+                          </div>
+                        ` : ""}
+                        ${ep.pub_date ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3">
+                            <span class="text-surface-500 block mb-1">Published</span>
+                            <span class="text-surface-300">${ep.pub_date}</span>
+                          </div>
+                        ` : ""}
+                        ${ep.duration_seconds ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3">
+                            <span class="text-surface-500 block mb-1">Duration</span>
+                            <span class="text-surface-300">${formatDuration(ep.duration_seconds)} (${ep.duration_seconds.toLocaleString()} seconds)</span>
+                          </div>
+                        ` : ""}
+                        ${ep.image ? `
+                          <div class="bg-surface-900/50 rounded-lg p-3 md:col-span-2">
+                            <span class="text-surface-500 block mb-2">Episode Image</span>
+                            <img src="${ep.image}" alt="Episode image" class="w-24 h-24 rounded-lg object-cover">
+                          </div>
+                        ` : ""}
+                      </div>
+                    </div>
+                  </details>
+                `).join("")}
+              </div>
+              ${data.rss_error ? `<p class="mt-2 text-xs text-amber-500">Note: ${data.rss_error}</p>` : ""}
+            </div>
+          `
+          : data.rss_error 
+            ? `
+              <div class="mb-8">
+                <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Episodes</h3>
+                <p class="text-sm text-surface-500">Could not load episodes from RSS feed</p>
+              </div>
+            `
+            : ""
+        }
+        
         <!-- Technical Details -->
         <div class="pt-6 border-t border-surface-800">
           <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Details</h3>
@@ -2858,6 +3029,7 @@ Shows{% endblock %} {% block body %}
       </div>
     `;
   }
+
 
   function renderAuthorDetail(data) {
     const name = data.name || data.search_title || "Unknown Author";
