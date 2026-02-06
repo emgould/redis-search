@@ -47,7 +47,7 @@ async def get_api_key() -> str:
         raise RuntimeError("Unable to extract INNERTUBE_API_KEY from YouTube")
 
     _YOUTUBE_KEY_CACHE = match.group(1)
-    return _YOUTUBE_KEY_CACHE
+    return _YOUTUBE_KEY_CACHE or ""
 
 
 def images_from_thumbnails(thumbnails: list[dict]) -> list[MCImage]:
