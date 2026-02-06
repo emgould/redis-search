@@ -211,7 +211,9 @@ class PodcastIndexNightlyETL:
                 if total_size > 0 and current_mb >= last_log_mb + 50:
                     percent = downloaded * 100 / total_size
                     mb_total = total_size / (1024 * 1024)
-                    logger.info(f"  Download progress: {percent:.1f}% ({current_mb}/{mb_total:.0f} MB)")
+                    logger.info(
+                        f"  Download progress: {percent:.1f}% ({current_mb}/{mb_total:.0f} MB)"
+                    )
                     last_log_mb = current_mb
 
         # Record download size
@@ -300,6 +302,10 @@ class PodcastIndexNightlyETL:
             image=image,
             cast=[],
             overview=description,
+            genre_ids=[],
+            genres=[],
+            cast_ids=[],
+            cast_names=[],
         )
 
     def _add_display_fields(self, redis_doc: dict[str, Any], row: sqlite3.Row) -> dict[str, Any]:
