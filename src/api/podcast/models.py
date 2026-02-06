@@ -5,8 +5,9 @@ Follows Pydantic 2.0 patterns with full type safety.
 
 from typing import Any
 
+from pydantic import BaseModel, Field, model_validator
+
 from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCSubType, MCType
-from pydantic import Field, model_validator
 
 
 class MCPodcastItem(MCBaseItem):
@@ -219,3 +220,33 @@ class PodcasterSearchResponse(MCSearchResponse):
     data_source: str = "PodcastIndex Podcaster Search"
     data_type: MCType = MCType.PERSON
     date: str | None = Field(None, description="Response date")
+
+
+# ============================================================================
+# RSS Feed Models
+# These models represent parsed RSS feed data
+# ============================================================================
+
+
+class RSSEpisode(BaseModel):
+    """Model for a podcast episode parsed from an RSS feed."""
+
+    title: str = Field(..., description="Episode title")
+    description: str | None = Field(None, description="Episode description (may contain HTML)")
+    audio_url: str | None = Field(None, description="Audio file URL for playback")
+    pub_date: str | None = Field(None, description="Publication date (ISO format)")
+    duration_seconds: int | None = Field(None, description="Episode duration in seconds")
+    guid: str | None = Field(None, description="Episode GUID from feed")
+    link: str | None = Field(None, description="Episode web link")
+    image: str | None = Field(None, description="Episode-specific image URL")
+
+
+class RSSFeedResult(BaseModel):
+    """Model for RSS feed parsing result."""
+
+    episodes: list[RSSEpisode] = Field(default_factory=list, description="Parsed episodes")
+    total_episodes: int = Field(default=0, description="Total episodes in feed")
+    feed_title: str | None = Field(None, description="Feed title from RSS")
+    feed_description: str | None = Field(None, description="Feed description from RSS")
+    error: str | None = Field(None, description="Error message if parsing failed")
+    status_code: int = Field(default=200, description="HTTP status code")

@@ -2127,12 +2127,14 @@ async def api_get_details(
     source_id: str = Query(...),
     mc_type: str = Query(...),
     mc_subtype: str | None = Query(default=None),
+    rss_details: bool = Query(default=False),
 ):
     """
     Get detailed metadata for a media item or person.
 
     For tv/movie: Returns indexed data enriched with watch providers and cast.
     For person: Returns person data with movie and TV credits.
+    For podcast: Returns podcast data, optionally with RSS feed episodes (rss_details=true).
     """
     try:
         request = DetailsRequest(
@@ -2140,6 +2142,7 @@ async def api_get_details(
             source_id=source_id,
             mc_type=mc_type,
             mc_subtype=mc_subtype,
+            rss_details=rss_details,
         )
         result = await get_details(request)
 

@@ -1504,6 +1504,7 @@ class DetailsRequest(BaseModel):
     source_id: str  # tmdb_id as string
     mc_type: str  # "tv", "movie", or "person"
     mc_subtype: str | None = None
+    rss_details: bool = False  # For podcasts: fetch and parse RSS feed episodes
 
 
 async def get_details(request: DetailsRequest) -> dict[str, Any]:
@@ -1790,7 +1791,11 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
 
     Uses the same get_podcast_by_id wrapper that the mobile app uses.
     Falls back to Redis index data if the API call fails.
+
+    If request.rss_details is True, also fetches and parses the RSS feed
+    to include episode data in the response.
     """
+    from api.podcast.rss_parser import parse_rss_feed
     from api.podcast.wrappers import podcast_wrapper
 
     # source_id should be the numeric PodcastIndex feed ID
@@ -1822,6 +1827,24 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
         podcast_data: dict[str, Any] = result.model_dump()
         podcast_data["mc_id"] = request.mc_id
         podcast_data["mc_type"] = "podcast"
+
+        # If rss_details requested, fetch and parse the RSS feed
+        if request.rss_details and podcast_data.get("url"):
+            feed_url = podcast_data["url"]
+            logger.info(f"Fetching RSS feed for podcast {feed_id}: {feed_url}")
+            try:
+                rss_result = await parse_rss_feed(feed_url, max_episodes=25)
+                # Add RSS data to response
+                podcast_data["rss_episodes"] = [ep.model_dump() for ep in rss_result.episodes]
+                podcast_data["rss_total_episodes"] = rss_result.total_episodes
+                podcast_data["rss_feed_title"] = rss_result.feed_title
+                podcast_data["rss_feed_description"] = rss_result.feed_description
+                if rss_result.error:
+                    podcast_data["rss_error"] = rss_result.error
+            except Exception as rss_error:
+                logger.warning(f"Failed to parse RSS feed for podcast {feed_id}: {rss_error}")
+                podcast_data["rss_episodes"] = []
+                podcast_data["rss_error"] = str(rss_error)
 
         return podcast_data
 
