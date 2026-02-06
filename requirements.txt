@@ -16,6 +16,7 @@ dotenv
 google-cloud-storage
 firebase-functions
 firebase-admin
+aiofiles
 aiohttp
 aiolimiter
 pyyaml

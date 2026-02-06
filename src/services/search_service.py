@@ -87,6 +87,56 @@ def _rank_media_result(media: dict, query: str) -> tuple[int, int, float]:
     return (1, 0, -popularity)
 
 
+def _rank_podcast_result(podcast: dict, query: str) -> tuple[int, float, int, float]:
+    """
+    Generate a sort key for ranking podcast results.
+
+    Prioritizes:
+    1. Exact title matches ALWAYS come first
+    2. Among exact matches, most recent (by last_update_time) comes first
+    3. Episode count as secondary signal (more episodes = more established)
+    4. Popularity breaks remaining ties
+
+    Returns tuple for sorting: (match_type, -recency_ts, -episode_count, -popularity)
+    - match_type: 0 = exact match, 1 = non-exact
+    - -recency_ts: more recent updates rank higher (negative for ascending sort)
+    - -episode_count: more episodes rank higher (negative for ascending sort)
+    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    """
+    title = (podcast.get("search_title", "") or podcast.get("title", "") or "").lower().strip()
+    query_lower = query.lower().strip()
+    popularity = float(podcast.get("popularity_score", 0) or 0)
+    episode_count = int(podcast.get("episode_count", 0) or 0)
+
+    # Parse last_update_time to get recency timestamp
+    recency_ts = 0.0
+    last_update = podcast.get("last_update_time")
+    if last_update:
+        try:
+            from datetime import datetime
+
+            # Handle ISO format with or without timezone
+            date_str = str(last_update).strip()
+            if date_str.endswith("Z"):
+                date_str = date_str[:-1] + "+00:00"
+            elif "T" in date_str and "+" not in date_str and not date_str.endswith("Z"):
+                date_str = date_str + "+00:00"
+
+            if "T" in date_str:
+                recency_ts = datetime.fromisoformat(date_str).timestamp()
+            else:
+                recency_ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
+        except (ValueError, TypeError):
+            recency_ts = 0.0
+
+    # Exact match - highest priority, then by recency, episode count, then popularity
+    if title == query_lower:
+        return (0, -recency_ts, -episode_count, -popularity)
+
+    # Everything else - sorted by episode count then popularity
+    return (1, 0, -episode_count, -popularity)
+
+
 # Lazy initialization
 _repo = None
 
@@ -595,8 +645,9 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     # Re-rank to prioritize exact matches and shorter names over pure popularity
     person_results = sorted(person_results_filtered, key=lambda p: _rank_person_result(p, q))
 
-    # Parse podcast results
-    podcast_results = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
+    # Parse podcast results and re-rank: exact title matches first, then by recency/episodes/popularity
+    podcast_results_raw = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
+    podcast_results = sorted(podcast_results_raw, key=lambda p: _rank_podcast_result(p, q))
 
     # Parse author results
     author_results = [parse_doc(doc) for doc in authors_res.docs]  # type: ignore[union-attr]
@@ -1133,12 +1184,16 @@ async def search(
             # Filter-only mode: return results as-is (sorted by popularity from Redis)
             final_results["person"] = parsed_people[:limit]
 
-    # Process podcast results
+    # Process podcast results with re-ranking when query is present
     if "podcast" in results_map:
         podcast_res = results_map["podcast"]
         if isinstance(podcast_res, BaseException):
             podcast_res = empty_result
-        final_results["podcast"] = [parse_doc(doc) for doc in podcast_res.docs][:limit]
+        parsed_podcasts = [parse_doc(doc) for doc in podcast_res.docs]
+        # Re-rank: exact title matches first, then by recency/episodes/popularity
+        if q:
+            parsed_podcasts = sorted(parsed_podcasts, key=lambda p: _rank_podcast_result(p, q))
+        final_results["podcast"] = parsed_podcasts[:limit]
 
     # Process author results
     if "author" in results_map:
