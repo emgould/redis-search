@@ -18,6 +18,7 @@ from typing import Any, Literal
 import yaml  # type: ignore[import-untyped]
 
 from adapters.config import load_env
+from etl.bestseller_author_etl import BestsellerETLStats
 from etl.etl_metadata import (
     ETLMetadataStore,
     ETLRunMetadata,
@@ -260,7 +261,7 @@ class ETLRunner:
             # Handle different ETL types
             if job.target == "pi_nightly_etl":
                 # PodcastIndex ETL - doesn't use media_type/dates, uses since_hours
-                stats: ChangesETLStats | PIETLStats = await etl_func(
+                stats: ChangesETLStats | PIETLStats | BestsellerETLStats = await etl_func(
                     media_type="podcast",
                     redis_host=self.config.redis_host,
                     redis_port=self.config.redis_port,
@@ -305,8 +306,10 @@ class ETLRunner:
 
             # Collect all errors - bestseller ETL also has search_phase
             all_errors = stats.fetch_phase.errors + stats.load_phase.errors
-            if hasattr(stats, "search_phase"):
-                all_errors = stats.fetch_phase.errors + stats.search_phase.errors + stats.load_phase.errors
+            if isinstance(stats, BestsellerETLStats):
+                all_errors = (
+                    stats.fetch_phase.errors + stats.search_phase.errors + stats.load_phase.errors
+                )
             result.errors_count = len(all_errors)
             result.errors = all_errors
 
@@ -318,6 +321,7 @@ class ETLRunner:
 
         except Exception as e:
             import traceback
+
             result.status = "failed"
             result.error_message = str(e)
             result.errors.append(str(e))
@@ -563,7 +567,6 @@ async def run_single_etl(
     redis_port: int | None = None,
     redis_password: str | None = None,
     verbose: bool = False,
-    stats: ChangesETLStats | None = None,
 ) -> ChangesETLStats:
     """
     Run a single ETL job directly without YAML config.
@@ -578,7 +581,6 @@ async def run_single_etl(
         redis_port: Redis port (defaults to env)
         redis_password: Redis password (defaults to env)
         verbose: Enable verbose logging
-        stats: Optional pre-created stats object (for progress tracking)
 
     Returns:
         ChangesETLStats with results
@@ -602,5 +604,4 @@ async def run_single_etl(
         redis_port=port,
         redis_password=password,
         verbose=verbose,
-        stats=stats,
     )
