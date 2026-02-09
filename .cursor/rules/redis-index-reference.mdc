@@ -1,0 +1,566 @@
+---
+description: Reference documentation for Redis Search indexes, schemas, and document structures
+globs: ["**/build_redis_index.py", "**/etl*.py", "**/normalize.py", "**/load_*_index.py"]
+alwaysApply: false
+---
+
+# Redis Search Index Reference
+
+## Overview
+
+The application uses RediSearch (Redis Stack) with JSON documents for full-text search and autocomplete. Documents are stored as JSON and indexed using FT.CREATE with JSONPath field definitions.
+
+**Redis Configuration:**
+- Default Port: `6380`
+- JSON Storage: Documents stored as JSON at key prefix
+- Index Type: `IndexType.JSON`
+
+## Index Summary
+
+| Index Name | Key Prefix | Source(s) | Content Type |
+|------------|------------|-----------|--------------|
+| `idx:media` | `media:` | TMDB | Movies, TV Shows |
+| `idx:people` | `person:` | TMDB | Actors, Directors |
+| `idx:podcasts` | `podcast:` | PodcastIndex | Podcasts |
+| `idx:book` | `book:` | OpenLibrary | Books |
+| `idx:author` | `author:` | OpenLibrary + Wikidata | Authors |
+
+---
+
+## 1. Media Index (`idx:media`)
+
+**Key Format:** `media:tmdb_{movie|tv}_{tmdb_id}`
+
+**Example Keys:**
+- `media:tmdb_movie_550` (Fight Club)
+- `media:tmdb_tv_1396` (Breaking Bad)
+
+### Schema (Indexed Fields)
+
+| Field | Type | Weight | Description |
+|-------|------|--------|-------------|
+| `search_title` | TEXT | 5.0 | Primary search field - title |
+| `mc_type` | TAG | - | Content type: `movie` or `tv` |
+| `mc_subtype` | TAG | - | Subtype (rarely used for media) |
+| `spoken_language` | TAG | - | Primary spoken language |
+| `source` | TAG | - | Data source: `tmdb` |
+| `genre_ids[*]` | TAG | - | TMDB genre IDs as strings (e.g., "35", "18") |
+| `genres[*]` | TAG | - | Genre names normalized (e.g., `comedy`, `science_fiction`) |
+| `cast_ids[*]` | TAG | - | TMDB person IDs for cast members |
+| `cast_names[*]` | TAG | - | Cast names normalized (e.g., `tom_hanks`) |
+| `director_id` | TAG | - | TMDB person ID for director |
+| `director_name` | TAG | - | Director name normalized (e.g., `christopher_nolan`) |
+| `keywords[*]` | TAG | - | Keywords with IPTC expansion, normalized |
+| `origin_country[*]` | TAG | - | ISO country codes normalized (e.g., `us`, `gb`) |
+| `popularity` | NUMERIC | sortable | TMDB popularity score |
+| `rating` | NUMERIC | sortable | TMDB vote average (0-10) |
+| `year` | NUMERIC | sortable | Release year |
+
+### Document Structure (Stored Fields)
+
+```json
+{
+  "id": "tmdb_movie_550",
+  "search_title": "Fight Club",
+  "mc_type": "movie",
+  "mc_subtype": null,
+  "source": "tmdb",
+  "source_id": "550",
+  "year": 1999,
+  "popularity": 75.32,
+  "rating": 8.4,
+  "image": "https://image.tmdb.org/t/p/w185/...",
+  "overview": "A ticking-Loss disillusioned man...",
+  "genre_ids": ["18", "53", "35"],
+  "genres": ["drama", "thriller", "comedy"],
+  "cast_ids": ["819", "287", "11614"],
+  "cast_names": ["edward_norton", "brad_pitt", "helena_bonham_carter"],
+  "cast": ["Edward Norton", "Brad Pitt", "Helena Bonham Carter"],
+  "director_id": "7467",
+  "director_name": "david_fincher",
+  "keywords": ["dual_identity", "nihilism", "support_group", "insomnia"],
+  "origin_country": ["us"]
+}
+```
+
+**Display-Only Fields (NOT indexed):**
+- `image` - Poster/backdrop URL
+- `overview` - Truncated description
+- `cast` - Original cast names (not normalized) for display
+
+---
+
+## 2. People Index (`idx:people`)
+
+**Key Format:** `person:tmdb_person_{tmdb_id}`
+
+**Example Keys:**
+- `person:tmdb_person_287` (Brad Pitt)
+- `person:tmdb_person_17419` (Bryan Cranston)
+
+### Schema (Indexed Fields)
+
+| Field | Type | Weight | Description |
+|-------|------|--------|-------------|
+| `search_title` | TEXT | 5.0 | Person's name |
+| `also_known_as` | TEXT | 3.0 | Alternate names, pipe-separated |
+| `mc_type` | TAG | - | Always `person` |
+| `mc_subtype` | TAG | - | Role: `actor`, `director`, `writer`, etc. |
+| `source` | TAG | - | Data source: `tmdb` |
+| `popularity` | NUMERIC | sortable | TMDB popularity score |
+
+### Document Structure (Stored Fields)
+
+```json
+{
+  "id": "tmdb_person_287",
+  "search_title": "Brad Pitt",
+  "mc_type": "person",
+  "mc_subtype": "actor",
+  "source": "tmdb",
+  "source_id": "287",
+  "popularity": 45.67,
+  "rating": 0.0,
+  "year": null,
+  "image": "https://image.tmdb.org/t/p/w185/...",
+  "overview": "William Bradley Pitt is an American actor...",
+  "also_known_as": "William Bradley Pitt | 布拉德·皮特",
+  "known_for_department": "Acting",
+  "birthday": "1963-12-18",
+  "deathday": null,
+  "place_of_birth": "Shawnee, Oklahoma, USA",
+  "age": 62,
+  "is_deceased": false,
+  "known_for_titles": ["Fight Club", "Troy", "Ocean's Eleven"]
+}
+```
+
+---
+
+## 3. Podcasts Index (`idx:podcasts`)
+
+**Key Format:** `podcast:podcastindex_podcast_{feed_id}`
+
+**Example Keys:**
+- `podcast:podcastindex_podcast_920666`
+- `podcast:podcastindex_podcast_75075`
+
+### Schema (Indexed Fields)
+
+| Field | Type | Weight | Description |
+|-------|------|--------|-------------|
+| `search_title` | TEXT | 5.0 | Podcast title |
+| `author` | TEXT | 3.0 | Author/creator name (full-text) |
+| `author_normalized` | TAG | - | Author name normalized for exact match |
+| `mc_type` | TAG | - | Always `podcast` |
+| `source` | TAG | - | Always `podcastindex` |
+| `id` | TAG | - | mc_id for exact lookup |
+| `language` | TAG | - | Language code normalized (e.g., `en`, `es`) |
+| `categories[*]` | TAG | - | IPTC-expanded categories normalized |
+| `popularity` | NUMERIC | sortable | Computed popularity (0-100) |
+| `episode_count` | NUMERIC | sortable | Number of episodes |
+
+### Document Structure (Stored Fields)
+
+```json
+{
+  "id": "podcastindex_podcast_920666",
+  "search_title": "The Joe Rogan Experience",
+  "mc_type": "podcast",
+  "mc_subtype": null,
+  "source": "podcastindex",
+  "source_id": "920666",
+  "year": null,
+  "popularity": 87.5,
+  "rating": 0.0,
+  "image": "https://...",
+  "overview": "The official podcast of comedian Joe Rogan...",
+  "title": "The Joe Rogan Experience",
+  "url": "https://...",
+  "site": "https://...",
+  "author": "Joe Rogan",
+  "author_normalized": "joe_rogan",
+  "owner_name": "Joe Rogan",
+  "language": "en",
+  "categories": ["comedy", "society", "culture", "entertainment"],
+  "episode_count": 2100,
+  "itunes_id": 360084272,
+  "podcast_guid": "...",
+  "popularity_score": 29,
+  "last_update_time": "2024-01-15T10:30:00Z"
+}
+```
+
+**Popularity Calculation:**
+```python
+# PodcastIndex popularityScore is 0-29
+pop_normalized = min(popularity_score * 3.5, 100)
+episode_score = min(log10(episode_count + 1) * 20, 50)
+combined = (pop_normalized * 0.7) + (episode_score * 0.3)
+```
+
+---
+
+## 4. Books Index (`idx:book`)
+
+**Key Format:** `book:book_{openlibrary_key}`
+
+**Example Keys:**
+- `book:book_OL45804W` (The Hobbit)
+- `book:book_9780140283334` (ISBN-based)
+
+### Schema (Indexed Fields)
+
+| Field | Type | Weight | Description |
+|-------|------|--------|-------------|
+| `search_title` | TEXT | 5.0 | Book title for search |
+| `title` | TEXT | 4.0 | Original title |
+| `author_search` | TEXT | 3.0 | Author names joined for search |
+| `author` | TEXT | 2.0 | Primary author name |
+| `description` | TEXT | 1.0 | Book description |
+| `subjects_search` | TEXT | 1.0 | First 10 subjects joined |
+| `mc_type` | TAG | - | Always `book` |
+| `source` | TAG | - | Always `openlibrary` |
+| `openlibrary_key` | TAG | - | OpenLibrary work key |
+| `primary_isbn13` | TAG | - | Primary ISBN-13 |
+| `primary_isbn10` | TAG | - | Primary ISBN-10 |
+| `author_olids[*]` | TAG | - | Author OpenLibrary IDs (enables books-by-author) |
+| `cover_available` | TAG | - | "true" or "false" |
+| `author_normalized` | TAG | - | Author name normalized for exact match |
+| `subjects_normalized[*]` | TAG | - | Subjects normalized with IPTC expansion |
+| `first_publish_year` | NUMERIC | sortable | First publication year |
+| `ratings_average` | NUMERIC | sortable | Average rating |
+| `ratings_count` | NUMERIC | sortable | Number of ratings |
+| `readinglog_count` | NUMERIC | sortable | Users with book in reading log |
+| `number_of_pages` | NUMERIC | sortable | Page count |
+| `popularity_score` | NUMERIC | sortable | Computed popularity |
+| `edition_count` | NUMERIC | sortable | Number of editions |
+
+### Document Structure (Stored Fields)
+
+```json
+{
+  "id": "book_OL45804W",
+  "key": "OL45804W",
+  "source_id": "OL45804W",
+  "search_title": "The Hobbit",
+  "title": "The Hobbit, or There and Back Again",
+  "description": "Bilbo Baggins, a respectable, well-to-do hobbit...",
+  "author": "J.R.R. Tolkien",
+  "author_name": ["J.R.R. Tolkien"],
+  "author_search": "J.R.R. Tolkien",
+  "matching_author_olids": ["OL26320A"],
+  "author_olids": ["OL26320A"],
+  "author_normalized": "j_r_r_tolkien",
+  "mc_type": "book",
+  "source": "openlibrary",
+  "openlibrary_key": "OL45804W",
+  "openlibrary_url": "https://openlibrary.org/works/OL45804W",
+  "isbn": ["9780395071229", "9780618260300"],
+  "primary_isbn13": "9780618260300",
+  "primary_isbn10": "0618260307",
+  "first_publish_year": 1937,
+  "publisher": "Houghton Mifflin",
+  "subject": ["Fantasy", "Middle Earth", "Hobbits"],
+  "subjects": ["Fantasy", "Middle Earth", "Hobbits"],
+  "subjects_search": "Fantasy Middle Earth Hobbits",
+  "subjects_normalized": ["fantasy", "middle_earth", "hobbits"],
+  "language": "eng",
+  "cover_i": 8259447,
+  "cover_available": "true",
+  "cover_urls": {
+    "S": "https://covers.openlibrary.org/b/id/8259447-S.jpg",
+    "M": "https://covers.openlibrary.org/b/id/8259447-M.jpg",
+    "L": "https://covers.openlibrary.org/b/id/8259447-L.jpg"
+  },
+  "book_image": "https://covers.openlibrary.org/b/id/8259447-M.jpg",
+  "image": "https://covers.openlibrary.org/b/id/8259447-M.jpg",
+  "ratings_average": 4.28,
+  "ratings_count": 12500,
+  "readinglog_count": 45000,
+  "number_of_pages": 310,
+  "edition_count": 847,
+  "popularity_score": 92.5
+}
+```
+
+---
+
+## 5. Authors Index (`idx:author`)
+
+**Key Format:** `author:author_{openlibrary_key}`
+
+**Example Keys:**
+- `author:author_OL26320A` (J.R.R. Tolkien)
+- `author:author_OL23919A` (Stephen King)
+
+### Schema (Indexed Fields)
+
+| Field | Type | Weight | Description |
+|-------|------|--------|-------------|
+| `search_title` | TEXT | 5.0 | Author name |
+| `name` | TEXT | 4.0 | Author name (duplicate for fallback) |
+| `bio` | TEXT | 1.0 | Biography text |
+| `mc_type` | TAG | - | Always `person` |
+| `mc_subtype` | TAG | - | Always `author` |
+| `source` | TAG | - | Always `openlibrary` |
+| `wikidata_id` | TAG | - | Wikidata entity ID (e.g., Q892) |
+| `openlibrary_key` | TAG | - | OpenLibrary author key |
+| `work_count` | NUMERIC | sortable | Number of works |
+| `quality_score` | NUMERIC | sortable | Wikidata enrichment quality |
+| `birth_year` | NUMERIC | sortable | Birth year from Wikidata |
+
+### Document Structure (Stored Fields)
+
+```json
+{
+  "id": "author_OL26320A",
+  "key": "OL26320A",
+  "source_id": "OL26320A",
+  "search_title": "J.R.R. Tolkien",
+  "name": "J.R.R. Tolkien",
+  "bio": "John Ronald Reuel Tolkien was an English writer...",
+  "mc_type": "person",
+  "mc_subtype": "author",
+  "source": "openlibrary",
+  "birth_date": "1892-01-03",
+  "death_date": "1973-09-02",
+  "remote_ids": {
+    "wikidata": "Q892",
+    "viaf": "95218067"
+  },
+  "openlibrary_key": "OL26320A",
+  "openlibrary_url": "https://openlibrary.org/authors/OL26320A",
+  "work_count": 127,
+  "quality_score": 95,
+  "wikidata_id": "Q892",
+  "wikidata_name": "J. R. R. Tolkien",
+  "wikidata_birth_year": 1892,
+  "image": "https://...",
+  "images": [...],
+  "photo_urls": {
+    "openlibrary": "https://covers.openlibrary.org/a/olid/OL26320A-M.jpg",
+    "wikidata": "https://..."
+  },
+  "author_links": [...]
+}
+```
+
+---
+
+## Normalization
+
+### Tag Normalization
+
+All TAG fields are normalized using `normalize_tag()`:
+
+```python
+def normalize_tag(value: str) -> str:
+    """
+    - Lowercase
+    - Strip whitespace
+    - Replace spaces and special characters with underscore
+    - Remove leading/trailing underscores
+    
+    Examples:
+        "Science Fiction" -> "science_fiction"
+        "Tom Hanks" -> "tom_hanks"
+        "US" -> "us"
+        "R&B" -> "r_b"
+    """
+```
+
+### IPTC Keyword Expansion
+
+Keywords and categories are expanded using IPTC Media Topic aliases:
+
+```python
+# Input keyword
+{"name": "time travel"}
+
+# Output (expanded and normalized)
+["time_travel", "temporal_displacement", "chrononautics"]
+```
+
+This enables queries like "AI" to match documents tagged with "artificial_intelligence", "machine_intelligence", etc.
+
+---
+
+## SearchDocument Model
+
+The core `SearchDocument` dataclass defines the canonical structure for all indexed content:
+
+```python
+@dataclass
+class SearchDocument:
+    # Indexed fields
+    id: str                    # mc_id - Unique identifier
+    search_title: str          # Primary searchable title
+    mc_type: MCType            # Content type enum
+    mc_subtype: MCSubType | None
+    source: MCSources          # Data source enum
+    source_id: str             # Original ID from source
+    
+    # Sortable/filterable
+    year: int | None
+    popularity: float          # Normalized 0-100
+    rating: float              # 0-10 scale
+    
+    # Display fields (stored, not indexed)
+    image: str | None
+    overview: str | None
+    
+    # Genre fields (normalized)
+    genre_ids: list[str]
+    genres: list[str]
+    
+    # Cast fields (normalized)
+    cast_ids: list[str]
+    cast_names: list[str]      # Normalized for TAG
+    cast: list[str]            # Original for display
+    
+    # Director (normalized)
+    director_id: str | None
+    director_name: str | None
+    
+    # Keywords (IPTC expanded, normalized)
+    keywords: list[str]
+    
+    # Origin country (normalized)
+    origin_country: list[str]
+    
+    # Person-specific
+    also_known_as: str | None
+```
+
+---
+
+## MC Types and Sources
+
+### MCType Enum (Content Types)
+
+| Value | Description |
+|-------|-------------|
+| `movie` | Feature films |
+| `tv` | TV series |
+| `podcast` | Podcast shows |
+| `podcast_episode` | Individual episodes |
+| `book` | Books |
+| `person` | People (actors, authors, etc.) |
+| `news_article` | News articles |
+| `youtube_video` | YouTube videos |
+| `music_album` | Music albums |
+
+### MCSubType Enum (Person Subtypes)
+
+| Value | Description |
+|-------|-------------|
+| `actor` | Film/TV actor |
+| `director` | Film/TV director |
+| `writer` | Screenwriter |
+| `producer` | Film/TV producer |
+| `author` | Book author |
+| `podcaster` | Podcast host |
+| `music_artist` | Musician |
+| `youtube_creator` | YouTube creator |
+
+### MCSources Enum (Data Sources)
+
+| Value | Description |
+|-------|-------------|
+| `tmdb` | The Movie Database |
+| `podcastindex` | Podcast Index |
+| `openlibrary` | Open Library |
+| `spotify` | Spotify (music) |
+| `youtube` | YouTube |
+| `rottentomatoes` | Rotten Tomatoes (ratings) |
+
+---
+
+## ETL Pipelines
+
+### Media ETL (TMDB)
+- **Source:** TMDB API daily exports
+- **Process:** `TMDBETLService`, `TMDBChangesETL`
+- **Schedule:** Nightly incremental updates via changes API
+- **Files:** `data/us/movies/`, `data/us/tv/`
+
+### Podcast ETL (PodcastIndex)
+- **Source:** PodcastIndex SQLite database dump
+- **Process:** `PodcastIndexNightlyETL`
+- **Schedule:** Nightly full refresh
+- **File:** Downloaded `.tgz` → extracted SQLite
+
+### Books ETL (OpenLibrary)
+- **Source:** OpenLibrary data dumps (JSONL)
+- **Process:** `load_books_to_redis()`, `load_authors_to_redis()`
+- **Schedule:** Manual/periodic bulk loads
+- **Files:** `data/openlibrary/mc_books.jsonl`, `mc_authors.jsonl`
+
+### People ETL (TMDB)
+- **Source:** TMDB popular people export
+- **Process:** `PersonETLService`
+- **Schedule:** Periodic enrichment runs
+- **File:** `data/us/persons/`
+
+---
+
+## Index Management
+
+### Creating Indexes
+
+```python
+# Media index
+await r.ft("idx:media").create_index(schema, IndexDefinition(prefix=["media:"]))
+
+# People index  
+await r.ft("idx:people").create_index(schema, IndexDefinition(prefix=["person:"]))
+```
+
+### Dropping Indexes
+
+```python
+# Drop index only (keep documents)
+await r.ft("idx:media").dropindex(delete_documents=False)
+
+# Drop index AND delete documents
+await r.ft("idx:author").dropindex(delete_documents=True)
+```
+
+### Index Info
+
+```python
+info = await r.ft("idx:media").info()
+num_docs = info.get("num_docs")
+indexing = info.get("indexing")
+```
+
+---
+
+## Query Examples
+
+### Full-Text Search
+```redis
+FT.SEARCH idx:media "@search_title:breaking bad"
+```
+
+### Tag Filter
+```redis
+FT.SEARCH idx:media "@mc_type:{movie} @genres:{science_fiction}"
+```
+
+### Numeric Range
+```redis
+FT.SEARCH idx:media "@year:[2020 2024] @rating:[7 10]"
+```
+
+### Combined
+```redis
+FT.SEARCH idx:media "@search_title:action @mc_type:{movie} @year:[2020 +inf]" 
+  SORTBY popularity DESC LIMIT 0 10
+```
+
+### Books by Author OLID
+```redis
+FT.SEARCH idx:book "@author_olid:{OL26320A}"
+```

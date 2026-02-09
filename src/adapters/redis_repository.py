@@ -16,7 +16,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
-        sort_by: str = "popularity",
+        sort_by: str | None = "popularity",
         sort_asc: bool = False,
     ):
         """
@@ -25,12 +25,13 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
-            sort_by: Field to sort by (popularity, rating, year)
+            sort_by: Field to sort by (popularity, rating, year), or None for query relevance
             sort_asc: Sort ascending if True, descending if False
         """
         query = Query(query_str).paging(0, limit)
 
         # Sort by the specified field (default: popularity descending)
+        # Pass sort_by=None to use query relevance scoring instead
         if sort_by:
             query = query.sort_by(sort_by, asc=sort_asc)
 

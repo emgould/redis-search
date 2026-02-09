@@ -450,7 +450,8 @@ async def api_search(
         default="any", description="Genre matching: 'any' (OR, default) or 'all' (AND)"
     ),
     cast_ids: str | None = Query(
-        default=None, description="Comma-separated TMDB person IDs (e.g., 287,1461 for Brad Pitt, George Clooney)"
+        default=None,
+        description="Comma-separated TMDB person IDs (e.g., 287,1461 for Brad Pitt, George Clooney)",
     ),
     cast_match: str = Query(
         default="any", description="Cast matching: 'any' (OR, default) or 'all' (AND)"
@@ -463,9 +464,7 @@ async def api_search(
     rating_max: float | None = Query(
         default=None, ge=0, le=10, description="Maximum rating (0-10)"
     ),
-    mc_type: str | None = Query(
-        default=None, description="Filter by media type: movie, tv"
-    ),
+    mc_type: str | None = Query(default=None, description="Filter by media type: movie, tv"),
     ratings_sort: str | None = Query(
         default=None,
         description="Sort order for ratings results when ratings source is requested with tv/movie. "
@@ -2681,19 +2680,20 @@ INDEX_CONFIGS = {
         "schema": (
             # Primary search field with high weight
             TextField("$.search_title", as_name="search_title", weight=5.0),
-            # Author/creator name - searchable
+            # Author/creator name - searchable (full-text)
             TextField("$.author", as_name="author", weight=3.0),
+            # Author normalized for exact TAG matching
+            TagField("$.author_normalized", as_name="author_normalized"),
             # Content type filter
             TagField("$.mc_type", as_name="mc_type"),
             # Source filter
             TagField("$.source", as_name="source"),
             # mc_id from SearchDocument.id
             TagField("$.id", as_name="id"),
-            # Language filter
+            # Language filter (normalized)
             TagField("$.language", as_name="language"),
-            # Category filters
-            TagField("$.categories.1", as_name="category1"),
-            TagField("$.categories.2", as_name="category2"),
+            # Categories array (normalized, IPTC-expanded)
+            TagField("$.categories[*]", as_name="categories"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),
@@ -2728,12 +2728,12 @@ INDEX_CONFIGS = {
             # Primary search field (title) with high weight
             TextField("$.search_title", as_name="search_title", weight=5.0),
             TextField("$.title", as_name="title", weight=4.0),
-            # Author search
+            # Author search (TEXT fields)
             TextField("$.author_search", as_name="author_search", weight=3.0),
             TextField("$.author", as_name="author", weight=2.0),
             # Description - searchable but lower weight
             TextField("$.description", as_name="description", weight=1.0),
-            # Subject search
+            # Subject search (TEXT field)
             TextField("$.subjects_search", as_name="subjects_search", weight=1.0),
             # Type filters
             TagField("$.mc_type", as_name="mc_type"),
@@ -2742,14 +2742,21 @@ INDEX_CONFIGS = {
             TagField("$.openlibrary_key", as_name="openlibrary_key"),
             TagField("$.primary_isbn13", as_name="primary_isbn13"),
             TagField("$.primary_isbn10", as_name="primary_isbn10"),
+            TagField("$.author_olids[*]", as_name="author_olid"),
             # Boolean fields
             TagField("$.cover_available", as_name="cover_available"),
+            # NEW: Normalized TAG fields for exact matching
+            TagField("$.author_normalized", as_name="author_normalized"),
+            TagField("$.subjects_normalized[*]", as_name="subjects"),
             # Sortable numeric fields
             NumericField("$.first_publish_year", as_name="first_publish_year", sortable=True),
             NumericField("$.ratings_average", as_name="ratings_average", sortable=True),
             NumericField("$.ratings_count", as_name="ratings_count", sortable=True),
             NumericField("$.readinglog_count", as_name="readinglog_count", sortable=True),
             NumericField("$.number_of_pages", as_name="number_of_pages", sortable=True),
+            # NEW: Popularity fields
+            NumericField("$.popularity_score", as_name="popularity_score", sortable=True),
+            NumericField("$.edition_count", as_name="edition_count", sortable=True),
         ),
     },
 }

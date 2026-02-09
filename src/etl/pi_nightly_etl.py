@@ -46,6 +46,7 @@ from redis.asyncio import Redis
 
 from adapters.config import load_env
 from contracts.models import MCSources, MCType
+from core.iptc import expand_keywords, normalize_tag
 from core.normalize import SearchDocument, document_to_redis
 from utils.get_logger import get_logger
 
@@ -260,16 +261,30 @@ class PodcastIndexNightlyETL:
 
         return round(combined, 2)
 
-    def _build_categories_dict(self, row: sqlite3.Row) -> dict[str, str]:
-        """Build categories dictionary from category1-10 fields."""
-        categories = {}
+    def _build_categories_array(self, row: sqlite3.Row) -> list[str]:
+        """
+        Build normalized and IPTC-expanded categories array from category1-10 fields.
+
+        Extracts all non-empty categories, normalizes them, and expands using IPTC aliases.
+        """
+        raw_categories: list[str] = []
         row_keys = row.keys()
         for i in range(1, 11):
             cat_key = f"category{i}"
             cat_value = row[cat_key] if cat_key in row_keys else ""
             if cat_value and str(cat_value).strip():
-                categories[str(i)] = str(cat_value).strip()
-        return categories
+                raw_categories.append(str(cat_value).strip())
+
+        if not raw_categories:
+            return []
+
+        # Convert to IPTC keyword format for expansion
+        # IPTC expand_keywords expects [{"name": "category"}, ...]
+        keyword_dicts: list[dict[str, str]] = [{"name": cat} for cat in raw_categories]
+
+        # expand_keywords normalizes and expands with IPTC aliases
+        expanded: list[str] = expand_keywords(keyword_dicts)
+        return expanded
 
     def _row_to_search_document(self, row: sqlite3.Row) -> SearchDocument:
         """Convert SQLite row to SearchDocument."""
@@ -315,8 +330,14 @@ class PodcastIndexNightlyETL:
         redis_doc["site"] = row["link"]
         redis_doc["author"] = row["itunesAuthor"] or None
         redis_doc["owner_name"] = row["itunesOwnerName"] or None
-        redis_doc["language"] = row["language"] or None
-        redis_doc["categories"] = self._build_categories_dict(row)
+        # Normalize language for consistent filtering
+        raw_language = row["language"] or ""
+        redis_doc["language"] = normalize_tag(raw_language) if raw_language else None
+        # Normalized and IPTC-expanded categories array
+        redis_doc["categories"] = self._build_categories_array(row)
+        # Normalized author for exact TAG matching
+        raw_author = row["itunesAuthor"] or ""
+        redis_doc["author_normalized"] = normalize_tag(raw_author) if raw_author else None
         redis_doc["episode_count"] = row["episodeCount"] or 0
         redis_doc["itunes_id"] = row["itunesId"] or None
         redis_doc["podcast_guid"] = row["podcastGuid"] or None

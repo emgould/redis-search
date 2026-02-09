@@ -788,7 +788,7 @@ Shows{% endblock %} {% block body %}
           </div>
           ${hasMore
             ? `
-            <button onclick="toggleCategoryExpand('${category.key}')" 
+            <button type="button" onclick="event.stopPropagation(); toggleCategoryExpand('${category.key}')" 
                     class="expand-toggle-btn w-full py-2 text-sm text-${category.color
             }-400 hover:text-${category.color
             }-300 hover:bg-surface-800/50 transition-colors flex items-center justify-center gap-1">
@@ -3387,6 +3387,10 @@ Shows{% endblock %} {% block body %}
 
   // Add click handler to results via event delegation
   resultsList.addEventListener("click", (e) => {
+    // Ignore clicks on expand/collapse buttons
+    if (e.target.closest(".expand-toggle-btn")) {
+      return;
+    }
     const resultItem = e.target.closest("[data-media-id]");
     if (resultItem) {
       const mediaId = resultItem.dataset.mediaId;

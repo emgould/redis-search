@@ -149,22 +149,6 @@ async def count_keys_by_prefix(redis: Redis, prefix: str) -> int:
     return count
 
 
-async def delete_keys_by_prefix(redis: Redis, prefix: str) -> int:
-    """Delete all keys matching a prefix. Returns count deleted."""
-    keys = await scan_keys_by_prefix(redis, prefix)
-    if not keys:
-        return 0
-
-    deleted = 0
-    batch_size = 100
-    for i in range(0, len(keys), batch_size):
-        batch = keys[i : i + batch_size]
-        await redis.delete(*batch)
-        deleted += len(batch)
-
-    return deleted
-
-
 def build_schema_from_fields(fields: list[dict]) -> list[Field]:
     """Reconstruct Redis schema from field definitions."""
     schema: list[Field] = []
@@ -188,10 +172,16 @@ def build_schema_from_fields(fields: list[dict]) -> list[Field]:
     return schema
 
 
-async def drop_index_safe(redis: Redis, index_name: str) -> bool:
-    """Drop an index if it exists. Returns True if dropped."""
+async def drop_index_safe(redis: Redis, index_name: str, delete_documents: bool = True) -> bool:
+    """Drop an index if it exists. Returns True if dropped.
+
+    Args:
+        redis: Redis connection
+        index_name: Name of the index to drop
+        delete_documents: If True, also delete all documents with the index prefix (DD flag)
+    """
     try:
-        await redis.ft(index_name).dropindex(delete_documents=False)
+        await redis.ft(index_name).dropindex(delete_documents=delete_documents)
         return True
     except Exception as e:
         if "Unknown index name" in str(e) or "Unknown Index name" in str(e):
@@ -274,10 +264,9 @@ async def copy_index(
     Copy a single index from source (public) to target (local).
 
     This performs a complete replacement:
-    1. Delete all documents with the prefix on target
-    2. Drop the index on target (if exists)
-    3. Recreate the index on target with same schema
-    4. Copy all documents from source to target
+    1. Drop the index on target with DD flag (deletes index and all documents)
+    2. Recreate the index on target with same schema
+    3. Copy all documents from source to target
 
     Returns dict with results.
     """
@@ -287,7 +276,6 @@ async def copy_index(
         "prefix": index_info.prefix,
         "success": False,
         "source_docs": 0,
-        "target_docs_deleted": 0,
         "docs_copied": 0,
         "errors": 0,
         "error_messages": [],
@@ -302,23 +290,17 @@ async def copy_index(
 
         if dry_run:
             target_count = await count_keys_by_prefix(target, prefix)
-            print(f"      Would delete {target_count:,} documents from target")
-            print(f"      Would drop and recreate index '{index_info.redis_name}'")
+            print(f"      Would drop index and delete {target_count:,} documents from target")
+            print(f"      Would recreate index '{index_info.redis_name}'")
             print(f"      Would copy {source_count:,} documents")
-            result["target_docs_deleted"] = target_count
             result["docs_copied"] = source_count
             result["success"] = True
             return result
 
-        print("      Deleting target documents...")
-        deleted = await delete_keys_by_prefix(target, prefix)
-        result["target_docs_deleted"] = deleted
-        print(f"      Deleted {deleted:,} documents")
-
-        print("      Dropping target index...")
-        dropped = await drop_index_safe(target, index_info.redis_name)
+        print("      Dropping target index (with documents)...")
+        dropped = await drop_index_safe(target, index_info.redis_name, delete_documents=True)
         if dropped:
-            print("      Index dropped")
+            print("      Index and documents dropped")
         else:
             print("      Index did not exist")
 

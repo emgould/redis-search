@@ -14,19 +14,26 @@ Usage:
 import argparse
 import asyncio
 import json
+import os
 import sys
 from calendar import monthrange
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from api.tmdb.core import TMDBService
-from api.tmdb.models import MCTvItem
-from contracts.models import MCType
-from utils.get_logger import get_logger
+# Load environment variables before importing from src
+env_file = os.getenv("ENV_FILE", "config/local.env")
+load_dotenv(Path(__file__).parent.parent / env_file)
+
+from api.tmdb.core import TMDBService  # noqa: E402
+from api.tmdb.models import MCTvItem  # noqa: E402
+from contracts.models import MCType  # noqa: E402
+from utils.get_logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
 BATCH_SIZE = 15
