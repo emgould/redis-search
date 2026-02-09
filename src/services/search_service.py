@@ -16,12 +16,20 @@ from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import get_person_credits_async
 from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
-from core.ranking import score_media_result, score_person_result
+from core.iptc import expand_query_string, get_search_aliases
+from core.ranking import (
+    score_book_result,
+    score_media_result,
+    score_person_result,
+    score_podcast_result,
+)
 from core.search_queries import (
     build_autocomplete_query,
+    build_books_autocomplete_query,
     build_filter_query,
     build_fuzzy_fulltext_query,
     escape_redis_search_term,
+    normalize_for_tag,
 )
 from utils.get_logger import get_logger
 from utils.soft_comparison import is_autocomplete_match
@@ -47,54 +55,28 @@ def _rank_media_result(media: dict, query: str) -> tuple[int, int, float]:
     return result
 
 
-def _rank_podcast_result(podcast: dict, query: str) -> tuple[int, float, int, float]:
+def _rank_podcast_result(podcast: dict, query: str) -> tuple[int, float, int]:
     """
     Generate a sort key for ranking podcast results.
+    Delegates to score_podcast_result from core.ranking.
 
-    Prioritizes:
-    1. Exact title matches ALWAYS come first
-    2. Among exact matches, most recent (by last_update_time) comes first
-    3. Episode count as secondary signal (more episodes = more established)
-    4. Popularity breaks remaining ties
-
-    Returns tuple for sorting: (match_type, -recency_ts, -episode_count, -popularity)
-    - match_type: 0 = exact match, 1 = non-exact
-    - -recency_ts: more recent updates rank higher (negative for ascending sort)
-    - -episode_count: more episodes rank higher (negative for ascending sort)
-    - -popularity: higher popularity ranks higher (negative for ascending sort)
+    Uses tiered scoring based on match quality across title, author, and categories.
+    Within each tier, sorted by popularity (desc), then episode_count (desc).
     """
-    title = (podcast.get("search_title", "") or podcast.get("title", "") or "").lower().strip()
-    query_lower = query.lower().strip()
-    popularity = float(podcast.get("popularity_score", 0) or 0)
-    episode_count = int(podcast.get("episode_count", 0) or 0)
+    result: tuple[int, float, int] = score_podcast_result(query, podcast)
+    return result
 
-    # Parse last_update_time to get recency timestamp
-    recency_ts = 0.0
-    last_update = podcast.get("last_update_time")
-    if last_update:
-        try:
-            from datetime import datetime
 
-            # Handle ISO format with or without timezone
-            date_str = str(last_update).strip()
-            if date_str.endswith("Z"):
-                date_str = date_str[:-1] + "+00:00"
-            elif "T" in date_str and "+" not in date_str and not date_str.endswith("Z"):
-                date_str = date_str + "+00:00"
+def _rank_book_result(book: dict, query: str) -> tuple[int, float, int]:
+    """
+    Generate a sort key for ranking book results.
+    Delegates to score_book_result from core.ranking.
 
-            if "T" in date_str:
-                recency_ts = datetime.fromisoformat(date_str).timestamp()
-            else:
-                recency_ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
-        except (ValueError, TypeError):
-            recency_ts = 0.0
-
-    # Exact match - highest priority, then by recency, episode count, then popularity
-    if title == query_lower:
-        return (0, -recency_ts, -episode_count, -popularity)
-
-    # Everything else - sorted by episode count then popularity
-    return (1, 0, -episode_count, -popularity)
+    Uses tiered scoring based on match quality across title, author, subjects, and description.
+    Within each tier, sorted by popularity_score (desc), then work_id (asc, lower = older/more established).
+    """
+    result: tuple[int, float, int] = score_book_result(query, book)
+    return result
 
 
 # Lazy initialization
@@ -224,15 +206,57 @@ def build_people_autocomplete_query(q: str) -> str:
         return f"({name_query}) | ({aka_query})"
 
 
-def build_podcasts_autocomplete_query(q: str) -> str:
+def _build_text_query_for_variation(
+    variation: str, stopwords: set[str]
+) -> tuple[str | None, str | None, bool]:
+    """
+    Build title and author queries for a single query variation.
+
+    Returns:
+        Tuple of (title_query, author_query, skip_author)
+    """
+    parts = variation.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w for w in words if w and w not in stopwords]
+
+    if not words:
+        return None, None, True
+
+    escaped_words = [escape_redis_search_term(w) for w in words]
+    query_len = len(escaped_words[0]) if len(escaped_words) == 1 else len(escaped_words[-1])
+    skip_author = query_len < 3
+
+    if len(escaped_words) == 1:
+        word = escaped_words[0]
+        if len(word) <= 3:
+            title_query = f"@search_title:{word}"
+        else:
+            title_query = f"@search_title:{word}*"
+        author_query = f"@author:{word}*" if not skip_author else None
+    else:
+        exact_words = " ".join(escaped_words[:-1])
+        last_word = escaped_words[-1]
+        if len(last_word) <= 3:
+            title_query = f"@search_title:({exact_words} {last_word})"
+        else:
+            title_query = f"@search_title:({exact_words} {last_word}*)"
+        author_query = f"@author:({exact_words} {last_word}*)" if not skip_author else None
+
+    return title_query, author_query, skip_author
+
+
+def build_podcasts_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     """
     Build a prefix search query for podcasts autocomplete.
-    Searches both search_title (podcast name) and author fields.
+
+    Searches:
+    - search_title (TEXT field with prefix matching)
+    - author (TEXT field with prefix matching)
+    - author_normalized (TAG field - matches podcast creator)
+    - categories (TAG field - matches podcast categories)
+
+    Supports query expansion for abbreviations (e.g., "NY Jets" -> also searches "New York Jets").
     """
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    # Filter out stopwords and empty strings
     stopwords = {
         "the",
         "a",
@@ -251,25 +275,45 @@ def build_podcasts_autocomplete_query(q: str) -> str:
         "podcast",
         "show",
     }
-    words = [w for w in words if w and w not in stopwords]
 
-    if not words:
+    # Get query variations (original + expanded)
+    # e.g., "NY Jets" -> ["NY Jets", "new york Jets"]
+    variations = expand_query_string(q)
+
+    query_parts: list[str] = []
+    any_skip_author = True  # Track if any variation allows author search
+
+    # Build TEXT field queries for each variation
+    for variation in variations:
+        title_query, author_query, skip_author = _build_text_query_for_variation(
+            variation, stopwords
+        )
+        if title_query:
+            query_parts.append(f"({title_query})")
+        if author_query:
+            query_parts.append(f"({author_query})")
+            any_skip_author = False
+        elif not skip_author:
+            any_skip_author = False
+
+    if not query_parts:
         return "*"
 
-    # Escape special characters in search terms
-    escaped_words = [escape_redis_search_term(w) for w in words]
+    # Add TAG field queries for union search (use original query for normalization)
+    if include_tag_fields:
+        normalized_full = normalize_for_tag(q)
+        use_prefix = len(normalized_full) > 3
+        if normalized_full and len(normalized_full) >= 2:
+            # Author normalized - skip for very short queries
+            if not any_skip_author:
+                tag_pattern = f"{normalized_full}*" if use_prefix else normalized_full
+                query_parts.append(f"(@author_normalized:{{{tag_pattern}}})")
+            # Categories - use IPTC alias expansion with EXACT matches
+            category_aliases = get_search_aliases(normalized_full)
+            category_union = "|".join(category_aliases)
+            query_parts.append(f"(@categories:{{{category_union}}})")
 
-    # For multi-word: match documents containing all words (last word as prefix)
-    if len(escaped_words) == 1:
-        # Search both title and author
-        return f"(@search_title:{escaped_words[0]}*) | (@author:{escaped_words[0]}*)"
-    else:
-        # All words except last should be exact, last word is prefix
-        exact_words = " ".join(escaped_words[:-1])
-        prefix_word = escaped_words[-1]
-        title_query = f"@search_title:({exact_words} {prefix_word}*)"
-        author_query = f"@author:({exact_words} {prefix_word}*)"
-        return f"({title_query}) | ({author_query})"
+    return " | ".join(query_parts)
 
 
 def build_authors_autocomplete_query(q: str) -> str:
@@ -316,50 +360,6 @@ def build_authors_autocomplete_query(q: str) -> str:
         title_query = f"@search_title:({exact_words} {prefix_word}*)"
         name_query = f"@name:({exact_words} {prefix_word}*)"
         return f"({title_query}) | ({name_query})"
-
-
-def build_books_autocomplete_query(q: str) -> str:
-    """
-    Build a search query for books (OpenLibrary works) autocomplete.
-    Uses simple word matching - BM25 scorer in repository handles ranking.
-    """
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    # Filter out stopwords and empty strings
-    stopwords = {
-        "the",
-        "a",
-        "an",
-        "and",
-        "or",
-        "but",
-        "in",
-        "on",
-        "at",
-        "to",
-        "for",
-        "of",
-        "is",
-        "it",
-    }
-    words = [w for w in words if w and w not in stopwords]
-
-    if not words:
-        return "*"
-
-    # Escape special characters in search terms
-    escaped_words = [escape_redis_search_term(w) for w in words]
-
-    if len(escaped_words) == 1:
-        # Single word - use prefix for autocomplete
-        return f"@search_title:{escaped_words[0]}*"
-    else:
-        # Multiple words - require all words, last word as prefix for autocomplete
-        # BM25 scorer will rank shorter/exact matches higher
-        parts = [f"@search_title:{w}" for w in escaped_words[:-1]]
-        parts.append(f"@search_title:{escaped_words[-1]}*")
-        return " ".join(parts)
 
 
 async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, list]:
@@ -435,7 +435,7 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         # RediSearch (local) - no timeout needed
         # "media" covers both tv and movie
         if "tv" in sources or "movie" in sources:
-            timed_tasks.append(timed_task("media", repo.search(media_query, limit=20)))
+            timed_tasks.append(timed_task("media", repo.search(media_query, limit=50)))
         if "person" in sources:
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
@@ -507,7 +507,7 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     except Exception:
         # If concurrent search fails, try individually
         try:
-            media_res = await repo.search(media_query, limit=20)
+            media_res = await repo.search(media_query, limit=50)
         except Exception:
             media_res = empty_result
 
@@ -612,8 +612,9 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     # Parse author results
     author_results = [parse_doc(doc) for doc in authors_res.docs]  # type: ignore[union-attr]
 
-    # Parse book results
-    book_results = [parse_doc(doc) for doc in books_res.docs]  # type: ignore[union-attr]
+    # Parse book results and re-rank: exact matches first, then by popularity
+    book_results_raw = [parse_doc(doc) for doc in books_res.docs]  # type: ignore[union-attr]
+    book_results = sorted(book_results_raw, key=lambda b: _rank_book_result(b, q))
 
     # Parse news results (from API, not index)
     news_results: list[dict] = []
@@ -734,7 +735,7 @@ async def autocomplete_stream(
     # RediSearch tasks (local) - no timeout
     # "media" covers both tv and movie
     if "tv" in sources or "movie" in sources:
-        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=20)))] = (
+        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=50)))] = (
             "media"
         )
     if "person" in sources:
@@ -846,9 +847,23 @@ async def autocomplete_stream(
                     # Re-rank to prioritize exact matches and shorter names
                     parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[:10]
 
-            elif name in ("podcast", "author", "book"):
+            elif name == "podcast":
+                if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+                    parsed_all = [parse_doc(doc) for doc in data.docs]
+                    # Re-rank podcasts: title starts with query > contains query
+                    parsed_results = sorted(parsed_all, key=lambda p: _rank_podcast_result(p, q))[
+                        :10
+                    ]
+
+            elif name == "author":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_results = [parse_doc(doc) for doc in data.docs][:10]
+
+            elif name == "book":
+                if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+                    parsed_all = [parse_doc(doc) for doc in data.docs]
+                    # Re-rank books: exact matches first, then by popularity
+                    parsed_results = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))[:10]
 
             elif name in ("news", "video", "ratings", "artist", "album"):
                 if (
@@ -1167,7 +1182,11 @@ async def search(
         book_res = results_map["book"]
         if isinstance(book_res, BaseException):
             book_res = empty_result
-        final_results["book"] = [parse_doc(doc) for doc in book_res.docs][:limit]
+        parsed_books = [parse_doc(doc) for doc in book_res.docs]
+        # Re-rank: exact matches first, then by popularity
+        if q:
+            parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
+        final_results["book"] = parsed_books[:limit]
 
     # Process news results (API)
     if "news" in results_map:
@@ -1417,7 +1436,7 @@ async def full_search(q: str) -> dict[str, list]:
     # Search both indexes concurrently
     try:
         media_res, people_res = await asyncio.gather(
-            repo.search(media_query, limit=20),
+            repo.search(media_query, limit=50),
             repo.search_people(people_query, limit=10),
             return_exceptions=True,
         )

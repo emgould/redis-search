@@ -3,6 +3,13 @@ Load MCBookItems into Redis book index.
 
 Reads the JSONL output from bulk_load_books.py and loads into Redis.
 Uses the idx:book index with book: key prefix.
+
+New fields added for enhanced search:
+- author_normalized: TAG field for exact author matching
+- subjects_normalized: TAG field array for exact subject matching (IPTC expanded)
+- author_olids: TAG field array for author->books lookup
+- popularity_score: Numeric field for sorting (computed from edition_count + author_quality)
+- edition_count: Numeric field from OpenLibrary
 """
 
 import asyncio
@@ -17,6 +24,7 @@ from redis.asyncio import Redis
 from redis.commands.search.field import NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 
+from core.iptc import expand_keywords, normalize_tag
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -26,14 +34,39 @@ KEY_PREFIX = "book:"
 BATCH_SIZE = 500
 
 
+def normalize_subjects(subjects: list[str] | None) -> list[str]:
+    """
+    Normalize subjects for TAG field with IPTC expansion.
+
+    Args:
+        subjects: List of raw subject strings
+
+    Returns:
+        List of normalized and IPTC-expanded subject tags
+    """
+    if not subjects:
+        return []
+
+    # Convert to keyword format for IPTC expansion
+    keyword_dicts = [{"name": subj} for subj in subjects if subj]
+
+    # expand_keywords normalizes and expands with IPTC aliases
+    return expand_keywords(keyword_dicts)
+
+
 def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
     """
     Convert MCBookItem dict to Redis document format.
 
     The document is stored as JSON and indexed by Redis Search.
+    Includes normalized fields for exact TAG matching.
     """
     # Extract author OLIDs for indexing (enables O(1) author->books lookup)
     author_olids = book.pop("_matching_author_olids", [])
+
+    # Get raw values for normalization
+    raw_author = book.get("author") or ""
+    raw_subjects = book.get("subjects") or book.get("subject") or []
 
     # Build search-optimized document
     doc = {
@@ -41,15 +74,19 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
         "id": book.get("mc_id") or book.get("key", ""),
         "key": book.get("key", ""),
         "source_id": book.get("source_id", ""),
-        # Search fields
+        # Search fields (TEXT)
         "search_title": book.get("title", ""),
         "title": book.get("title", ""),
         "description": book.get("description"),
-        # Author fields
-        "author": book.get("author"),
+        # Author fields (TEXT)
+        "author": raw_author,
         "author_name": book.get("author_name", []),
         "author_search": " ".join(book.get("author_name", [])),  # For text search
-        "matching_author_olids": author_olids,  # TagField indexed for O(1) relational queries
+        # Author OLID arrays (TAG)
+        "matching_author_olids": author_olids,  # Legacy field for relational queries
+        "author_olids": author_olids,  # New field matching schema
+        # NEW: Normalized author for exact TAG matching
+        "author_normalized": normalize_tag(raw_author) if raw_author else None,
         # Type tags
         "mc_type": book.get("mc_type", "book"),
         "source": book.get("source", "openlibrary"),
@@ -65,10 +102,12 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
         "publisher": book.get("publisher"),
         # Content
         "first_sentence": book.get("first_sentence", []),
-        # Subjects
-        "subject": book.get("subject", []),
-        "subjects": book.get("subjects", []),
-        "subjects_search": " ".join(book.get("subjects", [])[:10]),  # For text search
+        # Subjects (raw for display)
+        "subject": raw_subjects,
+        "subjects": raw_subjects,
+        "subjects_search": " ".join(raw_subjects[:10]),  # For text search
+        # NEW: Normalized subjects for exact TAG matching (IPTC expanded)
+        "subjects_normalized": normalize_subjects(raw_subjects),
         "language": book.get("language"),
         # Cover images
         "cover_i": book.get("cover_i"),
@@ -83,6 +122,11 @@ def mc_book_to_redis_doc(book: dict[str, Any]) -> dict[str, Any]:
         "readinglog_count": book.get("readinglog_count", 0),
         # Physical details
         "number_of_pages": book.get("number_of_pages"),
+        # NEW: Popularity fields (will be enriched by migration script)
+        # For fresh ETL, these default to None/0 and are enriched separately
+        "edition_count": book.get("edition_count"),
+        "author_quality_score": book.get("author_quality_score"),
+        "popularity_score": book.get("popularity_score", 0.0),
     }
 
     return doc
@@ -96,33 +140,34 @@ async def create_book_index(redis: Redis) -> bool:
         True if created or already exists
     """
     schema = (
-        # Primary search field (title) with high weight
+        # Primary search fields (TEXT)
         TextField("$.search_title", as_name="search_title", weight=5.0),
         TextField("$.title", as_name="title", weight=4.0),
-        # Author search
         TextField("$.author_search", as_name="author_search", weight=3.0),
         TextField("$.author", as_name="author", weight=2.0),
-        # Author OLID - O(1) lookup for relational queries (books by author)
-        TagField("$.matching_author_olids[*]", as_name="author_olid"),
-        # Description - searchable but lower weight
         TextField("$.description", as_name="description", weight=1.0),
-        # Subject search
         TextField("$.subjects_search", as_name="subjects_search", weight=1.0),
-        # Type filters
+        # Type/source filters
         TagField("$.mc_type", as_name="mc_type"),
         TagField("$.source", as_name="source"),
-        # External IDs as tags (exact match)
+        # External IDs (exact match)
         TagField("$.openlibrary_key", as_name="openlibrary_key"),
         TagField("$.primary_isbn13", as_name="primary_isbn13"),
         TagField("$.primary_isbn10", as_name="primary_isbn10"),
-        # Boolean fields
+        TagField("$.author_olids[*]", as_name="author_olid"),
         TagField("$.cover_available", as_name="cover_available"),
+        # NEW: Normalized TAG fields for exact matching
+        TagField("$.author_normalized", as_name="author_normalized"),
+        TagField("$.subjects_normalized[*]", as_name="subjects"),
         # Sortable numeric fields
         NumericField("$.first_publish_year", as_name="first_publish_year", sortable=True),
         NumericField("$.ratings_average", as_name="ratings_average", sortable=True),
         NumericField("$.ratings_count", as_name="ratings_count", sortable=True),
         NumericField("$.readinglog_count", as_name="readinglog_count", sortable=True),
         NumericField("$.number_of_pages", as_name="number_of_pages", sortable=True),
+        # NEW: Popularity fields
+        NumericField("$.popularity_score", as_name="popularity_score", sortable=True),
+        NumericField("$.edition_count", as_name="edition_count", sortable=True),
     )
 
     definition = IndexDefinition(prefix=[KEY_PREFIX], index_type=IndexType.JSON)

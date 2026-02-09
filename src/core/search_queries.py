@@ -1,5 +1,10 @@
 import re
 
+from core.iptc import get_search_aliases
+from utils.get_logger import get_logger
+
+logger = get_logger(__name__)
+
 # Common stopwords that Redis Search ignores
 STOPWORDS = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "is", "it"}
 
@@ -97,14 +102,48 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     # Escape special characters in search terms
     escaped_words = [escape_redis_search_term(w) for w in words]
 
-    # Build title query (TEXT field with prefix matching)
+    # Build title query (TEXT field)
+    # Short queries (<=3 chars) use EXACT match to avoid false positives
+    # e.g., "AI" shouldn't match "Air Force One", "Airplane", etc.
+    # Longer queries use prefix matching for autocomplete behavior
     if len(escaped_words) == 1:
-        title_query = f"@search_title:{escaped_words[0]}*"
+        word = escaped_words[0]
+        if len(word) <= 3:
+            # Exact match for short single-word queries
+            title_query = f"@search_title:{word}"
+
+            # Also search title for IPTC-expanded aliases (e.g., "AI" -> "artificial intelligence")
+            # This helps find titles like "A.I. Artificial Intelligence"
+            normalized_word = normalize_for_tag(word)
+            title_aliases = get_search_aliases(normalized_word)
+            # Find expanded aliases (not the raw query) that are longer
+            expanded_title_searches = []
+            for alias in title_aliases:
+                if alias != normalized_word and len(alias) > 3:
+                    # Convert normalized alias back to space-separated for title search
+                    title_alias = alias.replace("_", " ")
+                    expanded_title_searches.append(f"@search_title:({title_alias}*)")
+
+            if expanded_title_searches:
+                # Combine exact match with expanded alias searches
+                title_query = (
+                    f"({title_query})"
+                    + " | "
+                    + " | ".join(f"({s})" for s in expanded_title_searches)
+                )
+        else:
+            # Prefix match for longer queries
+            title_query = f"@search_title:{word}*"
     else:
-        # All words except last should be exact, last word is prefix
+        # Multi-word: all words except last should be exact, last word is prefix
         exact_words = " ".join(escaped_words[:-1])
-        prefix_word = escaped_words[-1]
-        title_query = f"@search_title:({exact_words} {prefix_word}*)"
+        last_word = escaped_words[-1]
+        if len(last_word) <= 3:
+            # Exact match for short last word
+            title_query = f"@search_title:({exact_words} {last_word})"
+        else:
+            # Prefix match for longer last word
+            title_query = f"@search_title:({exact_words} {last_word}*)"
 
     # If not including TAG fields, return just title query
     if not include_tag_fields:
@@ -117,20 +156,51 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     # Build union query parts
     query_parts = [title_query]
 
-    # For TAG fields, we search for the normalized full query
-    # TAG fields support prefix matching with * suffix
-    if normalized_full and len(normalized_full) >= 2:
+    # For TAG fields (cast, director, genres):
+    # - Short queries (<=3 chars) use exact matching to avoid false positives
+    # - Longer queries use prefix matching for autocomplete behavior
+    min_tag_length = 2
+    use_prefix = len(normalized_full) > 3  # Only prefix match if > 3 chars
+
+    if normalized_full and len(normalized_full) >= min_tag_length:
+        # Pattern for non-keyword TAG fields
+        tag_pattern = f"{normalized_full}*" if use_prefix else normalized_full
+        match_type = "prefix" if use_prefix else "exact"
+
+        # Log the TAG search
+        logger.info(
+            f"[Media Index] Query: '{q}' -> TAG: '{tag_pattern}' ({match_type}) "
+            f"(searching: cast_names, director_name, genres)"
+        )
+
         # Cast names - search for actor/actress names
-        query_parts.append(f"@cast_names:{{{normalized_full}*}}")
+        query_parts.append(f"@cast_names:{{{tag_pattern}}}")
 
         # Director name - search for director
-        query_parts.append(f"@director_name:{{{normalized_full}*}}")
+        query_parts.append(f"@director_name:{{{tag_pattern}}}")
 
-        # Keywords - search for content keywords
-        query_parts.append(f"@keywords:{{{normalized_full}*}}")
+        # Genres - same pattern as cast/director
+        query_parts.append(f"@genres:{{{tag_pattern}}}")
 
-        # Genres - search for genre names (e.g., "science_fiction")
-        query_parts.append(f"@genres:{{{normalized_full}*}}")
+        # Keywords - use IPTC alias expansion
+        # - Raw query alias (e.g., "ai"): EXACT match to avoid "ai*" matching "aircraft_carrier"
+        # - Expanded aliases (e.g., "artificial_intelligence"): PREFIX match to find "artificial_intelligence_a_i"
+        keyword_aliases = get_search_aliases(normalized_full)
+        keyword_patterns = []
+        for alias in keyword_aliases:
+            if alias == normalized_full:
+                # Raw query - exact match to avoid false positives
+                keyword_patterns.append(alias)
+            else:
+                # Expanded alias - prefix match to find variations
+                keyword_patterns.append(f"{alias}*")
+        keyword_union = "|".join(keyword_patterns)
+        query_parts.append(f"@keywords:{{{keyword_union}}}")
+
+        logger.info(
+            f"[Media Index] Query: '{q}' -> Keywords: {len(keyword_aliases)} aliases "
+            f"(raw=exact, expanded=prefix: {keyword_aliases[:5]}{'...' if len(keyword_aliases) > 5 else ''})"
+        )
 
     # Combine with OR (union)
     if len(query_parts) == 1:
@@ -155,6 +225,192 @@ def build_fuzzy_fulltext_query(q: str) -> str:
     # Fuzzy match on each word
     fuzzy_terms = " ".join(f"%{w}%" for w in escaped_words)
     return f"@search_title:({fuzzy_terms})"
+
+
+def build_podcast_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
+    """
+    Build a prefix search query for podcast autocomplete.
+
+    When include_tag_fields=True (default), creates a union query that searches:
+    - search_title (TEXT field with prefix matching)
+    - author_normalized (TAG field - matches podcast author/creator)
+    - categories (TAG field - matches podcast categories)
+    """
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w for w in words if w and w not in STOPWORDS]
+
+    if not words:
+        return "*"
+
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
+    # Build title query (TEXT field with prefix matching)
+    if len(escaped_words) == 1:
+        title_query = f"@search_title:{escaped_words[0]}*"
+    else:
+        exact_words = " ".join(escaped_words[:-1])
+        prefix_word = escaped_words[-1]
+        title_query = f"@search_title:({exact_words} {prefix_word}*)"
+
+    if not include_tag_fields:
+        return title_query
+
+    # Normalize full query for TAG matching
+    normalized_full = normalize_for_tag(q)
+
+    query_parts = [title_query]
+
+    # Short queries (<=3 chars) use exact matching to avoid false positives
+    min_tag_length = 2
+    use_prefix = len(normalized_full) > 3
+
+    if normalized_full and len(normalized_full) >= min_tag_length:
+        tag_pattern = f"{normalized_full}*" if use_prefix else normalized_full
+        match_type = "prefix" if use_prefix else "exact"
+
+        # Log the TAG aliases being searched
+        logger.info(
+            f"[Podcast Index] Query: '{q}' -> TAG alias: '{tag_pattern}' ({match_type}) "
+            f"(searching: author_normalized, categories)"
+        )
+
+        # Author - search for podcast creator
+        query_parts.append(f"@author_normalized:{{{tag_pattern}}}")
+
+        # Categories - use IPTC alias expansion with EXACT matches
+        # e.g., "ai" -> ["ai", "artificial_intelligence", "machine_intelligence", ...]
+        category_aliases = get_search_aliases(normalized_full)
+        category_union = "|".join(category_aliases)
+        query_parts.append(f"@categories:{{{category_union}}}")
+
+    if len(query_parts) == 1:
+        return query_parts[0]
+
+    return " | ".join(f"({part})" for part in query_parts)
+
+
+def build_books_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
+    """
+    Build a search query for books autocomplete.
+
+    Creates a union query that searches:
+    - search_title (TEXT field with prefix matching)
+    - author (TEXT field with prefix matching)
+    - author_normalized (TAG field - matches normalized author name)
+    - subjects (TAG field - matches normalized subjects with IPTC expansion)
+    - description (TEXT field - lower priority)
+
+    Short query rules (<=3 chars):
+    - Title: exact match
+    - Skip author/subjects TAGs to avoid false positives
+
+    Args:
+        q: Search query string
+        include_tag_fields: Whether to include TAG field union search
+
+    Returns:
+        RediSearch query string
+    """
+    # Split on both spaces and colons, then flatten
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w for w in words if w and w not in STOPWORDS]
+
+    if not words:
+        return "*"
+
+    # Escape special characters in search terms
+    escaped_words = [escape_redis_search_term(w) for w in words]
+
+    # Build title query (TEXT field)
+    # Short queries (<=3 chars) use exact match
+    # Longer queries use prefix matching for autocomplete
+    if len(escaped_words) == 1:
+        word = escaped_words[0]
+        if len(word) <= 3:
+            title_query = f"@search_title:{word}"
+        else:
+            title_query = f"@search_title:{word}*"
+    else:
+        exact_words = " ".join(escaped_words[:-1])
+        last_word = escaped_words[-1]
+        if len(last_word) <= 3:
+            title_query = f"@search_title:({exact_words} {last_word})"
+        else:
+            title_query = f"@search_title:({exact_words} {last_word}*)"
+
+    # Build author TEXT query (same pattern as title)
+    if len(escaped_words) == 1:
+        word = escaped_words[0]
+        if len(word) <= 3:
+            author_query = f"@author:{word}"
+        else:
+            author_query = f"@author:{word}*"
+    else:
+        exact_words = " ".join(escaped_words[:-1])
+        last_word = escaped_words[-1]
+        if len(last_word) <= 3:
+            author_query = f"@author:({exact_words} {last_word})"
+        else:
+            author_query = f"@author:({exact_words} {last_word}*)"
+
+    # Build description query (TEXT field, lower priority)
+    # Description uses same pattern but will rank lower in tiered scoring
+    if len(escaped_words) == 1:
+        word = escaped_words[0]
+        if len(word) <= 3:
+            desc_query = f"@description:{word}"
+        else:
+            desc_query = f"@description:{word}*"
+    else:
+        exact_words = " ".join(escaped_words[:-1])
+        last_word = escaped_words[-1]
+        if len(last_word) <= 3:
+            desc_query = f"@description:({exact_words} {last_word})"
+        else:
+            desc_query = f"@description:({exact_words} {last_word}*)"
+
+    query_parts = [title_query, author_query, desc_query]
+
+    if not include_tag_fields:
+        return " | ".join(f"({part})" for part in query_parts)
+
+    # Normalize full query for TAG matching
+    normalized_full = normalize_for_tag(q)
+
+    # For TAG fields (author_normalized, subjects):
+    # - Short queries (<=3 chars) use exact matching
+    # - Longer queries use prefix matching
+    min_tag_length = 2
+    use_prefix = len(normalized_full) > 3
+
+    if normalized_full and len(normalized_full) >= min_tag_length:
+        tag_pattern = f"{normalized_full}*" if use_prefix else normalized_full
+        match_type = "prefix" if use_prefix else "exact"
+
+        logger.info(
+            f"[Book Index] Query: '{q}' -> TAG: '{tag_pattern}' ({match_type}) "
+            f"(searching: author_normalized, subjects)"
+        )
+
+        # Author normalized - exact/prefix TAG match
+        query_parts.append(f"@author_normalized:{{{tag_pattern}}}")
+
+        # Subjects - use IPTC alias expansion with exact matches
+        # e.g., "mystery" -> ["mystery", "detective_fiction", ...]
+        subject_aliases = get_search_aliases(normalized_full)
+        subject_union = "|".join(subject_aliases)
+        query_parts.append(f"@subjects:{{{subject_union}}}")
+
+        logger.info(
+            f"[Book Index] Query: '{q}' -> Subjects: {len(subject_aliases)} aliases "
+            f"({subject_aliases[:5]}{'...' if len(subject_aliases) > 5 else ''})"
+        )
+
+    return " | ".join(f"({part})" for part in query_parts)
 
 
 def build_filter_query(

@@ -24,30 +24,26 @@ from adapters.config import load_env
 from contracts.models import MCSources, MCType
 from core.normalize import document_to_redis, normalize_document
 
-# Major streaming platforms for filtering
+# Major streaming platforms for TV show filtering
 MAJOR_STREAMING_PROVIDERS = {
     "Netflix",
-    "Amazon Prime Video",
-    "Amazon Video",
-    "Hulu",
-    "Max",  # HBO Max rebranded
-    "HBO Max",
-    "Disney Plus",
-    "Peacock",
-    "Peacock Premium",
+    "Netflix Standard with Ads",
     "Apple TV Plus",
     "Apple TV",
+    "Amazon Prime Video",
+    "Amazon Video",
+    "Disney Plus",
+    "Disney+",
     "Paramount Plus",
     "Paramount+",
-    "Fubo",
-    "FuboTV",
-    "fuboTV",
-    "YouTube TV",  # Added - American Idol, etc.
+    "Peacock",
+    "Peacock Premium",
+    "Max",
+    "HBO Max",
 }
 
-# Thresholds for "significant" TV shows that bypass recency/streaming filters
-SIGNIFICANT_SHOW_EPISODES = 50  # Shows with 50+ episodes are significant
-SIGNIFICANT_SHOW_SEASONS = 3  # Shows with 3+ seasons are significant
+# Cutoff date for TV shows - last_air_date must be >= this to qualify
+TV_SHOW_CUTOFF_DATE = "2023-01-01"
 
 
 @dataclass
@@ -488,10 +484,6 @@ class TMDBETLService:
         loaded_in_file = 0
         skipped_in_file = 0
 
-        # Calculate cutoff date for "last 10 years" filter
-        ten_years_ago = datetime.now() - timedelta(days=365 * 10)
-        cutoff_year = ten_years_ago.year
-
         # Process each item
         pipeline = self.redis.pipeline()
         batch_count = 0
@@ -499,57 +491,75 @@ class TMDBETLService:
         for item in results:
             # === FILTERING LOGIC ===
 
-            # 1. Poster must exist
+            # 1. Poster must exist (always required)
             if not item.get("poster_path"):
                 skipped_in_file += 1
                 continue
 
-            # 2. Popularity must be >= 1
-            metrics = item.get("metrics", {})
-            popularity = metrics.get("popularity") or item.get("popularity") or 0
-            if popularity < 1:
-                skipped_in_file += 1
-                continue
+            # 2. TV-specific filtering (more permissive than movies)
+            is_tv = mc_type == MCType.TV_SERIES
 
-            # 3. Vote count must be > 1
-            vote_count = metrics.get("vote_count") or item.get("vote_count") or 0
-            if vote_count <= 1:
-                skipped_in_file += 1
-                continue
+            if is_tv:
+                # TV shows pass if ANY of these are true:
+                # a) Status is "Returning Series" (actively producing)
+                # b) last_air_date >= 2023-01-01 (recent activity)
+                # c) On a major streaming platform
 
-            # 4. Runtime < 50 only allowed if vote_count >= 10
-            runtime = item.get("runtime") or 0
-            if runtime < 50 and vote_count < 10:
-                skipped_in_file += 1
-                continue
+                status = item.get("status", "")
+                is_returning = status == "Returning Series"
 
-            # 5. Either released in last 10 years OR on major streaming platform OR significant show
-            release_date = item.get("release_date") or item.get("first_air_date") or ""
-            release_year = int(release_date[:4]) if len(release_date) >= 4 else 0
-            is_recent = release_year >= cutoff_year
+                last_air_date = item.get("last_air_date") or ""
+                is_recent_activity = last_air_date >= TV_SHOW_CUTOFF_DATE
 
-            is_on_major_platform = False
-            watch_providers = item.get("watch_providers", {})
-            for provider_type in ["flatrate", "buy", "rent"]:
-                providers = watch_providers.get(provider_type, [])
-                for provider in providers:
-                    if provider.get("provider_name") in MAJOR_STREAMING_PROVIDERS:
-                        is_on_major_platform = True
+                is_on_major_platform = False
+                watch_providers = item.get("watch_providers", {})
+                for provider_type in ["flatrate"]:  # Only subscription streaming
+                    providers = watch_providers.get(provider_type, [])
+                    for provider in providers:
+                        if provider.get("provider_name") in MAJOR_STREAMING_PROVIDERS:
+                            is_on_major_platform = True
+                            break
+                    if is_on_major_platform:
                         break
-                if is_on_major_platform:
-                    break
 
-            # Check if it's a significant show (many episodes/seasons)
-            # This catches long-running shows like American Idol that may not be on major platforms
-            num_episodes = item.get("number_of_episodes") or 0
-            num_seasons = item.get("number_of_seasons") or 0
-            is_significant_show = (
-                num_episodes >= SIGNIFICANT_SHOW_EPISODES or num_seasons >= SIGNIFICANT_SHOW_SEASONS
-            )
+                if not (is_returning or is_recent_activity or is_on_major_platform):
+                    skipped_in_file += 1
+                    continue
+            else:
+                # Movies: keep existing stricter filtering
+                metrics = item.get("metrics", {})
+                popularity = metrics.get("popularity") or item.get("popularity") or 0
+                if popularity < 1:
+                    skipped_in_file += 1
+                    continue
 
-            if not is_recent and not is_on_major_platform and not is_significant_show:
-                skipped_in_file += 1
-                continue
+                vote_count = metrics.get("vote_count") or item.get("vote_count") or 0
+                if vote_count <= 1:
+                    skipped_in_file += 1
+                    continue
+
+                runtime = item.get("runtime") or 0
+                if runtime < 50 and vote_count < 10:
+                    skipped_in_file += 1
+                    continue
+
+                release_date = item.get("release_date") or ""
+                release_year = int(release_date[:4]) if len(release_date) >= 4 else 0
+                ten_years_ago = datetime.now() - timedelta(days=365 * 10)
+                if release_year < ten_years_ago.year:
+                    is_on_major_platform = False
+                    watch_providers = item.get("watch_providers", {})
+                    for provider_type in ["flatrate", "buy", "rent"]:
+                        providers = watch_providers.get(provider_type, [])
+                        for provider in providers:
+                            if provider.get("provider_name") in MAJOR_STREAMING_PROVIDERS:
+                                is_on_major_platform = True
+                                break
+                        if is_on_major_platform:
+                            break
+                    if not is_on_major_platform:
+                        skipped_in_file += 1
+                        continue
 
             # === DATA CLEANUP ===
 
