@@ -11,12 +11,37 @@ TAG values are normalized (lowercase, special chars replaced with underscore)
 to ensure consistent filtering in Redis Search.
 """
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
 from src.contracts.models import MCSources, MCSubType, MCType
 from src.core.iptc import expand_keywords, normalize_tag
+
+# Regex to strip apostrophes (straight + curly) from titles for search indexing.
+# RediSearch tokenizes apostrophes as word separators, so "It's" becomes ["it", "s"].
+# Stripping them produces "Its" which tokenizes as ["its"] — matching user queries.
+_APOSTROPHE_RE = re.compile(r"[\u0027\u2018\u2019\u02BC]")  # ' ' ' ʼ
+
+
+def normalize_search_title(title: str) -> str:
+    """
+    Normalize a title for RediSearch TEXT field indexing.
+
+    Strips apostrophes so that possessives and contractions become single tokens.
+    Examples:
+        "It's Complicated" -> "Its Complicated"
+        "Schindler's List" -> "Schindlers List"
+        "Don't Look Up"   -> "Dont Look Up"
+
+    Args:
+        title: The original title string.
+
+    Returns:
+        Title with apostrophes removed, suitable for search indexing.
+    """
+    return _APOSTROPHE_RE.sub("", title)
 
 
 @dataclass
@@ -628,10 +653,13 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
     Convert a SearchDocument to the dict format stored in Redis.
 
     TAG fields are already normalized in SearchDocument.
+    search_title is normalized (apostrophes stripped) for consistent tokenization.
+    The original title is preserved in the 'title' field for display.
     """
     result: dict[str, Any] = {
         "id": doc.id,
-        "search_title": doc.search_title,
+        "title": doc.search_title,  # Original title for display
+        "search_title": normalize_search_title(doc.search_title),
         "mc_type": doc.mc_type.value,
         "mc_subtype": doc.mc_subtype.value if doc.mc_subtype else None,
         "source": doc.source.value,

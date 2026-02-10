@@ -30,6 +30,7 @@ from core.search_queries import (
     build_fuzzy_fulltext_query,
     escape_redis_search_term,
     normalize_for_tag,
+    strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
 from utils.soft_comparison import is_autocomplete_match
@@ -117,6 +118,12 @@ def parse_doc(doc):
         if key not in ("id", "payload", "json") and value is not None:
             result[key] = value
 
+    # Use original title (with apostrophes) for display when available.
+    # search_title is normalized (apostrophes stripped) for search indexing,
+    # but the 'title' field preserves the original for display purposes.
+    if "title" in result and result["title"]:
+        result["search_title"] = result["title"]
+
     # Fix legacy person data that may be missing tmdb_ prefix and source_id
     # BUT skip this for OpenLibrary authors (mc_subtype === "author")
     doc_id = result.get("id", "")
@@ -148,6 +155,9 @@ def build_people_autocomplete_query(q: str) -> str:
     Single-character last words are handled by searching complete words only
     and relying on post-query filtering.
     """
+    # Strip apostrophes to match indexed names (e.g. "O'Brien" -> "OBrien")
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     parts = q.replace(":", " : ").split()
     words = [w.lower() for w in parts if w and w != ":"]
@@ -257,6 +267,9 @@ def build_podcasts_autocomplete_query(q: str, include_tag_fields: bool = True) -
 
     Supports query expansion for abbreviations (e.g., "NY Jets" -> also searches "New York Jets").
     """
+    # Strip apostrophes to match indexed titles
+    q = strip_query_apostrophes(q)
+
     stopwords = {
         "the",
         "a",
@@ -321,6 +334,9 @@ def build_authors_autocomplete_query(q: str) -> str:
     Build a prefix search query for authors (OpenLibrary) autocomplete.
     Searches both search_title (name) and name fields.
     """
+    # Strip apostrophes to match indexed names
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     parts = q.replace(":", " : ").split()
     words = [w.lower() for w in parts if w and w != ":"]

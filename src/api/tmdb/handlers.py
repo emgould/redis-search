@@ -7,11 +7,11 @@ import json
 import logging
 import random
 
-from contracts.models import MCType
 from firebase_functions import https_fn
 from firebase_functions.https_fn import FunctionsErrorCode
 
 import api.tmdb.wrappers as TMDB  # noqa: N812
+from contracts.models import MCType
 from utils.redis_cache import RedisCache
 
 # Configure logging

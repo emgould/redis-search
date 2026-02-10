@@ -343,40 +343,58 @@ class TMDBService(Auth, BaseAPIClient):
         if tasks:
             results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
 
+            # Track enrichment failures — any failure means incomplete data
+            enrichment_failures: list[str] = []
+
             # Process results
             for task_name, task_result in zip(tasks, results, strict=True):
                 if task_name[0] == "cast":
                     cast_result = task_result
-                    if not isinstance(cast_result, Exception) and isinstance(cast_result, dict):
+                    if isinstance(cast_result, Exception):
+                        enrichment_failures.append(f"cast: {cast_result}")
+                    elif isinstance(cast_result, dict):
                         details.tmdb_cast = cast_result.get("tmdb_cast", {})
                         details.main_cast = cast_result.get("main_cast", [])
                 elif task_name[0] == "videos":
                     video_result = task_result
-                    if not isinstance(video_result, Exception) and isinstance(video_result, dict):
+                    if isinstance(video_result, Exception):
+                        enrichment_failures.append(f"videos: {video_result}")
+                    elif isinstance(video_result, dict):
                         details.tmdb_videos = video_result.get("tmdb_videos", {})
                         details.primary_trailer = video_result.get("primary_trailer", {})
                         details.trailers = video_result.get("trailers", [])
                         details.clips = video_result.get("clips", [])
                 elif task_name[0] == "watch_providers":
                     provider_result = task_result
-                    if not isinstance(provider_result, Exception) and isinstance(
-                        provider_result, dict
-                    ):
+                    if isinstance(provider_result, Exception):
+                        enrichment_failures.append(f"watch_providers: {provider_result}")
+                    elif isinstance(provider_result, dict):
                         details.watch_providers = provider_result.get("watch_providers", {})
                         details.streaming_platform = provider_result.get("streaming_platform")
                 elif task_name[0] == "keywords":
                     keywords_result = task_result
-                    if not isinstance(keywords_result, Exception) and isinstance(
-                        keywords_result, dict
-                    ):
+                    if isinstance(keywords_result, Exception):
+                        enrichment_failures.append(f"keywords: {keywords_result}")
+                    elif isinstance(keywords_result, dict):
                         details.keywords = keywords_result.get("keywords", [])
                         details.keywords_count = keywords_result.get("keywords_count", 0)
                 elif task_name[0] == "release_dates":
                     release_dates_result = task_result
-                    if not isinstance(release_dates_result, Exception) and isinstance(
-                        release_dates_result, dict
+                    if isinstance(release_dates_result, Exception):
+                        enrichment_failures.append(f"release_dates: {release_dates_result}")
+                    elif isinstance(release_dates_result, dict) and isinstance(
+                        details, MCMovieItem
                     ):
                         details.release_dates = release_dates_result.get("release_dates", {})
+
+            # If any enrichment step failed, flag the result as an error.
+            # This prevents caching (RedisCache skips entries with .error set)
+            # and surfaces the failure to callers like the ETL.
+            if enrichment_failures:
+                failed_steps = ", ".join(enrichment_failures)
+                logger.warning(f"Enrichment failed for {media_type} {tmdb_id}: {failed_steps}")
+                details.error = f"Partial enrichment failure: {failed_steps}"
+                details.status_code = 500
 
         return details
 
@@ -676,7 +694,7 @@ class TMDBService(Auth, BaseAPIClient):
 
     @RedisCache.use_cache(TMDBCache, prefix="watch_providers")
     async def _get_watch_providers(
-        self, tmdb_id: int, media_type: MCType, region: str = "US"
+        self, tmdb_id: int, media_type: MCType, region: str = "US", **kwargs
     ) -> dict[str, Any]:
         """Get watch providers for media.
 

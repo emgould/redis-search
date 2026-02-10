@@ -8,6 +8,21 @@ logger = get_logger(__name__)
 # Common stopwords that Redis Search ignores
 STOPWORDS = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "is", "it"}
 
+# Regex to strip apostrophes from search queries.
+# Must match the normalization applied to search_title at index time
+# (see normalize_search_title in core.normalize).
+_APOSTROPHE_RE = re.compile(r"[\u0027\u2018\u2019\u02BC]")  # ' ' ' ʼ
+
+
+def strip_query_apostrophes(q: str) -> str:
+    """Strip apostrophes from a search query to match indexed titles.
+
+    RediSearch tokenizes apostrophes as word separators, so indexed titles
+    have apostrophes removed (e.g. "It's Complicated" → "Its Complicated").
+    This function applies the same normalization to user queries.
+    """
+    return _APOSTROPHE_RE.sub("", q)
+
 
 def normalize_for_tag(value: str) -> str:
     """
@@ -88,6 +103,9 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     - keywords (TAG field - matches content keywords)
     - genres (TAG field - matches genre names)
     """
+    # Strip apostrophes to match indexed titles (e.g. "it's" -> "its")
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     # This handles cases like "Predator:Badlands" or "Predator: Badlands"
     parts = q.replace(":", " : ").split()
@@ -211,6 +229,9 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
 
 def build_fuzzy_fulltext_query(q: str) -> str:
     """Build a fuzzy full-text search query."""
+    # Strip apostrophes to match indexed titles
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     parts = q.replace(":", " : ").split()
     words = [w.lower() for w in parts if w and w != ":"]
@@ -236,6 +257,9 @@ def build_podcast_autocomplete_query(q: str, include_tag_fields: bool = True) ->
     - author_normalized (TAG field - matches podcast author/creator)
     - categories (TAG field - matches podcast categories)
     """
+    # Strip apostrophes to match indexed titles
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     parts = q.replace(":", " : ").split()
     words = [w.lower() for w in parts if w and w != ":"]
@@ -314,6 +338,9 @@ def build_books_autocomplete_query(q: str, include_tag_fields: bool = True) -> s
     Returns:
         RediSearch query string
     """
+    # Strip apostrophes to match indexed titles
+    q = strip_query_apostrophes(q)
+
     # Split on both spaces and colons, then flatten
     parts = q.replace(":", " : ").split()
     words = [w.lower() for w in parts if w and w != ":"]

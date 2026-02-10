@@ -590,10 +590,7 @@ class MCKeywordSearchResponse(MCSearchResponse):
     """Model for TMDB keyword search response."""
 
     results: list[MCKeywordItem]  # type: ignore[assignment]
-    total_results: int
     total_pages: int
-    page: int
-    query: str
 
 
 class MCGenreItem(MCBaseItem):
@@ -613,10 +610,7 @@ class MCGenreSearchResponse(MCSearchResponse):
     """Model for TMDB keyword search response."""
 
     results: list[MCGenreItem]  # type: ignore[assignment]
-    total_results: int
     total_pages: int
-    page: int
-    query: str
 
 
 class MCDiscoverResponse(MCSearchResponse):

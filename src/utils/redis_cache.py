@@ -321,6 +321,12 @@ class RedisCache:
             else:
                 self.logging.warning(f"Redis read failed for {key}: {e}")
             return None
+        except ModuleNotFoundError as e:
+            # Stale pickled cache entry from an old module (e.g., media_manager).
+            # Delete it so it won't warn again, and treat as a cache miss.
+            self.logging.debug(f"Stale cache entry for {key} (old module): {e}")
+            self.remove(key)
+            return None
         except Exception as e:
             self.logging.warning(f"Redis read error for {key}: {e}")
             return None

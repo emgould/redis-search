@@ -160,7 +160,12 @@ def compute_book_popularity(author_quality_score: float | None) -> float:
 
 async def load_author_quality_scores(redis: Redis) -> dict[str, float]:
     """
-    Load author quality scores from idx:author into a dict mapping OLID -> score.
+    Load author quality scores from idx:author into a dict mapping bare OLID -> score.
+
+    Author documents store the OpenLibrary key as `openlibrary_key` in path format
+    (e.g., "/authors/OL3121210A"). Book documents reference authors by bare OLID
+    (e.g., "OL3121210A") in their `author_olids` array. This function strips the
+    "/authors/" prefix to produce bare OLIDs for matching.
     """
     logger.info("[AUTHORS] Loading author quality scores...")
     author_scores: dict[str, float] = {}
@@ -168,13 +173,14 @@ async def load_author_quality_scores(redis: Redis) -> dict[str, float]:
     # Scan all author documents
     async for key in redis.scan_iter(match="author:*", count=10000):
         try:
-            doc = await redis.json().get(key, "$.openlibrary_ids", "$.quality_score")
+            doc = await redis.json().get(key, "$.openlibrary_key", "$.quality_score")
             if doc:
-                olids = doc.get("$.openlibrary_ids", [[]])[0]
+                ol_key = doc.get("$.openlibrary_key", [None])[0]
                 score = doc.get("$.quality_score", [0])[0]
-                if olids and score:
-                    for olid in olids:
-                        author_scores[olid] = float(score)
+                if ol_key and score:
+                    # Strip "/authors/" prefix to get bare OLID matching book author_olids
+                    bare_olid = ol_key.replace("/authors/", "")
+                    author_scores[bare_olid] = float(score)
         except Exception as e:
             logger.debug(f"Error loading author {key}: {e}")
             continue
