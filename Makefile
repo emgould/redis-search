@@ -72,11 +72,11 @@ help:
 	@echo "    make create-redis-vm  - Create Redis Stack VM on GCE (one-time)"
 	@echo "    make tunnel           - Create IAP tunnel to public Redis VM (localhost:6381)"
 	@echo ""
-	@echo "  Cache Version Management:"
-	@echo "    make cache-version-get PREFIX=<prefix>       - Get version for a cache prefix"
-	@echo "    make cache-version-set PREFIX=<prefix> VERSION=<ver> - Set version for a cache prefix"
-	@echo "    make cache-version-list                      - List all cache prefix versions"
-	@echo "    make cache-version-seed                      - Seed all cache versions into Redis"
+	@echo "  Cache Version Management (REDIS=local|public required):"
+	@echo "    make cache-version-get PREFIX=<prefix> REDIS=local  - Get version for a cache prefix"
+	@echo "    make cache-version-set PREFIX=<prefix> VERSION=<ver> REDIS=local - Set version"
+	@echo "    make cache-version-list REDIS=local                 - List all cache prefix versions"
+	@echo "    make cache-version-seed REDIS=local                 - Seed all cache versions into Redis"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -334,18 +334,28 @@ tunnel:
 		--project=media-circle
 
 # Cache version management — shared registry in Redis
+# REDIS=local|public is REQUIRED for all cache-version-* targets
+#   local  → config/local.env
+#   public → config/etl.dev.env
+define CACHE_REDIS_ENV
+source venv/bin/activate && \
+if [ "$(REDIS)" = "local" ]; then source config/local.env; \
+elif [ "$(REDIS)" = "public" ]; then source config/etl.dev.env; \
+else echo "ERROR: REDIS=local|public is required"; exit 1; fi
+endef
+
 cache-version-get:
-	@bash -c 'source venv/bin/activate && source config/local.env && python -c "from utils.redis_cache import get_cache_version; print(get_cache_version(\"$(PREFIX)\"))"'
+	@bash -c '$(CACHE_REDIS_ENV) && python -c "from utils.redis_cache import get_cache_version; print(get_cache_version(\"$(PREFIX)\"))"'
 
 cache-version-set:
-	@bash -c 'source venv/bin/activate && source config/local.env && python -c "from utils.redis_cache import set_cache_version; set_cache_version(\"$(PREFIX)\", \"$(VERSION)\"); print(\"$(PREFIX) -> $(VERSION)\")"'
+	@bash -c '$(CACHE_REDIS_ENV) && python -c "from utils.redis_cache import set_cache_version; set_cache_version(\"$(PREFIX)\", \"$(VERSION)\"); print(\"$(PREFIX) -> $(VERSION)\")"'
 
 cache-version-list:
-	@bash -c 'source venv/bin/activate && source config/local.env && python -c "\
+	@bash -c '$(CACHE_REDIS_ENV) && python -c "\
 from utils.redis_cache import get_all_cache_versions; \
 versions = get_all_cache_versions(); \
 [print(f\"  {k:30s} {v}\") for k, v in sorted(versions.items())] if versions else print(\"  (no versions registered)\"); \
 "'
 
 cache-version-seed:
-	@bash -c 'source venv/bin/activate && source config/local.env && python scripts/seed_cache_versions.py'
+	@bash -c '$(CACHE_REDIS_ENV) && python scripts/seed_cache_versions.py'
