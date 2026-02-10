@@ -30,6 +30,61 @@ except ImportError:
 # Define version constant
 RELEASE_VERSION = "1.3.4"
 
+# Redis hash key for the shared version registry.
+# Stores one version per cache prefix so all repos/processes sharing
+# the same Redis instance agree on the effective version.
+VERSION_REGISTRY_KEY = "__cache_versions__"
+
+_logger = logging.getLogger("rediscache.versions")
+
+
+def get_cache_version(prefix: str) -> str:
+    """Read the shared cache version for *prefix* from the Redis registry.
+
+    Returns ``RELEASE_VERSION`` as a fallback when the prefix is not yet
+    registered or Redis is unreachable.
+    """
+    try:
+        client = get_redis_client()
+        raw = client.hget(VERSION_REGISTRY_KEY, prefix)
+        if raw is None:
+            _logger.debug("No version registered for prefix '%s', using RELEASE_VERSION", prefix)
+            return RELEASE_VERSION
+        return raw.decode() if isinstance(raw, bytes) else str(raw)
+    except RedisError as e:
+        _logger.warning("Redis error reading version for '%s': %s", prefix, e)
+        return RELEASE_VERSION
+    except Exception as e:
+        _logger.warning("Error reading version for '%s': %s", prefix, e)
+        return RELEASE_VERSION
+
+
+def set_cache_version(prefix: str, version: str) -> None:
+    """Write *version* into the shared registry for *prefix*.
+
+    Use this to bust a single cache prefix without a code deploy.
+    All processes sharing this Redis will see the new version on their
+    next ``RedisCache.read()`` call and treat older entries as stale.
+    """
+    client = get_redis_client()
+    client.hset(VERSION_REGISTRY_KEY, prefix, version)
+
+
+def get_all_cache_versions() -> dict[str, str]:
+    """Return every prefix/version pair in the shared registry."""
+    try:
+        client = get_redis_client()
+        raw = cast(dict[bytes, bytes], client.hgetall(VERSION_REGISTRY_KEY))
+        return {
+            (k.decode() if isinstance(k, bytes) else str(k)): (
+                v.decode() if isinstance(v, bytes) else str(v)
+            )
+            for k, v in raw.items()
+        }
+    except RedisError:
+        return {}
+
+
 # Cache is disabled in test environment unless explicitly enabled
 DISABLE_CACHE = (
     os.getenv("ENVIRONMENT", "").lower() == "test"
@@ -107,7 +162,6 @@ class RedisCache:
         prefix: str = "cache:",
         verbose: bool = False,
         isClassMethod: bool = True,
-        version: str = RELEASE_VERSION,
         # Accepted for compatibility but ignored/not used same way
         cache_max_memory: int = 0,
         persist: bool = False,
@@ -121,8 +175,10 @@ class RedisCache:
         self.prefix = prefix
         self.verbose = verbose
         self.isClassMethod = isClassMethod
-        self.version = version
         self.allow_empty = allow_empty
+
+        # Version comes from the shared Redis registry — never hardcoded by callers
+        self.version = get_cache_version(prefix)
 
         # Logging setup
         level = logging.WARNING if not verbose else logging.DEBUG
@@ -364,7 +420,10 @@ class RedisCache:
         try:
             cursor = 0
             while True:
-                cursor, keys = cast(tuple[int, list[bytes]], self._redis.scan(cursor=cursor, match=pattern, count=100))
+                cursor, keys = cast(
+                    tuple[int, list[bytes]],
+                    self._redis.scan(cursor=cursor, match=pattern, count=100),
+                )
                 if keys:
                     self._redis.delete(*keys)
                 if cursor == 0:
@@ -392,7 +451,7 @@ class RedisCache:
             while True:
                 cursor, keys = cast(
                     tuple[int, list[bytes]],
-                    redis_client.scan(cursor=cursor, match=pattern, count=100)
+                    redis_client.scan(cursor=cursor, match=pattern, count=100),
                 )
                 if keys:
                     deleted_count += cast(int, redis_client.delete(*keys))
@@ -433,11 +492,11 @@ class RedisCache:
             while True:
                 cursor, keys = cast(
                     tuple[int, list[bytes]],
-                    redis_client.scan(cursor=cursor, match=pattern, count=100)
+                    redis_client.scan(cursor=cursor, match=pattern, count=100),
                 )
                 total_keys += len(keys)
                 if len(sample_keys) < 20:  # Collect up to 20 sample keys
-                    for k in keys[:20 - len(sample_keys)]:
+                    for k in keys[: 20 - len(sample_keys)]:
                         sample_keys.append(k.decode() if isinstance(k, bytes) else str(k))
                 if cursor == 0:
                     break

@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -71,6 +71,12 @@ help:
 	@echo "    make setup-etl-schedule - Setup daily ETL schedule (2 AM UTC, auto-shutdown)"
 	@echo "    make create-redis-vm  - Create Redis Stack VM on GCE (one-time)"
 	@echo "    make tunnel           - Create IAP tunnel to public Redis VM (localhost:6381)"
+	@echo ""
+	@echo "  Cache Version Management:"
+	@echo "    make cache-version-get PREFIX=<prefix>       - Get version for a cache prefix"
+	@echo "    make cache-version-set PREFIX=<prefix> VERSION=<ver> - Set version for a cache prefix"
+	@echo "    make cache-version-list                      - List all cache prefix versions"
+	@echo "    make cache-version-seed                      - Seed all cache versions into Redis"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -326,3 +332,20 @@ tunnel:
 		--local-host-port=localhost:6381 \
 		--zone=us-central1-a \
 		--project=media-circle
+
+# Cache version management — shared registry in Redis
+cache-version-get:
+	@bash -c 'source venv/bin/activate && source config/local.env && python -c "from utils.redis_cache import get_cache_version; print(get_cache_version(\"$(PREFIX)\"))"'
+
+cache-version-set:
+	@bash -c 'source venv/bin/activate && source config/local.env && python -c "from utils.redis_cache import set_cache_version; set_cache_version(\"$(PREFIX)\", \"$(VERSION)\"); print(\"$(PREFIX) -> $(VERSION)\")"'
+
+cache-version-list:
+	@bash -c 'source venv/bin/activate && source config/local.env && python -c "\
+from utils.redis_cache import get_all_cache_versions; \
+versions = get_all_cache_versions(); \
+[print(f\"  {k:30s} {v}\") for k, v in sorted(versions.items())] if versions else print(\"  (no versions registered)\"); \
+"'
+
+cache-version-seed:
+	@bash -c 'source venv/bin/activate && source config/local.env && python scripts/seed_cache_versions.py'

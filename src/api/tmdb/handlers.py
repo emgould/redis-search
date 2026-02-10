@@ -23,7 +23,6 @@ TrendingHandlerCache = RedisCache(
     prefix="trending_handler",
     verbose=False,
     isClassMethod=True,  # Instance methods on TMDBHandler
-    version="1.0.1",  # Version bump for Redis migration
 )
 
 GENRES = {

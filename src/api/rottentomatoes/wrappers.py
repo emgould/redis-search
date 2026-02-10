@@ -31,7 +31,6 @@ RottenTomatoesWrapperCache = RedisCache(
     prefix="rottentomatoes_wrapper",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Initial version
 )
 
 

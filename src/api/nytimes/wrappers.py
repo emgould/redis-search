@@ -7,14 +7,6 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Any
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-    MCSearchResponse,
-    MCSources,
-)
-
 from api.nytimes.core import NYTimesService
 from api.nytimes.models import (
     NYTimesBestsellerListResponse,
@@ -23,6 +15,13 @@ from api.nytimes.models import (
     NYTimesListNamesResponse,
     NYTimesOverviewResponse,
     NYTimesReviewResponse,
+)
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+    MCSearchResponse,
+    MCSources,
 )
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
@@ -36,7 +35,6 @@ NYTimesWrapperCache = RedisCache(
     prefix="nytimes_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.0.1",  # Bumped for Redis migration
 )
 
 

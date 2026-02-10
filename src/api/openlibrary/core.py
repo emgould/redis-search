@@ -20,7 +20,6 @@ OpenLibraryRequestCache = RedisCache(
     prefix="openlibrary_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.22",  # Added support for covers array from author works endpoint
 )
 
 BookCache = RedisCache(
@@ -28,7 +27,6 @@ BookCache = RedisCache(
     prefix="books",
     verbose=False,
     isClassMethod=True,
-    version="1.4.5",  # Added sorting by work_count for author search results
 )
 
 logger = get_logger(__name__)

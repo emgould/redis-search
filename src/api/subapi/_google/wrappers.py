@@ -18,7 +18,6 @@ GoogleBooksCache = RedisCache(
     prefix="google_books_func",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="3.0.1",  # Version bump for Redis migration
 )
 
 

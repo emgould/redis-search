@@ -14,7 +14,6 @@ TokenCache = RedisCache(
     prefix="apple_auth",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Version bump for Redis migration
 )
 
 # Apple API secret parameters (declared at module level for Firebase CLI detection)

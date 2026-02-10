@@ -6,14 +6,6 @@ Provides backward-compatible async wrappers for Firebase Functions integration.
 import asyncio
 from typing import cast
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-    MCSources,
-    MCSubType,
-)
-
 from api.lastfm.models import (
     LastFMAlbumSearchResponse,
     LastFMArtistSearchResponse,
@@ -23,6 +15,13 @@ from api.lastfm.models import (
 from api.subapi.apple.wrapper import apple_wrapper
 from api.subapi.spotify.models import SpotifyAlbum, SpotifyAlbumSearchResponse
 from api.subapi.spotify.wrappers import spotify_wrapper
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+    MCSources,
+    MCSubType,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 from utils.soft_comparison import soft_compare
@@ -35,7 +34,6 @@ LastFMWrapperCache = RedisCache(
     prefix="lastfm_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="3.2.1",  # Incremented: Fixed validation to work correctly with cache
 )
 
 

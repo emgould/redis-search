@@ -30,7 +30,6 @@ NYTimesRequestCache = RedisCache(
     prefix="nytimes_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Bumped for Redis migration
 )
 
 NYTimesCache = RedisCache(
@@ -38,7 +37,6 @@ NYTimesCache = RedisCache(
     prefix="nytimes",
     verbose=False,
     isClassMethod=True,
-    version="3.0.1",  # Bumped for Redis migration
 )
 
 logger = get_logger(__name__)

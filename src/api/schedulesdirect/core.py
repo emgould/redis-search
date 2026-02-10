@@ -45,7 +45,6 @@ ScheduleCache = RedisCache(
     prefix="sd_schedule",
     defaultTTL=CACHE_TTL_SECONDS - 60 * 60,
     verbose=False,
-    version="1.0.0",  # Cache bust to force fresh data
 )
 
 

@@ -5,18 +5,17 @@ Provides async wrappers for Firebase Functions integration using ApiWrapperRespo
 
 from typing import Any, cast
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-)
-
 from api.news.models import (
     NewsSearchResponse,
     NewsSourcesResponse,
     TrendingNewsResponse,
 )
 from api.news.search import NewsSearchService
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -28,7 +27,6 @@ NewsCache = RedisCache(
     prefix="news_func",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="5.0.0",  # Bumped for Redis cache migration
 )
 
 

@@ -6,12 +6,6 @@ Drop-in replacement for news API wrappers.
 
 from typing import Any, cast
 
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-)
-
 from api.newsai.event_models import TrendingEventsResponse
 from api.newsai.models import (
     NewsSearchResponse,
@@ -19,6 +13,11 @@ from api.newsai.models import (
     TrendingNewsResponse,
 )
 from api.newsai.search import NewsAISearchService
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -30,7 +29,6 @@ NewsAICache = RedisCache(
     prefix="newsai",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.0.0",  # Initial version for NewsAI
 )
 
 

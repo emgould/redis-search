@@ -38,7 +38,6 @@ YouTubeCache = RedisCache(
     prefix="youtube",
     verbose=False,
     isClassMethod=True,
-    version="2.0.3",  # Version bump for Redis migration
 )
 
 logger = get_logger(__name__)
