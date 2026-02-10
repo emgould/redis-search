@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import datetime
+import io
 import logging
 import os
 import pickle
@@ -125,6 +126,23 @@ class CacheEntry:
         return {
             field.name: getattr(self, field.name) for field in self.__dataclass_fields__.values()
         }
+
+
+class _CacheEntryUnpickler(pickle.Unpickler):
+    """Unpickler that resolves CacheEntry to the local class regardless of source module path.
+
+    Pickle embeds the full module path (e.g. ``utils.redis_cache.CacheEntry``) when
+    serializing.  If another repo has ``redis_cache.py`` at a different import path,
+    the default unpickler raises ``ModuleNotFoundError``.  This subclass intercepts
+    the class lookup and returns the local ``CacheEntry`` for any module, enabling
+    cross-repo cache sharing.
+    """
+
+    def find_class(self, module: str, name: str) -> type:
+        if name == "CacheEntry":
+            return CacheEntry
+        cls: type = super().find_class(module, name)
+        return cls
 
 
 # Singleton Redis client (synchronous)
@@ -353,7 +371,7 @@ class RedisCache:
                 self.logging.debug(f"Redis miss: {storage_key}")
                 return None
 
-            entry = pickle.loads(cast(bytes, raw))
+            entry = _CacheEntryUnpickler(io.BytesIO(cast(bytes, raw))).load()
             if not isinstance(entry, CacheEntry):
                 self.logging.warning(f"Invalid cache entry format for {key}")
                 return None
