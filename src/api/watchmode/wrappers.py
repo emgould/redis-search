@@ -33,7 +33,6 @@ WatchmodeWrapperCache = RedisCache(
     prefix="watchmode_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.1.0",  # Incremented for results field migration (was releases)
 )
 
 

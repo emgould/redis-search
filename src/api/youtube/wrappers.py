@@ -32,7 +32,6 @@ YouTubeWrapperCache = RedisCache(
     prefix="youtube_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.3.0",  # Version bump: official API first, fallback to unofficial INNERTUBE
 )
 
 

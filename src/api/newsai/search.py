@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
-from contracts.models import MCType
 
 from api.newsai.core import NewsAIService
 from api.newsai.event_models import TrendingEventsResponse
@@ -20,6 +19,7 @@ from api.newsai.models import (
     NewsSourcesResponse,
     TrendingNewsResponse,
 )
+from contracts.models import MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -53,7 +53,6 @@ NewsAICache = RedisCache(
     prefix="newsai",
     verbose=False,
     isClassMethod=True,
-    version="1.0.7",  # Version bump for Redis migration
 )
 
 

@@ -93,7 +93,6 @@ SpotifyWrapperCache = RedisCache(
     prefix="spotify_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="1.6.0",  # Filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
 )
 
 

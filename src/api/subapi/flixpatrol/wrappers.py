@@ -19,7 +19,6 @@ FlixPatrolCache = RedisCache(
     prefix="flixpatrol_func",
     verbose=False,
     isClassMethod=True,  # For standalone functions
-    version="2.0.1",  # Version bump for Redis migration
 )
 
 

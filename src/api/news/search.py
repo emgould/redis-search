@@ -24,7 +24,6 @@ NewsCache = RedisCache(
     prefix="news",
     verbose=False,
     isClassMethod=True,
-    version="2.1.1",  # Version bump for Redis migration
 )
 
 

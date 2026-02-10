@@ -24,7 +24,6 @@ RSSFeedCache = RedisCache(
     prefix="rss_feed",
     verbose=False,
     isClassMethod=False,
-    version="1.0.0",
 )
 
 # Common XML namespaces used in podcast RSS feeds

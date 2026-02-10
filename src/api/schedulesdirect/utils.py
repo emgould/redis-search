@@ -9,12 +9,11 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from contracts.models import MCBaseItem, MCType
-
 from api.schedulesdirect.channel_filters import channel_name_map
 from api.schedulesdirect.models import SDProgramMetadata
 from api.tmdb import tmdb_wrapper
 from api.tmdb.models import MCMovieItem, MCTvItem
+from contracts.models import MCBaseItem, MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -25,7 +24,6 @@ SDFunctionCache = RedisCache(
     prefix="schedulesdirect_func",
     verbose=False,
     isClassMethod=False,  # search_tmdb is a standalone function, not a class method
-    version="1.0.3",  # Cache bust: added Unicode normalization + bidirectional title matching
 )
 
 movie_title_cache: dict[str, str] = {}

@@ -28,7 +28,6 @@ PodcastRequestCache = RedisCache(
     prefix="podcast_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Request cache version - independent from other caches
 )
 
 # ---------------------------

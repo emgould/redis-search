@@ -21,7 +21,6 @@ SDTokenCache = RedisCache(
     prefix="sd_token",
     verbose=False,
     isClassMethod=False,
-    version="1.0.0",
 )
 
 

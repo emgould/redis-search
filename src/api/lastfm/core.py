@@ -23,14 +23,12 @@ LastFMRequestCache = RedisCache(
     prefix="lastfm_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Request cache version - independent from other caches
 )
 
 LastFMCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="lastfm",
     verbose=True,
-    version="2.5.0",  # Filter out cover/tribute accounts (e.g., "Taylor Swift Piano Covers")
 )
 
 logger = get_logger(__name__)

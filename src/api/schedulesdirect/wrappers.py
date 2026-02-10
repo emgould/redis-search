@@ -9,8 +9,6 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from contracts.models import MCType
-
 from api.schedulesdirect.channel_filters import (
     ChannelType,
     channel_name_map,
@@ -26,6 +24,7 @@ from api.schedulesdirect.models import (
 )
 from api.schedulesdirect.utils import create_mc_item_from_schedule
 from api.tmdb.models import MCTvItem
+from contracts.models import MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -36,7 +35,6 @@ SchedulesDirectCache = RedisCache(
     prefix="schedulesdirect_wrapper",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Cache bust: Optimized mc_type filtering and logging
 )
 
 

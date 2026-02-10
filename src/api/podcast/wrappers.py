@@ -33,7 +33,6 @@ PodcastWrapperCache = RedisCache(
     prefix="podcast_wrapper",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.0.5",  # Updated podcast search sorting to use weighted title matching with Levenshtein distance
 )
 
 

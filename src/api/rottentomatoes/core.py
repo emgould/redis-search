@@ -30,7 +30,6 @@ RottenTomatoesRequestCache = RedisCache(
     prefix="rottentomatoes_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Initial version
 )
 
 # Cache for processed search results
@@ -39,7 +38,6 @@ RottenTomatoesCache = RedisCache(
     prefix="rottentomatoes",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Initial version
 )
 
 logger = get_logger(__name__)

@@ -36,7 +36,6 @@ FlixPatrolCache = RedisCache(
     prefix="flixpatrol",
     verbose=False,
     isClassMethod=True,
-    version="2.0.1",  # Version bump for Redis migration
 )
 
 logger = get_logger(__name__)

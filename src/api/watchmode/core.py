@@ -18,7 +18,6 @@ WatchmodeRequestCache = RedisCache(
     prefix="watchmode_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Request cache version - independent from other caches
 )
 
 WatchmodeCache = RedisCache(
@@ -26,7 +25,6 @@ WatchmodeCache = RedisCache(
     prefix="watchmode",
     verbose=False,
     isClassMethod=True,
-    version="2.1.0",  # Bumped for refactored modular structure
 )
 
 logger = get_logger(__name__)

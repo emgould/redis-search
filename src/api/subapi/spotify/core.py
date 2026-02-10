@@ -25,7 +25,6 @@ SpotifyRequestCache = RedisCache(
     prefix="spotify_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.2",  # Fixed: default_image now uses largest image (index 0) instead of smallest
 )
 
 SpotifyCache = RedisCache(
@@ -33,7 +32,6 @@ SpotifyCache = RedisCache(
     prefix="spotify",
     verbose=False,
     isClassMethod=True,
-    version="1.0.2",  # Fixed: default_image now uses largest image (index 0) instead of smallest
 )
 
 # Rate limiter configuration: Spotify API limits

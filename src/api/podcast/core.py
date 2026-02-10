@@ -17,14 +17,12 @@ PodcastCache = RedisCache(
     prefix="podcast",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",  # Added mc_id and mc_type to podcasts and episodes
 )
 PodcastFunctionCache = RedisCache(
     defaultTTL=60 * 60,  # 1 hour
     prefix="podcast_func",
     verbose=False,
     isClassMethod=False,
-    version="1.3.0",  # Updated podcast search sorting to use weighted title matching with Levenshtein distance
 )
 logger = get_logger(__name__)
 

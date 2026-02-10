@@ -17,7 +17,6 @@ ComscoreCache = RedisCache(
     prefix="comscore",
     verbose=False,
     isClassMethod=True,  # For ComscoreService class methods
-    version="2.0.1",  # Version bump for Redis migration
 )
 
 logger = get_logger(__name__)

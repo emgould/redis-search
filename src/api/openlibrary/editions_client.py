@@ -21,7 +21,6 @@ EditionsCache = RedisCache(
     prefix="openlibrary_editions",
     verbose=False,
     isClassMethod=True,
-    version="1.0.0",
 )
 
 

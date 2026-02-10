@@ -6,12 +6,6 @@ Provides async wrappers for Firebase Functions integration using ApiWrapperRespo
 from typing import Any, cast
 
 import aiohttp
-from contracts.models import (
-    MCBaseItem,
-    MCPersonSearchRequest,
-    MCPersonSearchResponse,
-    MCSources,
-)
 
 from api.openlibrary.models import (
     CoverUrlsResponse,
@@ -21,6 +15,12 @@ from api.openlibrary.models import (
     OpenLibrarySearchResponse,
 )
 from api.openlibrary.search import OpenLibrarySearchService
+from contracts.models import (
+    MCBaseItem,
+    MCPersonSearchRequest,
+    MCPersonSearchResponse,
+    MCSources,
+)
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
@@ -32,7 +32,6 @@ OpenLibraryCache = RedisCache(
     prefix="openlibrary_func",
     verbose=False,
     isClassMethod=True,  # Required for class methods
-    version="4.33.3",  # Added support for covers array from author works endpoint
 )
 
 

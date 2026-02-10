@@ -33,7 +33,6 @@ TMDBRequestCache = RedisCache(
     prefix="tmdb_request",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Rolled for ETL diagnostics test
 )
 
 # Cache for standalone async functions (not class methods)
@@ -43,13 +42,11 @@ TMDBFunctionCache = RedisCache(
     prefix="tmdb_func",
     verbose=False,
     isClassMethod=False,  # For standalone functions
-    version="1.2.9",  # Fixed TV credits: sort by recency BEFORE applying limit
 )
 TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="tmdb",
     verbose=False,
-    version="1.4.3",  # Added release_dates to get_media_details for theatrical release detection
 )
 
 

@@ -18,7 +18,6 @@ GoogleBooksCache: RedisCache = RedisCache(
     prefix="google_books",
     verbose=False,
     isClassMethod=True,
-    version="1.0.1",  # Version bump for Redis migration
 )
 
 logger = get_logger(__name__)

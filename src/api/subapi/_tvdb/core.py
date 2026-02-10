@@ -15,7 +15,6 @@ TVDBMonthCache = RedisCache(
     prefix="tvdb",
     verbose=False,
     isClassMethod=True,
-    version="2.0.1",  # Version bump for Redis migration
 )
 
 TVDBCache = RedisCache(
@@ -23,7 +22,6 @@ TVDBCache = RedisCache(
     prefix="tvdb",
     verbose=False,
     isClassMethod=True,
-    version="2.0.1",  # Version bump for Redis migration
 )
 
 logger = get_logger(__name__)
