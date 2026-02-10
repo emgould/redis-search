@@ -38,18 +38,30 @@ VERSION_REGISTRY_KEY = "__cache_versions__"
 _logger = logging.getLogger("rediscache.versions")
 
 
+_DEFAULT_NEW_PREFIX_VERSION = "1.0.0"
+
+
 def get_cache_version(prefix: str) -> str:
     """Read the shared cache version for *prefix* from the Redis registry.
 
-    Returns ``RELEASE_VERSION`` as a fallback when the prefix is not yet
-    registered or Redis is unreachable.
+    If the prefix has never been registered, it is auto-registered with
+    version ``1.0.0`` so it becomes immediately visible to all repos
+    sharing this Redis instance.
+
+    Returns ``RELEASE_VERSION`` as a fallback only when Redis is unreachable.
     """
     try:
         client = get_redis_client()
         raw = client.hget(VERSION_REGISTRY_KEY, prefix)
         if raw is None:
-            _logger.debug("No version registered for prefix '%s', using RELEASE_VERSION", prefix)
-            return RELEASE_VERSION
+            # Auto-register new prefixes so they appear in the shared registry
+            client.hset(VERSION_REGISTRY_KEY, prefix, _DEFAULT_NEW_PREFIX_VERSION)
+            _logger.info(
+                "Auto-registered new cache prefix '%s' with version %s",
+                prefix,
+                _DEFAULT_NEW_PREFIX_VERSION,
+            )
+            return _DEFAULT_NEW_PREFIX_VERSION
         return raw.decode() if isinstance(raw, bytes) else str(raw)
     except RedisError as e:
         _logger.warning("Redis error reading version for '%s': %s", prefix, e)
