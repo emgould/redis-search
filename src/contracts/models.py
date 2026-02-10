@@ -171,15 +171,15 @@ class MCBaseItem(BaseModelWithMethods):
         if not self.mc_id:
             # Handle different item types - TMDB items use tmdb_id, others use id
             item_dict = {}
-            if hasattr(self, "tmdb_id") and self.tmdb_id is not None:
-                item_dict["tmdb_id"] = self.tmdb_id
-                item_dict["id"] = self.tmdb_id  # Also include id for generate_mc_id compatibility
-            elif hasattr(self, "id") and self.id is not None:
-                item_dict["id"] = self.id
+            if hasattr(self, "tmdb_id") and self.tmdb_id is not None:  # type: ignore
+                item_dict["tmdb_id"] = self.tmdb_id  # type: ignore
+                item_dict["id"] = self.tmdb_id  # type: ignore # Also include id for generate_mc_id compatibility
+            elif hasattr(self, "id") and self.id is not None:  # type: ignore
+                item_dict["id"] = self.id  # type: ignore
 
             # Include mc_subtype if present (needed for music artist detection)
-            if hasattr(self, "mc_subtype") and self.mc_subtype is not None:
-                item_dict["mc_subtype"] = self.mc_subtype
+            if hasattr(self, "mc_subtype") and self.mc_subtype is not None:  # type: ignore
+                item_dict["mc_subtype"] = self.mc_subtype  # type: ignore
 
             # Generate mc_id from item data (always returns a value, uses hash fallback if needed)
             self.mc_id = generate_mc_id(item_dict, self.mc_type)

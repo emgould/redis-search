@@ -128,6 +128,13 @@ class ChangesETLStats:
     # Output
     staging_file: str = ""
 
+    # Live progress tracking (used by web UI status polling)
+    current_batch: int = 0
+    total_batches: int = 0
+    current_phase: str = ""
+    enriched_count: int = 0
+    enrichment_errors: int = 0
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "media_type": self.media_type,
@@ -176,11 +183,11 @@ class TMDBChangesETL(TMDBService):
         return self.staging_dir / f"tmdb_changes_{media_type}_{run_date}_errors.json.gz"
 
     async def _fetch_changes_page(
-        self, media_type: Literal["tv", "movie", "person"], start_date: str, page: int
+        self, media_type: Literal["tv", "movie", "person"], start_date: str, end_date: str, page: int
     ) -> dict:
         """Fetch a single page of changes."""
         endpoint = f"/{media_type}/changes"
-        params = {"start_date": start_date, "page": page}
+        params = {"start_date": start_date, "end_date": end_date, "page": page}
         result = await self._make_request(endpoint, params=params)
         return result or {}
 
@@ -193,7 +200,7 @@ class TMDBChangesETL(TMDBService):
         total_pages = 1
 
         while page <= total_pages:
-            data = await self._fetch_changes_page(media_type, start_date, page)
+            data = await self._fetch_changes_page(media_type, start_date, end_date, page)
             results = data.get("results", [])
             total_pages = data.get("total_pages", 1)
 
@@ -306,6 +313,8 @@ class TMDBChangesETL(TMDBService):
 
         batches = [change_ids[i : i + BATCH_SIZE] for i in range(0, len(change_ids), BATCH_SIZE)]
         total_batches = len(batches)
+        stats.total_batches = total_batches
+        stats.current_phase = "fetch"
 
         # Apply batch limit for testing
         if max_batches > 0:
@@ -313,6 +322,7 @@ class TMDBChangesETL(TMDBService):
             logger.info(f"⚠️  TESTING MODE: Limited to {max_batches} batches")
 
         for batch_idx, batch in enumerate(batches, 1):
+            stats.current_batch = batch_idx
             batch_start = time.time()
             logger.info(f"Fetching batch {batch_idx}/{total_batches} ({len(batch)} items)")
 
@@ -343,11 +353,13 @@ class TMDBChangesETL(TMDBService):
                 if isinstance(result, BaseException):
                     stats.fetch_phase.items_failed += 1
                     stats.fetch_phase.errors.append(f"{tmdb_id}: {result}")
+                    stats.enrichment_errors += 1
                     logger.error(f"Exception for {tmdb_id}: {result}")
                     continue
 
                 if result is None:
                     stats.fetch_phase.items_failed += 1
+                    stats.enrichment_errors += 1
                     logger.warning(f"Null result for {tmdb_id}")
                     continue
 
@@ -366,6 +378,14 @@ class TMDBChangesETL(TMDBService):
                     logger.warning(f"Empty or 404 for {tmdb_id}")
                     continue
 
+                # Check for enrichment errors (e.g. partial failures in get_media_details)
+                item_error = item_dict.get("error")
+                if item_error:
+                    stats.fetch_phase.items_failed += 1
+                    stats.fetch_phase.errors.append(f"{tmdb_id}: {item_error}")
+                    logger.warning(f"Enrichment error for {tmdb_id}: {item_error}")
+                    continue
+
                 item_dict["_media_type"] = media_type
                 item_dict["_tmdb_id"] = tmdb_id
 
@@ -377,6 +397,7 @@ class TMDBChangesETL(TMDBService):
                     )
 
                 # Apply filter
+                stats.enriched_count += 1
                 if media_type == "person":
                     if self._passes_person_filter(item_dict):
                         enriched_items.append(item_dict)
@@ -449,6 +470,7 @@ class TMDBChangesETL(TMDBService):
         """Phase 2: Load from staging file to Redis."""
         stats.load_phase.started_at = datetime.now()
         stats.load_phase.phase = "load_to_redis"
+        stats.current_phase = "load"
 
         logger.info(f"Phase 2: Loading from {staging_path} to Redis")
 
@@ -602,6 +624,7 @@ async def run_nightly_etl(
     staging_file: str | None = None,
     max_batches: int = 0,
     verbose: bool = False,
+    stats: ChangesETLStats | None = None,
 ) -> ChangesETLStats:
     """
     Run the two-phase changes ETL.
@@ -619,6 +642,7 @@ async def run_nightly_etl(
         staging_file: Path to existing staging file (for load_only)
         max_batches: Max batches to process (0 = unlimited)
         verbose: Enable verbose logging (shows filter rejection reasons)
+        stats: Optional pre-created stats object for live progress tracking
     """
     load_env()
 
@@ -628,11 +652,16 @@ async def run_nightly_etl(
     if not start_date:
         start_date = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    stats = ChangesETLStats(
-        media_type=media_type,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    if stats is None:
+        stats = ChangesETLStats(
+            media_type=media_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    else:
+        stats.media_type = media_type
+        stats.start_date = start_date
+        stats.end_date = end_date
 
     etl = TMDBChangesETL(staging_dir=staging_dir, verbose=verbose)
 

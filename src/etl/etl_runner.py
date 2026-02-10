@@ -567,6 +567,7 @@ async def run_single_etl(
     redis_port: int | None = None,
     redis_password: str | None = None,
     verbose: bool = False,
+    stats: ChangesETLStats | None = None,
 ) -> ChangesETLStats:
     """
     Run a single ETL job directly without YAML config.
@@ -581,6 +582,7 @@ async def run_single_etl(
         redis_port: Redis port (defaults to env)
         redis_password: Redis password (defaults to env)
         verbose: Enable verbose logging
+        stats: Optional pre-created stats object for live progress tracking
 
     Returns:
         ChangesETLStats with results
@@ -604,4 +606,5 @@ async def run_single_etl(
         redis_port=port,
         redis_password=password,
         verbose=verbose,
+        stats=stats,
     )
