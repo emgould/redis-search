@@ -33,7 +33,7 @@ from core.search_queries import (
     strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
-from utils.soft_comparison import is_autocomplete_match
+from utils.soft_comparison import is_author_name_match, is_autocomplete_match
 
 logger = get_logger(__name__)
 
@@ -331,8 +331,12 @@ def build_podcasts_autocomplete_query(q: str, include_tag_fields: bool = True) -
 
 def build_authors_autocomplete_query(q: str) -> str:
     """
-    Build a prefix search query for authors (OpenLibrary) autocomplete.
+    Build a search query for authors (OpenLibrary) autocomplete.
     Searches both search_title (name) and name fields.
+
+    Uses exact word matching (no prefix wildcards) so that partial word
+    matches are excluded.  For example, "tennis" matches "Jeni Tennis"
+    but NOT "Jeni Tennison".
     """
     # Strip apostrophes to match indexed names
     q = strip_query_apostrophes(q)
@@ -365,16 +369,13 @@ def build_authors_autocomplete_query(q: str) -> str:
     # Escape special characters in search terms
     escaped_words = [escape_redis_search_term(w) for w in words]
 
-    # For multi-word: match documents containing all words (last word as prefix)
+    # Exact word matching — no wildcard suffix so "tennis" won't match "tennison"
     if len(escaped_words) == 1:
-        # Search both search_title and name
-        return f"(@search_title:{escaped_words[0]}*) | (@name:{escaped_words[0]}*)"
+        return f"(@search_title:{escaped_words[0]}) | (@name:{escaped_words[0]})"
     else:
-        # All words except last should be exact, last word is prefix
-        exact_words = " ".join(escaped_words[:-1])
-        prefix_word = escaped_words[-1]
-        title_query = f"@search_title:({exact_words} {prefix_word}*)"
-        name_query = f"@name:({exact_words} {prefix_word}*)"
+        all_words = " ".join(escaped_words)
+        title_query = f"@search_title:({all_words})"
+        name_query = f"@name:({all_words})"
         return f"({title_query}) | ({name_query})"
 
 
@@ -625,8 +626,14 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
     podcast_results_raw = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
     podcast_results = sorted(podcast_results_raw, key=lambda p: _rank_podcast_result(p, q))
 
-    # Parse author results
-    author_results = [parse_doc(doc) for doc in authors_res.docs]  # type: ignore[union-attr]
+    # Parse author results and filter to exact word matches only
+    # (prevents "tennis" from matching "Jeni Tennison")
+    author_results_raw = [parse_doc(doc) for doc in authors_res.docs]  # type: ignore[union-attr]
+    author_results = [
+        a
+        for a in author_results_raw
+        if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
+    ]
 
     # Parse book results and re-rank: exact matches first, then by popularity
     book_results_raw = [parse_doc(doc) for doc in books_res.docs]  # type: ignore[union-attr]
@@ -873,7 +880,14 @@ async def autocomplete_stream(
 
             elif name == "author":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
-                    parsed_results = [parse_doc(doc) for doc in data.docs][:10]
+                    parsed_all = [parse_doc(doc) for doc in data.docs]
+                    parsed_results = [
+                        a
+                        for a in parsed_all
+                        if is_author_name_match(
+                            q, a.get("search_title", "") or a.get("name", "")
+                        )
+                    ][:10]
 
             elif name == "book":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
@@ -1186,12 +1200,19 @@ async def search(
             parsed_podcasts = sorted(parsed_podcasts, key=lambda p: _rank_podcast_result(p, q))
         final_results["podcast"] = parsed_podcasts[:limit]
 
-    # Process author results
+    # Process author results with exact word matching filter
     if "author" in results_map:
         author_res = results_map["author"]
         if isinstance(author_res, BaseException):
             author_res = empty_result
-        final_results["author"] = [parse_doc(doc) for doc in author_res.docs][:limit]
+        parsed_authors = [parse_doc(doc) for doc in author_res.docs]
+        if has_query and q:
+            parsed_authors = [
+                a
+                for a in parsed_authors
+                if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
+            ]
+        final_results["author"] = parsed_authors[:limit]
 
     # Process book results
     if "book" in results_map:

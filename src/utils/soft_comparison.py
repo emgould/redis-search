@@ -133,6 +133,48 @@ def _try_match_from(
     return True
 
 
+def is_author_name_match(query: str, name: str) -> bool:
+    """
+    Check if an author name matches the query using exact word matching.
+
+    Unlike ``is_autocomplete_match`` (which allows prefix matching on the last
+    word), this requires every query word to correspond to a *complete* word in
+    the name.  This prevents "tennis" from matching "Jeni Tennison" while still
+    allowing "tennis" to match "Jeni Tennis".
+
+    Examples:
+        - "tennis" matches "Jeni Tennis" (complete word match)
+        - "tennis" does NOT match "Jeni Tennison" (partial word match)
+        - "jeni tennis" matches "Jeni Tennis" (both words match)
+        - "mark twain" matches "Mark Twain" (both words match)
+
+    Args:
+        query: The user's search query
+        name: The candidate author name to match against
+
+    Returns:
+        True if every query word matches a complete word in the name
+    """
+    if not query or not name:
+        return not query  # Empty query matches everything, empty name matches nothing
+
+    query_lower = query.lower().strip()
+    name_lower = name.lower().strip()
+
+    # Quick exact match check
+    if query_lower == name_lower:
+        return True
+
+    query_words = query_lower.split()
+    name_words = name_lower.split()
+
+    if not query_words:
+        return True
+
+    # Every query word must match a complete word in the name
+    return all(qw in name_words for qw in query_words)
+
+
 def _levenshtein_distance(s1: str, s2: str) -> int:
     """
     Calculate the Levenshtein edit distance between two strings.
