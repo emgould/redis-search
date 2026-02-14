@@ -351,21 +351,26 @@ class RedisRepository:
             book_num_docs = 0
             book_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
-        # Use index doc counts for cache breakdown (fast, no SCAN needed)
-        # This is accurate because each index corresponds to keys with that prefix
+        # Index doc counts for key breakdown (fast, no SCAN needed)
+        total_index_keys = (
+            num_docs + people_num_docs + podcasts_num_docs + author_num_docs + book_num_docs
+        )
+        # API cache keys = everything in Redis that isn't an index document
+        api_cache_keys = max(0, dbsize - total_index_keys)
+
         cache_breakdown = {
-            "media": num_docs,  # media:* keys
-            "person": people_num_docs,  # person:* keys
-            "podcast": podcasts_num_docs,  # podcast:* keys
-            "author": author_num_docs,  # author:* keys
-            "book": book_num_docs,  # book:* keys
-            "tmdb_request": 0,  # Cache keys, not indexed
-            "tmdb": 0,  # Cache keys, not indexed
+            "media": num_docs,
+            "person": people_num_docs,
+            "podcast": podcasts_num_docs,
+            "author": author_num_docs,
+            "book": book_num_docs,
+            "api_cache": api_cache_keys,
         }
 
-        # Calculate 'other' as the remainder (includes tmdb cache keys, etc.)
-        total_counted = sum(cache_breakdown.values())
-        cache_breakdown["other"] = max(0, dbsize - total_counted)
+        # Extract memory policy and eviction stats from INFO
+        maxmemory = info.get("maxmemory", 0)
+        maxmemory_policy = info.get("maxmemory_policy", "unknown")
+        evicted_keys = info.get("evicted_keys", 0)
 
         return {
             "info": info,
@@ -381,4 +386,7 @@ class RedisRepository:
             "book_num_docs": book_num_docs,
             "book_index_stats": book_index_stats,
             "cache_breakdown": cache_breakdown,
+            "maxmemory": maxmemory,
+            "maxmemory_policy": maxmemory_policy,
+            "evicted_keys": evicted_keys,
         }
