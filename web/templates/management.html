@@ -1485,7 +1485,7 @@
 
       <!-- Overall Memory Stats - values loaded async via JavaScript -->
       <h3 class="text-lg font-medium mb-3 text-surface-300">📊 Memory</h3>
-      <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Total Memory Used</p>
           <p id="stat-memory-used" class="text-3xl font-bold text-brand-400">
@@ -1494,8 +1494,22 @@
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Peak Memory</p>
-          <p id="stat-memory-peak" class="text-3xl font-bold text-surface-300">
+          <p class="text-sm text-surface-400 mb-1">Max Memory</p>
+          <p id="stat-maxmemory" class="text-3xl font-bold text-surface-300">
+            Loading...
+          </p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Eviction Policy</p>
+          <p id="stat-eviction-policy" class="text-2xl font-bold text-surface-300">
+            Loading...
+          </p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Evicted Keys</p>
+          <p id="stat-evicted-keys" class="text-3xl font-bold text-surface-300">
             Loading...
           </p>
         </div>
@@ -1505,7 +1519,7 @@
       <h3 class="text-lg font-medium mb-3 text-surface-300">
         🔑 Key Breakdown
       </h3>
-      <div class="grid md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+      <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">Media Keys</p>
           <p id="stat-media-keys" class="text-2xl font-bold text-green-400">
@@ -1547,27 +1561,11 @@
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">API Response Cache</p>
-          <p id="stat-tmdb-request" class="text-2xl font-bold text-yellow-400">
+          <p class="text-sm text-surface-400 mb-1">API Cache Keys</p>
+          <p id="stat-api-cache" class="text-2xl font-bold text-yellow-400">
             ...
           </p>
-          <p class="text-xs text-surface-500">tmdb_request:*</p>
-        </div>
-
-        <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Enrichment Cache</p>
-          <p id="stat-tmdb-cache" class="text-2xl font-bold text-orange-400">
-            ...
-          </p>
-          <p class="text-xs text-surface-500">tmdb:*</p>
-        </div>
-
-        <div class="bg-surface-800 rounded-lg p-4">
-          <p class="text-sm text-surface-400 mb-1">Other Keys</p>
-          <p id="stat-other-keys" class="text-2xl font-bold text-surface-400">
-            ...
-          </p>
-          <p class="text-xs text-surface-500">misc</p>
+          <p class="text-xs text-surface-500">all cached API responses</p>
         </div>
       </div>
 
@@ -1651,7 +1649,28 @@
 
         // Update overall Redis memory stats
         document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
-        document.getElementById('stat-memory-peak').textContent = formatMB(data.memory_peak);
+
+        // Max memory: 0 means no limit
+        const maxmemoryEl = document.getElementById('stat-maxmemory');
+        if (maxmemoryEl) {
+          maxmemoryEl.textContent = data.maxmemory > 0 ? formatMB(data.maxmemory) : 'No limit';
+        }
+
+        // Eviction policy
+        const policyEl = document.getElementById('stat-eviction-policy');
+        if (policyEl) {
+          policyEl.textContent = data.maxmemory_policy || 'unknown';
+        }
+
+        // Evicted keys — highlight red if non-zero
+        const evictedEl = document.getElementById('stat-evicted-keys');
+        if (evictedEl) {
+          const evicted = data.evicted_keys || 0;
+          evictedEl.textContent = formatNumber(evicted);
+          evictedEl.className = evicted > 0
+            ? 'text-3xl font-bold text-red-400'
+            : 'text-3xl font-bold text-green-400';
+        }
 
         // Update cache breakdown
         document.getElementById('stat-media-keys').textContent = formatNumber(data.cache_breakdown.media || 0);
@@ -1671,9 +1690,10 @@
         if (bookKeysEl) {
           bookKeysEl.textContent = formatNumber(data.cache_breakdown.book || 0);
         }
-        document.getElementById('stat-tmdb-request').textContent = formatNumber(data.cache_breakdown.tmdb_request || 0);
-        document.getElementById('stat-tmdb-cache').textContent = formatNumber(data.cache_breakdown.tmdb || 0);
-        document.getElementById('stat-other-keys').textContent = formatNumber(data.cache_breakdown.other || 0);
+        const apiCacheEl = document.getElementById('stat-api-cache');
+        if (apiCacheEl) {
+          apiCacheEl.textContent = formatNumber(data.cache_breakdown.api_cache || 0);
+        }
 
         // Update total
         document.getElementById('stat-dbsize').textContent = formatNumber(data.dbsize);
