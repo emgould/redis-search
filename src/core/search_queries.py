@@ -5,6 +5,94 @@ from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
+
+class RawMediaQueryError(ValueError):
+    """Raised when raw mode query fails validation."""
+
+
+# Media index TAG/NUMERIC fields allowed for raw passthrough (idx:media)
+ALLOWED_RAW_MEDIA_FIELDS = frozenset(
+    {
+        "keywords",
+        "genres",
+        "genre_ids",
+        "cast_names",
+        "cast_ids",
+        "director_name",
+        "director_id",
+        "mc_type",
+        "mc_subtype",
+        "source",
+        "origin_country",
+        "year",
+        "rating",
+        "popularity",
+    }
+)
+
+
+def validate_raw_media_query(q: str) -> None:
+    """
+    Validate that the query is safe RediSearch syntax for idx:media.
+
+    Checks:
+    - Query must start with @ (field syntax)
+    - All field names must be in ALLOWED_RAW_MEDIA_FIELDS
+    - Braces and brackets must be balanced
+
+    Raises:
+        RawMediaQueryError: If validation fails
+    """
+    if not q or not q.strip():
+        raise RawMediaQueryError("Raw query cannot be empty")
+
+    s = q.strip()
+
+    # Must start with @ to indicate field syntax
+    if not s.startswith("@"):
+        raise RawMediaQueryError("Raw query must start with @field:{value} or @field:[range]")
+
+    # Extract all field names: @fieldname: or @fieldname:[
+    field_matches = re.findall(r"@(\w+)\s*[:\[\{]", s)
+    for field_name in field_matches:
+        if field_name.lower() not in ALLOWED_RAW_MEDIA_FIELDS:
+            raise RawMediaQueryError(
+                f"Disallowed field '{field_name}' in raw query. "
+                f"Allowed: {', '.join(sorted(ALLOWED_RAW_MEDIA_FIELDS))}"
+            )
+
+    # Basic balance check for {} and []
+    open_braces = 0
+    open_brackets = 0
+    for c in s:
+        if c == "{":
+            open_braces += 1
+        elif c == "}":
+            open_braces -= 1
+        elif c == "[":
+            open_brackets += 1
+        elif c == "]":
+            open_brackets -= 1
+        if open_braces < 0 or open_brackets < 0:
+            raise RawMediaQueryError("Unbalanced delimiters in raw query")
+    if open_braces != 0 or open_brackets != 0:
+        raise RawMediaQueryError("Unbalanced delimiters in raw query")
+
+
+def build_media_query_from_user_input(
+    q: str, raw: bool = False, include_tag_fields: bool = True
+) -> str:
+    """
+    Build media index query from user input.
+
+    When raw=True, validates and passes through the query. Otherwise uses
+    build_autocomplete_query.
+    """
+    if raw:
+        validate_raw_media_query(q)
+        return q.strip()
+    return build_autocomplete_query(q, include_tag_fields=include_tag_fields)
+
 # Common stopwords that Redis Search ignores
 STOPWORDS = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "is", "it"}
 
@@ -452,6 +540,7 @@ def build_filter_query(
     rating_max: float | None = None,
     mc_type: str | None = None,
     include_tag_fields: bool = True,
+    raw: bool = False,
 ) -> str:
     """
     Build a RediSearch query combining text search and field filters.
@@ -470,6 +559,7 @@ def build_filter_query(
         rating_max: Maximum rating 0-10 (inclusive)
         mc_type: Filter by media type (movie, tv)
         include_tag_fields: Include TAG field union search (cast_names, director_name, keywords, genres)
+        raw: If True, treat q as validated raw RediSearch syntax (passthrough)
 
     Returns:
         RediSearch query string
@@ -496,13 +586,20 @@ def build_filter_query(
         # Returns: "@cast_ids:{287} @cast_ids:{1461}"
     """
     parts: list[str] = []
+    has_filter_params = any(
+        [genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type]
+    )
 
-    # Text query component (with TAG field union when enabled)
+    # Text query component (with TAG field union when enabled, or raw passthrough)
     if q and len(q.strip()) >= 2:
-        text_query = build_autocomplete_query(q, include_tag_fields=include_tag_fields)
+        text_query = build_media_query_from_user_input(
+            q, raw=raw, include_tag_fields=include_tag_fields
+        )
         # Only add if it's not just "*"
         if text_query != "*":
-            parts.append(text_query)
+            # Wrap in parentheses when combining with filters to preserve precedence
+            wrap_in_parens = has_filter_params or raw
+            parts.append(f"({text_query})" if wrap_in_parens else text_query)
 
     # Genre filter
     if genre_ids:

@@ -307,6 +307,11 @@ Shows{% endblock %} {% block body %}
   let abortController = null; // For canceling in-flight requests
   let eventSource = null; // For streaming mode
   let streamingEnabled = false; // Toggle state
+
+  // Detect raw RediSearch mode: query contains @ (never used in normal searches)
+  function isRawMode(query) {
+    return query.includes("@");
+  }
   
   // Filter state - tracks which source filters are active
   const activeFilters = new Set();
@@ -401,7 +406,8 @@ Shows{% endblock %} {% block body %}
     
     try {
       const sourcesParam = getActiveFiltersParam();
-      let url = getApiUrl(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
+      const rawParam = isRawMode(query) ? "&raw=true" : "";
+      let url = getApiUrl(`/api/search?q=${encodeURIComponent(query)}&limit=10${rawParam}`);
       if (sourcesParam) {
         url += `&sources=${encodeURIComponent(sourcesParam)}`;
       }
@@ -1771,11 +1777,12 @@ Shows{% endblock %} {% block body %}
     const signal = abortController.signal;
 
     try {
-      // Build URL with optional sources filter
+      // Build URL with optional sources filter and raw mode detection
       const sourcesParam = getActiveFiltersParam();
+      const rawParam = isRawMode(query) ? "&raw=true" : "";
       const url = sourcesParam
-        ? getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}&sources=${sourcesParam}`)
-        : getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}`);
+        ? getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}&sources=${sourcesParam}${rawParam}`)
+        : getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}${rawParam}`);
 
       const response = await fetch(url, { signal });
       const results = await response.json();
@@ -1825,11 +1832,12 @@ Shows{% endblock %} {% block body %}
     renderResults(streamingResults, query);
     resultsContainer.classList.remove("hidden");
 
-    // Build URL with optional sources filter
+    // Build URL with optional sources filter and raw mode detection
     const sourcesParam = getActiveFiltersParam();
+    const rawParam = isRawMode(query) ? "&raw=true" : "";
     const url = sourcesParam
-      ? getApiUrl(`/api/autocomplete/stream?q=${encodeURIComponent(query)}&sources=${sourcesParam}`)
-      : getApiUrl(`/api/autocomplete/stream?q=${encodeURIComponent(query)}`);
+      ? getApiUrl(`/api/autocomplete/stream?q=${encodeURIComponent(query)}&sources=${sourcesParam}${rawParam}`)
+      : getApiUrl(`/api/autocomplete/stream?q=${encodeURIComponent(query)}${rawParam}`);
     eventSource = new EventSource(url);
 
     eventSource.addEventListener('result', (e) => {
