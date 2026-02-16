@@ -12,7 +12,7 @@ from utils.get_logger import get_logger
 logger = get_logger(__name__)
 
 # NewsAI API Key secret parameter
-NEWSAI_API_KEY = SecretParam("NEWSAI_API_KEY")
+NEWSAI_API_KEY = SecretParam("NEWS_AI_API_KEY")
 
 
 class Auth:
