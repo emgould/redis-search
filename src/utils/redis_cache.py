@@ -50,26 +50,52 @@ def get_cache_version(prefix: str) -> str:
     sharing this Redis instance.
 
     Returns ``RELEASE_VERSION`` as a fallback only when Redis is unreachable.
+    Retries up to 2 times on timeout errors, resetting the singleton client
+    between attempts so a dead TCP socket is replaced with a fresh connection.
     """
-    try:
-        client = get_redis_client()
-        raw = client.hget(VERSION_REGISTRY_KEY, prefix)
-        if raw is None:
-            # Auto-register new prefixes so they appear in the shared registry
-            client.hset(VERSION_REGISTRY_KEY, prefix, _DEFAULT_NEW_PREFIX_VERSION)
-            _logger.info(
-                "Auto-registered new cache prefix '%s' with version %s",
-                prefix,
-                _DEFAULT_NEW_PREFIX_VERSION,
-            )
-            return _DEFAULT_NEW_PREFIX_VERSION
-        return raw.decode() if isinstance(raw, bytes) else str(raw)
-    except RedisError as e:
-        _logger.warning("Redis error reading version for '%s': %s", prefix, e)
-        return RELEASE_VERSION
-    except Exception as e:
-        _logger.warning("Error reading version for '%s': %s", prefix, e)
-        return RELEASE_VERSION
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            client = get_redis_client()
+            raw = client.hget(VERSION_REGISTRY_KEY, prefix)
+            if raw is None:
+                # Auto-register new prefixes so they appear in the shared registry
+                client.hset(VERSION_REGISTRY_KEY, prefix, _DEFAULT_NEW_PREFIX_VERSION)
+                _logger.info(
+                    "Auto-registered new cache prefix '%s' with version %s",
+                    prefix,
+                    _DEFAULT_NEW_PREFIX_VERSION,
+                )
+                return _DEFAULT_NEW_PREFIX_VERSION
+            return raw.decode() if isinstance(raw, bytes) else str(raw)
+        except RedisError as e:
+            is_timeout = "timeout" in str(e).lower() or "timed out" in str(e).lower()
+            if is_timeout and attempt < max_attempts - 1:
+                _logger.warning(
+                    "Redis timeout reading version for '%s' (attempt %d/%d): %s. "
+                    "Resetting client and retrying...",
+                    prefix,
+                    attempt + 1,
+                    max_attempts,
+                    e,
+                )
+                reset_redis_client()
+                time.sleep(1)  # Brief backoff before retry
+            else:
+                _logger.warning(
+                    "Cache prefix '%s' failed to read its version from Redis after %d attempts. "
+                    "%s. Falling back to RELEASE_VERSION=%s.",
+                    prefix,
+                    max_attempts,
+                    e,
+                    RELEASE_VERSION,
+                )
+                return RELEASE_VERSION
+        except Exception as e:
+            _logger.warning("Error reading version for '%s': %s", prefix, e)
+            return RELEASE_VERSION
+
+    return RELEASE_VERSION  # Satisfies type checker; unreachable if logic is correct
 
 
 def set_cache_version(prefix: str, version: str) -> None:
@@ -164,17 +190,34 @@ def get_redis_client() -> Redis:
 
         # Synchronous Redis client - no event loop issues!
         # decode_responses=False because we are storing pickled binary values
+        # Redis should respond in ms; short timeouts surface real connectivity issues
         _redis_client = Redis(
             host=host,
             port=port,
             password=password,
             decode_responses=False,
-            socket_timeout=5,  # 5 second socket timeout
-            socket_connect_timeout=5,  # 5 second connection timeout
+            socket_timeout=5,
+            socket_connect_timeout=5,
             retry_on_timeout=True,  # Retry on timeout
             health_check_interval=30,  # Check connection health every 30 seconds
         )
     return _redis_client
+
+
+def reset_redis_client() -> None:
+    """Close and discard the singleton Redis client.
+
+    Call this when a connection failure is detected (e.g. timeout on a dead
+    TCP socket). The next call to ``get_redis_client()`` will create a fresh
+    connection, avoiding repeated failures on a stale socket.
+    """
+    global _redis_client
+    if _redis_client is not None:
+        try:
+            _redis_client.close()
+        except Exception:
+            pass
+        _redis_client = None
 
 
 class RedisCache:
