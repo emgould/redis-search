@@ -28,6 +28,7 @@ from core.search_queries import (
     build_books_autocomplete_query,
     build_filter_query,
     build_fuzzy_fulltext_query,
+    build_media_query_from_user_input,
     escape_redis_search_term,
     normalize_for_tag,
     strip_query_apostrophes,
@@ -379,7 +380,9 @@ def build_authors_autocomplete_query(q: str) -> str:
         return f"({title_query}) | ({name_query})"
 
 
-async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, list]:
+async def autocomplete(
+    q: str, sources: set[str] | None = None, raw: bool = False
+) -> dict[str, list]:
     """
     Autocomplete search that returns categorized results.
 
@@ -387,6 +390,7 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
+        raw: If True, treat q as raw RediSearch syntax for media index (validated, raises on error)
 
     Returns:
         dict with keys: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
@@ -425,12 +429,13 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
 
     repo = get_repo()
 
-    # Build queries
-    media_query = build_autocomplete_query(q)
-    people_query = build_people_autocomplete_query(q)
-    podcasts_query = build_podcasts_autocomplete_query(q)
-    authors_query = build_authors_autocomplete_query(q)
-    books_query = build_books_autocomplete_query(q)
+    # Build queries (raw mode applies only to media; skip non-media indices for raw)
+    media_query = build_media_query_from_user_input(q, raw=raw)
+    if not raw:
+        people_query = build_people_autocomplete_query(q)
+        podcasts_query = build_podcasts_autocomplete_query(q)
+        authors_query = build_authors_autocomplete_query(q)
+        books_query = build_books_autocomplete_query(q)
 
     # Debug logging for query with colons
     if ":" in q:
@@ -453,43 +458,58 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
         # "media" covers both tv and movie
         if "tv" in sources or "movie" in sources:
             timed_tasks.append(timed_task("media", repo.search(media_query, limit=50)))
-        if "person" in sources:
+        if "person" in sources and not raw:
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
-        if "podcast" in sources:
+        if "podcast" in sources and not raw:
             timed_tasks.append(
                 timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
             )
-        if "author" in sources:
+        if "author" in sources and not raw:
             timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=10)))
-        if "book" in sources:
+        if "book" in sources and not raw:
             timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=10)))
 
-        # External APIs - apply timeout
-        if "news" in sources:
-            timed_tasks.append(
-                timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout)
-            )
-        if "video" in sources:
-            timed_tasks.append(
-                timed_task(
-                    "video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout
+        # External APIs - skip for raw mode (raw syntax is meaningless for external APIs)
+        if not raw:
+            if "news" in sources:
+                timed_tasks.append(
+                    timed_task(
+                        "news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout
+                    )
                 )
-            )
-        if "ratings" in sources:
-            timed_tasks.append(
-                timed_task(
-                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout
+            if "video" in sources:
+                timed_tasks.append(
+                    timed_task(
+                        "video",
+                        youtube_wrapper.search_videos(query=q, max_results=10),
+                        api_timeout,
+                    )
                 )
-            )
-        if "artist" in sources:
-            timed_tasks.append(
-                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout)
-            )
-        if "album" in sources:
-            timed_tasks.append(
-                timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout)
-            )
+            if "ratings" in sources:
+                timed_tasks.append(
+                    timed_task(
+                        "ratings",
+                        rottentomatoes_wrapper.search_content(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
+            if "artist" in sources:
+                timed_tasks.append(
+                    timed_task(
+                        "artist",
+                        spotify_wrapper.search_artists(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
+            if "album" in sources:
+                timed_tasks.append(
+                    timed_task(
+                        "album",
+                        spotify_wrapper.search_albums(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
 
         timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
         total_elapsed = (time.perf_counter() - total_start) * 1000
@@ -705,7 +725,7 @@ async def autocomplete(q: str, sources: set[str] | None = None) -> dict[str, lis
 
 
 async def autocomplete_stream(
-    q: str, sources: set[str] | None = None
+    q: str, sources: set[str] | None = None, raw: bool = False
 ) -> AsyncIterator[tuple[str, list, float]]:
     """
     Streaming autocomplete that yields results as they become available.
@@ -717,6 +737,7 @@ async def autocomplete_stream(
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
+        raw: If True, treat q as raw RediSearch syntax for media index (validated, raises on error)
 
     Yields:
         tuple of (source_name, results, latency_ms) as each source completes
@@ -742,12 +763,13 @@ async def autocomplete_stream(
 
     repo = get_repo()
 
-    # Build queries
-    media_query = build_autocomplete_query(q)
-    people_query = build_people_autocomplete_query(q)
-    podcasts_query = build_podcasts_autocomplete_query(q)
-    authors_query = build_authors_autocomplete_query(q)
-    books_query = build_books_autocomplete_query(q)
+    # Build queries (raw mode applies only to media; skip non-media for raw)
+    media_query = build_media_query_from_user_input(q, raw=raw)
+    if not raw:
+        people_query = build_people_autocomplete_query(q)
+        podcasts_query = build_podcasts_autocomplete_query(q)
+        authors_query = build_authors_autocomplete_query(q)
+        books_query = build_books_autocomplete_query(q)
 
     # External API timeout - YouTube INNERTUBE API takes ~1.2s minimum, add buffer for Docker network
     api_timeout = 2.5
@@ -761,61 +783,76 @@ async def autocomplete_stream(
         tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=50)))] = (
             "media"
         )
-    if "person" in sources:
+    if "person" in sources and not raw:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         tasks_dict[
             asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))
         ] = "person"
-    if "podcast" in sources:
+    if "podcast" in sources and not raw:
         tasks_dict[
             asyncio.create_task(
                 timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
             )
         ] = "podcast"
-    if "author" in sources:
+    if "author" in sources and not raw:
         tasks_dict[
             asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))
         ] = "author"
-    if "book" in sources:
+    if "book" in sources and not raw:
         tasks_dict[
             asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))
         ] = "book"
 
-    # External API tasks - with timeout
-    if "news" in sources:
-        tasks_dict[
-            asyncio.create_task(
-                timed_task("news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout)
-            )
-        ] = "news"
-    if "video" in sources:
-        tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "video", youtube_wrapper.search_videos(query=q, max_results=10), api_timeout
+    # External API tasks - skip for raw mode (raw syntax is meaningless for external APIs)
+    if not raw:
+        if "news" in sources:
+            tasks_dict[
+                asyncio.create_task(
+                    timed_task(
+                        "news", newsai_wrapper.search_news(query=q, page_size=10), api_timeout
+                    )
                 )
-            )
-        ] = "video"
-    if "ratings" in sources:
-        tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "ratings", rottentomatoes_wrapper.search_content(query=q, limit=10), api_timeout
+            ] = "news"
+        if "video" in sources:
+            tasks_dict[
+                asyncio.create_task(
+                    timed_task(
+                        "video",
+                        youtube_wrapper.search_videos(query=q, max_results=10),
+                        api_timeout,
+                    )
                 )
-            )
-        ] = "ratings"
-    if "artist" in sources:
-        tasks_dict[
-            asyncio.create_task(
-                timed_task("artist", spotify_wrapper.search_artists(query=q, limit=10), api_timeout)
-            )
-        ] = "artist"
-    if "album" in sources:
-        tasks_dict[
-            asyncio.create_task(
-                timed_task("album", spotify_wrapper.search_albums(query=q, limit=10), api_timeout)
-            )
-        ] = "album"
+            ] = "video"
+        if "ratings" in sources:
+            tasks_dict[
+                asyncio.create_task(
+                    timed_task(
+                        "ratings",
+                        rottentomatoes_wrapper.search_content(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
+            ] = "ratings"
+        if "artist" in sources:
+            tasks_dict[
+                asyncio.create_task(
+                    timed_task(
+                        "artist",
+                        spotify_wrapper.search_artists(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
+            ] = "artist"
+        if "album" in sources:
+            tasks_dict[
+                asyncio.create_task(
+                    timed_task(
+                        "album",
+                        spotify_wrapper.search_albums(query=q, limit=10),
+                        api_timeout,
+                    )
+                )
+            ] = "album"
 
     # If no tasks, return early
     if not tasks_dict:
@@ -973,6 +1010,7 @@ async def search(
     rating_max: float | None = None,
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
+    raw: bool = False,
 ) -> dict[str, list]:
     """
     Unified search API that returns categorized results.
@@ -1033,20 +1071,21 @@ async def search(
             rating_min=rating_min,
             rating_max=rating_max,
             mc_type=mc_type,
+            raw=raw,
         )
     elif has_query and q:  # q check needed for type narrowing
-        media_query = build_autocomplete_query(q)
+        media_query = build_media_query_from_user_input(q, raw=raw)
     else:
         media_query = "*"
 
-    # For other indices, only build query if we have a text query
-    if has_query and q:  # q check needed for type narrowing
+    # For other indices, only build query if we have a text query and not raw mode
+    if has_query and q and not raw:  # q check needed for type narrowing
         people_query = build_people_autocomplete_query(q)
         podcasts_query = build_podcasts_autocomplete_query(q)
         authors_query = build_authors_autocomplete_query(q)
         books_query = build_books_autocomplete_query(q)
     else:
-        # Filter-only mode: use match-all for indices without specific filters
+        # Filter-only mode or raw mode: use match-all for indices without specific filters
         people_query = "*"
         podcasts_query = "*"
         authors_query = "*"
@@ -1075,8 +1114,8 @@ async def search(
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
-    # Other sources require a text query - skip if no query provided
-    if has_query:
+    # Other sources require a text query - skip if no query provided or raw mode
+    if has_query and not raw:
         if "news" in requested_sources:
             timed_tasks.append(
                 timed_task(
@@ -2092,7 +2131,6 @@ async def get_cast_names(request: CastNameSearchRequest) -> CastNameSearchRespon
     Returns:
         CastNameSearchResponse with title, description, and cast_names
     """
-    from core.search_queries import build_autocomplete_query
 
     tmdb_service = TMDBService()
     repo = get_repo()
