@@ -20,7 +20,7 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
-from core.search_queries import RawMediaQueryError, validate_raw_media_query
+from core.search_queries import RawQueryError, validate_raw_query
 from etl.etl_metadata import ETLMetadataStore
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.tmdb_nightly_etl import ChangesETLStats
@@ -359,7 +359,10 @@ async def api_autocomplete(
         "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
-    raw: bool = Query(default=False, description="If true, q is raw RediSearch syntax (media only)"),
+    raw: bool = Query(
+        default=False,
+        description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
 ):
     """JSON API endpoint for autocomplete search."""
     if not q or len(q) < 2:
@@ -370,17 +373,10 @@ async def api_autocomplete(
     if sources:
         sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
 
-    # Raw mode requires tv or movie in requested sources
-    if raw and sources_set is not None and "tv" not in sources_set and "movie" not in sources_set:
-        return JSONResponse(
-            content={"error": "raw mode requires tv or movie sources"},
-            status_code=400,
-        )
-
     try:
         results = await autocomplete(q, sources_set, raw=raw)
         return JSONResponse(content=results)
-    except RawMediaQueryError as e:
+    except RawQueryError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
 
@@ -393,7 +389,10 @@ async def api_autocomplete_stream(
         "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
-    raw: bool = Query(default=False, description="If true, q is raw RediSearch syntax (media only)"),
+    raw: bool = Query(
+        default=False,
+        description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
 ):
     """
     Streaming autocomplete endpoint using Server-Sent Events (SSE).
@@ -418,14 +417,9 @@ async def api_autocomplete_stream(
 
     # Raw mode: validate before streaming
     if raw:
-        if sources_set is not None and "tv" not in sources_set and "movie" not in sources_set:
-            return JSONResponse(
-                content={"error": "raw mode requires tv or movie sources"},
-                status_code=400,
-            )
         try:
-            validate_raw_media_query(q)
-        except RawMediaQueryError as e:
+            validate_raw_query(q)
+        except RawQueryError as e:
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
@@ -496,7 +490,10 @@ async def api_search(
         "Options: 'popularity' (default), 'audience_score', 'critics_score'. "
         "Sorts in descending order (highest first).",
     ),
-    raw: bool = Query(default=False, description="If true, q is raw RediSearch syntax (media only)"),
+    raw: bool = Query(
+        default=False,
+        description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
 ):
     """
     Unified search API that returns categorized results from multiple sources.
@@ -607,18 +604,12 @@ async def api_search(
             status_code=400,
         )
 
-    # Raw mode: validate sources and query before search
-    if raw:
-        if source_set is not None and "tv" not in source_set and "movie" not in source_set:
-            return JSONResponse(
-                content={"error": "raw mode requires tv or movie sources"},
-                status_code=400,
-            )
-        if has_query and q:
-            try:
-                validate_raw_media_query(q)
-            except RawMediaQueryError as e:
-                return JSONResponse(content={"error": str(e)}, status_code=400)
+    # Raw mode: validate query syntax before search
+    if raw and has_query and q:
+        try:
+            validate_raw_query(q)
+        except RawQueryError as e:
+            return JSONResponse(content={"error": str(e)}, status_code=400)
 
     results = await search(
         q=q if has_query else None,

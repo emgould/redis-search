@@ -6,11 +6,14 @@ from utils.get_logger import get_logger
 logger = get_logger(__name__)
 
 
-class RawMediaQueryError(ValueError):
+class RawQueryError(ValueError):
     """Raised when raw mode query fails validation."""
 
 
-# Media index TAG/NUMERIC fields allowed for raw passthrough (idx:media)
+# Backward-compatible alias
+RawMediaQueryError = RawQueryError
+
+# Per-index TAG/NUMERIC fields allowed for raw passthrough
 ALLOWED_RAW_MEDIA_FIELDS = frozenset(
     {
         "keywords",
@@ -30,35 +33,100 @@ ALLOWED_RAW_MEDIA_FIELDS = frozenset(
     }
 )
 
+ALLOWED_RAW_PODCAST_FIELDS = frozenset(
+    {
+        "author_normalized",
+        "mc_type",
+        "source",
+        "id",
+        "language",
+        "categories",
+        "popularity",
+        "episode_count",
+    }
+)
 
-def validate_raw_media_query(q: str) -> None:
+ALLOWED_RAW_PEOPLE_FIELDS = frozenset(
+    {
+        "mc_type",
+        "mc_subtype",
+        "source",
+        "popularity",
+    }
+)
+
+ALLOWED_RAW_BOOK_FIELDS = frozenset(
+    {
+        "mc_type",
+        "source",
+        "openlibrary_key",
+        "primary_isbn13",
+        "primary_isbn10",
+        "author_olid",
+        "cover_available",
+        "author_normalized",
+        "subjects",
+        "first_publish_year",
+        "ratings_average",
+        "ratings_count",
+        "readinglog_count",
+        "number_of_pages",
+        "popularity_score",
+        "edition_count",
+    }
+)
+
+ALLOWED_RAW_AUTHOR_FIELDS = frozenset(
+    {
+        "mc_type",
+        "mc_subtype",
+        "source",
+        "wikidata_id",
+        "openlibrary_key",
+        "work_count",
+        "quality_score",
+        "birth_year",
+    }
+)
+
+# Union of all per-index fields for general validation
+ALL_ALLOWED_RAW_FIELDS = (
+    ALLOWED_RAW_MEDIA_FIELDS
+    | ALLOWED_RAW_PODCAST_FIELDS
+    | ALLOWED_RAW_PEOPLE_FIELDS
+    | ALLOWED_RAW_BOOK_FIELDS
+    | ALLOWED_RAW_AUTHOR_FIELDS
+)
+
+
+def validate_raw_query(q: str) -> None:
     """
-    Validate that the query is safe RediSearch syntax for idx:media.
+    Validate that the query is safe RediSearch syntax for any indexed source.
 
     Checks:
     - Query must start with @ (field syntax)
-    - All field names must be in ALLOWED_RAW_MEDIA_FIELDS
+    - All field names must be in ALL_ALLOWED_RAW_FIELDS (union of all indices)
     - Braces and brackets must be balanced
 
     Raises:
-        RawMediaQueryError: If validation fails
+        RawQueryError: If validation fails
     """
     if not q or not q.strip():
-        raise RawMediaQueryError("Raw query cannot be empty")
+        raise RawQueryError("Raw query cannot be empty")
 
     s = q.strip()
 
     # Must start with @ to indicate field syntax
     if not s.startswith("@"):
-        raise RawMediaQueryError("Raw query must start with @field:{value} or @field:[range]")
+        raise RawQueryError("Raw query must start with @field:{value} or @field:[range]")
 
     # Extract all field names: @fieldname: or @fieldname:[
     field_matches = re.findall(r"@(\w+)\s*[:\[\{]", s)
     for field_name in field_matches:
-        if field_name.lower() not in ALLOWED_RAW_MEDIA_FIELDS:
-            raise RawMediaQueryError(
+        if field_name.lower() not in ALL_ALLOWED_RAW_FIELDS:
+            raise RawQueryError(
                 f"Disallowed field '{field_name}' in raw query. "
-                f"Allowed: {', '.join(sorted(ALLOWED_RAW_MEDIA_FIELDS))}"
+                f"Allowed: {', '.join(sorted(ALL_ALLOWED_RAW_FIELDS))}"
             )
 
     # Basic balance check for {} and []
@@ -74,9 +142,13 @@ def validate_raw_media_query(q: str) -> None:
         elif c == "]":
             open_brackets -= 1
         if open_braces < 0 or open_brackets < 0:
-            raise RawMediaQueryError("Unbalanced delimiters in raw query")
+            raise RawQueryError("Unbalanced delimiters in raw query")
     if open_braces != 0 or open_brackets != 0:
-        raise RawMediaQueryError("Unbalanced delimiters in raw query")
+        raise RawQueryError("Unbalanced delimiters in raw query")
+
+
+# Backward-compatible alias
+validate_raw_media_query = validate_raw_query
 
 
 def build_media_query_from_user_input(
@@ -89,7 +161,7 @@ def build_media_query_from_user_input(
     build_autocomplete_query.
     """
     if raw:
-        validate_raw_media_query(q)
+        validate_raw_query(q)
         return q.strip()
     return build_autocomplete_query(q, include_tag_fields=include_tag_fields)
 

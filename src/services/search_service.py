@@ -390,7 +390,7 @@ async def autocomplete(
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
-        raw: If True, treat q as raw RediSearch syntax for media index (validated, raises on error)
+        raw: If True, treat q as raw RediSearch syntax for indexed sources (validated, raises on error)
 
     Returns:
         dict with keys: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
@@ -429,9 +429,15 @@ async def autocomplete(
 
     repo = get_repo()
 
-    # Build queries (raw mode applies only to media; skip non-media indices for raw)
+    # Build queries - raw mode passes query through to all indexed sources
     media_query = build_media_query_from_user_input(q, raw=raw)
-    if not raw:
+    if raw:
+        raw_query = q.strip()
+        people_query = raw_query
+        podcasts_query = raw_query
+        authors_query = raw_query
+        books_query = raw_query
+    else:
         people_query = build_people_autocomplete_query(q)
         podcasts_query = build_podcasts_autocomplete_query(q)
         authors_query = build_authors_autocomplete_query(q)
@@ -458,16 +464,16 @@ async def autocomplete(
         # "media" covers both tv and movie
         if "tv" in sources or "movie" in sources:
             timed_tasks.append(timed_task("media", repo.search(media_query, limit=50)))
-        if "person" in sources and not raw:
+        if "person" in sources:
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
-        if "podcast" in sources and not raw:
+        if "podcast" in sources:
             timed_tasks.append(
                 timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
             )
-        if "author" in sources and not raw:
+        if "author" in sources:
             timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=10)))
-        if "book" in sources and not raw:
+        if "book" in sources:
             timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=10)))
 
         # External APIs - skip for raw mode (raw syntax is meaningless for external APIs)
@@ -737,7 +743,7 @@ async def autocomplete_stream(
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
-        raw: If True, treat q as raw RediSearch syntax for media index (validated, raises on error)
+        raw: If True, treat q as raw RediSearch syntax for indexed sources (validated, raises on error)
 
     Yields:
         tuple of (source_name, results, latency_ms) as each source completes
@@ -763,9 +769,15 @@ async def autocomplete_stream(
 
     repo = get_repo()
 
-    # Build queries (raw mode applies only to media; skip non-media for raw)
+    # Build queries - raw mode passes query through to all indexed sources
     media_query = build_media_query_from_user_input(q, raw=raw)
-    if not raw:
+    if raw:
+        raw_query = q.strip()
+        people_query = raw_query
+        podcasts_query = raw_query
+        authors_query = raw_query
+        books_query = raw_query
+    else:
         people_query = build_people_autocomplete_query(q)
         podcasts_query = build_podcasts_autocomplete_query(q)
         authors_query = build_authors_autocomplete_query(q)
@@ -783,22 +795,22 @@ async def autocomplete_stream(
         tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=50)))] = (
             "media"
         )
-    if "person" in sources and not raw:
+    if "person" in sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         tasks_dict[
             asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))
         ] = "person"
-    if "podcast" in sources and not raw:
+    if "podcast" in sources:
         tasks_dict[
             asyncio.create_task(
                 timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
             )
         ] = "podcast"
-    if "author" in sources and not raw:
+    if "author" in sources:
         tasks_dict[
             asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))
         ] = "author"
-    if "book" in sources and not raw:
+    if "book" in sources:
         tasks_dict[
             asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))
         ] = "book"
@@ -1078,14 +1090,21 @@ async def search(
     else:
         media_query = "*"
 
-    # For other indices, only build query if we have a text query and not raw mode
-    if has_query and q and not raw:  # q check needed for type narrowing
-        people_query = build_people_autocomplete_query(q)
-        podcasts_query = build_podcasts_autocomplete_query(q)
-        authors_query = build_authors_autocomplete_query(q)
-        books_query = build_books_autocomplete_query(q)
+    # For other indices, build query from text or pass raw through
+    if has_query and q:  # q check needed for type narrowing
+        if raw:
+            raw_query = q.strip()
+            people_query = raw_query
+            podcasts_query = raw_query
+            authors_query = raw_query
+            books_query = raw_query
+        else:
+            people_query = build_people_autocomplete_query(q)
+            podcasts_query = build_podcasts_autocomplete_query(q)
+            authors_query = build_authors_autocomplete_query(q)
+            books_query = build_books_autocomplete_query(q)
     else:
-        # Filter-only mode or raw mode: use match-all for indices without specific filters
+        # Filter-only mode: use match-all for indices without specific filters
         people_query = "*"
         podcasts_query = "*"
         authors_query = "*"
