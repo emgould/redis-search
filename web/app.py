@@ -35,6 +35,7 @@ from services.search_service import (
     get_details,
     reset_repo,
     search,
+    search_stream,
 )
 from web.routes.openlibrary_etl import router as openlibrary_etl_router
 
@@ -628,6 +629,132 @@ async def api_search(
         raw=raw,
     )
     return JSONResponse(content=results)
+
+
+@app.get("/api/search/stream")
+async def api_search_stream(
+    q: str = Query(default="", description="Search query string (optional if filters provided)"),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated list of sources to search. "
+        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "If not provided, searches all sources.",
+    ),
+    limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
+    genre_ids: str | None = Query(
+        default=None, description="Comma-separated TMDB genre IDs (e.g., 35,18 for Comedy,Drama)"
+    ),
+    genre_match: str = Query(
+        default="any", description="Genre matching: 'any' (OR, default) or 'all' (AND)"
+    ),
+    cast_ids: str | None = Query(
+        default=None,
+        description="Comma-separated TMDB person IDs (e.g., 287,1461 for Brad Pitt, George Clooney)",
+    ),
+    cast_match: str = Query(
+        default="any", description="Cast matching: 'any' (OR, default) or 'all' (AND)"
+    ),
+    year_min: int | None = Query(default=None, description="Minimum release year"),
+    year_max: int | None = Query(default=None, description="Maximum release year"),
+    rating_min: float | None = Query(
+        default=None, ge=0, le=10, description="Minimum rating (0-10)"
+    ),
+    rating_max: float | None = Query(
+        default=None, ge=0, le=10, description="Maximum rating (0-10)"
+    ),
+    mc_type: str | None = Query(default=None, description="Filter by media type: movie, tv"),
+    ratings_sort: str | None = Query(
+        default=None,
+        description="Sort order for ratings: 'popularity' (default), 'audience_score', 'critics_score'.",
+    ),
+    raw: bool = Query(
+        default=False,
+        description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
+):
+    """
+    Streaming search endpoint using Server-Sent Events (SSE).
+
+    Results are streamed as each source completes. Fast local RediSearch sources
+    (tv, movie, person, podcast, book, author) return immediately, while slower
+    brokered APIs (news, video, ratings, artist, album) stream in as they finish.
+
+    Each SSE event contains:
+    - event: "result" for data, "done" when all sources have completed
+    - data: JSON with {source: string, results: array, latency_ms: number}
+    """
+    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_query = q and len(q) >= 2
+
+    if not has_query and not has_filters:
+        return StreamingResponse(
+            iter(["event: done\ndata: {}\n\n"]),
+            media_type="text/event-stream",
+        )
+
+    # Parse parameters
+    source_set: set[str] | None = None
+    if sources:
+        source_set = {s.strip().lower() for s in sources.split(",")}
+        source_set = source_set & VALID_SOURCES
+        if not source_set:
+            return JSONResponse(
+                content={
+                    "error": f"No valid sources specified. Valid sources: {', '.join(sorted(VALID_SOURCES))}"
+                },
+                status_code=400,
+            )
+
+    genre_id_list: list[str] | None = None
+    if genre_ids:
+        genre_id_list = [gid.strip() for gid in genre_ids.split(",") if gid.strip()]
+
+    cast_id_list: list[str] | None = None
+    if cast_ids:
+        cast_id_list = [cid.strip() for cid in cast_ids.split(",") if cid.strip()]
+
+    if raw and has_query and q:
+        try:
+            validate_raw_query(q)
+        except RawQueryError as e:
+            return JSONResponse(content={"error": str(e)}, status_code=400)
+
+    async def event_generator():
+        async for source, results, latency_ms in search_stream(
+            q=q if has_query else None,
+            sources=source_set,
+            limit=limit,
+            genre_ids=genre_id_list,
+            genre_match=genre_match,
+            cast_ids=cast_id_list,
+            cast_match=cast_match,
+            year_min=year_min,
+            year_max=year_max,
+            rating_min=rating_min,
+            rating_max=rating_max,
+            mc_type=mc_type,
+            ratings_sort=ratings_sort or "popularity",
+            raw=raw,
+        ):
+            event_data = json.dumps(
+                {
+                    "source": source,
+                    "results": results,
+                    "latency_ms": round(latency_ms),
+                }
+            )
+            yield f"event: result\ndata: {event_data}\n\n"
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/autocomplete_test", response_class=HTMLResponse)
@@ -2232,6 +2359,37 @@ async def api_get_cast_names(
 
         request = CastNameSearchRequest(query=query, tmdb_id=tmdb_id, media_type=media_type)
         result = await get_cast_names(request)
+        return JSONResponse(content=result.model_dump())
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/api/news/reviews")
+async def api_news_reviews(
+    title: str = Query(..., description="Title of the movie or TV show"),
+    media_type: str = Query(default="tv", description="Media type: 'movie' or 'tv'"),
+    page_size: int = Query(default=10, ge=1, le=50, description="Number of articles to return"),
+):
+    """
+    Get recent news/reviews for a movie or TV show.
+
+    Uses concept resolution for precise matching, falls back to exact keyword
+    search with category and source rank filtering.
+    """
+    from api.newsai.wrappers import newsai_wrapper
+
+    if media_type.lower() not in ("movie", "tv"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "media_type must be 'movie' or 'tv'"},
+        )
+
+    try:
+        result = await newsai_wrapper.get_media_reviews(
+            title=title,
+            media_type=media_type,
+            page_size=page_size,
+        )
         return JSONResponse(content=result.model_dump())
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

@@ -14,6 +14,7 @@ import aiohttp
 from api.newsai.core import NewsAIService
 from api.newsai.event_models import TrendingEventsResponse
 from api.newsai.models import (
+    MCNewsItem,
     NewsSearchResponse,
     NewsSourceDetails,
     NewsSourcesResponse,
@@ -51,6 +52,15 @@ CacheExpiration = 60 * 60  # 60 minutes
 NewsAICache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="newsai",
+    verbose=False,
+    isClassMethod=True,
+)
+
+# Concept URI cache - 30 days. Entity URIs are effectively permanent
+# (e.g. "White Lotus" -> its Wikipedia concept URI never changes).
+ConceptCache = RedisCache(
+    defaultTTL=60 * 60 * 24 * 30,  # 30 days
+    prefix="newsai_concept",
     verbose=False,
     isClassMethod=True,
 )
@@ -525,7 +535,7 @@ class NewsAISearchService(NewsAIService):
                 status_code=500,
             )
 
-    @RedisCache.use_cache(NewsAICache, prefix="concept_uri")
+    @RedisCache.use_cache(ConceptCache, prefix="concept_uri")
     async def get_concept(self, title: str) -> str | None:
         """
         Resolve the top concept URI for a title (movie, show, person, etc.) using NewsAI's suggestConceptsFast.
@@ -773,6 +783,9 @@ class NewsAISearchService(NewsAIService):
         """
         Search for news articles using Event Registry's getArticles endpoint.
 
+        Uses concept URI resolution for precise entity matching (cached 30 days),
+        falling back to keyword-in-title search with capitalization post-filtering.
+
         Args:
             query: Search query string
             from_date: Oldest article date (YYYY-MM-DD format)
@@ -802,6 +815,9 @@ class NewsAISearchService(NewsAIService):
                 "publishedAt": "date",
             }
             er_sort_by = sort_by_map.get(sort_by, "date")
+
+            # Track whether we used keyword fallback (needs post-filtering for title capitalization)
+            used_keyword_fallback = False
 
             # Handle complex query structure
             if complex_query:
@@ -847,40 +863,59 @@ class NewsAISearchService(NewsAIService):
                         status_code=status_code,
                     )
             else:
-                # Use simple parameter-based query with GET request
-                # Map language to 3-letter code
-                lang_code = self._map_language(language)
+                # Try concept resolution first for precise entity matching
+                # (cached for 30 days, so only the first call per title is slow)
+                concept_uri = await self.get_concept(query)
 
-                params: dict = {
-                    "apiKey": self.newsai_api_key,
-                    "resultType": "articles",
-                    "articlesPage": page,
-                    "articlesCount": page_size,
-                    "articlesSortBy": er_sort_by,
-                    "articlesSortByAsc": "false",  # Most relevant/recent first
-                    "keyword": query,
-                    "lang": lang_code,
-                    "includeArticleTitle": "true",
-                    "includeArticleBasicInfo": "true",
-                    "includeArticleBody": "true",
-                    "includeArticleImage": "true",
-                    "includeArticleSentiment": "true",
-                    "includeSourceTitle": "true",
-                }
+                if concept_uri:
+                    # Concept found - use precise complex query via POST.
+                    # Category filtering is intentionally omitted here: the concept URI
+                    # already targets the specific entity (e.g. George Clooney), so adding
+                    # category constraints would over-filter and return 0 results.
+                    logger.info(f"News search using conceptUri for '{query}': {concept_uri}")
 
-                # Add date filters if provided
-                if from_date:
-                    params["dateStart"] = from_date
-                if to_date:
-                    params["dateEnd"] = to_date
+                    lang_code = self._map_language(language)
+                    concept_query: dict = {
+                        "$query": {
+                            "$and": [
+                                {"conceptUri": concept_uri},
+                                {"lang": lang_code},
+                            ]
+                        },
+                        "$filter": {
+                            "forceMaxDataTimeWindow": "31",
+                            "isDuplicateFilter": "skipDuplicates",
+                            "startSourceRankPercentile": 0,
+                            "endSourceRankPercentile": 50,
+                        },
+                    }
 
-                async with (
-                    aiohttp.ClientSession() as session,
-                    session.get(url, params=params) as resp,
-                ):
-                    if resp.status != 200:
-                        error_text = await resp.text()
-                        logger.error(f"Event Registry returned status {resp.status}: {error_text}")
+                    query_body = {
+                        "query": concept_query,
+                        "resultType": "articles",
+                        "articlesPage": page,
+                        "articlesCount": page_size,
+                        "articlesSortBy": er_sort_by,
+                        "articlesSortByAsc": False,
+                        "includeArticleTitle": True,
+                        "includeArticleBasicInfo": True,
+                        "includeArticleBody": True,
+                        "includeArticleImage": True,
+                        "includeArticleSentiment": True,
+                        "includeSourceTitle": True,
+                        "apiKey": self.newsai_api_key,
+                    }
+
+                    response, status_code = await self._core_async_post_request(
+                        url,
+                        query_body,
+                        headers={"User-Agent": "mediacircle/1.0 (gould@emgtrading.net)"},
+                        timeout=30,
+                        rate_limit_max=8,
+                        rate_limit_period=1.0,
+                    )
+
+                    if status_code != 200 or response is None:
                         return NewsSearchResponse(
                             results=[],
                             total_results=0,
@@ -892,11 +927,70 @@ class NewsAISearchService(NewsAIService):
                             page=page,
                             page_size=page_size,
                             status="error",
-                            error=f"API request failed with status {resp.status}",
-                            status_code=resp.status,
+                            error=f"API request failed with status {status_code}",
+                            status_code=status_code,
                         )
+                else:
+                    # No concept found - fall back to keyword search in title.
+                    # Results will be post-filtered to require the query as a
+                    # capitalized/title-cased word in the article title (treats it
+                    # as a proper noun, not a common word like "unfamiliar").
+                    used_keyword_fallback = True
+                    logger.info(f"No concept for '{query}', falling back to keyword title search")
+                    lang_code = self._map_language(language)
 
-                    response = await resp.json()
+                    params: dict = {
+                        "apiKey": self.newsai_api_key,
+                        "resultType": "articles",
+                        "articlesPage": page,
+                        "articlesCount": page_size,
+                        "articlesSortBy": er_sort_by,
+                        "articlesSortByAsc": "false",
+                        "keyword": query,
+                        "keywordLoc": "title",
+                        "lang": lang_code,
+                        "isDuplicateFilter": "skipDuplicates",
+                        "startSourceRankPercentile": "0",
+                        "endSourceRankPercentile": "50",
+                        "includeArticleTitle": "true",
+                        "includeArticleBasicInfo": "true",
+                        "includeArticleBody": "true",
+                        "includeArticleImage": "true",
+                        "includeArticleSentiment": "true",
+                        "includeSourceTitle": "true",
+                    }
+
+                    # Add date filters if provided
+                    if from_date:
+                        params["dateStart"] = from_date
+                    if to_date:
+                        params["dateEnd"] = to_date
+
+                    async with (
+                        aiohttp.ClientSession() as session,
+                        session.get(url, params=params) as resp,
+                    ):
+                        if resp.status != 200:
+                            error_text = await resp.text()
+                            logger.error(
+                                f"Event Registry returned status {resp.status}: {error_text}"
+                            )
+                            return NewsSearchResponse(
+                                results=[],
+                                total_results=0,
+                                query=query,
+                                language=language,
+                                sort_by=sort_by,
+                                from_date=from_date,
+                                to_date=to_date,
+                                page=page,
+                                page_size=page_size,
+                                status="error",
+                                error=f"API request failed with status {resp.status}",
+                                status_code=resp.status,
+                            )
+
+                        response = await resp.json()
 
             # Process articles from Event Registry response
             articles = []
@@ -913,16 +1007,47 @@ class NewsAISearchService(NewsAIService):
                 article = self._process_article_item(article_data)
                 articles.append(article)
 
-            # Extract total results
-            total_results = 0
-            if isinstance(articles_data, dict):
-                total_results = articles_data.get("totalResults", len(articles))
-            else:
-                total_results = len(articles)
+            # Post-filter keyword fallback results: require the query to appear
+            # as a capitalized word in the article title. This eliminates articles
+            # where a common word like "unfamiliar" appears in lowercase (used as
+            # an adjective) vs. "Unfamiliar" (used as a title/proper noun).
+            if used_keyword_fallback and articles:
+                query_words = query.strip().split()
+                pre_filter_count = len(articles)
+                filtered: list[MCNewsItem] = []
+                for article in articles:
+                    article_title = article.title or ""
+                    # Check that every word in the query appears capitalized in the title
+                    if all(
+                        word.capitalize() in article_title or word.upper() in article_title
+                        for word in query_words
+                    ):
+                        filtered.append(article)
+                articles = filtered
+                if pre_filter_count != len(articles):
+                    logger.info(
+                        f"Title capitalization filter: {pre_filter_count} -> {len(articles)} "
+                        f"articles for '{query}'"
+                    )
+
+            # Deduplicate by headline: Event Registry's isDuplicateFilter doesn't
+            # catch all duplicates (syndicated articles with identical titles).
+            seen_titles: set[str] = set()
+            deduped: list[MCNewsItem] = []
+            for article in articles:
+                title_key = (article.title or "").strip().lower()
+                if title_key and title_key not in seen_titles:
+                    seen_titles.add(title_key)
+                    deduped.append(article)
+            if len(deduped) != len(articles):
+                logger.info(
+                    f"Headline dedup: {len(articles)} -> {len(deduped)} articles for '{query}'"
+                )
+            articles = deduped
 
             result = NewsSearchResponse(
                 results=articles,
-                total_results=total_results,
+                total_results=len(articles),
                 query=query,
                 language=language,
                 sort_by=sort_by,
