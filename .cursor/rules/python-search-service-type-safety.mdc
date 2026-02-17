@@ -1,0 +1,27 @@
+---
+description: Python type-safety patterns for async search services
+globs: ["src/services/search_service.py", "src/services/*search*.py"]
+alwaysApply: false
+---
+
+# Python Search Service Type Safety
+
+Use these patterns when extending async search services that combine RediSearch and brokered API wrappers.
+
+## Query Narrowing
+
+- Normalize optional query input once near function entry (for example, `query_text: str | None`).
+- Gate wrapper calls behind `query_text is not None` so methods that require `str` never receive `None`.
+- Reuse the normalized query value across query building, wrapper calls, and ranking logic to avoid repeated narrowing branches.
+
+## Untyped Result Objects
+
+- Treat pipeline and repo responses as structurally untyped unless they are explicitly modeled.
+- Avoid direct `.docs` access on broadly-typed values.
+- Use a helper that safely extracts docs from arbitrary objects and returns `list[object]` when present, otherwise an empty list.
+- Iterate through that helper output before parsing docs.
+
+## Error Handling Consistency
+
+- Prefer fallback to empty iterables/results over placeholder dynamic object construction.
+- Keep exception handling behavior unchanged when introducing type-safety fixes.

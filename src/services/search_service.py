@@ -147,6 +147,14 @@ def parse_doc(doc):
     return result
 
 
+def _extract_docs(result: object) -> list[object]:
+    """Safely extract RediSearch docs from an arbitrary result object."""
+    docs = getattr(result, "docs", None)
+    if isinstance(docs, list):
+        return docs
+    return []
+
+
 def build_people_autocomplete_query(q: str) -> str:
     """
     Build a prefix search query for people autocomplete.
@@ -948,7 +956,8 @@ async def search(
     """
     # Check if we have filters or query
     has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
-    has_query = q and len(q) >= 2
+    query_text = q if q is not None and len(q) >= 2 else None
+    has_query = query_text is not None
 
     if not has_query and not has_filters:
         # Return empty dict with all requested source keys
@@ -981,24 +990,24 @@ async def search(
             mc_type=mc_type,
             raw=raw,
         )
-    elif has_query and q:  # q check needed for type narrowing
-        media_query = build_media_query_from_user_input(q, raw=raw)
+    elif query_text is not None:
+        media_query = build_media_query_from_user_input(query_text, raw=raw)
     else:
         media_query = "*"
 
     # For other indices, build query from text or pass raw through
-    if has_query and q:  # q check needed for type narrowing
+    if query_text is not None:
         if raw:
-            raw_query = q.strip()
+            raw_query = query_text.strip()
             people_query = raw_query
             podcasts_query = raw_query
             authors_query = raw_query
             books_query = raw_query
         else:
-            people_query = build_people_autocomplete_query(q)
-            podcasts_query = build_podcasts_autocomplete_query(q)
-            authors_query = build_authors_autocomplete_query(q)
-            books_query = build_books_autocomplete_query(q)
+            people_query = build_people_autocomplete_query(query_text)
+            podcasts_query = build_podcasts_autocomplete_query(query_text)
+            authors_query = build_authors_autocomplete_query(query_text)
+            books_query = build_books_autocomplete_query(query_text)
     else:
         # Filter-only mode: use match-all for indices without specific filters
         people_query = "*"
@@ -1032,39 +1041,41 @@ async def search(
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
     # Other sources require a text query - skip if no query provided or raw mode
-    if has_query and not raw:
+    if query_text is not None and not raw:
         if "news" in requested_sources:
             timed_tasks.append(
                 timed_task(
                     "news",
-                    newsai_wrapper.search_news(query=q, page_size=limit),
+                    newsai_wrapper.search_news(query=query_text, page_size=limit),
                     news_api_timeout,
                 )
             )
         if "video" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "video", youtube_wrapper.search_videos(query=q, max_results=limit), api_timeout
+                    "video",
+                    youtube_wrapper.search_videos(query=query_text, max_results=limit),
+                    api_timeout,
                 )
             )
         if "ratings" in requested_sources:
             timed_tasks.append(
                 timed_task(
                     "ratings",
-                    rottentomatoes_wrapper.search_content(query=q, limit=limit),
+                    rottentomatoes_wrapper.search_content(query=query_text, limit=limit),
                     api_timeout,
                 )
             )
         if "artist" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "artist", spotify_wrapper.search_artists(query=q, limit=limit), api_timeout
+                    "artist", spotify_wrapper.search_artists(query=query_text, limit=limit), api_timeout
                 )
             )
         if "album" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "album", spotify_wrapper.search_albums(query=q, limit=limit), api_timeout
+                    "album", spotify_wrapper.search_albums(query=query_text, limit=limit), api_timeout
                 )
             )
 
@@ -1107,7 +1118,7 @@ async def search(
         tv_results: list[dict] = []
         movie_results: list[dict] = []
 
-        for doc in media_res.docs:
+        for doc in _extract_docs(media_res):
             parsed = parse_doc(doc)
             mc_type = parsed.get("mc_type", "")
             if mc_type == "tv" and "tv" in requested_sources:
@@ -1130,7 +1141,7 @@ async def search(
         person_res = results_map["person"]
         if isinstance(person_res, BaseException):
             person_res = empty_result
-        parsed_people = [parse_doc(doc) for doc in person_res.docs]
+        parsed_people = [parse_doc(doc) for doc in _extract_docs(person_res)]
 
         if has_query and q:
             # Filter using autocomplete prefix matching (handles 1-char prefix case)
@@ -1152,7 +1163,7 @@ async def search(
         podcast_res = results_map["podcast"]
         if isinstance(podcast_res, BaseException):
             podcast_res = empty_result
-        parsed_podcasts = [parse_doc(doc) for doc in podcast_res.docs]
+        parsed_podcasts = [parse_doc(doc) for doc in _extract_docs(podcast_res)]
         # Re-rank: exact title matches first, then by recency/episodes/popularity
         if q:
             parsed_podcasts = sorted(parsed_podcasts, key=lambda p: _rank_podcast_result(p, q))
@@ -1163,7 +1174,7 @@ async def search(
         author_res = results_map["author"]
         if isinstance(author_res, BaseException):
             author_res = empty_result
-        parsed_authors = [parse_doc(doc) for doc in author_res.docs]
+        parsed_authors = [parse_doc(doc) for doc in _extract_docs(author_res)]
         if has_query and q:
             parsed_authors = [
                 a
@@ -1177,7 +1188,7 @@ async def search(
         book_res = results_map["book"]
         if isinstance(book_res, BaseException):
             book_res = empty_result
-        parsed_books = [parse_doc(doc) for doc in book_res.docs]
+        parsed_books = [parse_doc(doc) for doc in _extract_docs(book_res)]
         # Re-rank: exact matches first, then by popularity
         if q:
             parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
@@ -1415,7 +1426,8 @@ async def search_stream(
         Media index yields "tv" and "movie" separately from a single "media" task.
     """
     has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
-    has_query = q is not None and len(q) >= 2
+    query_text = q if q is not None and len(q) >= 2 else None
+    has_query = query_text is not None
 
     if not has_query and not has_filters:
         return
@@ -1442,23 +1454,23 @@ async def search_stream(
             mc_type=mc_type,
             raw=raw,
         )
-    elif has_query and q:
-        media_query = build_media_query_from_user_input(q, raw=raw)
+    elif query_text is not None:
+        media_query = build_media_query_from_user_input(query_text, raw=raw)
     else:
         media_query = "*"
 
-    if has_query and q:
+    if query_text is not None:
         if raw:
-            raw_query = q.strip()
+            raw_query = query_text.strip()
             people_query = raw_query
             podcasts_query = raw_query
             authors_query = raw_query
             books_query = raw_query
         else:
-            people_query = build_people_autocomplete_query(q)
-            podcasts_query = build_podcasts_autocomplete_query(q)
-            authors_query = build_authors_autocomplete_query(q)
-            books_query = build_books_autocomplete_query(q)
+            people_query = build_people_autocomplete_query(query_text)
+            podcasts_query = build_podcasts_autocomplete_query(query_text)
+            authors_query = build_authors_autocomplete_query(query_text)
+            books_query = build_books_autocomplete_query(query_text)
     else:
         people_query = "*"
         podcasts_query = "*"
@@ -1500,13 +1512,13 @@ async def search_stream(
         ] = "book"
 
     # Brokered sources - apply timeout
-    if has_query and not raw:
+    if query_text is not None and not raw:
         if "news" in requested_sources:
             tasks_dict[
                 asyncio.create_task(
                     timed_task(
                         "news",
-                        newsai_wrapper.search_news(query=q, page_size=limit),
+                        newsai_wrapper.search_news(query=query_text, page_size=limit),
                         news_api_timeout,
                     )
                 )
@@ -1516,7 +1528,7 @@ async def search_stream(
                 asyncio.create_task(
                     timed_task(
                         "video",
-                        youtube_wrapper.search_videos(query=q, max_results=limit),
+                        youtube_wrapper.search_videos(query=query_text, max_results=limit),
                         api_timeout,
                     )
                 )
@@ -1526,7 +1538,7 @@ async def search_stream(
                 asyncio.create_task(
                     timed_task(
                         "ratings",
-                        rottentomatoes_wrapper.search_content(query=q, limit=limit),
+                        rottentomatoes_wrapper.search_content(query=query_text, limit=limit),
                         api_timeout,
                     )
                 )
@@ -1536,7 +1548,7 @@ async def search_stream(
                 asyncio.create_task(
                     timed_task(
                         "artist",
-                        spotify_wrapper.search_artists(query=q, limit=limit),
+                        spotify_wrapper.search_artists(query=query_text, limit=limit),
                         api_timeout,
                     )
                 )
@@ -1546,7 +1558,7 @@ async def search_stream(
                 asyncio.create_task(
                     timed_task(
                         "album",
-                        spotify_wrapper.search_albums(query=q, limit=limit),
+                        spotify_wrapper.search_albums(query=query_text, limit=limit),
                         api_timeout,
                     )
                 )
@@ -1746,26 +1758,20 @@ async def full_search(q: str) -> dict[str, list]:
 
     # Search both indexes concurrently
     try:
-        media_res, people_res = await asyncio.gather(
+        media_res_obj, people_res_obj = await asyncio.gather(
             repo.search(media_query, limit=50),
             repo.search_people(people_query, limit=10),
             return_exceptions=True,
         )
     except Exception:
-        media_res = type("obj", (object,), {"docs": []})()
-        people_res = type("obj", (object,), {"docs": []})()
-
-    # Handle exceptions from gather
-    if isinstance(media_res, Exception):
-        media_res = type("obj", (object,), {"docs": []})()
-    if isinstance(people_res, Exception):
-        people_res = type("obj", (object,), {"docs": []})()
+        media_res_obj = None
+        people_res_obj = None
 
     # Parse and categorize media results
     tv_results = []
     movie_results = []
 
-    for doc in media_res.docs:
+    for doc in _extract_docs(media_res_obj):
         parsed = parse_doc(doc)
         mc_type = parsed.get("mc_type", "")
         if mc_type == "tv":
@@ -1778,7 +1784,7 @@ async def full_search(q: str) -> dict[str, list]:
     movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
 
     # Parse person results
-    person_results = [parse_doc(doc) for doc in people_res.docs]
+    person_results = [parse_doc(doc) for doc in _extract_docs(people_res_obj)]
 
     return {
         "tv": tv_results,
@@ -2391,7 +2397,8 @@ async def get_cast_names(request: CastNameSearchRequest) -> CastNameSearchRespon
         # Get multiple results to find best match
         search_results = await repo.search(search_query, limit=10)
 
-        if not search_results.docs:
+        search_docs = _extract_docs(search_results)
+        if not search_docs:
             return CastNameSearchResponse(
                 title="Not Found",
                 description=f"No results found for '{request.query}'",
@@ -2403,7 +2410,7 @@ async def get_cast_names(request: CastNameSearchRequest) -> CastNameSearchRespon
         best_match: dict[str, Any] | None = None
         exact_match: dict[str, Any] | None = None
 
-        for doc in search_results.docs:
+        for doc in search_docs:
             parsed = parse_doc(doc)
             title = (parsed.get("search_title") or "").lower().strip()
 
@@ -2413,7 +2420,7 @@ async def get_cast_names(request: CastNameSearchRequest) -> CastNameSearchRespon
                 break
 
         # Use exact match if found, otherwise first result (sorted by popularity)
-        best_match = exact_match or parse_doc(search_results.docs[0])
+        best_match = exact_match or parse_doc(search_docs[0])
 
         source_id = best_match.get("source_id")
         mc_type_str = best_match.get("mc_type", "movie")
