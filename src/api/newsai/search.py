@@ -1011,13 +1011,22 @@ class NewsAISearchService(NewsAIService):
             # as a capitalized word in the article title. This eliminates articles
             # where a common word like "unfamiliar" appears in lowercase (used as
             # an adjective) vs. "Unfamiliar" (used as a title/proper noun).
+            #
+            # Stopwords (and, or, the, of, etc.) are skipped since they are often
+            # lowercase in titles or replaced with symbols (e.g. "&" for "and").
+            # Title normalization: "&" -> "and" so "Friends & Neighbors" matches
+            # "Friends and Neighbors".
             if used_keyword_fallback and articles:
-                query_words = query.strip().split()
+                title_stopwords = {"a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "is", "it", "by", "with", "from"}
+                query_words = [
+                    w for w in query.strip().split()
+                    if w.lower() not in title_stopwords
+                ]
                 pre_filter_count = len(articles)
                 filtered: list[MCNewsItem] = []
                 for article in articles:
-                    article_title = article.title or ""
-                    # Check that every word in the query appears capitalized in the title
+                    # Normalize title: replace & with "and" for matching
+                    article_title = (article.title or "").replace("&", "and")
                     if all(
                         word.capitalize() in article_title or word.upper() in article_title
                         for word in query_words
