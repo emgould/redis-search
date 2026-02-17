@@ -320,6 +320,18 @@ deploy: deploy-api
 
 # IAP tunnel to Redis VM - forwards localhost:6381 to Redis VM port 6379
 # Use PUBLIC_REDIS_PORT=6381 in local.env to connect through tunnel
+# Test public Redis connectivity (requires `make tunnel` in another terminal)
+test-redis-public:
+	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
+		echo "❌ No tunnel on port 6381. Start it first:"; \
+		echo "   make tunnel"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "🧪 Testing Redis connectivity via IAP tunnel (localhost:6381)..."
+	@. venv/bin/activate 2>/dev/null || . .venv/bin/activate; \
+	REDIS_HOST=localhost REDIS_PORT=6381 REDIS_PASSWORD=rCrwd3xMFhfoKhUF9by9 python scripts/test_redis_connectivity.py
+
 tunnel:
 	@echo "🔐 Creating IAP tunnel to Redis VM..."
 	@echo "   Local port:  localhost:6381"
