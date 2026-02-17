@@ -1010,8 +1010,10 @@ async def search(
     empty_result = type("obj", (object,), {"docs": []})()
 
     # Build task list based on requested sources (wrapped with timing)
-    # External API timeout - YouTube INNERTUBE API takes ~1.2s minimum, add buffer for Docker network
+    # External API timeout - YouTube/Spotify/RT are single-call APIs (~1-2s)
     api_timeout = 2.5
+    # News needs more time: concept URI resolution (~1-2s on cache miss) + article search (~2s)
+    news_api_timeout = 6.0
     timed_tasks: list[Any] = []
 
     # Indexed sources (RediSearch) - no timeout needed
@@ -1036,7 +1038,7 @@ async def search(
                 timed_task(
                     "news",
                     newsai_wrapper.search_news(query=q, page_size=limit),
-                    api_timeout,
+                    news_api_timeout,
                 )
             )
         if "video" in requested_sources:
@@ -1464,6 +1466,7 @@ async def search_stream(
         books_query = "*"
 
     api_timeout = 2.5
+    news_api_timeout = 6.0  # News: concept resolution + article search
 
     # Create named tasks
     tasks_dict: dict[asyncio.Task, str] = {}  # type: ignore[type-arg]
@@ -1504,7 +1507,7 @@ async def search_stream(
                     timed_task(
                         "news",
                         newsai_wrapper.search_news(query=q, page_size=limit),
-                        api_timeout,
+                        news_api_timeout,
                     )
                 )
             ] = "news"
