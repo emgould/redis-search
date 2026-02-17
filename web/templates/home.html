@@ -706,7 +706,7 @@ Shows{% endblock %} {% block body %}
           items: results.person,
           topPopularity: parseFloat(results.person[0]?.popularity) || 0,
           color: "green",
-          tier: 2,  // People tier
+          tier: 0,  // People always render first
         });
       }
       if (results.podcast && results.podcast.length > 0) {
@@ -726,7 +726,7 @@ Shows{% endblock %} {% block body %}
           items: results.author,
           topPopularity: parseFloat(results.author[0]?.work_count) || 0,
           color: "amber",
-          tier: 2,  // People tier
+          tier: 0,  // Authors always render first
         });
       }
       if (results.book && results.book.length > 0) {
@@ -778,7 +778,7 @@ Shows{% endblock %} {% block body %}
           // Use popularity for sorting (Spotify popularity 0-100)
           topPopularity: parseFloat(results.artist[0]?.popularity) || 0,
           color: "lime",
-          tier: 2,  // People tier (with Person, Author)
+          tier: 0,  // Artists always render first
         });
       }
       if (results.album && results.album.length > 0) {
