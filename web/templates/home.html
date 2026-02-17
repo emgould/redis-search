@@ -1853,12 +1853,13 @@ Shows{% endblock %} {% block body %}
     const query = e.target.value.trim();
     currentQuery = query;
 
+    // Clear debounce timers (they'll be reset below)
     clearTimeout(autocompleteDebounceTimer);
     clearTimeout(searchDebounceTimer);
-    cancelAllRequests();
-    currentResults = {};
 
     if (!query || query.length < 2) {
+      cancelAllRequests();
+      currentResults = {};
       resultsContainer.classList.add("hidden");
       return;
     }
@@ -1870,6 +1871,7 @@ Shows{% endblock %} {% block body %}
 
     // Tier 1: Autocomplete (300ms) - fast local RediSearch results
     autocompleteDebounceTimer = setTimeout(() => {
+      currentResults = {};
       performAutocomplete(query);
     }, 300);
 
