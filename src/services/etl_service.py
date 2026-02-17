@@ -23,27 +23,7 @@ from redis.asyncio import Redis
 from adapters.config import load_env
 from contracts.models import MCSources, MCType
 from core.normalize import document_to_redis, normalize_document
-
-# Major streaming platforms for TV show filtering
-MAJOR_STREAMING_PROVIDERS = {
-    "Netflix",
-    "Netflix Standard with Ads",
-    "Apple TV Plus",
-    "Apple TV",
-    "Amazon Prime Video",
-    "Amazon Video",
-    "Disney Plus",
-    "Disney+",
-    "Paramount Plus",
-    "Paramount+",
-    "Peacock",
-    "Peacock Premium",
-    "Max",
-    "HBO Max",
-}
-
-# Cutoff date for TV shows - last_air_date must be >= this to qualify
-TV_SHOW_CUTOFF_DATE = "2023-01-01"
+from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 
 
 @dataclass

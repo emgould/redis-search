@@ -39,6 +39,7 @@ from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document
+from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
 
@@ -59,25 +60,6 @@ RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 # whose TMDB popularity can temporarily dip below 1.0
 MIN_PERSON_POPULARITY = 0.5
 IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
-
-MAJOR_STREAMING_PROVIDERS = {
-    "Netflix",
-    "Amazon Prime Video",
-    "Amazon Video",
-    "Hulu",
-    "Max",
-    "HBO Max",
-    "Disney Plus",
-    "Peacock",
-    "Peacock Premium",
-    "Apple TV Plus",
-    "Apple TV",
-    "Paramount Plus",
-    "Paramount+",
-    "Fubo",
-    "FuboTV",
-    "fuboTV",
-}
 
 
 @dataclass
@@ -217,11 +199,44 @@ class TMDBChangesETL(TMDBService):
         """Check if media item passes quality filters."""
         item_name = item.get("title") or item.get("name") or item.get("id")
         log_fn = logger.info if self.verbose else logger.debug
+        media_type = str(item.get("_media_type") or item.get("media_type") or "").lower()
 
         # Must have poster
         if not item.get("poster_path"):
             log_fn(f"Filter reject {item_name}: no poster_path")
             return False
+
+        # Check for major streaming platforms.
+        # Handle multiple formats:
+        # 1. Raw TMDB API: {"watch/providers": {"results": {"US": {"flatrate": [...]}}}}
+        # 2. Pydantic model_dump: {"watch_providers": {"flatrate": [...], "region": "US"}}
+        watch_providers = item.get("watch/providers", {}).get("results", {}).get("US", {})
+        if not watch_providers:
+            watch_providers = item.get("watch_providers", {})
+        flatrate = watch_providers.get("flatrate", [])
+
+        if not flatrate:
+            log_fn(
+                f"Filter: {item_name} no flatrate. wp_keys={list(watch_providers.keys()) if watch_providers else 'empty'}"
+            )
+        provider_names = {p.get("provider_name") for p in flatrate if p.get("provider_name")}
+        has_streaming = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
+
+        if flatrate and not has_streaming:
+            log_fn(f"Filter: {item_name} providers={provider_names} not in MAJOR")
+
+        if media_type == "tv":
+            status = item.get("status") or ""
+            is_returning_series = status == "Returning Series"
+            last_air_date = item.get("last_air_date") or ""
+            has_recent_activity = bool(last_air_date and last_air_date >= TV_SHOW_CUTOFF_DATE)
+
+            passed_tv_filter = is_returning_series or has_recent_activity or has_streaming
+            if not passed_tv_filter:
+                log_fn(
+                    f"Filter reject {item_name}: status={status}, last_air_date={last_air_date}, has_streaming={has_streaming}"
+                )
+            return passed_tv_filter
 
         # Popularity threshold - check both direct field and metrics dict
         popularity = item.get("popularity", 0) or item.get("metrics", {}).get("popularity", 0)
@@ -236,31 +251,10 @@ class TMDBChangesETL(TMDBService):
             return False
 
         # For movies: must have runtime
-        if item.get("media_type") == "movie":
+        if media_type == "movie":
             runtime = item.get("runtime") or 0
             if runtime < 40:
                 return False
-
-        # Check for major streaming or theatrical release
-        # Handle multiple formats:
-        # 1. Raw TMDB API: {"watch/providers": {"results": {"US": {"flatrate": [...]}}}}
-        # 2. Pydantic model_dump: {"watch_providers": {"flatrate": [...], "region": "US"}}
-        watch_providers = item.get("watch/providers", {}).get("results", {}).get("US", {})
-        if not watch_providers:
-            # Try Pydantic model format (no "results" level)
-            watch_providers = item.get("watch_providers", {})
-        flatrate = watch_providers.get("flatrate", [])
-
-        # Debug logging (only in verbose mode)
-        if not flatrate:
-            log_fn(
-                f"Filter: {item_name} no flatrate. wp_keys={list(watch_providers.keys()) if watch_providers else 'empty'}"
-            )
-        provider_names = {p.get("provider_name") for p in flatrate}
-        has_streaming = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
-
-        if flatrate and not has_streaming:
-            log_fn(f"Filter: {item_name} providers={provider_names} not in MAJOR")
 
         # Check release info
         release_dates = item.get("release_dates", {}).get("results", [])
