@@ -409,8 +409,13 @@ Shows{% endblock %} {% block body %}
       const data = await response.json();
 
       if (query === currentQuery) {
-        // Store autocomplete results and render
-        currentResults = { ...data };
+        // Merge autocomplete results without overwriting search results
+        // that may have already arrived via stream or batch
+        for (const [key, value] of Object.entries(data)) {
+          if (!currentResults[key] || currentResults[key].length === 0) {
+            currentResults[key] = value;
+          }
+        }
         renderResults(currentResults, query);
         resultsContainer.classList.remove("hidden");
       }
@@ -1850,10 +1855,10 @@ Shows{% endblock %} {% block body %}
 
     clearTimeout(autocompleteDebounceTimer);
     clearTimeout(searchDebounceTimer);
+    cancelAllRequests();
+    currentResults = {};
 
     if (!query || query.length < 2) {
-      cancelAllRequests();
-      currentResults = {};
       resultsContainer.classList.add("hidden");
       return;
     }
