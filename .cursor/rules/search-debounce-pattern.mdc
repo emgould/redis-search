@@ -1,0 +1,122 @@
+---
+description: Two-tier debounce search architecture for the web UI
+globs:
+  - web/static/js/search-controller.js
+  - web/templates/home.html
+alwaysApply: false
+---
+
+# Search Controller — Two-Tier Debounce Architecture
+
+## Overview
+
+The search UI uses a componentized controller (`web/static/js/search-controller.js`) that implements a two-tier debounce pattern. This separates fast local searches from slower external API calls, giving the user instant feedback while brokered results arrive later.
+
+## File Layout
+
+- `web/static/js/search-controller.js` — All search state, timers, fetch logic, and event wiring
+- `web/templates/home.html` — Imports the controller, passes DOM refs and callbacks via `initSearchController(cfg)`
+- `web/app.py` — Serves static files via `app.mount("/static", StaticFiles(...))`
+
+## Two-Tier Debounce
+
+### Tier 1 — Autocomplete (300ms)
+
+- **Endpoint:** `GET /api/autocomplete?q=...`
+- **Sources:** Local RediSearch only — tv, movie, person, podcast, author, book
+- **No brokered APIs** — no news, video, ratings, artist, album
+- **Purpose:** Instant type-ahead results while the user is still typing
+
+### Tier 2 — Full Search (750ms or Enter)
+
+- **Endpoint:** `GET /api/search?q=...` (batch) or `GET /api/search/stream?q=...` (SSE)
+- **Sources:** Everything — local RediSearch + brokered APIs (news, video, ratings, artist, album)
+- **Mode:** Controlled by the Stream toggle in the UI
+  - **Stream OFF (default):** `performSearchBatch` — single fetch, all results at once
+  - **Stream ON:** `performSearchStream` — SSE EventSource, results arrive per-source
+- **Purpose:** Complete results including external APIs, fires after user pauses typing
+
+### Timing
+
+```
+User types:  B . r . u . c . e . _ . S . p . r . i . n . g
+             |                                               |
+             0ms                                          last keystroke
+                                                             |
+                                                             +-- 300ms → Tier 1 (autocomplete)
+                                                             +-- 750ms → Tier 2 (full search)
+
+Enter key:   Immediately fires Tier 2 (cancels both timers)
+```
+
+Every keystroke clears both timers. If the query text changes, all in-flight requests are cancelled and `currentResults` is reset.
+
+## State Management
+
+### `currentResults`
+
+A shared object accumulating results from both tiers:
+
+```javascript
+currentResults = { tv: [...], movie: [...], artist: [...], news: [...], ... }
+```
+
+- **Autocomplete** overwrites all keys it returns (first responder for local sources)
+- **Batch search** overwrites all keys (`{ ...currentResults, ...data }`)
+- **Stream search** overwrites one key at a time as each source arrives (`currentResults[source] = results`)
+- **Reset:** happens immediately when the query text changes in the input handler
+
+### Cancellation
+
+Cancellation is centralized in the `input` event handler:
+
+```javascript
+if (query !== currentQuery) {
+  cancelAll();        // abort autocomplete, abort search, close EventSource
+  currentResults = {};
+}
+```
+
+Individual functions (`runAutocomplete`, `runSearchBatch`, `runSearchStream`) cancel only their own predecessor when they fire, so a new autocomplete doesn't kill an in-progress search stream.
+
+### Stale Result Guard
+
+Every async callback checks `query === currentQuery` before updating `currentResults`. This prevents results from a previous query from rendering after a new query has started.
+
+## Controller API
+
+```javascript
+const controller = initSearchController({
+  searchInput,           // HTMLInputElement
+  resultsContainer,      // results dropdown container
+  loadingSpinner,        // spinner element
+  getActiveFiltersParam, // () => "tv,movie" or null
+  isRawMode,             // (query) => bool
+  getApiUrl,             // (path) => full URL
+  renderResults,         // (results, query) => void
+  expandedCategories,    // mutable {tv: false, movie: false, ...}
+  isStreamingEnabled,    // () => bool
+});
+
+controller.searchFor("The Office");     // programmatic search
+controller.cancelAll();                 // cancel everything
+controller.getCurrentQuery();           // current query string
+controller.getCurrentResults();         // accumulated results object
+controller.triggerSearch(query);        // fire Tier 2 immediately
+```
+
+## Endpoints Used
+
+| Endpoint | Tier | Method | Sources |
+|---|---|---|---|
+| `/api/autocomplete` | 1 | GET (fetch) | Local RediSearch only |
+| `/api/search` | 2 (batch) | GET (fetch) | All sources |
+| `/api/search/stream` | 2 (stream) | GET (EventSource SSE) | All sources, streamed per-source |
+
+## Adding New Sources
+
+If a new brokered API source is added:
+
+1. Add it to `search_service.py` `search()` and `search_stream()` functions
+2. Add rendering for its `mc_type` in `home.html` `renderResults()`
+3. No changes needed to the search controller — it is source-agnostic

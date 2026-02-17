@@ -260,6 +260,7 @@ Shows{% endblock %} {% block body %}
   </div>
 </div>
 
+<script src="/static/js/search-controller.js"></script>
 <script>
   const searchInput = document.getElementById("search-input");
   const resultsContainer = document.getElementById("results-container");
@@ -303,15 +304,7 @@ Shows{% endblock %} {% block body %}
 
   updateApiBaseControls();
 
-  let autocompleteDebounceTimer;
-  let searchDebounceTimer;
-  let currentQuery = "";
-  let autocompleteController = null; // For canceling in-flight autocomplete requests
-  let searchController = null; // For canceling in-flight search requests
-  let eventSource = null; // For streaming mode
-  let streamingEnabled = false; // Toggle state
-  // Accumulated results from autocomplete + search (search results merge on top)
-  let currentResults = {};
+  let streamingEnabled = false; // Toggle state for stream mode
 
   // Detect raw RediSearch mode: query contains @ (never used in normal searches)
   function isRawMode(query) {
@@ -385,154 +378,23 @@ Shows{% endblock %} {% block body %}
     return Array.from(activeFilters).join(',');
   }
   
-  // ---- Autocomplete: fast local results (RediSearch only) ----
-  async function performAutocomplete(query) {
-    if (!query || query.length < 2) {
-      resultsContainer.classList.add("hidden");
-      return;
-    }
+  // Track expanded state for each category (must be declared before search controller)
+  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false };
 
-    if (autocompleteController) {
-      autocompleteController.abort();
-    }
-    autocompleteController = new AbortController();
-    loadingSpinner.classList.remove("hidden");
-
-    try {
-      const sourcesParam = getActiveFiltersParam();
-      const rawParam = isRawMode(query) ? "&raw=true" : "";
-      const url = sourcesParam
-        ? getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}&sources=${sourcesParam}${rawParam}`)
-        : getApiUrl(`/api/autocomplete?q=${encodeURIComponent(query)}${rawParam}`);
-
-      const response = await fetch(url, { signal: autocompleteController.signal });
-      const data = await response.json();
-
-      if (query === currentQuery) {
-        // Merge autocomplete results without overwriting search results
-        // that may have already arrived via stream or batch
-        for (const [key, value] of Object.entries(data)) {
-          if (!currentResults[key] || currentResults[key].length === 0) {
-            currentResults[key] = value;
-          }
-        }
-        renderResults(currentResults, query);
-        resultsContainer.classList.remove("hidden");
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error("[Autocomplete] Error:", error);
-    } finally {
-      loadingSpinner.classList.add("hidden");
-    }
-  }
-
-  // ---- Search (batch): /api/search - waits for all sources ----
-  async function performSearchBatch(query) {
-    if (!query || query.length < 2) return;
-
-    if (searchController) {
-      searchController.abort();
-    }
-    searchController = new AbortController();
-    loadingSpinner.classList.remove("hidden");
-
-    try {
-      const sourcesParam = getActiveFiltersParam();
-      const rawParam = isRawMode(query) ? "&raw=true" : "";
-      let url = getApiUrl(`/api/search?q=${encodeURIComponent(query)}&limit=10${rawParam}`);
-      if (sourcesParam) {
-        url += `&sources=${encodeURIComponent(sourcesParam)}`;
-      }
-
-      console.log(`[Search Batch] Fetching: ${url}`);
-      const response = await fetch(url, { signal: searchController.signal });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = await response.json();
-
-      if (query === currentQuery) {
-        console.log(`[Search Batch] Got results:`, Object.keys(data).map(k => `${k}:${data[k]?.length || 0}`).join(', '));
-        // Merge search results on top of existing autocomplete results
-        currentResults = { ...currentResults, ...data };
-        renderResults(currentResults, query);
-        resultsContainer.classList.remove("hidden");
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error('[Search Batch] Error:', error);
-    } finally {
-      loadingSpinner.classList.add("hidden");
-    }
-  }
-
-  // ---- Search (stream): /api/search/stream - results arrive as each source completes ----
-  function performSearchStream(query) {
-    if (!query || query.length < 2) return;
-
-    // Close any existing stream
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
-    }
-
-    loadingSpinner.classList.remove("hidden");
-    const startTime = performance.now();
-    let sourcesReceived = 0;
-
-    const sourcesParam = getActiveFiltersParam();
-    const rawParam = isRawMode(query) ? "&raw=true" : "";
-    let url = getApiUrl(`/api/search/stream?q=${encodeURIComponent(query)}&limit=10${rawParam}`);
-    if (sourcesParam) {
-      url += `&sources=${encodeURIComponent(sourcesParam)}`;
-    }
-
-    console.log(`[Search Stream] Connecting: ${url}`);
-    eventSource = new EventSource(url);
-
-    eventSource.addEventListener('result', (e) => {
-      if (query !== currentQuery) return;
-
-      try {
-        const { source, results, latency_ms } = JSON.parse(e.data);
-        sourcesReceived++;
-
-        // Merge this source into current results
-        currentResults[source] = results;
-        renderResults(currentResults, query);
-        resultsContainer.classList.remove("hidden");
-
-        console.debug(`[Search Stream] ${source}: ${results.length} results in ${latency_ms}ms (${sourcesReceived} sources)`);
-      } catch (err) {
-        console.error("[Search Stream] Error parsing event:", err);
-      }
-    });
-
-    eventSource.addEventListener('done', () => {
-      const totalTime = Math.round(performance.now() - startTime);
-      console.log(`[Search Stream] Complete: ${sourcesReceived} sources in ${totalTime}ms`);
-      loadingSpinner.classList.add("hidden");
-      eventSource.close();
-      eventSource = null;
-    });
-
-    eventSource.addEventListener('error', () => {
-      loadingSpinner.classList.add("hidden");
-      if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-      }
-    });
-  }
-
-  // ---- Trigger the appropriate search based on stream toggle ----
-  function triggerSearch(query) {
-    if (streamingEnabled) {
-      performSearchStream(query);
-    } else {
-      performSearchBatch(query);
-    }
-  }
+  // ---- Search Controller (imported from /static/js/search-controller.js) ----
+  // Handles two-tier debounce: autocomplete (300ms) + full search (750ms).
+  // See .cursor/rules/search-debounce-pattern.mdc for architecture docs.
+  const searchController = initSearchController({
+    searchInput,
+    resultsContainer,
+    loadingSpinner,
+    getActiveFiltersParam,
+    isRawMode,
+    getApiUrl,
+    renderResults,
+    expandedCategories,
+    isStreamingEnabled: () => streamingEnabled,
+  });
 
   // Stream mode toggle
   function toggleStreamMode() {
@@ -555,15 +417,14 @@ Shows{% endblock %} {% block body %}
     }
 
     // If there's an active query, re-search with new mode
-    if (currentQuery && currentQuery.length >= 2) {
-      triggerSearch(currentQuery);
+    const q = searchController.getCurrentQuery();
+    if (q && q.length >= 2) {
+      searchController.triggerSearch(q);
     }
   }
 
   function searchFor(query) {
-    searchInput.value = query;
-    searchInput.dispatchEvent(new Event("input"));
-    searchInput.focus();
+    searchController.searchFor(query);
   }
 
   function formatYear(item) {
@@ -628,9 +489,6 @@ Shows{% endblock %} {% block body %}
       '<mark class="bg-brand-500/30 text-white rounded px-0.5">$1</mark>'
     );
   }
-
-  // Track expanded state for each category
-  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false };
 
   function toggleCategoryExpand(category) {
     expandedCategories[category] = !expandedCategories[category];
@@ -1833,92 +1691,8 @@ Shows{% endblock %} {% block body %}
     `;
   }
 
-  // Cancel all in-flight requests and streams
-  function cancelAllRequests() {
-    if (autocompleteController) {
-      autocompleteController.abort();
-      autocompleteController = null;
-    }
-    if (searchController) {
-      searchController.abort();
-      searchController = null;
-    }
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
-    }
-  }
-
-  searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.trim();
-    currentQuery = query;
-
-    // Clear debounce timers (they'll be reset below)
-    clearTimeout(autocompleteDebounceTimer);
-    clearTimeout(searchDebounceTimer);
-
-    if (!query || query.length < 2) {
-      cancelAllRequests();
-      currentResults = {};
-      resultsContainer.classList.add("hidden");
-      return;
-    }
-
-    // Reset expanded state for new search
-    Object.keys(expandedCategories).forEach(key => {
-      expandedCategories[key] = false;
-    });
-
-    // Tier 1: Autocomplete (300ms) - fast local RediSearch results
-    autocompleteDebounceTimer = setTimeout(() => {
-      currentResults = {};
-      performAutocomplete(query);
-    }, 300);
-
-    // Tier 2: Full search (750ms) - adds brokered APIs (news, video, ratings, artist, album)
-    searchDebounceTimer = setTimeout(() => {
-      triggerSearch(query);
-    }, 750);
-  });
-
-  // Close results when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!document.getElementById("search-container").contains(e.target)) {
-      resultsContainer.classList.add("hidden");
-    }
-  });
-
-  // Handle keyboard shortcuts
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      resultsContainer.classList.add("hidden");
-      searchInput.blur();
-    }
-    // Enter key: immediately fire full search (cancel debounces)
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const query = searchInput.value.trim();
-      if (query.length >= 2) {
-        clearTimeout(autocompleteDebounceTimer);
-        clearTimeout(searchDebounceTimer);
-        triggerSearch(query);
-      }
-    }
-  });
-
-  // Re-show results when focusing input with existing query
-  searchInput.addEventListener("focus", () => {
-    const query = searchInput.value.trim();
-    if (query.length >= 2) {
-      // Show cached results immediately if available
-      if (Object.keys(currentResults).length > 0 && currentQuery === query) {
-        renderResults(currentResults, query);
-        resultsContainer.classList.remove("hidden");
-      } else {
-        performAutocomplete(query);
-      }
-    }
-  });
+  // Event handlers for input, keydown, focus, and click-outside are
+  // registered inside initSearchController (search-controller.js).
 
   // ===== Modal functionality =====
   const modal = document.getElementById("detail-modal");
