@@ -61,9 +61,7 @@ def build_html(metadata: ETLRunMetadata) -> str:
         "failed": "#ef4444",
     }.get(metadata.status, "#6b7280")
 
-    status_emoji = {"completed": "✅", "partial": "⚠️", "failed": "❌"}.get(
-        metadata.status, "❓"
-    )
+    status_emoji = {"completed": "✅", "partial": "⚠️", "failed": "❌"}.get(metadata.status, "❓")
     error_color = "#ef4444" if metadata.total_errors > 0 else "#22c55e"
     gcs_url = f"https://console.cloud.google.com/storage/browser/mc-redis-etl/redis-search/etl/runs/{metadata.run_date}"
 
@@ -72,7 +70,9 @@ def build_html(metadata: ETLRunMetadata) -> str:
         row_color = (
             "#22c55e"
             if job.status == "success"
-            else "#ef4444" if job.status == "failed" else "#6b7280"
+            else "#ef4444"
+            if job.status == "failed"
+            else "#6b7280"
         )
         job_rows += (
             f"<tr>"
@@ -85,39 +85,41 @@ def build_html(metadata: ETLRunMetadata) -> str:
             f"</tr>"
         )
 
-    return "".join([
-        "<!DOCTYPE html>",
-        '<html><head><meta charset="utf-8"><title>ETL Run Summary</title></head>',
-        '<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#111827;color:#f3f4f6;padding:20px;margin:0">',
-        '<div style="max-width:700px;margin:0 auto;background:#1f2937;border-radius:8px;overflow:hidden;border:1px solid #374151">',
-        f'<div style="background:{status_color};padding:20px;text-align:center">',
-        f'<h1 style="margin:0;color:white;font-size:24px">{status_emoji} ETL Run {metadata.status.upper()}</h1>',
-        f'<p style="margin:5px 0 0;color:rgba(255,255,255,0.9);font-size:14px">{metadata.run_date} • {metadata.run_id}</p>',
-        "</div>",
-        '<div style="padding:20px;display:flex;justify-content:space-around;background:#111827;border-bottom:1px solid #374151">',
-        f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#22c55e">{format_number(metadata.total_documents_upserted)}</div><div style="font-size:12px;color:#9ca3af">Documents Upserted</div></div>',
-        f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#3b82f6">{format_number(metadata.total_changes_found)}</div><div style="font-size:12px;color:#9ca3af">Changes Found</div></div>',
-        f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:{error_color}">{format_number(metadata.total_errors)}</div><div style="font-size:12px;color:#9ca3af">Errors</div></div>',
-        f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#f3f4f6">{format_duration(metadata.duration_seconds)}</div><div style="font-size:12px;color:#9ca3af">Duration</div></div>',
-        "</div>",
-        '<div style="padding:20px">',
-        '<h2 style="margin:0 0 15px;font-size:16px;color:#9ca3af">Job Breakdown</h2>',
-        '<table style="width:100%;border-collapse:collapse;font-size:13px">',
-        '<thead><tr style="background:#374151">',
-        '<th style="padding:10px 8px;text-align:left">Job</th>',
-        '<th style="padding:10px 8px;text-align:left">Status</th>',
-        '<th style="padding:10px 8px;text-align:right">Changes</th>',
-        '<th style="padding:10px 8px;text-align:right">Upserted</th>',
-        '<th style="padding:10px 8px;text-align:right">Errors</th>',
-        '<th style="padding:10px 8px;text-align:left">Duration</th>',
-        "</tr></thead>",
-        f"<tbody>{job_rows}</tbody>",
-        "</table></div>",
-        '<div style="padding:15px 20px;background:#111827;border-top:1px solid #374151;font-size:12px;color:#6b7280">',
-        f'<p style="margin:0">Redis Search ETL • <a href="{gcs_url}" style="color:#60a5fa">View in GCS</a></p>',
-        "</div>",
-        "</div></body></html>",
-    ])
+    return "".join(
+        [
+            "<!DOCTYPE html>",
+            '<html><head><meta charset="utf-8"><title>Redis Search ETL</title></head>',
+            '<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#111827;color:#f3f4f6;padding:20px;margin:0">',
+            '<div style="max-width:700px;margin:0 auto;background:#1f2937;border-radius:8px;overflow:hidden;border:1px solid #374151">',
+            f'<div style="background:{status_color};padding:20px;text-align:center">',
+            f'<h1 style="margin:0;color:white;font-size:24px">{status_emoji} Redis Search ETL Run {metadata.status.upper()}</h1>',
+            f'<p style="margin:5px 0 0;color:rgba(255,255,255,0.9);font-size:14px">{metadata.run_date} • {metadata.run_id}</p>',
+            "</div>",
+            '<div style="padding:20px;display:flex;justify-content:space-around;background:#111827;border-bottom:1px solid #374151">',
+            f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#22c55e">{format_number(metadata.total_documents_upserted)}</div><div style="font-size:12px;color:#9ca3af">Documents Upserted</div></div>',
+            f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#3b82f6">{format_number(metadata.total_changes_found)}</div><div style="font-size:12px;color:#9ca3af">Changes Found</div></div>',
+            f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:{error_color}">{format_number(metadata.total_errors)}</div><div style="font-size:12px;color:#9ca3af">Errors</div></div>',
+            f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#f3f4f6">{format_duration(metadata.duration_seconds)}</div><div style="font-size:12px;color:#9ca3af">Duration</div></div>',
+            "</div>",
+            '<div style="padding:20px">',
+            '<h2 style="margin:0 0 15px;font-size:16px;color:#9ca3af">Job Breakdown</h2>',
+            '<table style="width:100%;border-collapse:collapse;font-size:13px">',
+            '<thead><tr style="background:#374151">',
+            '<th style="padding:10px 8px;text-align:left">Job</th>',
+            '<th style="padding:10px 8px;text-align:left">Status</th>',
+            '<th style="padding:10px 8px;text-align:right">Changes</th>',
+            '<th style="padding:10px 8px;text-align:right">Upserted</th>',
+            '<th style="padding:10px 8px;text-align:right">Errors</th>',
+            '<th style="padding:10px 8px;text-align:left">Duration</th>',
+            "</tr></thead>",
+            f"<tbody>{job_rows}</tbody>",
+            "</table></div>",
+            '<div style="padding:15px 20px;background:#111827;border-top:1px solid #374151;font-size:12px;color:#6b7280">',
+            f'<p style="margin:0">Redis Search ETL • <a href="{gcs_url}" style="color:#60a5fa">View in GCS</a></p>',
+            "</div>",
+            "</div></body></html>",
+        ]
+    )
 
 
 def send_test_email(metadata: ETLRunMetadata) -> bool:
@@ -149,11 +151,9 @@ def send_test_email(metadata: ETLRunMetadata) -> bool:
             print("❌ Missing SMTP credentials")
             return False
 
-    status_prefix = {"completed": "✅", "partial": "⚠️", "failed": "❌"}.get(
-        metadata.status, ""
-    )
+    status_prefix = {"completed": "✅", "partial": "⚠️", "failed": "❌"}.get(metadata.status, "")
     subject = (
-        f"{status_prefix} ETL {metadata.status.upper()}: "
+        f"{status_prefix} Redis Search ETL {metadata.status.upper()}: "
         f"{format_number(metadata.total_documents_upserted)} docs, "
         f"{metadata.total_errors} errors ({metadata.run_date})"
     )

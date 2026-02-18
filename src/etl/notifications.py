@@ -51,7 +51,7 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
 
     lines = [
         f"{'=' * 60}",
-        f"  ETL Run Summary - {metadata.run_date}",
+        f"  Redis Search ETL Run Summary - {metadata.run_date}",
         f"{'=' * 60}",
         "",
         f"  Status: {status_emoji} {metadata.status.upper()}",
@@ -179,12 +179,12 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
     # Build HTML using list to avoid trailing whitespace issues
     html_parts = [
         "<!DOCTYPE html>",
-        '<html><head><meta charset="utf-8"><title>ETL Run Summary</title></head>',
+        '<html><head><meta charset="utf-8"><title>Redis Search ETL</title></head>',
         '<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#111827;color:#f3f4f6;padding:20px;margin:0">',
         '<div style="max-width:700px;margin:0 auto;background:#1f2937;border-radius:8px;overflow:hidden;border:1px solid #374151">',
         # Header
         f'<div style="background:{status_color};padding:20px;text-align:center">',
-        f'<h1 style="margin:0;color:white;font-size:24px">{status_emoji} ETL Run {metadata.status.upper()}</h1>',
+        f'<h1 style="margin:0;color:white;font-size:24px">{status_emoji} Redis Search ETL Run {metadata.status.upper()}</h1>',
         f'<p style="margin:5px 0 0;color:rgba(255,255,255,0.9);font-size:14px">{metadata.run_date} • {metadata.run_id}</p>',
         "</div>",
         # Summary Stats
@@ -284,7 +284,7 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     }.get(metadata.status, "")
 
     subject = (
-        f"{status_prefix} ETL {metadata.status.upper()}: "
+        f"{status_prefix} Redis Search ETL {metadata.status.upper()}: "
         f"{format_number(metadata.total_documents_upserted)} docs, "
         f"{metadata.total_errors} errors ({metadata.run_date})"
     )
