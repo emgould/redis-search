@@ -837,9 +837,7 @@ async def autocomplete_stream(
                     parsed_results = [
                         a
                         for a in parsed_all
-                        if is_author_name_match(
-                            q, a.get("search_title", "") or a.get("name", "")
-                        )
+                        if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
                     ][:10]
 
             elif name == "book":
@@ -1026,8 +1024,12 @@ async def search(
     timed_tasks: list[Any] = []
 
     # Indexed sources (RediSearch) - no timeout needed
+    # Fetch limit * 5 for media to ensure exact title matches aren't pushed out
+    # by higher-popularity keyword/cast matches in the union query.
+    # Python re-ranking (score_media_result) handles final ordering.
+    media_fetch_limit = max(limit * 5, 50) if has_query else limit * 2
     if "tv" in requested_sources or "movie" in requested_sources:
-        timed_tasks.append(timed_task("media", repo.search(media_query, limit=limit * 2)))
+        timed_tasks.append(timed_task("media", repo.search(media_query, limit=media_fetch_limit)))
     if "person" in requested_sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=limit * 2)))
@@ -1069,13 +1071,17 @@ async def search(
         if "artist" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "artist", spotify_wrapper.search_artists(query=query_text, limit=limit), api_timeout
+                    "artist",
+                    spotify_wrapper.search_artists(query=query_text, limit=limit),
+                    api_timeout,
                 )
             )
         if "album" in requested_sources:
             timed_tasks.append(
                 timed_task(
-                    "album", spotify_wrapper.search_albums(query=query_text, limit=limit), api_timeout
+                    "album",
+                    spotify_wrapper.search_albums(query=query_text, limit=limit),
+                    api_timeout,
                 )
             )
 
@@ -1484,9 +1490,14 @@ async def search_stream(
     tasks_dict: dict[asyncio.Task, str] = {}  # type: ignore[type-arg]
 
     # Indexed sources (RediSearch) - no timeout
+    # Fetch more media results for text queries to ensure exact title matches
+    # aren't pushed out by popularity-sorted keyword/cast/genre matches.
+    media_fetch_limit = max(limit * 5, 50) if has_query else limit * 2
     if "tv" in requested_sources or "movie" in requested_sources:
         tasks_dict[
-            asyncio.create_task(timed_task("media", repo.search(media_query, limit=limit * 2)))
+            asyncio.create_task(
+                timed_task("media", repo.search(media_query, limit=media_fetch_limit))
+            )
         ] = "media"
     if "person" in requested_sources:
         tasks_dict[
@@ -1612,9 +1623,9 @@ async def search_stream(
                                 q, p.get("search_title", "") or p.get("name", "")
                             )
                         ]
-                        parsed_results = sorted(
-                            filtered, key=lambda p: _rank_person_result(p, q)
-                        )[:limit]
+                        parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[
+                            :limit
+                        ]
                     else:
                         parsed_results = parsed_all[:limit]
 
@@ -1650,9 +1661,9 @@ async def search_stream(
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if q:
-                        parsed_results = sorted(
-                            parsed_all, key=lambda b: _rank_book_result(b, q)
-                        )[:limit]
+                        parsed_results = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))[
+                            :limit
+                        ]
                     else:
                         parsed_results = parsed_all[:limit]
                 else:
