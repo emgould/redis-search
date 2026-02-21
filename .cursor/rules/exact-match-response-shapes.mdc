@@ -1,0 +1,153 @@
+---
+description: Response shapes for Search and Autocomplete with exact_match feature
+globs: ["**/search*.py", "**/app.py", "**/autocomplete*"]
+alwaysApply: false
+---
+
+# Exact Match Response Shapes
+
+## Overview
+
+The exact match feature adds a new `exact_match` property to search and autocomplete responses. When the user's query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"), that match is surfaced in a dedicated field.
+
+---
+
+## Non-Stream Responses (JSON)
+
+**Endpoints:** `/api/search`, `/api/autocomplete`
+
+### Before (current)
+
+```json
+{
+  "tv": [...],
+  "movie": [...],
+  "person": [...],
+  "podcast": [...],
+  "author": [...],
+  "book": [...],
+  "news": [...],
+  "video": [...],
+  "ratings": [...],
+  "artist": [...],
+  "album": [...]
+}
+```
+
+### After (evolved)
+
+```json
+{
+  "exact_match": {
+    "mc_id": "tmdb_movie_238",
+    "mc_type": "movie",
+    "source": "tmdb",
+    "source_id": "238",
+    "search_title": "The Godfather",
+    "year": 1972,
+    "popularity": 85.2,
+    "image": "https://...",
+    "overview": "..."
+  },
+  "tv": [...],
+  "movie": [...],
+  "person": [...],
+  "podcast": [...],
+  "author": [...],
+  "book": [...],
+  "news": [...],
+  "video": [...],
+  "ratings": [...],
+  "artist": [...],
+  "album": [...]
+}
+```
+
+**`exact_match` field:**
+- **Type:** `MCBaseItem | null`
+- **When present:** At least one exact match found; contains the single best match by source priority (movie > tv > person > podcast > book > author)
+- **When absent:** Omit key, or use `"exact_match": null` for consistent typing (recommend always include, use `null` when none)
+
+---
+
+## Streaming Responses (SSE)
+
+**Endpoints:** `/api/search/stream`, `/api/autocomplete/stream`
+
+### Event Types
+
+| Event      | When                         | Data shape                                                    |
+|-----------|-------------------------------|--------------------------------------------------------------|
+| `result`  | Each source completes         | `{ source: string, results: MCBaseItem[], latency_ms: number }` |
+| `exact_match` | **NEW** – when a source yields an exact match | `MCBaseItem` (single item)                                  |
+| `done`    | All sources complete          | `{}`                                                         |
+
+### Event sequence example
+
+```
+event: result
+data: {"source":"movie","results":[...],"latency_ms":12}
+
+event: exact_match
+data: {"mc_id":"tmdb_movie_238","mc_type":"movie","search_title":"The Godfather",...}
+
+event: result
+data: {"source":"tv","results":[...],"latency_ms":15}
+
+event: done
+data: {}
+```
+
+**`exact_match` event behavior:**
+- Emitted **as soon as** a source completes and yields at least one exact match
+- May fire **multiple times** per stream (e.g., movie exact match, then person exact match)
+- Client handles each event; no aggregation needed
+- `exact_match` events can appear between `result` events (typically right after the `result` that contained the match)
+
+---
+
+## TypeScript Types (Mobile / Clients)
+
+### SearchResponse (evolved)
+
+```typescript
+export interface SearchResponse {
+  exact_match: MCBaseItem | null;  // NEW
+  tv: MCBaseItem[];
+  movie: MCBaseItem[];
+  person: MCBaseItem[];
+  podcast: MCBaseItem[];
+  author: MCBaseItem[];
+  book: MCBaseItem[];
+  news: MCBaseItem[];
+  video: MCBaseItem[];
+  ratings: MCBaseItem[];
+  artist: MCBaseItem[];
+  album: MCBaseItem[];
+}
+```
+
+### Stream event handlers
+
+```typescript
+// Result event - unchanged shape
+es.addEventListener("result", (e) => {
+  const data: { source: SearchSource; results: MCBaseItem[]; latency_ms: number } = JSON.parse(e.data);
+  // ...
+});
+
+// NEW: exact_match event
+es.addEventListener("exact_match", (e) => {
+  const item: MCBaseItem = JSON.parse(e.data);
+  // Surface immediately - likely what user is looking for
+});
+
+es.addEventListener("done", () => es.close());
+```
+
+---
+
+## Backwards Compatibility
+
+- **Non-stream:** Adding `exact_match` is additive; existing clients can ignore it
+- **Stream:** New event type `exact_match`; clients that only listen for `result` and `done` are unchanged

@@ -528,74 +528,111 @@ Shows{% endblock %} {% block body %}
     window._lastResults = results;
     window._lastQuery = query;
 
-    // Handle categorized results format: {tv: [], movie: [], person: []}
+    // Handle categorized results format: {tv: [], movie: [], person: [], exact_match: {...}}
     const categories = [];
 
     if (results && typeof results === "object" && !Array.isArray(results)) {
+      // Exact match: render at very top (tier -1) when present
+      if (results.exact_match && typeof results.exact_match === "object") {
+        const em = results.exact_match;
+        const label = em.mc_type === "movie" ? "🎬 Movie (Exact Match)" : em.mc_type === "tv" ? "📺 TV Show (Exact Match)" : em.mc_type === "person" ? "👤 Person (Exact Match)" : em.mc_type === "podcast" ? "🎙️ Podcast (Exact Match)" : em.mc_type === "book" ? "📚 Book (Exact Match)" : em.mc_type === "author" ? "✍️ Author (Exact Match)" : "✨ Exact Match";
+        categories.push({
+          key: "exact_match",
+          label: label,
+          items: [em],
+          topPopularity: 999999,
+          color: "brand",
+          tier: -1,  // Always at top
+        });
+      }
+
       // Build category objects with items, popularity, and tier
+      // Helper: filter out exact match from a list to avoid duplicate display
+      const exactMatchId = results.exact_match?.mc_id || null;
+      const withoutExactMatch = (arr) =>
+        exactMatchId && Array.isArray(arr) ? arr.filter((it) => it.mc_id !== exactMatchId) : arr || [];
+
       // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
       // Tier 2: People (Person, Author) - sorted by popularity within tier
       // Tier 3: News - fixed position
       // Tier 4: Video - fixed position (last)
       if (results.tv && results.tv.length > 0) {
+        const tvItems = withoutExactMatch(results.tv);
+        if (tvItems.length > 0) {
         categories.push({
           key: "tv",
           label: "📺 TV Shows",
-          items: results.tv,
+          items: tvItems,
           topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
           color: "blue",
           tier: 1,  // Media tier
         });
+        }
       }
       if (results.movie && results.movie.length > 0) {
+        const movieItems = withoutExactMatch(results.movie);
+        if (movieItems.length > 0) {
         categories.push({
           key: "movie",
           label: "🎬 Movies",
-          items: results.movie,
+          items: movieItems,
           topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
           color: "purple",
           tier: 1,  // Media tier
         });
+        }
       }
       if (results.person && results.person.length > 0) {
+        const personItems = withoutExactMatch(results.person);
+        if (personItems.length > 0) {
         categories.push({
           key: "person",
           label: "👤 People",
-          items: results.person,
+          items: personItems,
           topPopularity: parseFloat(results.person[0]?.popularity) || 0,
           color: "green",
           tier: 0,  // People always render first
         });
+        }
       }
       if (results.podcast && results.podcast.length > 0) {
+        const podcastItems = withoutExactMatch(results.podcast);
+        if (podcastItems.length > 0) {
         categories.push({
           key: "podcast",
           label: "🎙️ Podcasts",
-          items: results.podcast,
+          items: podcastItems,
           topPopularity: parseFloat(results.podcast[0]?.popularity) || 0,
           color: "pink",
           tier: 1,  // Media tier
         });
+        }
       }
       if (results.author && results.author.length > 0) {
+        const authorItems = withoutExactMatch(results.author);
+        if (authorItems.length > 0) {
         categories.push({
           key: "author",
           label: "✍️ Authors",
-          items: results.author,
+          items: authorItems,
           topPopularity: parseFloat(results.author[0]?.work_count) || 0,
           color: "amber",
           tier: 0,  // Authors always render first
         });
+        }
       }
       if (results.book && results.book.length > 0) {
+        const bookItems = withoutExactMatch(results.book);
+        if (bookItems.length > 0) {
         categories.push({
           key: "book",
           label: "📚 Books",
-          items: results.book,
+          items: bookItems,
           topPopularity: parseFloat(results.book[0]?.ratings_count) || 0,
           color: "emerald",
           tier: 1,  // Media tier
         });
+        }
       }
       if (results.news && results.news.length > 0) {
         categories.push({

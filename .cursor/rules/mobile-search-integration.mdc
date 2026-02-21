@@ -83,6 +83,7 @@ export interface MCBaseItem {
  * Search/Autocomplete response structure
  */
 export interface SearchResponse {
+  exact_match: MCBaseItem | null;  // When query exactly matches an entity
   tv: MCBaseItem[];
   movie: MCBaseItem[];
   person: MCBaseItem[];
@@ -97,13 +98,19 @@ export interface SearchResponse {
 }
 
 /**
- * Streaming event data structure
+ * Streaming result event structure (event: "result")
  */
 export interface StreamEvent {
   source: SearchSource;
   results: MCBaseItem[];
   latency_ms: number;
 }
+
+/**
+ * Exact match event (event: "exact_match"): single MCBaseItem when query
+ * exactly matches an entity. Emitted as soon as a source yields a match.
+ * May fire multiple times per stream.
+ */
 ```
 
 ---
@@ -227,6 +234,7 @@ class SearchService {
    */
   private emptyResponse(): SearchResponse {
     return {
+      exact_match: null,
       tv: [],
       movie: [],
       person: [],
@@ -653,6 +661,7 @@ const { isLoading } = useSearch();
 GET /api/autocomplete?q=breaking+bad&sources=tv,person
 
 {
+  "exact_match": null,
   "tv": [
     {
       "mc_id": "tmdb_tv_1396",

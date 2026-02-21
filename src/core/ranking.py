@@ -474,3 +474,63 @@ def score_book_result(query: str, doc: dict[str, Any]) -> tuple[int, float, int]
 
     # Tier 13: Fallback
     return (13, -popularity_score, work_id)
+
+
+# Cross-source priority for exact_match (lower index = higher priority)
+EXACT_MATCH_SOURCE_PRIORITY: tuple[str, ...] = (
+    "movie",
+    "tv",
+    "person",
+    "podcast",
+    "book",
+    "author",
+)
+
+
+def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
+    """
+    Return True if doc is an exact match for the query (tier 0-1 title/name match).
+
+    Used to surface the single best match when the user's query exactly matches
+    a known entity (e.g., "the godfather" -> movie "The Godfather").
+
+    Definition of exact:
+    - Media (tv, movie): tier 0-1 (exact title raw/normalized)
+    - Person: tier 0-1 (exact name)
+    - Book: tier 0-1 (exact title)
+    - Podcast: tier 0-3 (exact title, title starts with, exact author)
+    - Author: exact normalized name match
+
+    Args:
+        query: Search query string
+        doc: Parsed result document (MCBaseItem-like dict)
+        source: Source name (movie, tv, person, podcast, book, author)
+
+    Returns:
+        True if doc is an exact match for query
+    """
+    if not query or not query.strip():
+        return False
+
+    q = query.strip()
+    if source in ("tv", "movie"):
+        tier = score_media_result(q, doc)[0]
+        return tier <= 1
+    if source == "person":
+        tier = score_person_result(q, doc)[0]
+        return tier <= 1
+    if source == "book":
+        tier = score_book_result(q, doc)[0]
+        return tier <= 1
+    if source == "podcast":
+        tier = score_podcast_result(q, doc)[0]
+        return tier <= 3
+    if source == "author":
+        name = (doc.get("search_title") or doc.get("name") or "").strip()
+        if not name:
+            return False
+        query_norm = normalize_for_match(q)
+        name_norm = normalize_for_match(name.lower())
+        return query_norm == name_norm
+
+    return False
