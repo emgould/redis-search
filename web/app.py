@@ -21,6 +21,7 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
+from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
 from etl.etl_metadata import ETLMetadataStore
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
@@ -373,11 +374,21 @@ async def api_autocomplete(
 
     # Parse sources if provided
     sources_set: set[str] | None = None
+    source_hint_applied: list[str] | None = None
     if sources:
         sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+    elif not raw:
+        parsed_q, hinted = parse_source_hint(q)
+        if hinted:
+            q = parsed_q
+            sources_set = hinted
+            source_hint_applied = sorted(hinted)
 
     try:
         results = await autocomplete(q, sources_set, raw=raw)
+        if source_hint_applied is not None:
+            results = dict(results)
+            results["source_hint"] = source_hint_applied
         return JSONResponse(content=results)
     except RawQueryError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
@@ -415,8 +426,15 @@ async def api_autocomplete_stream(
 
     # Parse sources if provided
     sources_set: set[str] | None = None
+    source_hint_applied: list[str] | None = None
     if sources:
         sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+    elif not raw:
+        parsed_q, hinted = parse_source_hint(q)
+        if hinted:
+            q = parsed_q
+            sources_set = hinted
+            source_hint_applied = sorted(hinted)
 
     # Raw mode: validate before streaming
     if raw:
@@ -426,16 +444,24 @@ async def api_autocomplete_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
-        async for source, results, latency_ms in autocomplete_stream(q, sources_set, raw=raw):
-            event_data = json.dumps(
-                {
-                    "source": source,
-                    "results": results,
-                    "latency_ms": round(latency_ms),
-                }
-            )
-            yield f"event: result\ndata: {event_data}\n\n"
-        yield "event: done\ndata: {}\n\n"
+        async for event in autocomplete_stream(q, sources_set, raw=raw):
+            if len(event) == 2 and event[0] == "exact_match":
+                _, item = event
+                yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
+            else:
+                source, results, latency_ms = event
+                event_data = json.dumps(
+                    {
+                        "source": source,
+                        "results": results,
+                        "latency_ms": round(latency_ms),
+                    }
+                )
+                yield f"event: result\ndata: {event_data}\n\n"
+        done_data: dict[str, Any] = {}
+        if source_hint_applied is not None:
+            done_data["source_hint"] = source_hint_applied
+        yield f"event: done\ndata: {json.dumps(done_data)}\n\n"
 
     return StreamingResponse(
         event_generator(),
@@ -552,6 +578,7 @@ async def api_search(
 
     # Parse sources parameter
     source_set: set[str] | None = None
+    source_hint_applied: list[str] | None = None
     if sources:
         source_set = {s.strip().lower() for s in sources.split(",")}
         # Filter to only valid sources
@@ -563,6 +590,13 @@ async def api_search(
                 },
                 status_code=400,
             )
+    elif not raw and has_query and q:
+        parsed_q, hinted = parse_source_hint(q)
+        if hinted:
+            q = parsed_q
+            has_query = len(q) >= 2
+            source_set = hinted
+            source_hint_applied = sorted(hinted)
 
     # Handle field-only filtering (no text query)
     if not has_query:
@@ -630,6 +664,9 @@ async def api_search(
         ratings_sort=ratings_sort or "popularity",  # Default to popularity
         raw=raw,
     )
+    if source_hint_applied is not None:
+        results = dict(results)
+        results["source_hint"] = source_hint_applied
     return JSONResponse(content=results)
 
 
@@ -696,6 +733,7 @@ async def api_search_stream(
 
     # Parse parameters
     source_set: set[str] | None = None
+    source_hint_applied: list[str] | None = None
     if sources:
         source_set = {s.strip().lower() for s in sources.split(",")}
         source_set = source_set & VALID_SOURCES
@@ -706,6 +744,13 @@ async def api_search_stream(
                 },
                 status_code=400,
             )
+    elif not raw and has_query and q:
+        parsed_q, hinted = parse_source_hint(q)
+        if hinted:
+            q = parsed_q
+            has_query = len(q) >= 2
+            source_set = hinted
+            source_hint_applied = sorted(hinted)
 
     genre_id_list: list[str] | None = None
     if genre_ids:
@@ -722,7 +767,7 @@ async def api_search_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
-        async for source, results, latency_ms in search_stream(
+        async for event in search_stream(
             q=q if has_query else None,
             sources=source_set,
             limit=limit,
@@ -738,15 +783,23 @@ async def api_search_stream(
             ratings_sort=ratings_sort or "popularity",
             raw=raw,
         ):
-            event_data = json.dumps(
-                {
-                    "source": source,
-                    "results": results,
-                    "latency_ms": round(latency_ms),
-                }
-            )
-            yield f"event: result\ndata: {event_data}\n\n"
-        yield "event: done\ndata: {}\n\n"
+            if len(event) == 2 and event[0] == "exact_match":
+                _, item = event
+                yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
+            else:
+                source, results, latency_ms = event
+                event_data = json.dumps(
+                    {
+                        "source": source,
+                        "results": results,
+                        "latency_ms": round(latency_ms),
+                    }
+                )
+                yield f"event: result\ndata: {event_data}\n\n"
+        done_data: dict[str, Any] = {}
+        if source_hint_applied is not None:
+            done_data["source_hint"] = source_hint_applied
+        yield f"event: done\ndata: {json.dumps(done_data)}\n\n"
 
     return StreamingResponse(
         event_generator(),

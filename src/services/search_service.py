@@ -3,7 +3,7 @@ import json
 import re
 import time
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal, Union
 
 from pydantic import BaseModel
 
@@ -18,6 +18,8 @@ from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
 from core.iptc import expand_query_string, get_search_aliases
 from core.ranking import (
+    EXACT_MATCH_SOURCE_PRIORITY,
+    is_exact_match,
     score_book_result,
     score_media_result,
     score_person_result,
@@ -35,6 +37,12 @@ from core.search_queries import (
 )
 from utils.get_logger import get_logger
 from utils.soft_comparison import is_author_name_match, is_autocomplete_match
+
+# Stream event: either (source, results, latency_ms) or ("exact_match", item)
+StreamEvent = Union[
+    tuple[str, list[Any], float],
+    tuple[Literal["exact_match"], dict[str, Any]],
+]
 
 logger = get_logger(__name__)
 
@@ -79,6 +87,37 @@ def _rank_book_result(book: dict, query: str) -> tuple[int, float, int]:
     """
     result: tuple[int, float, int] = score_book_result(query, book)
     return result
+
+
+def _iter_exact_matches(
+    source: str, results: list[dict], query: str | None
+) -> list[dict[str, Any]]:
+    """Return items from results that are exact matches. Indexed sources only."""
+    if not query or len(query.strip()) < 2:
+        return []
+    if source not in EXACT_MATCH_SOURCE_PRIORITY:
+        return []
+    return [item for item in results if is_exact_match(query.strip(), item, source)]
+
+
+def _pick_exact_match(
+    results: dict[str, list[dict[str, Any]]], query: str | None
+) -> dict[str, Any] | None:
+    """
+    Pick the single best exact match from search results by cross-source priority.
+
+    Returns the first exact match found when scanning sources in priority order
+    (movie, tv, person, podcast, book, author). Returns None if no exact match.
+    """
+    if not query or len(query.strip()) < 2:
+        return None
+    q = query.strip()
+    for source in EXACT_MATCH_SOURCE_PRIORITY:
+        items = results.get(source) or []
+        for item in items:
+            if is_exact_match(q, item, source):
+                return item
+    return None
 
 
 # Lazy initialization
@@ -392,7 +431,7 @@ async def autocomplete(
     q: str,
     sources: set[str] | None = None,
     raw: bool = False,
-) -> dict[str, list]:
+) -> dict[str, Any]:
     """
     Autocomplete search that returns categorized results.
 
@@ -424,6 +463,7 @@ async def autocomplete(
 
     if not q or len(q) < 2:
         return {
+            "exact_match": None,
             "tv": [],
             "movie": [],
             "person": [],
@@ -667,7 +707,7 @@ async def autocomplete(
     ):
         album_results = [album.model_dump() for album in album_res.results[:10]]
 
-    return {
+    result = {
         "tv": tv_results[:10],  # Limit each category
         "movie": movie_results[:10],
         "person": person_results[:10],
@@ -680,13 +720,16 @@ async def autocomplete(
         "artist": artist_results,  # From Spotify API (24h cache), not indexed
         "album": album_results,  # From Spotify API (24h cache), not indexed
     }
+    exact = _pick_exact_match(result, q)
+    result["exact_match"] = exact
+    return result
 
 
 async def autocomplete_stream(
     q: str,
     sources: set[str] | None = None,
     raw: bool = False,
-) -> AsyncIterator[tuple[str, list, float]]:
+) -> AsyncIterator[StreamEvent]:
     """
     Streaming autocomplete that yields results as they become available.
 
@@ -807,8 +850,12 @@ async def autocomplete_stream(
                     # Yield TV and movie separately (only if requested)
                     if tv_results and "tv" in sources:
                         yield ("tv", tv_results[:10], elapsed)
+                        for item in _iter_exact_matches("tv", tv_results[:10], q):
+                            yield ("exact_match", item)
                     if movie_results and "movie" in sources:
                         yield ("movie", movie_results[:10], elapsed)
+                        for item in _iter_exact_matches("movie", movie_results[:10], q):
+                            yield ("exact_match", item)
                 continue  # Already yielded tv/movie
 
             elif name == "person":
@@ -859,6 +906,8 @@ async def autocomplete_stream(
 
             if parsed_results:
                 yield (name, parsed_results, elapsed)
+                for item in _iter_exact_matches(name, parsed_results, q):
+                    yield ("exact_match", item)
 
         except Exception as e:
             logger.warning(f"Error processing streaming result: {e}")
@@ -925,7 +974,7 @@ async def search(
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
     raw: bool = False,
-) -> dict[str, list]:
+) -> dict[str, Any]:
     """
     Unified search API that returns categorized results.
 
@@ -960,7 +1009,9 @@ async def search(
     if not has_query and not has_filters:
         # Return empty dict with all requested source keys
         requested = sources if sources else VALID_SOURCES
-        return {src: [] for src in requested}
+        out: dict[str, Any] = {src: [] for src in requested}
+        out["exact_match"] = None
+        return out
 
     # Default to all sources if none specified
     requested_sources = sources if sources else VALID_SOURCES
@@ -968,7 +1019,8 @@ async def search(
     requested_sources = requested_sources & VALID_SOURCES
 
     if not requested_sources:
-        return {}
+        empty: dict[str, Any] = {"exact_match": None}
+        return empty
 
     repo = get_repo()
 
@@ -1091,7 +1143,9 @@ async def search(
         timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
     except Exception:
         # If gather itself fails, return empty results
-        return {src: [] for src in requested_sources}
+        fail_out: dict[str, Any] = {src: [] for src in requested_sources}
+        fail_out["exact_match"] = None
+        return fail_out
     total_elapsed = (time.perf_counter() - total_start) * 1000
 
     # Log timing for each source
@@ -1113,7 +1167,7 @@ async def search(
     )
 
     # Handle exceptions and parse results
-    final_results: dict[str, list] = {}
+    final_results: dict[str, Any] = {}
 
     # Process media (tv/movie) results
     if "media" in results_map:
@@ -1398,6 +1452,10 @@ async def search(
         if src not in final_results:
             final_results[src] = []
 
+    # Add exact_match when query is present (single best match by source priority)
+    exact = _pick_exact_match(final_results, q if has_query else None)
+    final_results["exact_match"] = exact
+
     return final_results
 
 
@@ -1416,7 +1474,7 @@ async def search_stream(
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
     raw: bool = False,
-) -> AsyncIterator[tuple[str, list, float]]:
+) -> AsyncIterator[StreamEvent]:
     """
     Streaming search that yields categorized results as each source completes.
 
@@ -1608,8 +1666,12 @@ async def search_stream(
                         )
                     if tv_results and "tv" in requested_sources:
                         yield ("tv", tv_results[:limit], elapsed)
+                        for item in _iter_exact_matches("tv", tv_results[:limit], q):
+                            yield ("exact_match", item)
                     if movie_results and "movie" in requested_sources:
                         yield ("movie", movie_results[:limit], elapsed)
+                        for item in _iter_exact_matches("movie", movie_results[:limit], q):
+                            yield ("exact_match", item)
                 continue
 
             elif name == "person":
@@ -1710,6 +1772,8 @@ async def search_stream(
 
             if parsed_results:
                 yield (name, parsed_results, elapsed)
+                for item in _iter_exact_matches(name, parsed_results, q):
+                    yield ("exact_match", item)
 
         except Exception as e:
             logger.warning(f"Error processing streaming search result: {e}")

@@ -202,6 +202,21 @@ function initSearchController(cfg) {
       }
     });
 
+    eventSource.addEventListener("exact_match", (e) => {
+      if (query !== currentQuery) return;
+      try {
+        const item = JSON.parse(e.data);
+        // First exact match wins (matches batch behavior: single best by priority)
+        if (!currentResults.exact_match) {
+          currentResults.exact_match = item;
+          render(query);
+        }
+        console.debug("[Search Stream] exact_match:", item.search_title || item.name || item.title);
+      } catch (err) {
+        console.error("[Search Stream] exact_match parse error:", err);
+      }
+    });
+
     eventSource.addEventListener("done", () => {
       console.log(
         `[Search Stream] done: ${sourcesReceived} sources in ${Math.round(performance.now() - startTime)}ms`

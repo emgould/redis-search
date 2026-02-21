@@ -24,8 +24,9 @@ GET /api/autocomplete?q={query}&sources={sources}
 **Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `q` | string | Yes | Search query (min 2 characters) |
+| `q` | string | Yes | Search query (min 2 characters). May include source keywords (e.g., "movie", "podcast") when sources not specified; see Query Source Hints. |
 | `sources` | string | No | Comma-separated list of sources to search |
+| `raw` | bool | No | If true, treat `q` as raw RediSearch syntax (disables source hint parsing) |
 
 **Valid Sources:** `tv`, `movie`, `person`, `podcast`, `author`, `book`, `news`, `video`, `ratings`, `artist`, `album`
 
@@ -36,7 +37,7 @@ GET /api/autocomplete?q={query}&sources={sources}
 /api/autocomplete?q=matrix&sources=tv,movie
 ```
 
-**Response:** JSON object with results grouped by source type.
+**Response:** JSON object with results grouped by source type. When a source hint was applied, includes `source_hint` (array of source names).
 
 ---
 
@@ -50,7 +51,8 @@ Same parameters as above, but returns **Server-Sent Events (SSE)** where results
 
 **Event Types:**
 - `result` - Contains results from one source: `{source, results, latency_ms}`
-- `done` - Indicates all sources have completed
+- `exact_match` - Emitted when a source yields an exact match (e.g., query "the godfather" matches movie "The Godfather"). Data is a single MCBaseItem. May fire multiple times per stream.
+- `done` - Indicates all sources have completed. Payload may include `source_hint` when a source hint was applied.
 
 **Example JavaScript:**
 ```javascript
@@ -59,6 +61,11 @@ const es = new EventSource('/api/autocomplete/stream?q=breaking+bad');
 es.addEventListener('result', (e) => {
   const data = JSON.parse(e.data);
   console.log(`${data.source}: ${data.results.length} results (${data.latency_ms}ms)`);
+});
+
+es.addEventListener('exact_match', (e) => {
+  const item = JSON.parse(e.data);
+  // Surface immediately - likely what user is looking for
 });
 
 es.addEventListener('done', () => es.close());
@@ -88,8 +95,9 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 | `rating_max` | float | No | - | Maximum rating (0-10) |
 | `mc_type` | string | No | - | Filter by type: movie, tv |
 | `ratings_sort` | string | No | popularity | Sort order for ratings results when ratings source is requested with tv/movie. Options: "popularity" (default), "audience_score", "critics_score". Sorts in descending order (highest first). |
+| `raw` | bool | No | false | If true, treat `q` as raw RediSearch syntax (disables source hint parsing) |
 
-*`q` is required for brokered sources (artist, album, video, news). The `ratings` source is special: when requested together with `tv` or `movie`, it can be enriched from indexed results even without a query parameter. Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
+*`q` is required for brokered sources (artist, album, video, news). When `sources` is not specified, `q` may include source keywords (e.g., "godfather movie"); see Query Source Hints. The `ratings` source is special: when requested together with `tv` or `movie`, it can be enriched from indexed results even without a query parameter. Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
 
 **Field Filters:**
 - Filters only apply to indexed sources (tv, movie)
@@ -155,6 +163,42 @@ GET /api/cast-names?query={title}&media_type={type}
 ```
 
 Search for a movie/TV show and return cast names split into first/last parts. Useful for trivia and game applications.
+
+---
+
+## Query Source Hints
+
+When `sources` is not specified and `raw=false`, the query can include source keywords as prefix or suffix to restrict the search. The keyword is stripped from the query and the corresponding source filter is applied.
+
+**Keywords:**
+
+| Keyword | Maps to source |
+|---------|----------------|
+| podcast | podcast |
+| movie | movie |
+| video | video |
+| book | book |
+| actor, actress | person |
+| author | author |
+| artist | artist |
+| album | album |
+| tv show, tv series, tvshow, tvseries | tv |
+
+**Rules:**
+- Suffix wins over prefix (rightmost match)
+- Stripped query must be at least 3 characters; otherwise no hint is applied
+- Case-insensitive matching
+- Skipped when `raw=true` or when `sources` is explicitly provided
+
+**Examples:**
+| Query | Effective query | Source filter |
+|-------|-----------------|---------------|
+| the godfather movie | the godfather | movie |
+| podcast joe rogan | joe rogan | podcast |
+| breaking bad tv show | breaking bad | tv |
+| something movie podcast | something movie | podcast |
+
+**Response field:** When a hint is applied, responses include `source_hint` (array of source names). JSON responses add it as a top-level key; streaming `done` events include it in the payload.
 
 ---
 
@@ -230,6 +274,15 @@ Example: Searching "spielberg" will match movies directed by Spielberg via the `
 ---
 
 ## Response Format
+
+### Non-Stream (JSON) Response
+
+Top-level keys include per-source arrays (`tv`, `movie`, `person`, etc.), optionally `exact_match`, and optionally `source_hint`:
+
+- **`exact_match`** - `MCBaseItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Single best match by source priority (movie > tv > person > podcast > book > author). Omitted or `null` when no exact match.
+- **`source_hint`** - `string[]`. Present when a source hint was parsed from the query (e.g., "godfather movie" → sources restricted to movie). Omitted when no hint was applied.
+
+### Result Item Format
 
 All search results follow the **MCBaseItem** contract:
 
