@@ -1,0 +1,38 @@
+---
+description: Documentary major-platform filtering for backfills and nightly ETL
+globs:
+  - "scripts/backfill_theatrical_movies.py"
+  - "scripts/backfill_missing_documentaries.py"
+  - "src/etl/tmdb_nightly_etl.py"
+  - "src/etl/documentary_filter.py"
+alwaysApply: true
+---
+
+# Documentary Filtering Backfill Rules
+
+Use the shared `src/etl/documentary_filter.py` helpers when handling documentary inclusion/exclusion logic.
+
+## Accepted Documentary Criteria
+
+- Must be detected as documentary by:
+  - `genre_ids` contains `99`, or
+  - `genres` contains `"documentary"` (case-insensitive).
+- Must have a non-empty `poster_path`.
+- Must include a major provider signal:
+  - `streaming_platform` normalized against `MAJOR_STREAMING_PROVIDERS`, or
+  - a `watch_providers` / `watch/providers` flatrate provider in that set.
+- Must be within the last 10 years based on `release_date` (or `first_air_date` fallback for TV).
+
+## Script Behavior
+
+- `scripts/backfill_theatrical_movies.py`
+  - Backfill discovery remains unchanged.
+  - Non-documentary items keep the existing theatrical backfill filter behavior.
+  - Documentaries can pass only via the documentary helper criteria.
+  - `--dry-run` skips enrichment and Redis writes; it reports candidate counts only.
+
+- `scripts/backfill_missing_documentaries.py`
+  - New script for candidate-only loading.
+  - Scans cached `data/us/movie` and `data/us/tv` files within the requested lookback window.
+- `src/etl/tmdb_nightly_etl.py`
+  - Documentary path uses the shared documentary helper as an override before regular filter logic.
