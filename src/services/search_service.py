@@ -36,7 +36,7 @@ from core.search_queries import (
     strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
-from utils.soft_comparison import is_author_name_match, is_autocomplete_match
+from utils.soft_comparison import is_author_name_match, is_person_autocomplete_match
 
 # Stream event: either (source, results, latency_ms) or ("exact_match", item)
 StreamEvent = Union[
@@ -294,7 +294,9 @@ def build_people_autocomplete_query(q: str) -> str:
     # Escape special characters in search terms
     escaped_words = [escape_redis_search_term(w) for w in words]
 
-    # For multi-word: match documents containing all words (last word as prefix)
+    # For multi-word names, match documents containing all words.
+    # Previously this required the final two words to be contiguous in title text,
+    # which breaks names with middle words (e.g. "Megan Therese Rippey").
     if len(escaped_words) == 1:
         # Single word - use as prefix (must be 2+ chars for RediSearch)
         if len(words[0]) >= 2:
@@ -302,26 +304,19 @@ def build_people_autocomplete_query(q: str) -> str:
         else:
             # Single character - too short for prefix, return broad match
             return "*"
-    else:
-        # Multi-word query
-        prefix_word = escaped_words[-1]
-        original_prefix_word = words[-1]
-
-        # RediSearch minimum prefix length is 2 characters
-        # If last word is only 1 char, search on complete words only
-        # Post-query filtering will handle the prefix matching
-        if len(original_prefix_word) < 2:
-            # Only use complete words, skip the 1-char prefix
-            exact_words = " ".join(escaped_words[:-1])
-            name_query = f"@search_title:({exact_words})"
-            aka_query = f"@also_known_as:({exact_words})"
+    # Multi-word query: each token must match in either field (in any position).
+    # Build one clause per token and combine with AND semantics via spaces.
+    query_terms: list[str] = []
+    for word in escaped_words:
+        if len(word) <= 3:
+            token = f"{word}"
         else:
-            # All words except last should be exact, last word is prefix
-            exact_words = " ".join(escaped_words[:-1])
-            name_query = f"@search_title:({exact_words} {prefix_word}*)"
-            aka_query = f"@also_known_as:({exact_words} {prefix_word}*)"
+            token = f"{word}*"
+        title_term = f"@search_title:({token})"
+        aka_term = f"@also_known_as:({token})"
+        query_terms.append(f"({title_term} | {aka_term})")
 
-        return f"({name_query}) | ({aka_query})"
+    return " ".join(query_terms)
 
 
 def _build_text_query_for_variation(
@@ -696,7 +691,7 @@ async def autocomplete(
     person_results_filtered = [
         p
         for p in person_results_raw
-        if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+        if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
     ]
     # Re-rank to prioritize exact matches and shorter names over pure popularity
     person_results = sorted(person_results_filtered, key=lambda p: _rank_person_result(p, q))
@@ -939,7 +934,7 @@ async def autocomplete_stream(
                     filtered = [
                         p
                         for p in parsed_all
-                        if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+                        if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
                     ]
                     # Re-rank to prioritize exact matches and shorter names
                     parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[:10]
@@ -1287,7 +1282,7 @@ async def search(
             filtered_people = [
                 p
                 for p in parsed_people
-                if is_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+                if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
             ]
             # Re-rank to prioritize exact matches and shorter names over pure popularity
             final_results["person"] = sorted(
@@ -1773,7 +1768,7 @@ async def search_stream(
                         filtered = [
                             p
                             for p in parsed_all
-                            if is_autocomplete_match(
+                            if is_person_autocomplete_match(
                                 q, p.get("search_title", "") or p.get("name", "")
                             )
                         ]
