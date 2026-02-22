@@ -47,7 +47,12 @@ The exact match feature adds a new `exact_match` property to search and autocomp
     "year": 1972,
     "popularity": 85.2,
     "image": "https://...",
-    "overview": "..."
+    "overview": "...",
+    "cast": [
+      { "name": "Marlon Brando", "id": "3084" },
+      { "name": "Al Pacino", "id": "1158" },
+      { "name": "James Caan", "id": "4239" }
+    ]
   },
   "tv": [...],
   "movie": [...],
@@ -64,9 +69,10 @@ The exact match feature adds a new `exact_match` property to search and autocomp
 ```
 
 **`exact_match` field:**
-- **Type:** `MCBaseItem | null`
+- **Type:** `ExactMatchItem | null`
 - **When present:** At least one exact match found; contains the single best match by source priority (movie > tv > person > podcast > book > author)
 - **When absent:** Omit key, or use `"exact_match": null` for consistent typing (recommend always include, use `null` when none)
+- **Cast shape:** For `exact_match`, `cast` is now `Array<{ name: string, id: string | null }>` (name + TMDB ID).
 
 ---
 
@@ -79,7 +85,7 @@ The exact match feature adds a new `exact_match` property to search and autocomp
 | Event      | When                         | Data shape                                                    |
 |-----------|-------------------------------|--------------------------------------------------------------|
 | `result`  | Each source completes         | `{ source: string, results: MCBaseItem[], latency_ms: number }` |
-| `exact_match` | **NEW** – when a source yields an exact match | `MCBaseItem` (single item)                                  |
+| `exact_match` | **NEW** – when a source yields an exact match | `ExactMatchItem` (single item)                                  |
 | `done`    | All sources complete          | `{}`                                                         |
 
 ### Event sequence example
@@ -89,7 +95,7 @@ event: result
 data: {"source":"movie","results":[...],"latency_ms":12}
 
 event: exact_match
-data: {"mc_id":"tmdb_movie_238","mc_type":"movie","search_title":"The Godfather",...}
+data: {"mc_id":"tmdb_movie_238","mc_type":"movie","search_title":"The Godfather","cast":[{"name":"Marlon Brando","id":"3084"},...]}
 
 event: result
 data: {"source":"tv","results":[...],"latency_ms":15}
@@ -112,7 +118,7 @@ data: {}
 
 ```typescript
 export interface SearchResponse {
-  exact_match: MCBaseItem | null;  // NEW
+  exact_match: ExactMatchItem | null;  // NEW
   tv: MCBaseItem[];
   movie: MCBaseItem[];
   person: MCBaseItem[];
@@ -124,6 +130,15 @@ export interface SearchResponse {
   ratings: MCBaseItem[];
   artist: MCBaseItem[];
   album: MCBaseItem[];
+}
+
+export interface ExactMatchCastMember {
+  name: string;
+  id: string | null;
+}
+
+export interface ExactMatchItem extends Omit<MCBaseItem, "cast"> {
+  cast: ExactMatchCastMember[];
 }
 ```
 
@@ -138,7 +153,7 @@ es.addEventListener("result", (e) => {
 
 // NEW: exact_match event
 es.addEventListener("exact_match", (e) => {
-  const item: MCBaseItem = JSON.parse(e.data);
+  const item: ExactMatchItem = JSON.parse(e.data);
   // Surface immediately - likely what user is looking for
 });
 
