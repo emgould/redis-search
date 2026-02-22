@@ -5,6 +5,7 @@ Provides normalized string comparison with configurable thresholds for matching.
 Also includes autocomplete-specific prefix matching for typeahead functionality.
 """
 
+from core.search_queries import STOPWORDS
 from utils.normalize import normalize
 
 
@@ -67,6 +68,42 @@ def is_autocomplete_match(query: str, name: str) -> bool:
     return _match_word_sequence(query_words, name_words)
 
 
+def is_person_autocomplete_match(query: str, name: str) -> bool:
+    """
+    Person-specific autocomplete matching used only for people index filtering.
+
+    This variant ignores stopwords and allows non-final tokens to match exact words
+    while the final token can match by prefix.
+    """
+    if not query or not name:
+        return not query
+
+    query_lower = query.lower().strip()
+    name_lower = name.lower().strip()
+
+    if query_lower == name_lower:
+        return True
+
+    if name_lower.startswith(query_lower):
+        return True
+
+    query_raw_words = query_lower.split()
+    query_words = [word for word in query_raw_words if word and word not in STOPWORDS]
+    name_words = name_lower.split()
+
+    if not query_words:
+        return True
+
+    if len(query_words) == 1:
+        if len(query_raw_words) > 1 and query_raw_words[0] in STOPWORDS:
+            if len(query_words[0]) <= 3:
+                return query_words[0] in name_words
+            return any(word.startswith(query_words[0]) for word in name_words)
+        return any(word.startswith(query_words[0]) for word in name_words)
+
+    return _match_person_word_sequence(query_words, name_words)
+
+
 def _match_word_sequence(query_words: list[str], name_words: list[str]) -> bool:
     """
     Check if query words can be matched against name words in sequence.
@@ -110,7 +147,6 @@ def _try_match_from(
         True if all query words can be matched starting from start_idx
     """
     name_idx = start_idx
-
     for i, query_word in enumerate(query_words):
         if name_idx >= len(name_words):
             return False
@@ -119,14 +155,54 @@ def _try_match_from(
         name_word = name_words[name_idx]
 
         if is_last_word:
-            # Last query word: can be a prefix
             if not name_word.startswith(query_word):
                 return False
         else:
-            # Not last word: must match (as a prefix that covers entire query word)
-            # e.g., query "the" should match name word "the" or "theater"
             if not name_word.startswith(query_word):
                 return False
+
+        name_idx += 1
+
+    return True
+
+
+def _match_person_word_sequence(query_words: list[str], name_words: list[str]) -> bool:
+    if not query_words:
+        return True
+    if not name_words:
+        return False
+
+    for start_idx in range(len(name_words)):
+        if _try_match_person_from(query_words, name_words, start_idx):
+            return True
+
+    return False
+
+
+def _try_match_person_from(
+    query_words: list[str], name_words: list[str], start_idx: int
+) -> bool:
+    name_idx = start_idx
+    query_len = len(query_words)
+
+    for i, query_word in enumerate(query_words):
+        is_last_word = i == query_len - 1
+        found_match = False
+
+        while name_idx < len(name_words):
+            name_word = name_words[name_idx]
+            if is_last_word:
+                if name_word.startswith(query_word):
+                    found_match = True
+                    break
+            else:
+                if query_word == name_word:
+                    found_match = True
+                    break
+            name_idx += 1
+
+        if not found_match:
+            return False
 
         name_idx += 1
 

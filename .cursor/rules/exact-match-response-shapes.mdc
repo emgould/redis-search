@@ -166,3 +166,11 @@ es.addEventListener("done", () => es.close());
 
 - **Non-stream:** Adding `exact_match` is additive; existing clients can ignore it
 - **Stream:** New event type `exact_match`; clients that only listen for `result` and `done` are unchanged
+
+## Person autocomplete matching behavior
+
+- Person index filtering now uses a dedicated matcher for query behavior.
+- Query construction and filtering for people are intentionally person-specific:
+  - Multi-word person queries now require each token to match separately so names with middle words still match (`megan therese rippey`).
+  - Stopword-leading phrases such as `"the rip"` still avoid broad prefix behavior.
+- Other index matchers (`is_autocomplete_match`) are unchanged for non-person uses.
