@@ -40,6 +40,7 @@ from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
+from etl.documentary_filter import is_documentary, is_eligible_documentary
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
 
@@ -106,6 +107,8 @@ class ChangesETLStats:
     # Filtering
     passed_filter: int = 0
     failed_filter: int = 0
+    documentary_passed_filter: int = 0
+    documentary_failed_filter: int = 0
 
     # Output
     staging_file: str = ""
@@ -126,6 +129,8 @@ class ChangesETLStats:
             "non_adult_changes": self.non_adult_changes,
             "passed_filter": self.passed_filter,
             "failed_filter": self.failed_filter,
+            "documentary_passed_filter": self.documentary_passed_filter,
+            "documentary_failed_filter": self.documentary_failed_filter,
             "staging_file": self.staging_file,
             "fetch_phase": {
                 "duration_seconds": self.fetch_phase.duration_seconds,
@@ -200,6 +205,23 @@ class TMDBChangesETL(TMDBService):
         item_name = item.get("title") or item.get("name") or item.get("id")
         log_fn = logger.info if self.verbose else logger.debug
         media_type = str(item.get("_media_type") or item.get("media_type") or "").lower()
+
+        # Documentaries get a stricter acceptance rule than normal flow:
+        # poster + streaming signal + within last 10 years.
+        if is_documentary(item) and is_eligible_documentary(
+            item,
+            years_back=10,
+            as_of=date.today(),
+            require_major_provider=True,
+        ):
+            log_fn(
+                f"Filter pass (documentary override): {item_name}, has_streaming="
+                f"{bool(item.get('streaming_platform') or item.get('watch_providers'))}"
+            )
+            return True
+        if is_documentary(item):
+            log_fn(f"Filter reject {item_name}: documentary exception conditions not met")
+            return False
 
         # Must have poster
         if not item.get("poster_path"):
@@ -399,11 +421,16 @@ class TMDBChangesETL(TMDBService):
                     else:
                         stats.failed_filter += 1
                 else:
+                    item_is_documentary = is_documentary(item_dict)
                     if self._passes_media_filter(item_dict):
                         enriched_items.append(item_dict)
                         stats.passed_filter += 1
+                        if item_is_documentary:
+                            stats.documentary_passed_filter += 1
                     else:
                         stats.failed_filter += 1
+                        if item_is_documentary:
+                            stats.documentary_failed_filter += 1
 
                 stats.fetch_phase.items_success += 1
 
@@ -681,6 +708,12 @@ async def run_nightly_etl(
         print(f"  Items fetched: {stats.fetch_phase.items_success}")
         print(f"  Passed filter: {stats.passed_filter}")
         print(f"  Failed filter: {stats.failed_filter}")
+        if stats.documentary_passed_filter or stats.documentary_failed_filter:
+            print(
+                "  Documentary override passes: "
+                f"{stats.documentary_passed_filter}/{stats.documentary_passed_filter + stats.documentary_failed_filter}"
+            )
+            print(f"  Documentary override fails: {stats.documentary_failed_filter}")
         print(f"  Errors: {stats.fetch_phase.items_failed}")
         print(f"  Duration: {stats.fetch_phase.duration_seconds:.1f}s")
         print(f"  Rate: {stats.fetch_phase.items_per_second:.1f} items/sec")

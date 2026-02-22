@@ -4,8 +4,8 @@ Backfill script for theatrical movies that were missed due to the release_dates 
 
 This script:
 1. Uses the discover endpoint to find movies released in a date range
-2. Enriches them with full details (bypassing the broken nightly ETL filter)
-3. Loads directly into Redis
+    2. Enriches them with full details (bypassing the broken nightly ETL filter)
+    3. Loads directly into Redis
 
 Usage:
     python scripts/backfill_theatrical_movies.py --start-date 2025-12 --months 3
@@ -14,26 +14,25 @@ Usage:
 import argparse
 import asyncio
 import os
-import sys
 from calendar import monthrange
-from pathlib import Path
-from typing import Any
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from collections.abc import Awaitable
+from datetime import date
+from typing import Any, cast
 
 from redis.asyncio import Redis
 
-from adapters.config import load_env
-from api.tmdb.core import TMDBService
-from api.tmdb.models import MCMovieItem
-from contracts.models import MCType
-from core.normalize import document_to_redis, normalize_document
-from utils.genre_mapping import get_genre_mapping_with_fallback
-from utils.get_logger import get_logger
+from src.adapters.config import load_env
+from src.api.tmdb.core import TMDBService
+from src.api.tmdb.models import MCMovieItem
+from src.contracts.models import MCType
+from src.core.normalize import document_to_redis, normalize_document
+from src.etl.documentary_filter import is_documentary, is_eligible_documentary
+from src.utils.genre_mapping import get_genre_mapping_with_fallback
+from src.utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 BATCH_SIZE = 15
+DOCUMENTARY_LOOKBACK_YEARS = 10
 
 
 class TheatricalBackfillETL(TMDBService):
@@ -147,8 +146,20 @@ class TheatricalBackfillETL(TMDBService):
                     logger.warning(f"Error enriching movie {tmdb_id}: {result}")
                     continue
                 if result is not None and isinstance(result, MCMovieItem):
-                    # Only require poster - be more lenient than nightly ETL
+                    payload = result.model_dump(mode="json")
+                    if is_eligible_documentary(
+                        payload,
+                        years_back=DOCUMENTARY_LOOKBACK_YEARS,
+                        as_of=date.today(),
+                        require_major_provider=True,
+                    ):
+                        enriched_items.append(payload)
+                        continue
+                    if is_documentary(payload):
+                        logger.debug(f"Skipping documentary {tmdb_id}: no streaming+poster+10y rule match")
+                        continue
                     if result.poster_path:
+                        # Keep original behavior for non-documentaries
                         enriched_items.append(result.model_dump(mode="json"))
                     else:
                         logger.debug(f"Skipping movie {tmdb_id}: no poster")
@@ -211,7 +222,7 @@ async def run_backfill(
             password=redis_password,
             decode_responses=True,
         )
-        await redis.ping()
+        await cast(Awaitable[bool], redis.ping())
         logger.info(f"Connected to Redis at {redis_host}:{redis_port}")
 
     total_loaded = 0
@@ -238,49 +249,48 @@ async def run_backfill(
                 current_year, current_month = get_next_month(current_year, current_month)
                 continue
 
+            if dry_run:
+                logger.info(f"[DRY RUN] Would process {len(tmdb_ids)} discovered movies for this month")
+                if tmdb_ids:
+                    logger.info(f"  Sample IDs: {', '.join(map(str, tmdb_ids[:10]))}")
+                continue
+
             # Enrich movies
             enriched_movies = await etl.enrich_movies(tmdb_ids)
 
-            if dry_run:
-                logger.info(f"[DRY RUN] Would load {len(enriched_movies)} movies")
-                for movie in enriched_movies[:5]:
-                    logger.info(f"  - {movie.get('title')} ({movie.get('tmdb_id')})")
-                if len(enriched_movies) > 5:
-                    logger.info(f"  ... and {len(enriched_movies) - 5} more")
-            else:
-                # Load to Redis
-                loaded = 0
-                skipped = 0
+            # Load to Redis
+            loaded = 0
+            skipped = 0
 
-                if redis:
-                    pipe = redis.pipeline()
-                    batch_count = 0
+            if redis:
+                pipe = redis.pipeline()
+                batch_count = 0
 
-                    for movie in enriched_movies:
-                        doc = normalize_document(movie, genre_mapping=genre_mapping)
-                        if doc is None:
-                            skipped += 1
-                            continue
+                for movie in enriched_movies:
+                    doc = normalize_document(movie, genre_mapping=genre_mapping)
+                    if doc is None:
+                        skipped += 1
+                        continue
 
-                        key = f"media:{doc.id}"
-                        redis_doc = document_to_redis(doc)
-                        pipe.json().set(key, "$", redis_doc)
-                        loaded += 1
-                        batch_count += 1
+                    key = f"media:{doc.id}"
+                    redis_doc = document_to_redis(doc)
+                    pipe.json().set(key, "$", redis_doc)
+                    loaded += 1
+                    batch_count += 1
 
-                        # Execute in batches
-                        if batch_count >= 100:
-                            await pipe.execute()
-                            pipe = redis.pipeline()
-                            batch_count = 0
-
-                    # Execute remaining
-                    if batch_count > 0:
+                    # Execute in batches
+                    if batch_count >= 100:
                         await pipe.execute()
+                        pipe = redis.pipeline()
+                        batch_count = 0
 
-                logger.info(f"Loaded {loaded} movies, skipped {skipped}")
-                total_loaded += loaded
-                total_skipped += skipped
+                # Execute remaining
+                if batch_count > 0:
+                    await pipe.execute()
+
+            logger.info(f"Loaded {loaded} movies, skipped {skipped}")
+            total_loaded += loaded
+            total_skipped += skipped
 
             # Move to next month
             current_year, current_month = get_next_month(current_year, current_month)
