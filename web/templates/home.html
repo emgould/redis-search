@@ -839,6 +839,26 @@ Shows{% endblock %} {% block body %}
       .join("");
   }
 
+  function formatCastForDisplay(castValue) {
+    if (!Array.isArray(castValue)) {
+      return "";
+    }
+
+    const castNames = castValue
+      .map((entry) => {
+        if (typeof entry === "string") {
+          return entry;
+        }
+        if (entry && typeof entry === "object") {
+          return entry.name || "";
+        }
+        return "";
+      })
+      .filter((name) => typeof name === "string" && name.trim().length > 0);
+
+    return castNames.slice(0, 3).join(", ");
+  }
+
   function renderResultItem(item, index, query) {
     const title = item.search_title || "Unknown";
     const year = formatYear(item);
@@ -900,8 +920,7 @@ Shows{% endblock %} {% block body %}
       return renderMusicAlbumItem(item, index, query);
     }
 
-    // Cast is stored as array of strings directly
-    const cast = (item.cast || []).slice(0, 3).join(", ");
+    const cast = formatCastForDisplay(item.cast);
 
     // source_id is the numeric TMDB ID stored in the index
     const sourceId = item.source_id || "";

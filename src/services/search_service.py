@@ -97,7 +97,41 @@ def _iter_exact_matches(
         return []
     if source not in EXACT_MATCH_SOURCE_PRIORITY:
         return []
-    return [item for item in results if is_exact_match(query.strip(), item, source)]
+    exact_items: list[dict[str, Any]] = []
+    for item in results:
+        if is_exact_match(query.strip(), item, source):
+            exact_items.append(_normalize_exact_match_cast(item))
+    return exact_items
+
+
+def _normalize_exact_match_cast(item: dict[str, Any]) -> dict[str, Any]:
+    """
+    Convert exact-match cast payload to a structured `{name, id}` format.
+
+    This preserves all existing fields and only rewrites `cast` for exact-match items.
+    """
+    cast_names = item.get("cast")
+    cast_ids = item.get("cast_ids")
+
+    if not isinstance(cast_names, list):
+        item["cast"] = []
+        return item
+
+    if not cast_ids:
+        cast_ids = []
+    elif not isinstance(cast_ids, list):
+        cast_ids = [cast_ids]
+
+    normalized_cast: list[dict[str, Any]] = []
+    for index, cast_name in enumerate(cast_names):
+        if not isinstance(cast_name, str) or not cast_name:
+            continue
+
+        cast_id = cast_ids[index] if index < len(cast_ids) else None
+        normalized_cast.append({"name": cast_name, "id": str(cast_id) if cast_id else None})
+
+    item["cast"] = normalized_cast
+    return item
 
 
 def _pick_exact_match(
@@ -116,7 +150,7 @@ def _pick_exact_match(
         items = results.get(source) or []
         for item in items:
             if is_exact_match(q, item, source):
-                return item
+                return _normalize_exact_match_cast(item)
     return None
 
 

@@ -79,11 +79,20 @@ export interface MCBaseItem {
   external_ids?: Record<string, string>;
 }
 
+export interface ExactMatchCastMember {
+  name: string;
+  id: string | null;
+}
+
+export interface MCExactMatchItem extends Omit<MCBaseItem, "cast"> {
+  cast: ExactMatchCastMember[];
+}
+
 /**
  * Search/Autocomplete response structure
  */
 export interface SearchResponse {
-  exact_match: MCBaseItem | null;  // When query exactly matches an entity
+  exact_match: MCExactMatchItem | null;  // When query exactly matches an entity
   tv: MCBaseItem[];
   movie: MCBaseItem[];
   person: MCBaseItem[];

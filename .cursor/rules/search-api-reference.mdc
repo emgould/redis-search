@@ -279,7 +279,7 @@ Example: Searching "spielberg" will match movies directed by Spielberg via the `
 
 Top-level keys include per-source arrays (`tv`, `movie`, `person`, etc.), optionally `exact_match`, and optionally `source_hint`:
 
-- **`exact_match`** - `MCBaseItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Single best match by source priority (movie > tv > person > podcast > book > author). Omitted or `null` when no exact match.
+- **`exact_match`** - `ExactMatchItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Single best match by source priority (movie > tv > person > podcast > book > author). Omitted or `null` when no exact match.
 - **`source_hint`** - `string[]`. Present when a source hint was parsed from the query (e.g., "godfather movie" → sources restricted to movie). Omitted when no hint was applied.
 
 ### Result Item Format
@@ -303,6 +303,30 @@ All search results follow the **MCBaseItem** contract:
   "overview": "A high school chemistry teacher diagnosed with..."
 }
 ```
+
+### Exact Match Cast Shape
+
+The `exact_match` object still follows item contract fields, but its cast payload is normalized to ID-aware objects for follow-on person lookups:
+
+```json
+{
+  "exact_match": {
+    "mc_id": "tmdb_movie_238",
+    "mc_type": "movie",
+    "source": "tmdb",
+    "source_id": "238",
+    "search_title": "The Godfather",
+    "year": 1972,
+    "cast": [
+      { "name": "Marlon Brando", "id": "3084" },
+      { "name": "Al Pacino", "id": "1158" }
+    ]
+  }
+}
+```
+
+- `cast` on non-exact-match list items remains name-only arrays in index payloads (`["Bryan Cranston", ...]`).
+- `exact_match.cast` uses objects: `[{ "name": "Bryan Cranston", "id": "1234" }, ...]`.
 
 ---
 
