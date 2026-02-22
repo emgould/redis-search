@@ -367,6 +367,10 @@ async def api_autocomplete(
         default=False,
         description="If true, q is raw RediSearch syntax for indexed sources",
     ),
+    no_duplicate: bool = Query(
+        default=False,
+        description="If true, the exact match item is excluded from its source results list",
+    ),
 ):
     """JSON API endpoint for autocomplete search."""
     if not q or len(q) < 2:
@@ -385,7 +389,7 @@ async def api_autocomplete(
             source_hint_applied = sorted(hinted)
 
     try:
-        results = await autocomplete(q, sources_set, raw=raw)
+        results = await autocomplete(q, sources_set, raw=raw, no_duplicate=no_duplicate)
         if source_hint_applied is not None:
             results = dict(results)
             results["source_hint"] = source_hint_applied
@@ -406,6 +410,10 @@ async def api_autocomplete_stream(
     raw: bool = Query(
         default=False,
         description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
+    no_duplicate: bool = Query(
+        default=False,
+        description="If true, the exact match item is excluded from its source results list",
     ),
 ):
     """
@@ -444,7 +452,7 @@ async def api_autocomplete_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
-        async for event in autocomplete_stream(q, sources_set, raw=raw):
+        async for event in autocomplete_stream(q, sources_set, raw=raw, no_duplicate=no_duplicate):
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
@@ -522,6 +530,10 @@ async def api_search(
     raw: bool = Query(
         default=False,
         description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
+    no_duplicate: bool = Query(
+        default=False,
+        description="If true, the exact match item is excluded from its source results list",
     ),
 ):
     """
@@ -663,6 +675,7 @@ async def api_search(
         mc_type=mc_type,
         ratings_sort=ratings_sort or "popularity",  # Default to popularity
         raw=raw,
+        no_duplicate=no_duplicate,
     )
     if source_hint_applied is not None:
         results = dict(results)
@@ -709,6 +722,10 @@ async def api_search_stream(
     raw: bool = Query(
         default=False,
         description="If true, q is raw RediSearch syntax for indexed sources",
+    ),
+    no_duplicate: bool = Query(
+        default=False,
+        description="If true, the exact match item is excluded from its source results list",
     ),
 ):
     """
@@ -782,6 +799,7 @@ async def api_search_stream(
             mc_type=mc_type,
             ratings_sort=ratings_sort or "popularity",
             raw=raw,
+            no_duplicate=no_duplicate,
         ):
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event

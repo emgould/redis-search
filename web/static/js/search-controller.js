@@ -44,6 +44,7 @@ const SEARCH_DEBOUNCE_MS = 750;
  * @param {function(Object,string):void} cfg.renderResults    — renders {tv:[], movie:[], …} + query
  * @param {Object}            cfg.expandedCategories          — mutable object tracking expand/collapse state
  * @param {function():boolean} cfg.isStreamingEnabled         — returns current stream toggle state
+ * @param {function():boolean} cfg.isNoDuplicateEnabled      — returns current no-duplicate toggle state
  */
 function initSearchController(cfg) {
   const {
@@ -56,6 +57,7 @@ function initSearchController(cfg) {
     renderResults,
     expandedCategories,
     isStreamingEnabled,
+    isNoDuplicateEnabled,
   } = cfg;
 
   // ---- State ----
@@ -76,6 +78,7 @@ function initSearchController(cfg) {
       `${endpoint}?q=${encodeURIComponent(query)}${raw}`
     );
     if (sources) url += `&sources=${encodeURIComponent(sources)}`;
+    if (isNoDuplicateEnabled && isNoDuplicateEnabled()) url += "&no_duplicate=true";
     if (extraParams) {
       for (const [k, v] of Object.entries(extraParams)) {
         url += `&${k}=${encodeURIComponent(v)}`;

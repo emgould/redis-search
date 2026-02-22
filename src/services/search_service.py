@@ -120,6 +120,32 @@ def _pick_exact_match(
     return None
 
 
+def _remove_exact_from_results(
+    results: dict[str, Any], exact: dict[str, Any]
+) -> None:
+    """Remove the exact-match item from its source list (in-place).
+
+    Uses object identity so only the specific dict returned by
+    ``_pick_exact_match`` is removed.
+    """
+    for source in EXACT_MATCH_SOURCE_PRIORITY:
+        items = results.get(source)
+        if not items:
+            continue
+        filtered = [item for item in items if item is not exact]
+        if len(filtered) < len(items):
+            results[source] = filtered
+            return
+
+
+def _filter_exact_items(
+    results: list[dict[str, Any]], exact_items: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Return *results* without any items present in *exact_items* (identity check)."""
+    exact_ids = {id(item) for item in exact_items}
+    return [item for item in results if id(item) not in exact_ids]
+
+
 # Lazy initialization
 _repo = None
 
@@ -431,6 +457,7 @@ async def autocomplete(
     q: str,
     sources: set[str] | None = None,
     raw: bool = False,
+    no_duplicate: bool = False,
 ) -> dict[str, Any]:
     """
     Autocomplete search that returns categorized results.
@@ -722,6 +749,8 @@ async def autocomplete(
     }
     exact = _pick_exact_match(result, q)
     result["exact_match"] = exact
+    if no_duplicate and exact is not None:
+        _remove_exact_from_results(result, exact)
     return result
 
 
@@ -729,6 +758,7 @@ async def autocomplete_stream(
     q: str,
     sources: set[str] | None = None,
     raw: bool = False,
+    no_duplicate: bool = False,
 ) -> AsyncIterator[StreamEvent]:
     """
     Streaming autocomplete that yields results as they become available.
@@ -849,12 +879,22 @@ async def autocomplete_stream(
                     movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
                     # Yield TV and movie separately (only if requested)
                     if tv_results and "tv" in sources:
-                        yield ("tv", tv_results[:10], elapsed)
-                        for item in _iter_exact_matches("tv", tv_results[:10], q):
+                        tv_top = tv_results[:10]
+                        tv_exact = _iter_exact_matches("tv", tv_top, q)
+                        if no_duplicate and tv_exact:
+                            tv_top = _filter_exact_items(tv_top, tv_exact)
+                        if tv_top:
+                            yield ("tv", tv_top, elapsed)
+                        for item in tv_exact:
                             yield ("exact_match", item)
                     if movie_results and "movie" in sources:
-                        yield ("movie", movie_results[:10], elapsed)
-                        for item in _iter_exact_matches("movie", movie_results[:10], q):
+                        movie_top = movie_results[:10]
+                        movie_exact = _iter_exact_matches("movie", movie_top, q)
+                        if no_duplicate and movie_exact:
+                            movie_top = _filter_exact_items(movie_top, movie_exact)
+                        if movie_top:
+                            yield ("movie", movie_top, elapsed)
+                        for item in movie_exact:
                             yield ("exact_match", item)
                 continue  # Already yielded tv/movie
 
@@ -905,8 +945,12 @@ async def autocomplete_stream(
                     parsed_results = [item.model_dump() for item in data.results[:10]]
 
             if parsed_results:
-                yield (name, parsed_results, elapsed)
-                for item in _iter_exact_matches(name, parsed_results, q):
+                exact_items = _iter_exact_matches(name, parsed_results, q)
+                if no_duplicate and exact_items:
+                    parsed_results = _filter_exact_items(parsed_results, exact_items)
+                if parsed_results:
+                    yield (name, parsed_results, elapsed)
+                for item in exact_items:
                     yield ("exact_match", item)
 
         except Exception as e:
@@ -974,6 +1018,7 @@ async def search(
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
     raw: bool = False,
+    no_duplicate: bool = False,
 ) -> dict[str, Any]:
     """
     Unified search API that returns categorized results.
@@ -1455,6 +1500,8 @@ async def search(
     # Add exact_match when query is present (single best match by source priority)
     exact = _pick_exact_match(final_results, q if has_query else None)
     final_results["exact_match"] = exact
+    if no_duplicate and exact is not None:
+        _remove_exact_from_results(final_results, exact)
 
     return final_results
 
@@ -1474,6 +1521,7 @@ async def search_stream(
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
     raw: bool = False,
+    no_duplicate: bool = False,
 ) -> AsyncIterator[StreamEvent]:
     """
     Streaming search that yields categorized results as each source completes.
@@ -1665,12 +1713,22 @@ async def search_stream(
                             movie_results, key=lambda m: _rank_media_result(m, q)
                         )
                     if tv_results and "tv" in requested_sources:
-                        yield ("tv", tv_results[:limit], elapsed)
-                        for item in _iter_exact_matches("tv", tv_results[:limit], q):
+                        tv_top = tv_results[:limit]
+                        tv_exact = _iter_exact_matches("tv", tv_top, q)
+                        if no_duplicate and tv_exact:
+                            tv_top = _filter_exact_items(tv_top, tv_exact)
+                        if tv_top:
+                            yield ("tv", tv_top, elapsed)
+                        for item in tv_exact:
                             yield ("exact_match", item)
                     if movie_results and "movie" in requested_sources:
-                        yield ("movie", movie_results[:limit], elapsed)
-                        for item in _iter_exact_matches("movie", movie_results[:limit], q):
+                        movie_top = movie_results[:limit]
+                        movie_exact = _iter_exact_matches("movie", movie_top, q)
+                        if no_duplicate and movie_exact:
+                            movie_top = _filter_exact_items(movie_top, movie_exact)
+                        if movie_top:
+                            yield ("movie", movie_top, elapsed)
+                        for item in movie_exact:
                             yield ("exact_match", item)
                 continue
 
@@ -1771,8 +1829,12 @@ async def search_stream(
                 parsed_results = []
 
             if parsed_results:
-                yield (name, parsed_results, elapsed)
-                for item in _iter_exact_matches(name, parsed_results, q):
+                exact_items = _iter_exact_matches(name, parsed_results, q)
+                if no_duplicate and exact_items:
+                    parsed_results = _filter_exact_items(parsed_results, exact_items)
+                if parsed_results:
+                    yield (name, parsed_results, elapsed)
+                for item in exact_items:
                     yield ("exact_match", item)
 
         except Exception as e:
