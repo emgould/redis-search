@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
+from redis.commands.search.query import Query as SearchQuery
 
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
@@ -2887,6 +2888,105 @@ async def get_etl_job_states(_: None = Depends(require_api_key)):
             status_code=500,
             content={"success": False, "error": str(e)},
         )
+
+
+# ---------------------------------------------------------------------------
+# Changes feed — documents modified in a time range across indexes
+# ---------------------------------------------------------------------------
+
+_CHANGES_SOURCE_ALIASES: dict[str, str] = {
+    "person": "people",
+    "podcast": "podcasts",
+}
+
+
+async def _search_index_changes(
+    index_name: str,
+    redis_index: str,
+    since: int,
+    until_val: str,
+    limit: int,
+    change_source: str | None,
+) -> tuple[str, dict[str, Any]]:
+    """Run a modified_at range query on a single index and return parsed docs."""
+    redis = get_redis()
+    query_str = f"@modified_at:[{since} {until_val}]"
+    q = SearchQuery(query_str).paging(0, limit).sort_by("modified_at", asc=False)
+    result = await redis.ft(redis_index).search(q)
+
+    documents: list[dict[str, Any]] = []
+    for doc in result.docs:
+        parsed: dict[str, Any] = {"id": doc.id}
+        if hasattr(doc, "json") and doc.json:
+            try:
+                parsed.update(json.loads(doc.json))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if change_source and parsed.get("_source") != change_source:
+            continue
+        documents.append(parsed)
+
+    return index_name, {"count": len(documents), "documents": documents}
+
+
+@app.get("/api/changes")
+async def api_changes(
+    since: int = Query(..., description="Inclusive start of range (Unix timestamp)"),
+    until: int | None = Query(
+        default=None,
+        description="Inclusive end of range (Unix timestamp); omit for open-ended",
+    ),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated index names (media,people,podcast,book,author). Default: all.",
+    ),
+    limit: int = Query(default=100, ge=1, le=1000, description="Max documents per source"),
+    change_source: str | None = Query(
+        default=None,
+        description="Filter by _source field value (e.g. 'backfill')",
+    ),
+) -> JSONResponse:
+    """Return documents modified in a time range, across one or more indexes."""
+    until_val = str(until) if until is not None else "+inf"
+
+    if sources:
+        requested = [s.strip() for s in sources.split(",") if s.strip()]
+    else:
+        requested = list(INDEX_CONFIGS.keys())
+
+    resolved: list[tuple[str, str]] = []
+    for src in requested:
+        canonical = _CHANGES_SOURCE_ALIASES.get(src, src)
+        if canonical not in INDEX_CONFIGS:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Unknown source: {src}"},
+            )
+        redis_name = str(INDEX_CONFIGS[canonical]["redis_name"])
+        resolved.append((canonical, redis_name))
+
+    tasks = [
+        _search_index_changes(name, redis_idx, since, until_val, limit, change_source)
+        for name, redis_idx in resolved
+    ]
+    outcomes = await asyncio.gather(*tasks, return_exceptions=True)
+
+    results: dict[str, dict[str, Any]] = {}
+    for outcome in outcomes:
+        if isinstance(outcome, BaseException):
+            logging.exception("Changes query failed", exc_info=outcome)
+            continue
+        name, data = outcome
+        results[name] = data
+
+    return JSONResponse(
+        content={
+            "since": since,
+            "until": until if until is not None else None,
+            "sources": [name for name, _ in resolved],
+            "results": results,
+        }
+    )
 
 
 # Index configurations - maps index name to (redis_index_name, prefix, schema)
