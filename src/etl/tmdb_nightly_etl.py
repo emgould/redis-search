@@ -36,6 +36,7 @@ from redis.asyncio import Redis
 
 from adapters.config import load_env
 from api.tmdb.core import TMDBService
+from api.tmdb.get_providers import get_streaming_platform_summary_for_title
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, resolve_timestamps
@@ -404,6 +405,34 @@ class TMDBChangesETL(TMDBService):
 
                 item_dict["_media_type"] = media_type
                 item_dict["_tmdb_id"] = tmdb_id
+
+                if media_type != "person":
+                    content_type = "movie" if media_type == "movie" else "tv"
+                    try:
+                        rating_result = await self.get_content_rating(
+                            tmdb_id, "US", content_type
+                        )
+                        item_dict["us_rating"] = (
+                            rating_result.get("rating") if rating_result else None
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "get_content_rating failed for tmdb_id=%s mc_type=%s: %s",
+                            tmdb_id, content_type, e,
+                        )
+                        item_dict["us_rating"] = None
+
+                    try:
+                        wp_result = await get_streaming_platform_summary_for_title(
+                            tmdb_id, content_type, "US"
+                        )
+                        item_dict["watch_providers"] = wp_result
+                    except Exception as e:
+                        logger.warning(
+                            "get_streaming_platform_summary failed for tmdb_id=%s mc_type=%s: %s",
+                            tmdb_id, content_type, e,
+                        )
+                        item_dict["watch_providers"] = None
 
                 # Debug: log first item's key fields
                 if stats.fetch_phase.items_processed == 1:
