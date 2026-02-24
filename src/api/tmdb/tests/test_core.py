@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from contracts.models import MCType
 
-from api.tmdb.core import TMDBService
+from api.tmdb.core import TMDBContentRatingCache, TMDBService
 from api.tmdb.models import MCBaseMediaItem, MCMovieItem, MCTvItem
 from api.tmdb.tests.conftest import load_fixture
 from api.tmdb.tmdb_models import (
@@ -414,6 +414,102 @@ class TestTMDBService:
             result = await service._get_watch_providers(550, "movie", "US")
 
             assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_content_rating(self):
+        """Test getting TV content rating for a region."""
+        service = TMDBService()
+
+        rating_payload = {
+            "id": 1396,
+            "results": [
+                {"iso_3166_1": "US", "rating": "TV-MA"},
+                {"iso_3166_1": "CA", "rating": "18+"},
+            ],
+        }
+
+        with (
+            patch.object(service, "_make_request", new=AsyncMock(return_value=rating_payload)),
+            patch.object(TMDBContentRatingCache, "read", return_value=None),
+            patch.object(TMDBContentRatingCache._redis, "set") as mock_set,
+        ):
+            result = await service.get_content_rating(1396, "us")
+
+        assert result == {"rating": "TV-MA", "release_date": None}
+        mock_set.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_movie_content_rating(self):
+        """Test getting movie content rating and release date for a region."""
+        service = TMDBService()
+
+        movie_payload = {
+            "id": 238,
+            "results": [
+                {
+                    "iso_3166_1": "US",
+                    "release_dates": [
+                        {
+                            "certification": "R",
+                            "descriptors": [],
+                            "iso_639_1": "",
+                            "note": "",
+                            "release_date": "1999-11-13T00:00:00.000Z",
+                            "type": 3,
+                        }
+                    ],
+                }
+            ],
+        }
+
+        with (
+            patch.object(service, "_make_request", new=AsyncMock(return_value=movie_payload)),
+            patch.object(TMDBContentRatingCache, "read", return_value=None),
+            patch.object(TMDBContentRatingCache._redis, "set") as mock_set,
+        ):
+            result = await service.get_content_rating(238, "us", "movie")
+
+        assert result == {
+            "rating": "R",
+            "release_date": "1999-11-13T00:00:00.000Z",
+        }
+        mock_set.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_content_rating_region_not_found(self):
+        """Test missing regional rating returns None."""
+        service = TMDBService()
+
+        rating_payload = {"id": 1396, "results": [{"iso_3166_1": "DE", "rating": "16"}]}
+
+        with (
+            patch.object(service, "_make_request", new=AsyncMock(return_value=rating_payload)),
+            patch.object(TMDBContentRatingCache, "read", return_value=None),
+            patch.object(TMDBContentRatingCache._redis, "set") as mock_set,
+        ):
+            result = await service.get_content_rating(1396, "US")
+
+        assert result is None
+        mock_set.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_get_content_rating_skips_cache_on_missing_value(self):
+        """Test missing rating values are not cached."""
+        service = TMDBService()
+
+        with (
+            patch.object(
+                service,
+                "_make_request",
+                new=AsyncMock(return_value={"id": 1396, "results": []}),
+            ),
+            patch.object(TMDBContentRatingCache, "read", return_value=None),
+            patch.object(TMDBContentRatingCache._redis, "set") as mock_set,
+        ):
+            result = await service.get_content_rating(1396, "US")
+
+        assert result is None
+        mock_set.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_get_keywords_movie(self):

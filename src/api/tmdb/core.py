@@ -24,12 +24,12 @@ from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
-# Cache configuration - 7 days for most data
-CacheExpiration = 7 * 24 * 60 * 60  # 7 days
+# Cache configuration - 24 hours max for daily ETL cadence
+CacheExpiration = 24 * 60 * 60  # 24 hours
 
 # Request cache - separate from other caches, independent refresh
 TMDBRequestCache = RedisCache(
-    defaultTTL=7 * 24 * 60 * 60,  # 7 days - raw API responses cache longer
+    defaultTTL=24 * 60 * 60,  # 24 hours - keep raw TMDB responses fresh daily
     prefix="tmdb_request",
     verbose=False,
     isClassMethod=True,
@@ -47,6 +47,15 @@ TMDBCache = RedisCache(
     defaultTTL=CacheExpiration,
     prefix="tmdb",
     verbose=False,
+)
+
+# Content rating cache configuration - content ratings change rarely.
+TMDBContentRatingCacheTTL = 2 * 365 * 24 * 60 * 60  # 2 years
+TMDBContentRatingCache = RedisCache(
+    defaultTTL=TMDBContentRatingCacheTTL,  # 2 years - content ratings are stable
+    prefix="tmdb_content_rating",
+    verbose=False,
+    isClassMethod=True,
 )
 
 
@@ -97,7 +106,7 @@ class TMDBService(Auth, BaseAPIClient):
 
     @RedisCache.use_cache(TMDBRequestCache, prefix="tmdb_api")
     async def _make_request(
-        self, endpoint: str, params: dict[str, Any] | None = None, max_retries: int = 3
+        self, endpoint: str, params: dict[str, Any] | None = None, max_retries: int = 3, **kwargs
     ) -> dict[str, Any] | None:
         """Make async HTTP request to TMDB API.
 
@@ -368,6 +377,8 @@ class TMDBService(Auth, BaseAPIClient):
                     elif isinstance(provider_result, dict):
                         details.watch_providers = provider_result.get("watch_providers", {})
                         details.streaming_platform = provider_result.get("streaming_platform")
+                        if isinstance(details, MCTvItem):
+                            details.apply_episode_availability_rules()
                 elif task_name[0] == "keywords":
                     keywords_result = task_result
                     if isinstance(keywords_result, Exception):
@@ -570,7 +581,7 @@ class TMDBService(Auth, BaseAPIClient):
 
         return result
 
-    async def _get_videos(self, tmdb_id: int, media_type: MCType, **kwargs: Any) -> dict[str, Any]:
+    async def _get_videos(self, tmdb_id: int, media_type: MCType) -> dict[str, Any]:
         """Get videos/trailers for media.
 
         Args:
@@ -711,8 +722,9 @@ class TMDBService(Auth, BaseAPIClient):
             raise ValueError(f"Invalid media type: {media_type}")
 
         endpoint = f"{path}/{tmdb_id}/watch/providers"
+        params = {"watch_region": region}
 
-        data = await self._make_request(endpoint)
+        data = await self._make_request(endpoint, params)
         if not data:
             return {}
 
@@ -759,6 +771,90 @@ class TMDBService(Auth, BaseAPIClient):
             response_data["streaming_platform"] = primary.get("provider_name")
 
         return response_data
+
+    @RedisCache.use_cache(TMDBContentRatingCache, prefix="content_ratings")
+    async def get_content_rating(
+        self, tmdb_id: int, region: str = "US", media_type: str | MCType = "tv"
+    ) -> dict[str, str | None] | None:
+        """
+        Get content rating details for a movie or TV title in a region.
+
+        Args:
+            tmdb_id: TMDB movie/TV ID.
+            region: Region code (default "US").
+            media_type: "tv" or "movie" (default "tv").
+
+        Returns:
+            Dict with rating and optional release_date, or None if unavailable.
+        """
+        normalized_region = region.strip().upper() if region else "US"
+        if isinstance(media_type, MCType):
+            normalized_media_type = media_type.value
+        else:
+            normalized_media_type = media_type.strip().lower() if media_type else "tv"
+
+        try:
+            if normalized_media_type == "movie":
+                data = await self._make_request(f"movie/{tmdb_id}/release_dates")
+            else:
+                data = await self._make_request(f"tv/{tmdb_id}/content_ratings")
+
+            if not isinstance(data, dict):
+                return None
+
+            results = data.get("results")
+            if not isinstance(results, list):
+                return None
+
+            if normalized_media_type == "movie":
+                for item in results:
+                    if not isinstance(item, dict):
+                        continue
+                    if str(item.get("iso_3166_1", "")).upper() != normalized_region:
+                        continue
+
+                    release_dates = item.get("release_dates")
+                    if not isinstance(release_dates, list):
+                        continue
+
+                    for release_date_entry in release_dates:
+                        if not isinstance(release_date_entry, dict):
+                            continue
+
+                        rating = release_date_entry.get("certification")
+                        if isinstance(rating, str) and rating.strip():
+                            release_date = release_date_entry.get("release_date")
+                            return {
+                                "rating": rating.strip(),
+                                "release_date": release_date.strip()
+                                if isinstance(release_date, str) and release_date.strip()
+                                else None,
+                            }
+
+                    return None
+
+            for item in results:
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("iso_3166_1", "")).upper() != normalized_region:
+                    continue
+
+                rating = item.get("rating")
+                if isinstance(rating, str):
+                    cleaned_rating = rating.strip()
+                    if cleaned_rating:
+                        return {"rating": cleaned_rating, "release_date": None}
+                return None
+
+            return None
+        except Exception as error:
+            logger.error(
+                "Error getting content rating for tmdb_id=%s region=%s: %s",
+                tmdb_id,
+                normalized_region,
+                error,
+            )
+            return None
 
     @RedisCache.use_cache(TMDBCache, prefix="tv_providers")
     async def get_providers(

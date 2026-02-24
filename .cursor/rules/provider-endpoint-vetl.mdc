@@ -1,0 +1,67 @@
+---
+description: VETL notes for streaming provider summary endpoint
+globs: ["src/api/tmdb/get_providers.py", "scripts/tmdb_streaming_platform_chat.py"]
+alwaysApply: false
+---
+
+# VETL: Streaming Provider Summary Endpoint
+
+## Purpose
+
+This document tracks the new provider endpoint contract introduced by the refactor in
+`src/api/tmdb/get_providers.py`.
+
+The implementation is intentionally split into:
+
+- A fetch phase (`fetch_watch_provider_data_for_title`) that resolves TMDB watch provider data.
+- A transform phase (`build_streaming_platform_summary`) that builds the final payload.
+- A coordinator phase (`get_streaming_platform_summary_for_title`) that validates input and applies movie theater/on-demand fallback logic.
+
+## Endpoint Behavior (Provider Summary)
+
+- **Primary use case:** return a normalized provider summary for one TMDB title.
+- **Inputs**
+  - `tmdb_id` (int): TMDB identifier
+  - `content_type` (str): `movie` or `tv`
+  - `watch_region` (str): TMDB region code, defaults to `"US"`
+- **Output shape**
+  - `streaming_platform_ids`: list of flattened provider IDs (flatrate)
+- `streaming_platforms`: list of `{provider_name, provider_id, logo_path, mkt_share_order}`
+  - `primary_provider`: provider object for the primary provider source
+  - `primary_provider_id`: int | null (or numeric provider id for flatrate primary)
+- `primary_provider_type`: `flatrate` | `on_demand` | `in theater`
+  - `watch_region`: str
+  - `on_demand_platform_ids`: list of provider IDs from buy/rent
+- `on_demand_platforms`: list of `{provider_name, provider_id, logo_path, mkt_share_order}`
+
+## Detailed Processing Rules
+
+- Invalid `content_type` returns `None` after logging the error.
+- Provider lookup is constrained to the selected region (`watch_region`).
+- Provider IDs are normalized through `provider_map.json` and provider map aliases:
+  - canonical provider IDs and package/channel aliases are resolved through `get_full_provider_map`.
+- Output list order:
+  - providers are de-duplicated by provider ID.
+  - sort key is `mkt_share_order` (fallback `10000`).
+- `streaming_platform*` values come from flatrate providers only.
+- `on_demand_platforms` values come from buy + rent providers.
+- Any processing error now returns `None` after logging the error.
+- Provider selection:
+- if flatrate providers exist:
+  - `primary_provider` is the first flatrate provider
+  - `primary_provider_type` is `"flatrate"` by default
+- for movie results in theater:
+  - `primary_provider_type` is `"in theater"`
+  - if there are no flatrate providers and on-demand providers exist, `primary_provider` falls back to the first on-demand provider
+- if no flatrate providers and not in theater, and on-demand providers exist:
+  - `primary_provider` is the first on-demand provider
+  - `primary_provider_type` is `"on_demand"`.
+
+## Operational Notes
+
+- Cache semantics are inherited from upstream TMDB service calls and wrappers.
+- This helper keeps response shape stable while splitting data-fetch and mutation logic to keep
+  `get_streaming_platform_summary_for_title` small and composable.
+- `scripts/tmdb_streaming_platform_chat.py` can be used as a manual query harness for the same
+  summary flow.
+

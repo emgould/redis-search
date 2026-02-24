@@ -1,0 +1,438 @@
+---
+description: Implementation plan for media index document enhancements (date fields, us_rating, created_at/modified_at, changes API)
+globs: ["**/normalize.py", "**/etl*.py", "**/bulk_loader.py", "**/build_redis_index.py", "**/web/app.py"]
+alwaysApply: false
+---
+
+# Media Index Document Enhancements - Implementation Plan
+
+## Terminology
+
+**Cache data** = Local TMDB JSON files:
+- `data/us/tv/tmdb_tv_YYYY_MM.json`
+- `data/us/movie/tmdb_movie_YYYY_MM.json`
+
+These files contain `first_air_date`, `last_air_date` (TV), `release_date` (movie), and `director` (id, name) for movies only. They do NOT contain `us_rating` (content rating) or `watch_providers` (streaming/on-demand provider summary).
+
+---
+
+## Final Normalized Document Shape
+
+After ETL and backfill complete, media documents in Redis (`media:tmdb_movie_*`, `media:tmdb_tv_*`) will have this shape:
+
+### Movie Example
+
+```json
+{
+  "id": "tmdb_movie_550",
+  "title": "Fight Club",
+  "search_title": "Fight Club",
+  "mc_type": "movie",
+  "mc_subtype": null,
+  "source": "tmdb",
+  "source_id": "550",
+  "year": 1999,
+  "popularity": 75.32,
+  "rating": 8.4,
+  "image": "https://image.tmdb.org/t/p/w185/...",
+  "overview": "A ticking time bomb of a man...",
+  "genre_ids": ["18", "53", "35"],
+  "genres": ["drama", "thriller", "comedy"],
+  "cast_ids": ["819", "287", "11614"],
+  "cast_names": ["edward_norton", "brad_pitt", "helena_bonham_carter"],
+  "cast": ["Edward Norton", "Brad Pitt", "Helena Bonham Carter"],
+  "director": {
+    "id": "7467",
+    "name": "David Fincher",
+    "name_normalized": "david_fincher"
+  },
+  "keywords": ["dual_identity", "nihilism", "support_group", "insomnia"],
+  "origin_country": ["us"],
+  "release_date": "1999-10-15",
+  "first_air_date": null,
+  "last_air_date": null,
+  "us_rating": "R",
+  "watch_providers": {
+    "streaming_platform_ids": [9],
+    "streaming_platforms": [{"provider_name": "Amazon Prime", "provider_id": 9, "logo_path": "/...", "display_priority": 1, "mkt_share_order": 1}],
+    "primary_provider": {"provider_name": "Amazon Prime", "provider_id": 9, "logo_path": "/...", "display_priority": 1, "mkt_share_order": 1},
+    "primary_provider_id": 9,
+    "primary_provider_type": "flatrate",
+    "watch_region": "US",
+    "on_demand_platform_ids": [9, 350],
+    "on_demand_platforms": [{"provider_name": "Amazon Prime", "provider_id": 9, "logo_path": "/...", "display_priority": 1, "mkt_share_order": 1}, {"provider_name": "Apple TV", "provider_id": 350, "logo_path": "/...", "display_priority": 9, "mkt_share_order": 9}]
+  },
+  "created_at": 1771891200,
+  "modified_at": 1771891200,
+  "_source": "backfill"
+}
+```
+
+### TV Example
+
+```json
+{
+  "id": "tmdb_tv_1396",
+  "title": "Breaking Bad",
+  "search_title": "Breaking Bad",
+  "mc_type": "tv",
+  "mc_subtype": null,
+  "source": "tmdb",
+  "source_id": "1396",
+  "year": 2008,
+  "popularity": 125.5,
+  "rating": 8.9,
+  "image": "https://image.tmdb.org/t/p/w185/...",
+  "overview": "When Walter White, a chemistry teacher...",
+  "genre_ids": ["18", "80"],
+  "genres": ["drama", "crime"],
+  "cast_ids": ["17419", "21911"],
+  "cast_names": ["bryan_cranston", "aaron_paul"],
+  "cast": ["Bryan Cranston", "Aaron Paul"],
+  "director": null,
+  "keywords": ["drug_dealer", "teacher", "high_school"],
+  "origin_country": ["us"],
+  "release_date": null,
+  "first_air_date": "2008-01-20",
+  "last_air_date": "2013-09-29",
+  "us_rating": "TV-MA",
+  "watch_providers": {
+    "streaming_platform_ids": [283],
+    "streaming_platforms": [{"provider_name": "Netflix", "provider_id": 283, "logo_path": "/...", "display_priority": 2, "mkt_share_order": 2}],
+    "primary_provider": {"provider_name": "Netflix", "provider_id": 283, "logo_path": "/...", "display_priority": 2, "mkt_share_order": 2},
+    "primary_provider_id": 283,
+    "primary_provider_type": "flatrate",
+    "watch_region": "US",
+    "on_demand_platform_ids": [],
+    "on_demand_platforms": []
+  },
+  "created_at": 1771891200,
+  "modified_at": 1771891200,
+  "_source": "backfill"
+}
+```
+
+### Field Summary
+
+| Field | Movie | TV |
+|-------|-------|-----|
+| `release_date` | YYYY-MM-DD | null |
+| `first_air_date` | null | YYYY-MM-DD |
+| `last_air_date` | null | YYYY-MM-DD |
+| `director` | `{id, name, name_normalized}` or null | null |
+| `us_rating` | e.g. "R", "PG-13" | e.g. "TV-MA", "TV-14" |
+| `watch_providers` | Object from `get_streaming_platform_summary_for_title` | Same |
+| `created_at` | Unix seconds | Unix seconds |
+| `modified_at` | Unix seconds | Unix seconds |
+| `_source` | `"backfill"` during migration, otherwise null/omitted | Same |
+
+---
+
+## Part A: Date Fields (Media Index)
+
+### Fields
+
+| Field | Source | Media Type |
+|-------|--------|------------|
+| `first_air_date` | Cache data | TV only |
+| `last_air_date` | Cache data | TV only |
+| `release_date` | Cache data | Movie only |
+
+### Implementation
+
+- Add to `SearchDocument` in [src/core/normalize.py](src/core/normalize.py)
+- Add `_extract_dates(raw)` in `BaseTMDBNormalizer`: TV → first_air_date, last_air_date; Movie → release_date
+- Add to `document_to_redis()`
+- No index schema change (stored only)
+
+---
+
+## Part A2: Director Object (Media Index)
+
+### Overview
+
+Replace flat `director_id` and `director_name` with a structured `director` object that captures both the TMDB person ID and the name. Director data is in cache data for **movies only** (`raw.get("director")` or `raw.get("tmdb_cast", {}).get("director")`). TV shows do not have director; use `director: null`.
+
+### Structure
+
+```json
+"director": {
+  "id": "7467",
+  "name": "David Fincher",
+  "name_normalized": "david_fincher"
+}
+```
+
+- `id`: TMDB person ID as string
+- `name`: Display name (original casing)
+- `name_normalized`: Normalized for TAG indexing (lowercase, underscores)
+- When no director: `director: null`
+
+### Implementation
+
+- Add `director: dict | None` to `SearchDocument` (e.g. `{"id": str, "name": str, "name_normalized": str}` or None)
+- Update `_extract_director(raw)` to return the object (or None) instead of `(director_id, director_name)`
+- In `document_to_redis()`: output `director` object. Remove flat `director_id` / `director_name` from `SearchDocument` and `document_to_redis`. Clean replacement, no dual-write.
+- **Index schema:** Update media index to use `TagField("$.director.id", as_name="director_id")` and `TagField("$.director.name_normalized", as_name="director_name")` via JSONPath into the object.
+- Phase 1 backfill: Director comes from cache data; no API call
+
+---
+
+## Part B: us_rating (Media Index)
+
+### Field
+
+| Field | Source | Media Type |
+|-------|--------|------------|
+| `us_rating` | TMDB `get_content_rating(tmdb_id, "US", mc_type)` | Movie, TV |
+
+**Not in cache data.** Requires API call per doc.
+
+### Implementation
+
+- Add `us_rating: str | None = None` to `SearchDocument`
+- Add to `document_to_redis()`
+- Normalizers read from `raw.get("us_rating")`; callers supply it
+- Nightly ETL: In `fetch_and_stage`, call `get_content_rating` per movie/TV item, add to `item_dict` before filter
+- No index schema change (stored only)
+
+---
+
+## Part B2: watch_providers (Media Index)
+
+### Field
+
+| Field | Source | Media Type |
+|-------|--------|------------|
+| `watch_providers` | `get_streaming_platform_summary_for_title(tmdb_id, content_type, watch_region="US")` | Movie, TV |
+
+**Not in cache data.** Requires API call per doc.
+
+### Decision (Locked)
+
+- Store the **full** `watch_providers` object in the normalized media document.
+- Keep the shape **constant** (non-polymorphic fields) across movie/tv.
+- Do not compact this payload for storage; downstream consumers rely on full provider metadata.
+
+### Output Shape (from get_providers)
+
+Constant, non-polymorphic shape. Every field is always present with the same type.
+
+```json
+{
+  "streaming_platform_ids": [],
+  "streaming_platforms": [],
+  "primary_provider": null,
+  "primary_provider_id": null,
+  "primary_provider_type": null,
+  "watch_region": "US",
+  "on_demand_platform_ids": [9, 350],
+  "on_demand_platforms": [
+    {"provider_name": "Amazon Prime", "provider_id": 9, "logo_path": "/...", "display_priority": 1, "mkt_share_order": 1},
+    {"provider_name": "Apple TV", "provider_id": 350, "logo_path": "/...", "display_priority": 9, "mkt_share_order": 9}
+  ]
+}
+```
+
+- `primary_provider`: Always a provider dict (`{provider_name, provider_id, logo_path, display_priority, mkt_share_order}`) or `null`. Never a string.
+- `primary_provider_type`: Discriminator string — `"flatrate"`, `"in theater"`, `"on_demand"`, or `null`.
+- See [.cursor/rules/provider-endpoint-vetl.mdc](.cursor/rules/provider-endpoint-vetl.mdc) for full contract.
+
+### Implementation
+
+- Add `watch_providers: dict | None = None` to `SearchDocument`
+- Add to `document_to_redis()`
+- Normalizers read from `raw.get("watch_providers")`; callers supply it
+- Nightly ETL: In `fetch_and_stage`, call `get_streaming_platform_summary_for_title` per movie/TV item, add to `item_dict` before filter
+- Index only selected nested sub-properties; keep the rest stored-only
+
+### Indexing Strategy for `watch_providers`
+
+Index these nested paths in media schema:
+
+```python
+TagField("$.watch_providers.watch_region", as_name="watch_region"),
+TagField("$.watch_providers.primary_provider_type", as_name="primary_provider_type"),
+TagField("$.watch_providers.streaming_platform_ids[*]", as_name="streaming_platform_ids"),
+TagField("$.watch_providers.on_demand_platform_ids[*]", as_name="on_demand_platform_ids"),
+NumericField("$.watch_providers.primary_provider_id", as_name="primary_provider_id", sortable=True),
+```
+
+Keep these stored-only (not indexed):
+- `watch_providers.streaming_platforms`
+- `watch_providers.on_demand_platforms`
+- provider display metadata (name/logo/display_priority payloads)
+
+---
+
+## Part C: created_at / modified_at (All Indexes)
+
+### Document Fields
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `created_at` | int (Unix seconds) | When the document was first indexed; never changes |
+| `modified_at` | int (Unix seconds) | When the document was last updated; equals created_at on insert, then updates on every write |
+| `_source` | str \| null | Optional write provenance (set to `"backfill"` during reindex/backfill process) |
+
+### Write Logic
+
+#### Full Document Replace
+
+Paths that do `json().set(key, "$", redis_doc)` (ETL loads, backfills, etc.):
+
+1. Read existing doc: `existing = await redis.json().get(key)`
+2. `now_ts = int(datetime.now(UTC).timestamp())`
+3. `created_at = existing.get("created_at") if (existing and isinstance(existing, dict)) else now_ts` — if result is None (existing doc lacks field), use backfill default `1771891200`
+4. `modified_at = now_ts`
+5. Optionally set `_source = "backfill"` for migration runs (otherwise omit or null)
+6. Add fields to `redis_doc` before set
+
+For batched loads: pipeline `JSON.GET` for all keys in the batch first, then build docs with preserved `created_at`, then pipeline `JSON.SET`.
+
+#### Partial Updates
+
+Paths that do `json().set(key, "$.field", value)` (e.g. enrich_redis_metadata, migrate_search_titles):
+
+- Add `json().set(key, "$.modified_at", now_ts)` when updating other fields
+- Do not change `created_at`
+- Leave `_source` unchanged for normal partial updates
+
+#### SearchDocument and document_to_redis
+
+`created_at`, `modified_at`, and `_source` are permanent fields on `SearchDocument`:
+
+```python
+created_at: int | None = None
+modified_at: int | None = None
+_source: str | None = None
+```
+
+`document_to_redis` maps them from the dataclass like every other field — no extra params. Write-path callers (ETL, backfill, bulk loader) are responsible for populating these on `SearchDocument` before passing to `document_to_redis`. Read-before-write logic happens in the caller.
+
+### Backfill Default for Existing Documents
+
+For documents that already exist without these fields, use:
+
+- **Backfill default:** `1771891200` (2026-02-23 00:00:00 UTC)
+- `created_at = 1771891200`
+- `modified_at = 1771891200` (same)
+
+Apply via `json().set(key, "$.created_at", ts)` and `json().set(key, "$.modified_at", ts)`. Use this same value when step 3 of Full Document Replace yields `None` (existing doc lacks `created_at`).
+
+### Index Schema
+
+Add to all five indexes (idx:media, idx:people, idx:podcasts, idx:author, idx:book):
+
+```python
+NumericField("$.created_at", as_name="created_at", sortable=True),
+NumericField("$.modified_at", as_name="modified_at", sortable=True),
+```
+
+Schema locations: web/app.py INDEX_CONFIGS, scripts/build_redis_index.py, migrate_*.py, load_*_index.py.
+
+`_source` is metadata for migration provenance and is not indexed initially.
+
+---
+
+## Part D: GET /api/changes
+
+**Endpoint:** `GET /api/changes`
+
+- `since` (required): Unix timestamp or ISO 8601 — inclusive start of range
+- `until` (optional): Unix timestamp or ISO 8601 — inclusive end; omit for "since X onward"
+- `sources` (optional): Comma-separated `media,person,podcast,book,author` — default all
+- `limit` (optional): Max docs per source (e.g. 100)
+- `change_source` (optional): filter by `_source` (e.g. `backfill`) for migration windows
+
+Implementation: Query `@modified_at:[since until]` on each requested index in parallel. If `change_source` is provided, post-filter on `_source` (or add index support later if needed). Endpoint returns documents that changed (were modified) in the window, not created.
+
+---
+
+## Enrichment Failure Policy
+
+When `get_content_rating` or `get_streaming_platform_summary_for_title` fails for a single item (nightly ETL or backfill):
+
+- **Write the doc** with `null` for the failed field (`us_rating: null` or `watch_providers: null`)
+- **Log at WARNING** with `tmdb_id`, `mc_type`, and the exception
+- **Never drop a doc** due to enrichment failure
+
+---
+
+## Backfill Strategy
+
+### Phase 1: From cache data (dates + timestamps + director)
+
+- **Source:** Cache data files (`data/us/tv/*.json`, `data/us/movie/*.json`)
+- **Fields populated:** first_air_date, last_air_date, release_date, director (from cache, movies only), created_at, modified_at
+- **Flow:** Discover files, read results, apply existing ETL filters, normalize (with new date fields), read-before-write for timestamps, full upsert to Redis
+- **_source:** Optionally set `_source = "backfill"` for this migration run
+- **us_rating:** Not in cache; stays `None` in Phase 1
+- **watch_providers:** Not in cache; stays `null` in Phase 1
+- Supports: `--dry-run`, `--year-lte`, `--type movie|tv`
+
+### Phase 2: us_rating (separate pass)
+
+- **Source of tmdb_ids:** Existing Redis media docs (`media:*`) — Redis is source of truth
+- **Flow:** Scan `media:*` keys, for each doc read `source_id` (tmdb_id) and `mc_type`, call `get_content_rating(tmdb_id, "US", mc_type)`, merge `us_rating` into doc, set `modified_at = now` (and optionally `_source = "backfill"`)
+- Batched with rate limiting
+- Supports: `--dry-run`, `--limit`
+
+### Phase 2b: watch_providers (separate pass)
+
+- **Source of tmdb_ids:** Existing Redis media docs (`media:*`) — Redis is source of truth
+- **Flow:** Scan `media:*` keys, for each doc read `source_id` (tmdb_id) and `mc_type`, call `get_streaming_platform_summary_for_title(tmdb_id, mc_type, "US")`, merge `watch_providers` into doc, set `modified_at = now` (and optionally `_source = "backfill"`)
+- Batched with rate limiting
+- Supports: `--dry-run`, `--limit`
+- **Note:** Phases 2 and 2b can be combined into one Redis scan with two API calls per doc (get_content_rating + get_streaming_platform_summary_for_title) if desired for efficiency
+
+### Phase 3: Timestamps for non-media indexes
+
+- For `person:*`, `podcast:*`, `book:*`, `author:*`: set `created_at` and `modified_at` to backfill default (`1771891200` = 2026-02-23 00:00:00 UTC) where missing
+
+---
+
+## Document Write Paths
+
+| Path | File | Behavior |
+|------|------|----------|
+| document_to_redis | src/core/normalize.py | Maps all SearchDocument fields to Redis dict — dates, director object, us_rating, watch_providers, created_at, modified_at, _source. No extra params; callers populate SearchDocument fields (including timestamps via read-before-write) before calling. |
+| Full replace | tmdb_nightly_etl, etl_service, backfill scripts | Read-before-write to preserve created_at |
+| Full replace | pi_nightly_etl, person_etl_service, load_book_index, load_author_index, bestseller_author_etl, load_podcasts_from_db, load_gcs_metadata, seed_example_data | Read-before-write to preserve created_at |
+| Partial update | scripts/enrich_redis_metadata.py | Add modified_at when updating genre_ids, cast, etc. |
+| Partial update | scripts/migrate_search_titles.py | Add modified_at when updating title/search_title |
+| Person | tmdb_nightly_etl _normalize_person() | Different path; add both fields; needs read-before-write for key that may exist |
+
+### promote_to_dev / copy_to_local
+
+No changes. These scripts copy the full document; created_at and modified_at are copied as stored.
+
+---
+
+## New Script
+
+**scripts/backfill_media_dates_and_timestamps.py**
+
+- Phase 1: From cache data (dates + timestamps + director for media)
+- Phase 2: us_rating backfill (Redis docs as source of tmdb_ids)
+- Phase 2b: watch_providers backfill (Redis docs as source of tmdb_ids)
+- Phase 3: Timestamps for person, podcast, book, author
+
+---
+
+## Index Recreation
+
+Adding created_at/modified_at requires drop + recreate indexes. Use `dropindex delete_documents=False`. Run backfill before or after recreate.
+
+---
+
+## Implementation Order
+
+1. Normalization: SearchDocument (add date fields, director object replacing flat director_id/director_name, us_rating, watch_providers, created_at, modified_at, _source); update _extract_director to return dict|None; add _extract_dates; document_to_redis maps all fields from dataclass
+2. Schema: Add created_at/modified_at to all 5 indexes; update media index director to JSONPath `$.director.id` / `$.director.name_normalized`; add selected nested `watch_providers` index paths
+3. Full-replace paths: Read-before-write in ETL services
+4. Partial-update paths: modified_at in enrich_redis_metadata, migrate_search_titles
+5. Nightly ETL: Add get_content_rating and get_streaming_platform_summary_for_title calls for us_rating and watch_providers
+6. Backfill script: Phase 1, 2, 2b, 3
+7. GET /api/changes endpoint
+8. Documentation: redis-index-reference.mdc

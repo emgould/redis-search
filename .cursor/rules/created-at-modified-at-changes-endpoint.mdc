@@ -1,0 +1,105 @@
+---
+description: Plan for created_at/modified_at timestamp fields and GET /api/changes endpoint
+globs: ["**/normalize.py", "**/etl*.py", "**/load_*_index.py", "**/web/app.py", "**/build_redis_index.py", "**/migrate_*.py"]
+alwaysApply: false
+---
+
+# created_at / modified_at Timestamps and /api/changes Endpoint
+
+## Overview
+
+Add two timestamp fields to all Redis index documents to track when documents were first created and last modified. Expose `GET /api/changes` to efficiently return documents modified within a time window.
+
+---
+
+## Document Fields
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `created_at` | int (Unix seconds) | When the document was first indexed; never changes |
+| `modified_at` | int (Unix seconds) | When the document was last updated; equals created_at on insert, then updates on every write |
+
+---
+
+## Write Logic
+
+### Full Document Replace
+
+Paths that do `json().set(key, "$", redis_doc)` (ETL loads, backfills, etc.):
+
+1. Read existing doc: `existing = await redis.json().get(key)`
+2. `now_ts = int(datetime.now(UTC).timestamp())`
+3. `created_at = existing.get("created_at") if (existing and isinstance(existing, dict)) else now_ts`
+4. `modified_at = now_ts`
+5. Add both to `redis_doc` before set
+
+For batched loads: pipeline `JSON.GET` for all keys in batch first, then build docs with preserved `created_at`, then pipeline `JSON.SET`.
+
+### Partial Updates
+
+Paths that do `json().set(key, "$.field", value)` (e.g. enrich_redis_metadata, migrate_search_titles):
+
+- Add `json().set(key, "$.modified_at", now_ts)` when updating other fields
+- Do not change `created_at`
+
+---
+
+## Index Schema
+
+Add to all five indexes (idx:media, idx:people, idx:podcasts, idx:author, idx:book):
+
+```python
+NumericField("$.created_at", as_name="created_at", sortable=True),
+NumericField("$.modified_at", as_name="modified_at", sortable=True),
+```
+
+Schema locations: web/app.py INDEX_CONFIGS, scripts/build_redis_index.py, migrate_*.py, load_*_index.py.
+
+---
+
+## API Endpoint
+
+**GET /api/changes**
+
+Query params:
+- `since` (required): Unix timestamp or ISO 8601 — inclusive start of range
+- `until` (optional): Unix timestamp or ISO 8601 — inclusive end; omit for "since X onward"
+- `sources` (optional): Comma-separated `media,person,podcast,book,author` — default all
+- `limit` (optional): Max docs per source (e.g. 100)
+
+Implementation: Query `@modified_at:[since until]` on each requested index (parallel). Endpoint returns documents that changed (were modified) in the window, not created.
+
+---
+
+## Backfill for Existing Documents
+
+For documents that already exist without these fields:
+
+- `created_at = 1771891200` (2026-02-23 00:00:00 UTC)
+- `modified_at = 1771891200` (same)
+
+Create `scripts/backfill_created_modified_at.py` (or similar) to set both fields via `json().set(key, "$.created_at", ts)` and `json().set(key, "$.modified_at", ts)`.
+
+---
+
+## Document Write Paths
+
+| Path | File | Behavior |
+|------|------|----------|
+| document_to_redis | src/core/normalize.py | Add created_at, modified_at params (optional); if omitted, use now for both (new doc). Callers doing full replace must read existing doc first and pass existing created_at when key exists. |
+| Full replace | tmdb_nightly_etl, etl_service, backfill scripts, pi_nightly_etl, person_etl_service, load_book_index, load_author_index, bestseller_author_etl, load_podcasts_from_db, load_gcs_metadata, seed_example_data | Read-before-write to preserve created_at |
+| Partial update | scripts/enrich_redis_metadata.py | Add modified_at when updating genre_ids, cast, etc. |
+| Partial update | scripts/migrate_search_titles.py | Add modified_at when updating title/search_title |
+| tmdb_nightly_etl person | _normalize_person() | Different path; add both fields; needs read-before-write for key that may exist |
+
+---
+
+## promote_to_dev / copy_to_local
+
+No changes. These scripts copy the full document; created_at and modified_at are copied as stored.
+
+---
+
+## Index Recreation
+
+Adding new NumericFields requires dropping and recreating indexes. Use `dropindex delete_documents=False` so documents remain; RediSearch re-indexes on recreate. After backfill, all documents will have the new fields.

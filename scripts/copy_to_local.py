@@ -17,6 +17,9 @@ Usage:
     # Copy specific indices
     python scripts/copy_to_local.py --indices media people
 
+    # Custom batch size (default 1000, overrides COPY_TO_LOCAL_BATCH_SIZE env)
+    python scripts/copy_to_local.py --batch-size 500
+
     # JSON output for API integration
     python scripts/copy_to_local.py --list --json
 """
@@ -206,7 +209,7 @@ async def copy_documents(
     target: Redis,
     prefix: str,
     dry_run: bool = False,
-    batch_size: int = 100,
+    batch_size: int = 1000,
 ) -> tuple[int, int, list[str]]:
     """
     Copy all documents with given prefix from source to target.
@@ -259,6 +262,7 @@ async def copy_index(
     target: Redis,
     index_info: IndexInfo,
     dry_run: bool = False,
+    batch_size: int = 1000,
 ) -> dict:
     """
     Copy a single index from source (public) to target (local).
@@ -315,7 +319,7 @@ async def copy_index(
 
         print("      Copying documents...")
         copied, errors, error_msgs = await copy_documents(
-            source, target, prefix, dry_run=False
+            source, target, prefix, dry_run=False, batch_size=batch_size
         )
         result["docs_copied"] = copied
         result["errors"] = errors
@@ -374,6 +378,7 @@ async def main(
     indices_to_copy: list[str] | None = None,
     list_only: bool = False,
     output_json: bool = False,
+    batch_size: int = 1000,
 ) -> int:
     """
     Main copy function.
@@ -383,6 +388,7 @@ async def main(
         indices_to_copy: List of index names to copy (None = all)
         list_only: Just list available indices
         output_json: Output JSON format (for API integration)
+        batch_size: Documents per pipeline batch (env: COPY_TO_LOCAL_BATCH_SIZE)
 
     Returns exit code (0 = success, 1 = error).
     """
@@ -419,6 +425,9 @@ async def main(
     if dry_run:
         print("🔍 DRY RUN MODE - No changes will be made")
         print()
+
+    print(f"   Batch size: {batch_size:,} documents per pipeline")
+    print()
 
     # Connect to public Redis (SOURCE)
     print("🔌 Connecting to Public Redis...")
@@ -495,7 +504,9 @@ async def main(
     for info in available_indices:
         print(f"   📦 Index: {info.name} ({info.redis_name})")
         # NOTE: source is public, target is local
-        result = await copy_index(public_redis, local_redis, info, dry_run=dry_run)
+        result = await copy_index(
+            public_redis, local_redis, info, dry_run=dry_run, batch_size=batch_size
+        )
         results.append(result)
         total_copied += result["docs_copied"]
         total_errors += result["errors"]
@@ -551,6 +562,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Output JSON format (for API integration)",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=int(os.getenv("COPY_TO_LOCAL_BATCH_SIZE", "1000")),
+        help="Documents per pipeline batch (default: 1000, env: COPY_TO_LOCAL_BATCH_SIZE)",
+    )
 
     args = parser.parse_args()
 
@@ -560,6 +577,7 @@ if __name__ == "__main__":
             indices_to_copy=args.indices,
             list_only=args.list,
             output_json=args.json,
+            batch_size=args.batch_size,
         )
     )
     sys.exit(exit_code)

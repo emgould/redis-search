@@ -46,12 +46,11 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}/firebase/python_functions",
+      "cwd": "${workspaceFolder}",
       "env": {  
-        "PYTHONPATH": "${workspaceFolder}/firebase/python_functions",
-        "FIREBASE_AUTH_EMULATOR_HOST": "localhost:9099"
+        "PYTHONPATH": "${workspaceFolder}/src",
       },
-      "envFile": "${workspaceFolder}/firebase/python_functions/.env",
+      "envFile": "${workspaceFolder}/config/local.env",
       "justMyCode": false
     }
   ]

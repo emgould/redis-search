@@ -195,7 +195,7 @@ def get_rate_limiter(max_rate: int, time_period: float = 1.0) -> ResilientRateLi
                 _limiter_creation_count += 1
 
                 # Log limiter creation for monitoring
-                logger.info(
+                logger.debug(
                     f"Created rate limiter #{_limiter_creation_count} for loop {id(loop)}: "
                     f"{max_rate} requests per {time_period}s"
                 )
