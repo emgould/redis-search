@@ -40,9 +40,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+_project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_project_root / "src"))
+sys.path.insert(0, str(_project_root))
 
-from adapters.config import load_env
+from adapters.config import load_env  # noqa: E402
 
 load_env()
 
