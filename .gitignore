@@ -16,4 +16,4 @@ config/*.json
 # Keep encrypted versions tracked (if using SOPS)
 !config/*.env.encrypted
 
-.vscode/*.json
+.vscode/*.jsontest_backfill.json
