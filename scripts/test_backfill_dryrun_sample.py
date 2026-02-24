@@ -275,6 +275,32 @@ async def enrich_item(
     return enriched
 
 
+# Pinned TMDB IDs known to have content ratings
+PINNED_TV_ITEMS: list[dict[str, Any]] = [
+    {
+        "mc_type": "tv",
+        "mc_id": "tmdb_tv_224372",
+        "source_id": "224372",
+        "tmdb_id": 224372,
+        "source": "tmdb",
+        "name": "Squid Game",
+        "first_air_date": "2024-12-26",
+        "last_air_date": "2025-01-09",
+        "genre_ids": [10759, 18],
+        "genres": ["Action & Adventure", "Drama"],
+        "overview": "Hundreds of cash-strapped players accept an invitation to compete in children's games.",
+        "popularity": 500.0,
+        "vote_average": 7.8,
+        "vote_count": 5000,
+        "images": [],
+        "metrics": {"popularity": 500.0, "vote_average": 7.8, "vote_count": 5000},
+        "main_cast": [],
+        "keywords": [],
+        "origin_country": ["KR"],
+    },
+]
+
+
 # ---------- Test cases ----------
 
 
@@ -317,6 +343,50 @@ async def test_movie_full_integration(
                   f"release_date={redis_doc.get('release_date')}, "
                   f"us_rating={redis_doc.get('us_rating')!r}, "
                   f"director={redis_doc.get('director')}, "
+                  f"wp_keys={list(redis_doc['watch_providers'].keys()) if redis_doc.get('watch_providers') else None}")
+
+        results.append(r)
+    return results
+
+
+async def test_pinned_tv_integration(
+    service: TMDBService,
+    verbose: bool,
+) -> list[TestResult]:
+    """Pinned TV items with known content ratings: enrich, normalize, validate."""
+    results: list[TestResult] = []
+    for i, item in enumerate(PINNED_TV_ITEMS):
+        mc_id = item.get("mc_id", "?")
+        r = TestResult(f"pinned_tv_integration [{i}] id={mc_id}")
+
+        enriched = await enrich_item(item, "tv", service)
+        doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
+        if doc is None:
+            r.fail("normalize_document returned None")
+            results.append(r)
+            continue
+
+        redis_doc = document_to_redis(doc)
+        now_ts = 1709000000
+        ca, ma, src = resolve_timestamps(None, now_ts, source_tag="backfill")
+        redis_doc["created_at"] = ca
+        redis_doc["modified_at"] = ma
+        redis_doc["_source"] = src
+
+        validate_schema_keys(redis_doc, r)
+        validate_tv_specifics(redis_doc, r)
+        validate_watch_providers_shape(redis_doc, r)
+        validate_list_contents(redis_doc, r)
+        validate_timestamps(redis_doc, r, expect_source="backfill")
+
+        if redis_doc.get("us_rating") is None:
+            r.fail(f"Pinned TV {mc_id} should have a us_rating but got None")
+
+        if verbose:
+            print(f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
+                  f"title={redis_doc['title']!r}, "
+                  f"first_air_date={redis_doc.get('first_air_date')}, "
+                  f"us_rating={redis_doc.get('us_rating')!r}, "
                   f"wp_keys={list(redis_doc['watch_providers'].keys()) if redis_doc.get('watch_providers') else None}")
 
         results.append(r)
@@ -422,7 +492,7 @@ async def test_us_rating_populated(
             found = True
             break
     if not found:
-        r.warn(f"No {label} item returned a non-null us_rating (data-dependent on TMDB coverage)")
+        r.fail(f"No {label} item returned a non-null us_rating from TMDB API")
     return r
 
 
@@ -542,7 +612,11 @@ async def run_tests(args: argparse.Namespace) -> int:
     movie_results = await test_movie_full_integration(movie_items, service, args.verbose)
     all_results.extend(movie_results)
 
-    # Tests N+1-2N: TV full integration
+    # Pinned TV integration (known to have content ratings)
+    pinned_tv_results = await test_pinned_tv_integration(service, args.verbose)
+    all_results.extend(pinned_tv_results)
+
+    # Tests N+1-2N: TV full integration (from cache)
     tv_results = await test_tv_full_integration(tv_items, service, args.verbose)
     all_results.extend(tv_results)
 
@@ -558,7 +632,7 @@ async def run_tests(args: argparse.Namespace) -> int:
 
     # API field population checks
     all_results.append(await test_us_rating_populated(movie_items, "movie", service))
-    all_results.append(await test_us_rating_populated(tv_items, "tv", service))
+    all_results.append(await test_us_rating_populated(PINNED_TV_ITEMS + tv_items, "tv", service))
     all_results.append(await test_watch_providers_populated(movie_items, "movie", service))
     all_results.append(await test_watch_providers_populated(tv_items, "tv", service))
 
@@ -579,6 +653,16 @@ async def run_tests(args: argparse.Namespace) -> int:
     print(f"\n  {passed} passed, {failed} failed out of {len(all_results)} tests\n")
 
     if args.output:
+        for item in PINNED_TV_ITEMS:
+            enriched = await enrich_item(item, "tv", service)
+            doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
+            if doc:
+                redis_doc = document_to_redis(doc)
+                ca, ma, src = resolve_timestamps(None, 1709000000, source_tag="backfill")
+                redis_doc["created_at"] = ca
+                redis_doc["modified_at"] = ma
+                redis_doc["_source"] = src
+                all_enriched_docs.append(redis_doc)
         for item in movie_items:
             enriched = await enrich_item(item, "movie", service)
             doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.MOVIE)

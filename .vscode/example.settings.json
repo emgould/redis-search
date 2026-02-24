@@ -1,0 +1,7 @@
+{
+  "makefile.configureOnOpen": false,
+  "biome.enabled": true,
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  }
+}

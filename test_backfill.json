@@ -1,0 +1,1331 @@
+[
+  {
+    "id": "tmdb_tv_224372",
+    "title": "Squid Game",
+    "search_title": "Squid Game",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "224372",
+    "year": 2024,
+    "popularity": 68.34,
+    "rating": 7.8,
+    "image": null,
+    "overview": "Hundreds of cash-strapped players accept an invitation to compete in children's games.",
+    "genre_ids": [
+      "10759",
+      "18"
+    ],
+    "genres": [
+      "action_adventure",
+      "drama"
+    ],
+    "cast_ids": [],
+    "cast_names": [],
+    "cast": [],
+    "director": null,
+    "keywords": [],
+    "origin_country": [
+      "kr"
+    ],
+    "release_date": null,
+    "first_air_date": "2024-12-26",
+    "last_air_date": "2025-01-09",
+    "us_rating": "TV-MA",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        1899,
+        486
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "HBO Max",
+          "provider_id": 1899,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "display_priority": 6,
+          "mkt_share_order": 6
+        },
+        {
+          "provider_name": "Spectrum On Demand",
+          "provider_id": 486,
+          "logo_path": "/aAb9CUHjFe9Y3O57qnrJH0KOF1B.jpg",
+          "display_priority": 76,
+          "mkt_share_order": 76
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "HBO Max",
+        "provider_id": 1899,
+        "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "display_priority": 6,
+        "mkt_share_order": 6
+      },
+      "primary_provider_id": 1899,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_movie_533533",
+    "title": "TRON: Ares",
+    "search_title": "TRON: Ares",
+    "mc_type": "movie",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "533533",
+    "year": 2025,
+    "popularity": 57.56,
+    "rating": 6.504,
+    "image": "https://image.tmdb.org/t/p/w185/chpWmskl3aKm1aTZqUHRCtviwPy.jpg",
+    "overview": "A highly sophisticated Program called Ares is sent from the digital world into the real world on a dangerous mission, marking humankind's first encounter with A.I. beings.",
+    "genre_ids": [
+      "878",
+      "12",
+      "28"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "7499",
+      "1260481",
+      "55089",
+      "12214",
+      "1695989"
+    ],
+    "cast_names": [
+      "jared_leto",
+      "greta_lee",
+      "evan_peters",
+      "gillian_anderson",
+      "jodie_turner_smith"
+    ],
+    "cast": [
+      "Jared Leto",
+      "Greta Lee",
+      "Evan Peters",
+      "Gillian Anderson",
+      "Jodie Turner-Smith"
+    ],
+    "director": {
+      "id": "20307",
+      "name": "Joachim R\u00f8nning",
+      "name_normalized": "joachim_r_nning"
+    },
+    "keywords": [
+      "angry",
+      "artificial_intelligence_a_i",
+      "business_rivalry",
+      "computer_program",
+      "computer_simulation",
+      "digital_world",
+      "real_world",
+      "sequel",
+      "simulation"
+    ],
+    "origin_country": [],
+    "release_date": "2025-10-08",
+    "first_air_date": null,
+    "last_air_date": null,
+    "us_rating": "PG-13",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        337
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "Disney Plus",
+          "provider_id": 337,
+          "logo_path": "/97yvRBw1GzX7fXprcF80er19ot.jpg",
+          "display_priority": 4,
+          "mkt_share_order": 4
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "Disney Plus",
+        "provider_id": 337,
+        "logo_path": "/97yvRBw1GzX7fXprcF80er19ot.jpg",
+        "display_priority": 4,
+        "mkt_share_order": 4
+      },
+      "primary_provider_id": 337,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [
+        9,
+        192,
+        350,
+        3,
+        7
+      ],
+      "on_demand_platforms": [
+        {
+          "provider_name": "Amazon Prime",
+          "provider_id": 9,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "display_priority": 1,
+          "mkt_share_order": 1
+        },
+        {
+          "provider_name": "YouTube",
+          "provider_id": 192,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "display_priority": 3,
+          "mkt_share_order": 3
+        },
+        {
+          "provider_name": "Apple TV",
+          "provider_id": 350,
+          "logo_path": "/mcbz1LgtErU9p4UdbZ0rG6RTWHX.jpg",
+          "display_priority": 9,
+          "mkt_share_order": 9
+        },
+        {
+          "provider_name": "Google Play Movies",
+          "provider_id": 3,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "display_priority": 30,
+          "mkt_share_order": 30
+        },
+        {
+          "provider_name": "Fandango At Home",
+          "provider_id": 7,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "display_priority": 35,
+          "mkt_share_order": 35
+        }
+      ]
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_movie_1054867",
+    "title": "One Battle After Another",
+    "search_title": "One Battle After Another",
+    "mc_type": "movie",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "1054867",
+    "year": 2025,
+    "popularity": 43.71,
+    "rating": 7.495,
+    "image": "https://image.tmdb.org/t/p/w185/m1jFoahEbeQXtx4zArT2FKdbNIj.jpg",
+    "overview": "Washed-up revolutionary Bob exists in a state of stoned paranoia, surviving off-grid with his spirited, self-reliant daughter, Willa. When his evil nemesis resurfaces after 16 years and she goes...",
+    "genre_ids": [
+      "53",
+      "80",
+      "28"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "6193",
+      "2228",
+      "3914706",
+      "1121",
+      "35705"
+    ],
+    "cast_names": [
+      "leonardo_dicaprio",
+      "sean_penn",
+      "chase_infiniti",
+      "benicio_del_toro",
+      "regina_hall"
+    ],
+    "cast": [
+      "Leonardo DiCaprio",
+      "Sean Penn",
+      "Chase Infiniti",
+      "Benicio del Toro",
+      "Regina Hall"
+    ],
+    "director": {
+      "id": "4762",
+      "name": "Paul Thomas Anderson",
+      "name_normalized": "paul_thomas_anderson"
+    },
+    "keywords": [
+      "african_american",
+      "aftercreditsstinger",
+      "anti_fascism",
+      "anti_racism",
+      "based_on_novel_or_book",
+      "father_daughter_relationship",
+      "immigration_detention_center",
+      "insurgency",
+      "insurrection",
+      "interracial_relationship",
+      "missing_daughter",
+      "on_the_run",
+      "rebellion",
+      "resistance",
+      "revolt",
+      "revolutionaries",
+      "riot",
+      "riots",
+      "uprising",
+      "usa_mexico_border",
+      "white_supremacy",
+      "xenophobia"
+    ],
+    "origin_country": [],
+    "release_date": "2025-09-23",
+    "first_air_date": null,
+    "last_air_date": null,
+    "us_rating": "R",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        1899
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "HBO Max",
+          "provider_id": 1899,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "display_priority": 6,
+          "mkt_share_order": 6
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "HBO Max",
+        "provider_id": 1899,
+        "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "display_priority": 6,
+        "mkt_share_order": 6
+      },
+      "primary_provider_id": 1899,
+      "primary_provider_type": "in theater",
+      "watch_region": "US",
+      "on_demand_platform_ids": [
+        9,
+        192,
+        350,
+        538,
+        3,
+        7
+      ],
+      "on_demand_platforms": [
+        {
+          "provider_name": "Amazon Prime",
+          "provider_id": 9,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "display_priority": 1,
+          "mkt_share_order": 1
+        },
+        {
+          "provider_name": "YouTube",
+          "provider_id": 192,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "display_priority": 3,
+          "mkt_share_order": 3
+        },
+        {
+          "provider_name": "Apple TV",
+          "provider_id": 350,
+          "logo_path": "/mcbz1LgtErU9p4UdbZ0rG6RTWHX.jpg",
+          "display_priority": 9,
+          "mkt_share_order": 9
+        },
+        {
+          "provider_name": "Plex",
+          "provider_id": 538,
+          "logo_path": "/vLZKlXUNDcZR7ilvfY9Wr9k80FZ.jpg",
+          "display_priority": 24,
+          "mkt_share_order": 24
+        },
+        {
+          "provider_name": "Google Play Movies",
+          "provider_id": 3,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "display_priority": 30,
+          "mkt_share_order": 30
+        },
+        {
+          "provider_name": "Fandango At Home",
+          "provider_id": 7,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "display_priority": 35,
+          "mkt_share_order": 35
+        }
+      ]
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_movie_120",
+    "title": "The Lord of the Rings: The Fellowship of the Ring",
+    "search_title": "The Lord of the Rings: The Fellowship of the Ring",
+    "mc_type": "movie",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "120",
+    "year": 2001,
+    "popularity": 47.91,
+    "rating": 8.426,
+    "image": "https://image.tmdb.org/t/p/w185/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
+    "overview": "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a...",
+    "genre_ids": [
+      "12",
+      "14",
+      "28"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "109",
+      "1327",
+      "110",
+      "1328",
+      "65"
+    ],
+    "cast_names": [
+      "elijah_wood",
+      "ian_mckellen",
+      "viggo_mortensen",
+      "sean_astin",
+      "ian_holm"
+    ],
+    "cast": [
+      "Elijah Wood",
+      "Ian McKellen",
+      "Viggo Mortensen",
+      "Sean Astin",
+      "Ian Holm"
+    ],
+    "director": {
+      "id": "108",
+      "name": "Peter Jackson",
+      "name_normalized": "peter_jackson"
+    },
+    "keywords": [
+      "based_on_novel_or_book",
+      "battle",
+      "birthday_party",
+      "blizzard",
+      "bravery",
+      "castle",
+      "demon",
+      "dwarf",
+      "elves",
+      "fantasy_world",
+      "fireworks",
+      "good_versus_evil",
+      "hero_s_journey",
+      "invisibility",
+      "journey",
+      "journey_travel",
+      "live_action_and_animation",
+      "magic",
+      "maze",
+      "mine",
+      "mount",
+      "mountain",
+      "mt",
+      "mtn",
+      "obsession",
+      "ring",
+      "sword_and_sorcery",
+      "to_travel",
+      "travel_and_tourism",
+      "traveling",
+      "travelling",
+      "trekking",
+      "troll",
+      "uncle_nephew_relationship",
+      "wraith"
+    ],
+    "origin_country": [],
+    "release_date": "2001-12-18",
+    "first_air_date": null,
+    "last_air_date": null,
+    "us_rating": "PG-13",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        1899
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "HBO Max",
+          "provider_id": 1899,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "display_priority": 6,
+          "mkt_share_order": 6
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "HBO Max",
+        "provider_id": 1899,
+        "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "display_priority": 6,
+        "mkt_share_order": 6
+      },
+      "primary_provider_id": 1899,
+      "primary_provider_type": "in theater",
+      "watch_region": "US",
+      "on_demand_platform_ids": [
+        9,
+        192,
+        350,
+        538,
+        3,
+        7,
+        486
+      ],
+      "on_demand_platforms": [
+        {
+          "provider_name": "Amazon Prime",
+          "provider_id": 9,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "display_priority": 1,
+          "mkt_share_order": 1
+        },
+        {
+          "provider_name": "YouTube",
+          "provider_id": 192,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "display_priority": 3,
+          "mkt_share_order": 3
+        },
+        {
+          "provider_name": "Apple TV",
+          "provider_id": 350,
+          "logo_path": "/mcbz1LgtErU9p4UdbZ0rG6RTWHX.jpg",
+          "display_priority": 9,
+          "mkt_share_order": 9
+        },
+        {
+          "provider_name": "Plex",
+          "provider_id": 538,
+          "logo_path": "/vLZKlXUNDcZR7ilvfY9Wr9k80FZ.jpg",
+          "display_priority": 24,
+          "mkt_share_order": 24
+        },
+        {
+          "provider_name": "Google Play Movies",
+          "provider_id": 3,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "display_priority": 30,
+          "mkt_share_order": 30
+        },
+        {
+          "provider_name": "Fandango At Home",
+          "provider_id": 7,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "display_priority": 35,
+          "mkt_share_order": 35
+        },
+        {
+          "provider_name": "Spectrum On Demand",
+          "provider_id": 486,
+          "logo_path": "/aAb9CUHjFe9Y3O57qnrJH0KOF1B.jpg",
+          "display_priority": 76,
+          "mkt_share_order": 76
+        }
+      ]
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_movie_122",
+    "title": "The Lord of the Rings: The Return of the King",
+    "search_title": "The Lord of the Rings: The Return of the King",
+    "mc_type": "movie",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "122",
+    "year": 2003,
+    "popularity": 47.95,
+    "rating": 8.491,
+    "image": "https://image.tmdb.org/t/p/w185/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
+    "overview": "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is...",
+    "genre_ids": [
+      "12",
+      "14",
+      "28"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "109",
+      "1327",
+      "110",
+      "1328",
+      "1333"
+    ],
+    "cast_names": [
+      "elijah_wood",
+      "ian_mckellen",
+      "viggo_mortensen",
+      "sean_astin",
+      "andy_serkis"
+    ],
+    "cast": [
+      "Elijah Wood",
+      "Ian McKellen",
+      "Viggo Mortensen",
+      "Sean Astin",
+      "Andy Serkis"
+    ],
+    "director": {
+      "id": "108",
+      "name": "Peter Jackson",
+      "name_normalized": "peter_jackson"
+    },
+    "keywords": [
+      "armed_forces",
+      "armies",
+      "army",
+      "award_and_prize",
+      "awards_and_prizes",
+      "based_on_novel_or_book",
+      "bravery",
+      "brutality",
+      "castle",
+      "dwarf",
+      "elves",
+      "epic_battle",
+      "fantasy_world",
+      "giant_spider",
+      "good_versus_evil",
+      "great_war",
+      "hero_s_journey",
+      "high_fantasy",
+      "honor",
+      "honour",
+      "hopeful",
+      "hostilities",
+      "journey",
+      "journey_travel",
+      "king",
+      "kingdom",
+      "live_action_and_animation",
+      "madness",
+      "magic",
+      "medal",
+      "obsession",
+      "power_madness",
+      "prize",
+      "quest",
+      "ring",
+      "sequel",
+      "spirits",
+      "split_personality",
+      "sword_and_sorcery",
+      "sword_making",
+      "to_travel",
+      "travel_and_tourism",
+      "traveling",
+      "travelling",
+      "trekking",
+      "volcano",
+      "war",
+      "wars",
+      "winged_creatures",
+      "wizard",
+      "wraith"
+    ],
+    "origin_country": [],
+    "release_date": "2003-12-17",
+    "first_air_date": null,
+    "last_air_date": null,
+    "us_rating": "PG-13",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        1899
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "HBO Max",
+          "provider_id": 1899,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "display_priority": 6,
+          "mkt_share_order": 6
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "HBO Max",
+        "provider_id": 1899,
+        "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "display_priority": 6,
+        "mkt_share_order": 6
+      },
+      "primary_provider_id": 1899,
+      "primary_provider_type": "in theater",
+      "watch_region": "US",
+      "on_demand_platform_ids": [
+        9,
+        192,
+        350,
+        538,
+        3,
+        7,
+        486
+      ],
+      "on_demand_platforms": [
+        {
+          "provider_name": "Amazon Prime",
+          "provider_id": 9,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "display_priority": 1,
+          "mkt_share_order": 1
+        },
+        {
+          "provider_name": "YouTube",
+          "provider_id": 192,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "display_priority": 3,
+          "mkt_share_order": 3
+        },
+        {
+          "provider_name": "Apple TV",
+          "provider_id": 350,
+          "logo_path": "/mcbz1LgtErU9p4UdbZ0rG6RTWHX.jpg",
+          "display_priority": 9,
+          "mkt_share_order": 9
+        },
+        {
+          "provider_name": "Plex",
+          "provider_id": 538,
+          "logo_path": "/vLZKlXUNDcZR7ilvfY9Wr9k80FZ.jpg",
+          "display_priority": 24,
+          "mkt_share_order": 24
+        },
+        {
+          "provider_name": "Google Play Movies",
+          "provider_id": 3,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "display_priority": 30,
+          "mkt_share_order": 30
+        },
+        {
+          "provider_name": "Fandango At Home",
+          "provider_id": 7,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "display_priority": 35,
+          "mkt_share_order": 35
+        },
+        {
+          "provider_name": "Spectrum On Demand",
+          "provider_id": 486,
+          "logo_path": "/aAb9CUHjFe9Y3O57qnrJH0KOF1B.jpg",
+          "display_priority": 76,
+          "mkt_share_order": 76
+        }
+      ]
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_movie_121",
+    "title": "The Lord of the Rings: The Two Towers",
+    "search_title": "The Lord of the Rings: The Two Towers",
+    "mc_type": "movie",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "121",
+    "year": 2002,
+    "popularity": 47.6,
+    "rating": 8.4,
+    "image": "https://image.tmdb.org/t/p/w185/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
+    "overview": "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard,...",
+    "genre_ids": [
+      "12",
+      "14",
+      "28"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "109",
+      "1327",
+      "110",
+      "1328",
+      "1333"
+    ],
+    "cast_names": [
+      "elijah_wood",
+      "ian_mckellen",
+      "viggo_mortensen",
+      "sean_astin",
+      "andy_serkis"
+    ],
+    "cast": [
+      "Elijah Wood",
+      "Ian McKellen",
+      "Viggo Mortensen",
+      "Sean Astin",
+      "Andy Serkis"
+    ],
+    "director": null,
+    "keywords": [
+      "armed_forces",
+      "army",
+      "based_on_novel_or_book",
+      "battle",
+      "bravery",
+      "brutality",
+      "castle",
+      "dwarf",
+      "elves",
+      "evil_spell",
+      "fantasy_world",
+      "good_versus_evil",
+      "guide",
+      "hero_s_journey",
+      "high_fantasy",
+      "hopeful",
+      "journey",
+      "journey_travel",
+      "live_action_and_animation",
+      "magic",
+      "marsh",
+      "mission",
+      "obsession",
+      "reincarnation",
+      "ring",
+      "sequel",
+      "split_personality",
+      "sword_and_sorcery",
+      "to_travel",
+      "travel_and_tourism",
+      "traveling",
+      "travelling",
+      "trees",
+      "trekking",
+      "winged_creatures",
+      "wizard",
+      "wraith"
+    ],
+    "origin_country": [],
+    "release_date": "2002-12-18",
+    "first_air_date": null,
+    "last_air_date": null,
+    "us_rating": "PG-13",
+    "watch_providers": {
+      "streaming_platform_ids": [
+        1899
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "HBO Max",
+          "provider_id": 1899,
+          "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+          "display_priority": 6,
+          "mkt_share_order": 6
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "HBO Max",
+        "provider_id": 1899,
+        "logo_path": "/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "display_priority": 6,
+        "mkt_share_order": 6
+      },
+      "primary_provider_id": 1899,
+      "primary_provider_type": "in theater",
+      "watch_region": "US",
+      "on_demand_platform_ids": [
+        9,
+        192,
+        350,
+        538,
+        3,
+        7
+      ],
+      "on_demand_platforms": [
+        {
+          "provider_name": "Amazon Prime",
+          "provider_id": 9,
+          "logo_path": "/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+          "display_priority": 1,
+          "mkt_share_order": 1
+        },
+        {
+          "provider_name": "YouTube",
+          "provider_id": 192,
+          "logo_path": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
+          "display_priority": 3,
+          "mkt_share_order": 3
+        },
+        {
+          "provider_name": "Apple TV",
+          "provider_id": 350,
+          "logo_path": "/mcbz1LgtErU9p4UdbZ0rG6RTWHX.jpg",
+          "display_priority": 9,
+          "mkt_share_order": 9
+        },
+        {
+          "provider_name": "Plex",
+          "provider_id": 538,
+          "logo_path": "/vLZKlXUNDcZR7ilvfY9Wr9k80FZ.jpg",
+          "display_priority": 24,
+          "mkt_share_order": 24
+        },
+        {
+          "provider_name": "Google Play Movies",
+          "provider_id": 3,
+          "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+          "display_priority": 30,
+          "mkt_share_order": 30
+        },
+        {
+          "provider_name": "Fandango At Home",
+          "provider_id": 7,
+          "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+          "display_priority": 35,
+          "mkt_share_order": 35
+        }
+      ]
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_tv_312915",
+    "title": "Bake Your Dream",
+    "search_title": "Bake Your Dream",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "312915",
+    "year": 2026,
+    "popularity": 0.06,
+    "rating": 0.0,
+    "image": "https://image.tmdb.org/t/p/w185/sO7V3qo9n7MYnAexfNyVIuzBUgW.jpg",
+    "overview": "Bake Your Dream is a global pastry competition where elite and rising pastry chefs face off in intense challenges, blending technique, creativity, and passion to claim the ultimate title.",
+    "genre_ids": [
+      "10764"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "123807",
+      "2430096",
+      "1966738",
+      "4988208"
+    ],
+    "cast_names": [
+      "lee_da_hee",
+      "rho_hee_young",
+      "mimi",
+      "kwon_seong_joon"
+    ],
+    "cast": [
+      "Lee Da-hee",
+      "Rho Hee-young",
+      "Mimi",
+      "Kwon Seong-joon"
+    ],
+    "director": null,
+    "keywords": [],
+    "origin_country": [
+      "kr"
+    ],
+    "release_date": null,
+    "first_air_date": "2026-02-01",
+    "last_air_date": "2026-02-15",
+    "us_rating": null,
+    "watch_providers": {
+      "streaming_platform_ids": [
+        575,
+        464
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "OnDemandKorea",
+          "provider_id": 575,
+          "logo_path": "/gR8rrj71VCLjlF1LJpplo72MXf0.jpg",
+          "display_priority": 82,
+          "mkt_share_order": 82
+        },
+        {
+          "provider_name": "Kocowa",
+          "provider_id": 464,
+          "logo_path": "/hwsU65QW7A4dbMEWkDpgHyCNcfS.jpg",
+          "display_priority": 111,
+          "mkt_share_order": 111
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "OnDemandKorea",
+        "provider_id": 575,
+        "logo_path": "/gR8rrj71VCLjlF1LJpplo72MXf0.jpg",
+        "display_priority": 82,
+        "mkt_share_order": 82
+      },
+      "primary_provider_id": 575,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_tv_312046",
+    "title": "Glitter & Gold: Ice Dancing",
+    "search_title": "Glitter & Gold: Ice Dancing",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "312046",
+    "year": 2026,
+    "popularity": 21.98,
+    "rating": 8.7,
+    "image": "https://image.tmdb.org/t/p/w185/irrdulKrIPIjUwpZMwdtoo80CLW.jpg",
+    "overview": "Delves into competitive ice dance's intense world, where deep partnerships, total dedication, and raw emotions merge in the pursuit of Olympic gold.",
+    "genre_ids": [
+      "99",
+      "10764"
+    ],
+    "genres": [],
+    "cast_ids": [],
+    "cast_names": [],
+    "cast": [],
+    "director": null,
+    "keywords": [
+      "reality_show"
+    ],
+    "origin_country": [
+      "us"
+    ],
+    "release_date": null,
+    "first_air_date": "2026-02-01",
+    "last_air_date": "2026-02-01",
+    "us_rating": null,
+    "watch_providers": {
+      "streaming_platform_ids": [
+        8
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "Netflix",
+          "provider_id": 8,
+          "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+          "display_priority": 2,
+          "mkt_share_order": 2
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "Netflix",
+        "provider_id": 8,
+        "logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "display_priority": 2,
+        "mkt_share_order": 2
+      },
+      "primary_provider_id": 8,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_tv_306721",
+    "title": "Star Detective Precure!",
+    "search_title": "Star Detective Precure!",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "306721",
+    "year": 2026,
+    "popularity": 22.43,
+    "rating": 10.0,
+    "image": "https://image.tmdb.org/t/p/w185/hvCZ64xKMJvFQDgW3RypLnzzS32.jpg",
+    "overview": "On her 14th birthday, Anna Akechi meets a magical fairy and suddenly time-slips from 2027 to 1999! There, she befriends Mikuru, a spirited girl who dreams of becoming a detective. When mysterious...",
+    "genre_ids": [
+      "16",
+      "10762",
+      "10759",
+      "35",
+      "10765"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "5892199",
+      "1779027",
+      "1168909",
+      "149894",
+      "1157126"
+    ],
+    "cast_names": [
+      "hikari_senga",
+      "kaede_hondo",
+      "nao_toyama",
+      "yuki_kaji",
+      "emiri_kato"
+    ],
+    "cast": [
+      "Hikari Senga",
+      "Kaede Hondo",
+      "Nao Toyama",
+      "Yuki Kaji",
+      "Emiri Kato"
+    ],
+    "director": null,
+    "keywords": [
+      "anime",
+      "detective",
+      "fairy",
+      "female_superhero",
+      "henshin_heroes",
+      "hero",
+      "heroine",
+      "magical_girl",
+      "monster",
+      "precure",
+      "superhero",
+      "superhero_team",
+      "supervillain",
+      "villain"
+    ],
+    "origin_country": [
+      "jp"
+    ],
+    "release_date": null,
+    "first_air_date": "2026-02-01",
+    "last_air_date": "2026-02-15",
+    "us_rating": null,
+    "watch_providers": {
+      "streaming_platform_ids": [
+        283
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "Crunchyroll",
+          "provider_id": 283,
+          "logo_path": "/fzN5Jok5Ig1eJ7gyNGoMhnLSCfh.jpg",
+          "display_priority": 13,
+          "mkt_share_order": 13
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "Crunchyroll",
+        "provider_id": 283,
+        "logo_path": "/fzN5Jok5Ig1eJ7gyNGoMhnLSCfh.jpg",
+        "display_priority": 13,
+        "mkt_share_order": 13
+      },
+      "primary_provider_id": 283,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_tv_288595",
+    "title": "Rise of the 49ers",
+    "search_title": "Rise of the 49ers",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "288595",
+    "year": 2026,
+    "popularity": 22.31,
+    "rating": 10.0,
+    "image": "https://image.tmdb.org/t/p/w185/vp1SsOSfcvVMjPX0dwu0eyfygz7.jpg",
+    "overview": "Using rare and never-before-seen footage, as well as one-on-one interviews, discover how the San Francisco 49ers rose from an also-ran into pro football's most glamorous franchise during the '80s and...",
+    "genre_ids": [
+      "99"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "1223666",
+      "1215054",
+      "1496681",
+      "1215812",
+      "1223657"
+    ],
+    "cast_names": [
+      "joe_montana",
+      "jerry_rice",
+      "ronnie_lott",
+      "steve_young",
+      "tom_brady"
+    ],
+    "cast": [
+      "Joe Montana",
+      "Jerry Rice",
+      "Ronnie Lott",
+      "Steve Young",
+      "Tom Brady"
+    ],
+    "director": null,
+    "keywords": [
+      "1980s",
+      "1990s",
+      "american_football",
+      "american_football_player",
+      "american_rules_football",
+      "football",
+      "gridiron_football",
+      "miniseries",
+      "nfl_national_football_league",
+      "sports_documentary"
+    ],
+    "origin_country": [
+      "us"
+    ],
+    "release_date": null,
+    "first_air_date": "2026-02-01",
+    "last_air_date": "2026-02-02",
+    "us_rating": null,
+    "watch_providers": {
+      "streaming_platform_ids": [
+        526,
+        2383
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "AMC Plus",
+          "provider_id": 526,
+          "logo_path": "/ovmu6uot1XVvsemM2dDySXLiX57.jpg",
+          "display_priority": 11,
+          "mkt_share_order": 11
+        },
+        {
+          "provider_name": "Philo",
+          "provider_id": 2383,
+          "logo_path": "/ptmbGSttkyzawLbxx9MElmxKuVo.jpg",
+          "display_priority": 44,
+          "mkt_share_order": 44
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "AMC Plus",
+        "provider_id": 526,
+        "logo_path": "/ovmu6uot1XVvsemM2dDySXLiX57.jpg",
+        "display_priority": 11,
+        "mkt_share_order": 11
+      },
+      "primary_provider_id": 526,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  },
+  {
+    "id": "tmdb_tv_287231",
+    "title": "Vanished",
+    "search_title": "Vanished",
+    "mc_type": "tv",
+    "mc_subtype": null,
+    "source": "tmdb",
+    "source_id": "287231",
+    "year": 2026,
+    "popularity": 25.88,
+    "rating": 7.471,
+    "image": "https://image.tmdb.org/t/p/w185/KVyfJoW4nO1CATxHrD7oR8rRJH.jpg",
+    "overview": "When a romantic getaway to Paris takes a dark turn with the sudden disappearance of her boyfriend Tom aboard a train to the south of France, Alice is plunged into a web of intrigue and danger,...",
+    "genre_ids": [
+      "18",
+      "9648"
+    ],
+    "genres": [],
+    "cast_ids": [
+      "53862",
+      "237455",
+      "13688",
+      "16808",
+      "10917"
+    ],
+    "cast_names": [
+      "kaley_cuoco",
+      "sam_claflin",
+      "karin_viard",
+      "matthias_schweigh_fer",
+      "simon_abkarian"
+    ],
+    "cast": [
+      "Kaley Cuoco",
+      "Sam Claflin",
+      "Karin Viard",
+      "Matthias Schweigh\u00f6fer",
+      "Simon Abkarian"
+    ],
+    "director": null,
+    "keywords": [
+      "admiring"
+    ],
+    "origin_country": [
+      "us"
+    ],
+    "release_date": null,
+    "first_air_date": "2026-02-01",
+    "last_air_date": "2026-02-08",
+    "us_rating": null,
+    "watch_providers": {
+      "streaming_platform_ids": [
+        257,
+        34,
+        2383,
+        486
+      ],
+      "streaming_platforms": [
+        {
+          "provider_name": "fuboTV",
+          "provider_id": 257,
+          "logo_path": "/9BgaNQRMDvVlji1JBZi6tcfxpKx.jpg",
+          "display_priority": 29,
+          "mkt_share_order": 29
+        },
+        {
+          "provider_name": "MGM Plus",
+          "provider_id": 34,
+          "logo_path": "/ctiRpS16dlaTXQBSsiFncMrgWmh.jpg",
+          "display_priority": 42,
+          "mkt_share_order": 42
+        },
+        {
+          "provider_name": "Philo",
+          "provider_id": 2383,
+          "logo_path": "/ptmbGSttkyzawLbxx9MElmxKuVo.jpg",
+          "display_priority": 44,
+          "mkt_share_order": 44
+        },
+        {
+          "provider_name": "Spectrum On Demand",
+          "provider_id": 486,
+          "logo_path": "/aAb9CUHjFe9Y3O57qnrJH0KOF1B.jpg",
+          "display_priority": 76,
+          "mkt_share_order": 76
+        }
+      ],
+      "primary_provider": {
+        "provider_name": "fuboTV",
+        "provider_id": 257,
+        "logo_path": "/9BgaNQRMDvVlji1JBZi6tcfxpKx.jpg",
+        "display_priority": 29,
+        "mkt_share_order": 29
+      },
+      "primary_provider_id": 257,
+      "primary_provider_type": "flatrate",
+      "watch_region": "US",
+      "on_demand_platform_ids": [],
+      "on_demand_platforms": []
+    },
+    "created_at": 1709000000,
+    "modified_at": 1709000000,
+    "_source": "backfill"
+  }
+]
