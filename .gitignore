@@ -17,3 +17,9 @@ config/*.json
 !config/*.env.encrypted
 
 .vscode/*.jsontest_backfill.json
+
+# IDE and test artifacts
+test_backfill.json
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/example.settings.json
