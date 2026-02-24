@@ -426,13 +426,20 @@ Adding created_at/modified_at requires drop + recreate indexes. Use `dropindex d
 
 ---
 
-## Implementation Order
+## Implementation Order (Status: Complete)
 
-1. Normalization: SearchDocument (add date fields, director object replacing flat director_id/director_name, us_rating, watch_providers, created_at, modified_at, _source); update _extract_director to return dict|None; add _extract_dates; document_to_redis maps all fields from dataclass
-2. Schema: Add created_at/modified_at to all 5 indexes; update media index director to JSONPath `$.director.id` / `$.director.name_normalized`; add selected nested `watch_providers` index paths
-3. Full-replace paths: Read-before-write in ETL services
-4. Partial-update paths: modified_at in enrich_redis_metadata, migrate_search_titles
-5. Nightly ETL: Add get_content_rating and get_streaming_platform_summary_for_title calls for us_rating and watch_providers
-6. Backfill script: Phase 1, 2, 2b, 3
-7. GET /api/changes endpoint
-8. Documentation: redis-index-reference.mdc
+1. **DONE** Normalization: SearchDocument (add date fields, director object replacing flat director_id/director_name, us_rating, watch_providers, created_at, modified_at, _source); update _extract_director to return dict|None; add _extract_dates; document_to_redis maps all fields from dataclass
+2. **DONE** Schema: Add created_at/modified_at to all 5 indexes; update media index director to JSONPath `$.director.id` / `$.director.name_normalized`; add selected nested `watch_providers` index paths
+3. **DONE** Full-replace paths: Read-before-write in ETL services (etl_service.py, tmdb_nightly_etl.py, pi_nightly_etl.py, load_book_index.py, load_author_index.py)
+4. **DONE** Partial-update paths: modified_at in enrich_redis_metadata, migrate_search_titles
+5. **DONE** Nightly ETL: Add get_content_rating and get_streaming_platform_summary_for_title calls for us_rating and watch_providers
+6. **DONE** Backfill script: Phase 1, 2, 2b, 2+2b, 3 (scripts/backfill_media_dates_and_timestamps.py)
+7. **DONE** GET /api/changes endpoint (web/app.py)
+
+### Operational Steps (Post-Deploy)
+
+1. Drop + recreate indexes: `FT.DROPINDEX idx:media` (delete_documents=False), then run build_redis_index.py
+2. Run Phase 1 backfill for movies: `python scripts/backfill_media_dates_and_timestamps.py --phase 1 --type movie`
+3. Run Phase 1 backfill for TV: `python scripts/backfill_media_dates_and_timestamps.py --phase 1 --type tv`
+4. Run Phase 2+2b combined: `python scripts/backfill_media_dates_and_timestamps.py --phase 2+2b`
+5. Run Phase 3 non-media timestamps: `python scripts/backfill_media_dates_and_timestamps.py --phase 3`
