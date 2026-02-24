@@ -2909,17 +2909,26 @@ INDEX_CONFIGS = {
             # Cast filtering (arrays) - cast_names normalized
             TagField("$.cast_ids[*]", as_name="cast_ids"),
             TagField("$.cast_names[*]", as_name="cast_names"),
-            # Director fields (normalized)
-            TagField("$.director_id", as_name="director_id"),
-            TagField("$.director_name", as_name="director_name"),
+            # Director object (JSONPath into nested dict)
+            TagField("$.director.id", as_name="director_id"),
+            TagField("$.director.name_normalized", as_name="director_name"),
             # Keywords (IPTC expanded, normalized)
             TagField("$.keywords[*]", as_name="keywords"),
             # Origin country (normalized ISO codes)
             TagField("$.origin_country[*]", as_name="origin_country"),
+            # watch_providers indexed subfields
+            TagField("$.watch_providers.watch_region", as_name="watch_region"),
+            TagField("$.watch_providers.primary_provider_type", as_name="primary_provider_type"),
+            TagField("$.watch_providers.streaming_platform_ids[*]", as_name="streaming_platform_ids"),
+            TagField("$.watch_providers.on_demand_platform_ids[*]", as_name="on_demand_platform_ids"),
+            NumericField("$.watch_providers.primary_provider_id", as_name="primary_provider_id", sortable=True),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),
             NumericField("$.year", as_name="year", sortable=True),
+            # Document lifecycle timestamps
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "people": {
@@ -2937,6 +2946,8 @@ INDEX_CONFIGS = {
             TagField("$.source", as_name="source"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "podcasts": {
@@ -2962,6 +2973,8 @@ INDEX_CONFIGS = {
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "author": {
@@ -2984,6 +2997,8 @@ INDEX_CONFIGS = {
             NumericField("$.work_count", as_name="work_count", sortable=True),
             NumericField("$.quality_score", as_name="quality_score", sortable=True),
             NumericField("$.wikidata_birth_year", as_name="birth_year", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "book": {
@@ -3022,6 +3037,8 @@ INDEX_CONFIGS = {
             # NEW: Popularity fields
             NumericField("$.popularity_score", as_name="popularity_score", sortable=True),
             NumericField("$.edition_count", as_name="edition_count", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
 }

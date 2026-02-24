@@ -28,7 +28,7 @@ import os
 import time
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -38,7 +38,7 @@ from adapters.config import load_env
 from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
-from core.normalize import document_to_redis, normalize_document
+from core.normalize import document_to_redis, normalize_document, resolve_timestamps
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from etl.documentary_filter import is_documentary, is_eligible_documentary
 from utils.get_logger import get_logger
@@ -547,18 +547,14 @@ class TMDBChangesETL(TMDBService):
                 batch = items[i : i + batch_size]
                 batch_start = time.time()
 
-                pipe = redis.pipeline()
-
+                prepared: list[tuple[str, dict[str, Any]]] = []
                 for item in batch:
                     stats.load_phase.items_processed += 1
-
                     try:
-                        # Normalize and prepare for Redis
                         if media_type == "person":
                             doc_dict = self._normalize_person(item)
-                            # For person, doc_dict is already in Redis format
                             key = f"{prefix}{doc_dict['id']}"
-                            redis_doc = doc_dict
+                            prepared.append((key, doc_dict))
                         else:
                             doc = normalize_document(item, genre_mapping=genre_mapping)
                             if doc is None:
@@ -567,19 +563,31 @@ class TMDBChangesETL(TMDBService):
                                     f"{item.get('id')}: normalize_document returned None"
                                 )
                                 continue
-                            # Use doc.id (mc_id like "tmdb_tv_12345") for key consistency
-                            # This matches etl_service.py which uses search_doc.id
                             key = f"{prefix}{doc.id}"
                             redis_doc = document_to_redis(doc)
-
-                        pipe.json().set(key, "$", redis_doc)
-                        stats.load_phase.items_success += 1
-
+                            prepared.append((key, redis_doc))
                     except Exception as e:
                         stats.load_phase.items_failed += 1
                         stats.load_phase.errors.append(f"{item.get('id')}: {e}")
 
-                await pipe.execute()
+                if prepared:
+                    now_ts = int(datetime.now(UTC).timestamp())
+                    read_pipe = redis.pipeline()
+                    for key, _ in prepared:
+                        read_pipe.json().get(key)
+                    existing_docs: list[object] = await read_pipe.execute()
+
+                    write_pipe = redis.pipeline()
+                    for (key, redis_doc), existing in zip(
+                        prepared, existing_docs, strict=True
+                    ):
+                        existing_dict = existing if isinstance(existing, dict) else None
+                        ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                        redis_doc["created_at"] = ca
+                        redis_doc["modified_at"] = ma
+                        write_pipe.json().set(key, "$", redis_doc)
+                        stats.load_phase.items_success += 1
+                    await write_pipe.execute()
 
                 batch_time = time.time() - batch_start
                 items_per_sec = len(batch) / batch_time if batch_time > 0 else 0

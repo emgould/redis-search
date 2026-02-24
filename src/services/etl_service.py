@@ -14,7 +14,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from google.cloud import storage  # type: ignore[attr-defined]
@@ -22,7 +22,7 @@ from redis.asyncio import Redis
 
 from adapters.config import load_env
 from contracts.models import MCSources, MCType
-from core.normalize import document_to_redis, normalize_document
+from core.normalize import SearchDocument, document_to_redis, normalize_document, resolve_timestamps
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 
 
@@ -465,8 +465,7 @@ class TMDBETLService:
         skipped_in_file = 0
 
         # Process each item
-        pipeline = self.redis.pipeline()
-        batch_count = 0
+        pending_batch: list[tuple[str, SearchDocument]] = []
 
         for item in results:
             # === FILTERING LOGIC ===
@@ -555,7 +554,6 @@ class TMDBETLService:
                     if cast_member.get("profile_path") or cast_member.get("has_image")
                 ]
 
-            # Normalize the document with genre mapping
             search_doc = normalize_document(
                 item, source=MCSources.TMDB, mc_type=mc_type, genre_mapping=self.genre_mapping
             )
@@ -564,26 +562,45 @@ class TMDBETLService:
                 skipped_in_file += 1
                 continue
 
-            # Convert to Redis format
             key = f"media:{search_doc.id}"
-            redis_doc = document_to_redis(search_doc)
+            pending_batch.append((key, search_doc))
 
-            # Add to pipeline
-            pipeline.json().set(key, "$", redis_doc)
-            batch_count += 1
-            loaded_in_file += 1
+            if len(pending_batch) >= self.config.batch_size:
+                loaded_in_file += await self._flush_batch_with_timestamps(pending_batch)
+                pending_batch = []
 
-            # Execute batch
-            if batch_count >= self.config.batch_size:
-                await pipeline.execute()
-                pipeline = self.redis.pipeline()
-                batch_count = 0
-
-        # Execute remaining items
-        if batch_count > 0:
-            await pipeline.execute()
+        if pending_batch:
+            loaded_in_file += await self._flush_batch_with_timestamps(pending_batch)
 
         stats.documents_loaded += loaded_in_file
         stats.documents_skipped += skipped_in_file
 
         print(f"    ✅ Loaded {loaded_in_file}, skipped {skipped_in_file}")
+
+    async def _flush_batch_with_timestamps(
+        self, batch: list[tuple[str, SearchDocument]]
+    ) -> int:
+        """Write a batch of docs with read-before-write timestamp resolution."""
+        if not batch or not self.redis:
+            return 0
+
+        now_ts = int(datetime.now(UTC).timestamp())
+        keys = [key for key, _ in batch]
+
+        read_pipe = self.redis.pipeline()
+        for key in keys:
+            read_pipe.json().get(key)
+        existing_docs: list[object] = await read_pipe.execute()
+
+        write_pipe = self.redis.pipeline()
+        for (key, search_doc), existing in zip(batch, existing_docs, strict=True):
+            existing_dict = existing if isinstance(existing, dict) else None
+            created_at, modified_at, source_tag = resolve_timestamps(existing_dict, now_ts)
+            search_doc.created_at = created_at
+            search_doc.modified_at = modified_at
+            search_doc._source = source_tag
+            redis_doc = document_to_redis(search_doc)
+            write_pipe.json().set(key, "$", redis_doc)
+
+        await write_pipe.execute()
+        return len(batch)

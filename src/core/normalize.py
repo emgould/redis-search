@@ -11,6 +11,7 @@ TAG values are normalized (lowercase, special chars replaced with underscore)
 to ensure consistent filtering in Redis Search.
 """
 
+import math
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -77,13 +78,23 @@ class SearchDocument:
     cast_ids: list[str]  # TMDB person IDs as strings for cast members
     cast_names: list[str]  # Cast member names normalized for search/filter
     cast: list[str]  # Cast member names for display (NOT normalized)
-    # Director fields (indexed as TagFields)
-    director_id: str | None = None  # TMDB person ID for director
-    director_name: str | None = None  # Director name normalized
+    # Director object (indexed via JSONPath into $.director.id, $.director.name_normalized)
+    director: dict[str, str] | None = None
     # Keywords (indexed as TagFields - IPTC expanded and normalized)
     keywords: list[str] = field(default_factory=list)
     # Origin country (indexed as TagFields - normalized ISO codes)
     origin_country: list[str] = field(default_factory=list)
+    # Date fields (stored, not indexed)
+    release_date: str | None = None  # YYYY-MM-DD, movies only
+    first_air_date: str | None = None  # YYYY-MM-DD, TV only
+    last_air_date: str | None = None  # YYYY-MM-DD, TV only
+    # Content rating and streaming providers
+    us_rating: str | None = None  # e.g. "R", "PG-13", "TV-MA"
+    watch_providers: dict[str, Any] | None = None
+    # Document lifecycle timestamps
+    created_at: int | None = None  # Unix seconds, set on first index
+    modified_at: int | None = None  # Unix seconds, updated on every write
+    _source: str | None = None  # Write provenance (e.g. "backfill")
     # Person-specific fields (for people index)
     also_known_as: str | None = None  # Pipe-separated alternate names for search
 
@@ -188,8 +199,6 @@ class BaseTMDBNormalizer(BaseNormalizer):
         - Vote count (more votes = more popular)
         - Vote average (quality signal)
         """
-        import math
-
         metrics = raw.get("metrics", {})
 
         # Get raw values
@@ -310,34 +319,50 @@ class BaseTMDBNormalizer(BaseNormalizer):
 
         return cast_ids, cast_names, cast_display
 
-    def _extract_director(self, raw: dict) -> tuple[str | None, str | None]:
+    def _extract_director(self, raw: dict) -> dict[str, str] | None:
         """
-        Extract director data from TMDB data.
+        Extract director data from TMDB data as a structured object.
 
         Returns:
-            Tuple of (director_id, director_name)
-            - director_id: TMDB person ID as string
-            - director_name: Director name normalized
+            Dict with id, name, name_normalized — or None when absent.
         """
-        # Try direct director field first
-        director = raw.get("director", {})
-        if isinstance(director, dict) and director.get("id"):
-            director_id = str(director["id"])
-            director_name = director.get("name", "")
-            normalized_name = normalize_tag(director_name) if director_name else None
-            return director_id, normalized_name
+        director_raw: dict[str, Any] | None = None
 
-        # Try tmdb_cast.director
-        tmdb_cast = raw.get("tmdb_cast", {})
-        if isinstance(tmdb_cast, dict):
-            director = tmdb_cast.get("director", {})
-            if isinstance(director, dict) and director.get("id"):
-                director_id = str(director["id"])
-                director_name = director.get("name", "")
-                normalized_name = normalize_tag(director_name) if director_name else None
-                return director_id, normalized_name
+        candidate = raw.get("director", {})
+        if isinstance(candidate, dict) and candidate.get("id"):
+            director_raw = candidate
+        else:
+            tmdb_cast = raw.get("tmdb_cast", {})
+            if isinstance(tmdb_cast, dict):
+                candidate = tmdb_cast.get("director", {})
+                if isinstance(candidate, dict) and candidate.get("id"):
+                    director_raw = candidate
 
-        return None, None
+        if director_raw is None:
+            return None
+
+        name = director_raw.get("name", "")
+        return {
+            "id": str(director_raw["id"]),
+            "name": name,
+            "name_normalized": normalize_tag(name) or "",
+        }
+
+    def _extract_dates(self, raw: dict, mc_type: MCType) -> dict[str, str | None]:
+        """Extract date fields based on content type."""
+        if mc_type == MCType.MOVIE:
+            return {
+                "release_date": raw.get("release_date") or None,
+                "first_air_date": None,
+                "last_air_date": None,
+            }
+        if mc_type == MCType.TV_SERIES:
+            return {
+                "release_date": None,
+                "first_air_date": raw.get("first_air_date") or None,
+                "last_air_date": raw.get("last_air_date") or None,
+            }
+        return {"release_date": None, "first_air_date": None, "last_air_date": None}
 
     def _extract_origin_country(self, raw: dict) -> list[str]:
         """
@@ -410,11 +435,9 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
         if not title:
             return None
 
-        # Extract cast data (ids, normalized names, display names)
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
-
-        # Extract director
-        director_id, director_name = self._extract_director(raw)
+        director = self._extract_director(raw)
+        dates = self._extract_dates(raw, self.mc_type)
 
         return SearchDocument(
             id=doc_id,
@@ -433,10 +456,14 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             cast_ids=cast_ids,
             cast_names=cast_names,
             cast=cast_display,
-            director_id=director_id,
-            director_name=director_name,
+            director=director,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
+            release_date=dates["release_date"],
+            first_air_date=dates["first_air_date"],
+            last_air_date=dates["last_air_date"],
+            us_rating=raw.get("us_rating"),
+            watch_providers=raw.get("watch_providers"),
         )
 
 
@@ -460,11 +487,8 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
         if not title:
             return None
 
-        # Extract cast data (ids, normalized names, display names)
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
-
-        # Extract director (TV shows may have creators, but we use director field if present)
-        director_id, director_name = self._extract_director(raw)
+        dates = self._extract_dates(raw, self.mc_type)
 
         return SearchDocument(
             id=doc_id,
@@ -483,10 +507,14 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             cast_ids=cast_ids,
             cast_names=cast_names,
             cast=cast_display,
-            director_id=director_id,
-            director_name=director_name,
+            director=None,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
+            release_date=dates["release_date"],
+            first_air_date=dates["first_air_date"],
+            last_air_date=dates["last_air_date"],
+            us_rating=raw.get("us_rating"),
+            watch_providers=raw.get("watch_providers"),
         )
 
 
@@ -658,7 +686,7 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
     """
     result: dict[str, Any] = {
         "id": doc.id,
-        "title": doc.search_title,  # Original title for display
+        "title": doc.search_title,
         "search_title": normalize_search_title(doc.search_title),
         "mc_type": doc.mc_type.value,
         "mc_subtype": doc.mc_subtype.value if doc.mc_subtype else None,
@@ -669,25 +697,54 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "rating": doc.rating,
         "image": doc.image,
         "overview": doc.overview,
-        # Genre fields (indexed as TagFields - normalized)
         "genre_ids": doc.genre_ids,
         "genres": doc.genres,
-        # Cast fields (indexed as TagFields - cast_names normalized, cast for display)
         "cast_ids": doc.cast_ids,
         "cast_names": doc.cast_names,
         "cast": doc.cast,
-        # Director fields (indexed as TagFields)
-        "director_id": doc.director_id,
-        "director_name": doc.director_name,
-        # Keywords (indexed as TagFields - IPTC expanded)
+        "director": doc.director,
         "keywords": doc.keywords,
-        # Origin country (indexed as TagFields)
         "origin_country": doc.origin_country,
+        "release_date": doc.release_date,
+        "first_air_date": doc.first_air_date,
+        "last_air_date": doc.last_air_date,
+        "us_rating": doc.us_rating,
+        "watch_providers": doc.watch_providers,
+        "created_at": doc.created_at,
+        "modified_at": doc.modified_at,
+        "_source": doc._source,
     }
-    # Add also_known_as for person documents
     if doc.also_known_as is not None:
         result["also_known_as"] = doc.also_known_as
     return result
+
+
+BACKFILL_DEFAULT_TS = 1771891200  # 2026-02-23 00:00:00 UTC
+
+
+def resolve_timestamps(
+    existing_doc: dict[str, Any] | None,
+    now_ts: int,
+    source_tag: str | None = None,
+) -> tuple[int, int, str | None]:
+    """
+    Determine created_at, modified_at, and _source for a document write.
+
+    Args:
+        existing_doc: The existing Redis document (None if new).
+        now_ts: Current Unix timestamp.
+        source_tag: Optional provenance tag (e.g. "backfill").
+
+    Returns:
+        (created_at, modified_at, _source)
+    """
+    if existing_doc and isinstance(existing_doc, dict):
+        created_at = existing_doc.get("created_at")
+        if created_at is None:
+            created_at = BACKFILL_DEFAULT_TS
+    else:
+        created_at = now_ts
+    return int(created_at), now_ts, source_tag
 
 
 # Legacy function for backward compatibility

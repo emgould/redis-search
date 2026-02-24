@@ -38,7 +38,7 @@ import tarfile
 import tempfile
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +47,7 @@ from redis.asyncio import Redis
 from adapters.config import load_env
 from contracts.models import MCSources, MCType
 from core.iptc import expand_keywords, normalize_tag
-from core.normalize import SearchDocument, document_to_redis
+from core.normalize import SearchDocument, document_to_redis, resolve_timestamps
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -442,21 +442,13 @@ class PodcastIndexNightlyETL:
             # Step 4: Load into Redis
             logger.info("Loading into Redis...")
 
-            pipeline = None if dry_run else self.redis.pipeline()  # type: ignore
-            batch_count = 0
+            prepared: list[tuple[str, dict[str, Any]]] = []
 
             for row in rows:
                 try:
-                    # Convert to SearchDocument
                     search_doc = self._row_to_search_document(row)
-
-                    # Convert to Redis format
                     redis_doc = document_to_redis(search_doc)
-
-                    # Add display fields
                     redis_doc = self._add_display_fields(redis_doc, row)
-
-                    # Redis key
                     key = f"podcast:{search_doc.id}"
 
                     if dry_run:
@@ -466,15 +458,8 @@ class PodcastIndexNightlyETL:
                                 f"  [DRY RUN] Would load: {search_doc.search_title[:50]} -> {key}"
                             )
                     else:
-                        pipeline.json().set(key, "$", redis_doc)  # type: ignore
-                        batch_count += 1
+                        prepared.append((key, redis_doc))
                         stats.documents_loaded += 1
-
-                        if batch_count >= REDIS_BATCH_SIZE:
-                            await pipeline.execute()  # type: ignore
-                            logger.info(f"  Loaded {stats.documents_loaded:,} podcasts...")
-                            pipeline = self.redis.pipeline()  # type: ignore
-                            batch_count = 0
 
                 except Exception as e:
                     stats.errors += 1
@@ -484,10 +469,31 @@ class PodcastIndexNightlyETL:
                         stats.error_messages.append(f"Feed {podcast_id}: {e}")
                         logger.error(f"Error processing podcast {podcast_id}: {e}")
 
-            # Execute remaining items
-            if not dry_run and batch_count > 0:
-                await pipeline.execute()  # type: ignore
-                logger.info(f"  Loaded final batch ({batch_count} podcasts)")
+            if not dry_run:
+                for i in range(0, len(prepared), REDIS_BATCH_SIZE):
+                    batch = prepared[i : i + REDIS_BATCH_SIZE]
+                    now_ts = int(datetime.now(UTC).timestamp())
+
+                    read_pipe = self.redis.pipeline()  # type: ignore[union-attr]
+                    for key, _ in batch:
+                        read_pipe.json().get(key)
+                    existing_docs: list[object] = await read_pipe.execute()
+
+                    write_pipe = self.redis.pipeline()  # type: ignore[union-attr]
+                    for (key, redis_doc), existing in zip(
+                        batch, existing_docs, strict=True
+                    ):
+                        existing_dict = existing if isinstance(existing, dict) else None
+                        ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                        redis_doc["created_at"] = ca
+                        redis_doc["modified_at"] = ma
+                        write_pipe.json().set(key, "$", redis_doc)
+                    await write_pipe.execute()
+
+                    logger.info(
+                        f"  Loaded {min(i + REDIS_BATCH_SIZE, len(prepared)):,}"
+                        f"/{len(prepared):,} podcasts..."
+                    )
 
             conn.close()
 

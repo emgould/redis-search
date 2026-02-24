@@ -32,6 +32,7 @@ import re
 import sys
 import time
 from collections.abc import Awaitable
+from datetime import UTC, datetime
 from typing import cast
 
 from dotenv import load_dotenv
@@ -155,14 +156,18 @@ async def migrate_prefix(
                             )
                     else:
                         # Set title to original (for display), search_title to normalized
+                        now_ts = int(datetime.now(UTC).timestamp())
                         update_pipe.json().set(key, "$.title", search_title)  # type: ignore[union-attr]
                         update_pipe.json().set(key, "$.search_title", normalized)  # type: ignore[union-attr]
+                        update_pipe.json().set(key, "$.modified_at", now_ts)  # type: ignore[union-attr]
                         batch_updates += 1
                     stats["updated"] += 1
                 elif needs_title:
                     # No apostrophes but title field missing — add for consistency
                     if not dry_run:
+                        now_ts = int(datetime.now(UTC).timestamp())
                         update_pipe.json().set(key, "$.title", search_title)  # type: ignore[union-attr]
+                        update_pipe.json().set(key, "$.modified_at", now_ts)  # type: ignore[union-attr]
                         batch_updates += 1
                     stats["title_added"] += 1
                 else:
