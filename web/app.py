@@ -3097,7 +3097,11 @@ INDEX_CONFIGS = {
             # Content type filters (MCType and MCSubType)
             TagField("$.mc_type", as_name="mc_type"),
             TagField("$.mc_subtype", as_name="mc_subtype"),
-            TagField("$.spoken_language", as_name="spoken_language"),
+            TagField("$.spoken_languages[*]", as_name="spoken_languages"),
+            TagField("$.original_language", as_name="original_language"),
+            # Text fields
+            TextField("$.original_title", as_name="original_title", weight=1.0),
+            TextField("$.tagline", as_name="tagline", weight=1.0),
             # Source filter
             TagField("$.source", as_name="source"),
             # Genre filtering (arrays) - normalized (lowercase, underscores)
@@ -3113,6 +3117,8 @@ INDEX_CONFIGS = {
             TagField("$.keywords[*]", as_name="keywords"),
             # Origin country (normalized ISO codes)
             TagField("$.origin_country[*]", as_name="origin_country"),
+            # Networks
+            TagField("$.networks[*]", as_name="networks"),
             # watch_providers indexed subfields
             TagField("$.watch_providers.watch_region", as_name="watch_region"),
             TagField("$.watch_providers.primary_provider_type", as_name="primary_provider_type"),
@@ -3131,6 +3137,9 @@ INDEX_CONFIGS = {
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),
             NumericField("$.year", as_name="year", sortable=True),
+            NumericField("$.vote_count", as_name="vote_count", sortable=True),
+            NumericField("$.number_of_seasons", as_name="number_of_seasons", sortable=True),
+            NumericField("$.revenue", as_name="revenue", sortable=True),
             # Document lifecycle timestamps
             NumericField("$.created_at", as_name="created_at", sortable=True),
             NumericField("$.modified_at", as_name="modified_at", sortable=True),

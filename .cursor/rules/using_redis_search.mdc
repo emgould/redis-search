@@ -57,7 +57,7 @@ Each index returns full JSON documents from the Redis JSON key.
 
 ### Indexed (queryable/sortable) media fields
 
-`search_title`, `mc_type`, `mc_subtype`, `spoken_language`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id`, `director.name_normalized`, `keywords`, `origin_country`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids`, `watch_providers.on_demand_platform_ids`, `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `created_at`, `modified_at`.
+`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id`, `director.name_normalized`, `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids`, `watch_providers.on_demand_platform_ids`, `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
 
 ## `idx:people` (`person:`)
 

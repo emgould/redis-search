@@ -84,33 +84,8 @@ class MigrationStats:
 
 def build_new_schema() -> tuple:
     """Build the new index schema with additional TAG fields."""
-    return (
-        # Primary search field with high weight
-        TextField("$.search_title", as_name="search_title", weight=5.0),
-        # Content type filters (MCType and MCSubType)
-        TagField("$.mc_type", as_name="mc_type"),
-        TagField("$.mc_subtype", as_name="mc_subtype"),
-        TagField("$.spoken_language", as_name="spoken_language"),
-        # Source filter
-        TagField("$.source", as_name="source"),
-        # Genre filtering (arrays) - now normalized
-        TagField("$.genre_ids[*]", as_name="genre_ids"),
-        TagField("$.genres[*]", as_name="genres"),
-        # Cast filtering (arrays) - now normalized
-        TagField("$.cast_ids[*]", as_name="cast_ids"),
-        TagField("$.cast_names[*]", as_name="cast_names"),
-        # NEW: Director fields
-        TagField("$.director_id", as_name="director_id"),
-        TagField("$.director_name", as_name="director_name"),
-        # NEW: Keywords (IPTC expanded)
-        TagField("$.keywords[*]", as_name="keywords"),
-        # NEW: Origin country
-        TagField("$.origin_country[*]", as_name="origin_country"),
-        # Sortable numeric fields for ranking
-        NumericField("$.popularity", as_name="popularity", sortable=True),
-        NumericField("$.rating", as_name="rating", sortable=True),
-        NumericField("$.year", as_name="year", sortable=True),
-    )
+    from web.app import INDEX_CONFIGS
+    return INDEX_CONFIGS["media"]["schema"]
 
 
 def normalize_existing_tags(doc: dict[str, Any]) -> dict[str, Any]:
@@ -162,6 +137,37 @@ def extract_new_fields(
                 c.get("iso_3166_1", "") for c in prod_countries if isinstance(c, dict)
             ]
     doc["origin_country"] = [normalize_tag(c) for c in origin_country if c and normalize_tag(c)]
+
+    # Additional fields from recent schema updates
+    if hasattr(details, "original_title") and details.original_title:
+        doc["original_title"] = details.original_title
+    if hasattr(details, "tagline") and details.tagline:
+        doc["tagline"] = details.tagline
+    
+    # Language fields
+    if hasattr(details, "original_language") and details.original_language:
+        doc["original_language"] = details.original_language
+    
+    # spoken_languages is now stored as an array of strings
+    spoken_langs = getattr(details, "spoken_languages", [])
+    if spoken_langs:
+        # Assuming spoken_languages on the API model is already a list of strings
+        doc["spoken_languages"] = spoken_langs
+    
+    # Networks
+    networks = getattr(details, "networks", [])
+    if networks:
+        doc["networks"] = networks
+        
+    # Numeric stats
+    if hasattr(details, "vote_count"):
+        doc["vote_count"] = details.vote_count
+    
+    if hasattr(details, "number_of_seasons"):
+        doc["number_of_seasons"] = details.number_of_seasons
+        
+    if hasattr(details, "revenue"):
+        doc["revenue"] = details.revenue
 
     return doc
 
