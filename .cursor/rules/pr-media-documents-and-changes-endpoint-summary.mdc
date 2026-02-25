@@ -44,6 +44,16 @@ This PR includes every local change in the branch at commit time, including the 
 - Added a dedicated schema/consumer reference for Redis indexes, including TV vs Movie payload field set in `idx:media`:
   - `.cursor/rules/using_redis_search.mdc`
 
+## 5) Documentation artifacts added in this PR
+
+- New doc:
+  - `.cursor/rules/using_redis_search.mdc`
+    - Documents index-by-index Redis payload schemas and separates `idx:media` by `mc_type` (`movie` vs `tv`).
+- Updated docs:
+  - `.cursor/rules/pr-media-documents-and-changes-endpoint-summary.mdc` (this PR summary)
+  - `.cursor/rules/media-index-enhancements-plan.mdc` (already includes API/shape notes)
+  - `.cursor/rules/created-at-modified-at-changes-endpoint.mdc` (changes endpoint contract)
+
 ## Notes
 
 - Branch includes all modified files in this repo state when the PR was created, not a subset.
