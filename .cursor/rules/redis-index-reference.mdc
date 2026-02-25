@@ -42,7 +42,10 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 | `search_title` | TEXT | 5.0 | Primary search field - title |
 | `mc_type` | TAG | - | Content type: `movie` or `tv` |
 | `mc_subtype` | TAG | - | Subtype (rarely used for media) |
-| `spoken_language` | TAG | - | Primary spoken language |
+| `spoken_languages` | TAG | - | Movie/TV spoken languages |
+| `original_language` | TAG | - | Original language code |
+| `original_title` | TEXT | 1.0 | Original title |
+| `tagline` | TEXT | 1.0 | Tagline |
 | `source` | TAG | - | Data source: `tmdb` |
 | `genre_ids[*]` | TAG | - | TMDB genre IDs as strings (e.g., "35", "18") |
 | `genres[*]` | TAG | - | Genre names normalized (e.g., `comedy`, `science_fiction`) |
@@ -52,15 +55,27 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 | `director_name` | TAG | - | Director name normalized (e.g., `christopher_nolan`) |
 | `keywords[*]` | TAG | - | Keywords with IPTC expansion, normalized |
 | `origin_country[*]` | TAG | - | ISO country codes normalized (e.g., `us`, `gb`) |
+| `networks[*]` | TAG | - | TV network tags |
+| `watch_region` | TAG | - | Watch provider watch region |
+| `primary_provider_type` | TAG | - | Watch provider stream/on-demand type |
+| `streaming_platform_ids[*]` | TAG | - | Watch providers by streaming provider ID (string IDs) |
+| `on_demand_platform_ids[*]` | TAG | - | Watch providers by on-demand provider ID (string IDs) |
+| `primary_provider_id` | NUMERIC | sortable | Primary provider id |
 | `popularity` | NUMERIC | sortable | TMDB popularity score |
 | `rating` | NUMERIC | sortable | TMDB vote average (0-10) |
 | `year` | NUMERIC | sortable | Release year |
+| `vote_count` | NUMERIC | sortable | Vote count |
+| `number_of_seasons` | NUMERIC | sortable | TV seasons count |
+| `revenue` | NUMERIC | sortable | Movie revenue |
+| `created_at` | NUMERIC | sortable | Document created timestamp |
+| `modified_at` | NUMERIC | sortable | Document modified timestamp |
 
 ### Document Structure (Stored Fields)
 
 ```json
 {
   "id": "tmdb_movie_550",
+  "title": "Fight Club",
   "search_title": "Fight Club",
   "mc_type": "movie",
   "mc_subtype": null,
@@ -70,23 +85,90 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
   "popularity": 75.32,
   "rating": 8.4,
   "image": "https://image.tmdb.org/t/p/w185/...",
-  "overview": "A ticking-Loss disillusioned man...",
+  "overview": "A ticking clock that is always running...",
   "genre_ids": ["18", "53", "35"],
   "genres": ["drama", "thriller", "comedy"],
   "cast_ids": ["819", "287", "11614"],
   "cast_names": ["edward_norton", "brad_pitt", "helena_bonham_carter"],
   "cast": ["Edward Norton", "Brad Pitt", "Helena Bonham Carter"],
-  "director_id": "7467",
-  "director_name": "david_fincher",
+  "director": {"id": "7467", "name": "David Fincher", "name_normalized": "david_fincher"},
   "keywords": ["dual_identity", "nihilism", "support_group", "insomnia"],
-  "origin_country": ["us"]
+  "origin_country": ["us"],
+  "original_language": "en",
+  "original_title": "Fight Club",
+  "release_date": "1999-10-15",
+  "runtime": 139,
+  "budget": 63000000,
+  "revenue": 100853753,
+  "spoken_languages": ["en"],
+  "production_companies": ["Fox 2000 Pictures"],
+  "production_countries": ["US"],
+  "tagline": "How much can you know about yourself until the day your wife is gone?",
+  "vote_count": 25600,
+  "vote_average": 8.4,
+  "watch_providers": {
+    "watch_region": "US",
+    "primary_provider_type": "flatrate",
+    "streaming_platform_ids": ["143", "528", "2383"],
+    "on_demand_platform_ids": ["8", "9"],
+    "primary_provider_id": 143
+  },
+  "created_at": 1730000000,
+  "modified_at": 1730000100
 }
 ```
 
-**Display-Only Fields (NOT indexed):**
-- `image` - Poster/backdrop URL
-- `overview` - Truncated description
-- `cast` - Original cast names (not normalized) for display
+#### Movie vs TV populated fields
+
+- Movie documents include:
+  - `release_date`
+  - `runtime`
+  - `budget`
+  - `revenue`
+  - `spoken_languages`
+  - `production_companies`
+  - `production_countries`
+  - `director` object
+- TV documents include:
+  - `first_air_date`
+  - `last_air_date`
+  - `status`
+  - `series_status`
+  - `number_of_seasons`
+  - `number_of_episodes`
+  - `created_by`
+  - `created_by_ids`
+  - `networks`
+  - `network`
+  - `production_companies`
+  - `production_countries`
+
+```json
+{
+  "id": "tmdb_tv_1396",
+  "title": "Breaking Bad",
+  "search_title": "Breaking Bad",
+  "mc_type": "tv",
+  "source": "tmdb",
+  "source_id": "1396",
+  "year": 2008,
+  "rating": 9.5,
+  "origin_country": ["us"],
+  "first_air_date": "2008-01-20",
+  "last_air_date": "2013-09-29",
+  "status": "Ended",
+  "series_status": "over",
+  "number_of_seasons": 5,
+  "number_of_episodes": 62,
+  "created_by": ["Vince Gilligan"],
+  "created_by_ids": [14396],
+  "networks": ["AMC"],
+  "network": "AMC",
+  "production_companies": ["Sony Pictures Television", "High Bridge Entertainment"],
+  "production_countries": ["US"],
+  "tagline": "Change the course of your life."
+}
+```
 
 ---
 

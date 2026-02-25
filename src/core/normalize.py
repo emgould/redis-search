@@ -269,6 +269,48 @@ class BaseTMDBNormalizer(BaseNormalizer):
         genre_ids = raw.get("genre_ids", [])
         return [str(gid) for gid in genre_ids if isinstance(gid, int)]
 
+    @staticmethod
+    def _normalize_id_array(values: Any) -> list[str]:
+        """
+        Normalize ID arrays to string lists for TagField compatibility.
+
+        RediSearch TagField only accepts strings or nulls; integers must be converted.
+        """
+        if values is None or isinstance(values, bool):
+            return []
+        if isinstance(values, int):
+            return [str(values)]
+        if isinstance(values, str):
+            normalized = values.strip()
+            return [normalized] if normalized else []
+        if not isinstance(values, list):
+            return []
+
+        ids: list[str] = []
+        for raw_value in values:
+            ids.extend(BaseTMDBNormalizer._normalize_id_array(raw_value))
+        return ids
+
+    def _normalize_watch_providers(self, watch_providers: Any) -> dict[str, Any] | None:
+        """
+        Normalize watch provider ID arrays for Redis TagField compatibility.
+
+        Keeps watch provider payload shape stable while converting only provider ID arrays.
+        """
+        if not isinstance(watch_providers, dict):
+            return None
+
+        normalized_watch_providers = dict(watch_providers)
+        streaming_ids = watch_providers.get("streaming_platform_ids")
+        if streaming_ids is not None:
+            normalized_watch_providers["streaming_platform_ids"] = self._normalize_id_array(streaming_ids)
+
+        on_demand_ids = watch_providers.get("on_demand_platform_ids")
+        if on_demand_ids is not None:
+            normalized_watch_providers["on_demand_platform_ids"] = self._normalize_id_array(on_demand_ids)
+
+        return normalized_watch_providers
+
     def _extract_genres(self, raw: dict, genre_mapping: dict[int, str] | None = None) -> list[str]:
         """
         Extract and normalize genre names from TMDB data.
@@ -490,7 +532,7 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             first_air_date=dates["first_air_date"],
             last_air_date=dates["last_air_date"],
             us_rating=raw.get("us_rating"),
-            watch_providers=raw.get("watch_providers"),
+            watch_providers=self._normalize_watch_providers(raw.get("watch_providers")),
             status=raw.get("status"),
             tagline=raw.get("tagline"),
             production_companies=raw.get("production_companies"),
@@ -554,7 +596,7 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             first_air_date=dates["first_air_date"],
             last_air_date=dates["last_air_date"],
             us_rating=raw.get("us_rating"),
-            watch_providers=raw.get("watch_providers"),
+            watch_providers=self._normalize_watch_providers(raw.get("watch_providers")),
             status=raw.get("status"),
             series_status=raw.get("series_status"),
             number_of_seasons=raw.get("number_of_seasons"),

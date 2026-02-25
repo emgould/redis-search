@@ -15,49 +15,116 @@ Each index returns full JSON documents from the Redis JSON key.
 
 ### What consumers get
 
-- Common fields from `SearchDocument` (via `document_to_redis` in `src/core/normalize.py`):
-  - `id`, `title`, `search_title`
-  - `mc_type`, `mc_subtype`, `source`, `source_id`
-  - `year`, `popularity`, `rating`
-  - `image`, `overview`
-  - `genre_ids`, `genres`
-  - `cast_ids`, `cast_names`, `cast`
-  - `director`, `keywords`
-  - `origin_country`
-  - `original_language`, `original_title`
-  - `release_date`, `first_air_date`, `last_air_date`
-  - `us_rating`
-  - `watch_providers`
-  - `status`, `series_status`
-  - `tagline`
-  - `vote_count`, `vote_average`, `popularity_tmdb`
-  - `runtime`, `number_of_seasons`, `number_of_episodes`
+`idx:media` documents use a shared Redis JSON schema across movie and TV and include all media fields listed below.
+All keys are present when values are available, and absent fields are omitted by Redis JSON serialization.
+
+#### Shared payload keys (`document_to_redis`)
+
+- `id`: `tmdb_movie_<id>` or `tmdb_tv_<id>`
+- `title`: display title
+- `search_title`: indexed title tokenized version
+- `mc_type`: `movie` or `tv`
+- `mc_subtype`: optional subtype
+- `source`: always `tmdb`
+- `source_id`: raw TMDB ID
+- `year`
+- `popularity`, `rating`
+- `image`, `overview`
+- `genre_ids`, `genres`
+- `cast_ids`, `cast_names`, `cast`
+- `director`
+- `keywords`
+- `origin_country`
+- `original_language`, `original_title`
+- `release_date`, `first_air_date`, `last_air_date`
+- `us_rating`
+- `watch_providers`
+- `status`, `series_status`
+- `tagline`
+- `vote_count`, `vote_average`, `popularity_tmdb`
+- `runtime`, `number_of_seasons`, `number_of_episodes`
+- `created_by`, `created_by_ids`
+- `networks`, `network`
+- `production_companies`, `production_countries`
+- `budget`, `revenue`
+- `spoken_languages`
+- `created_at`, `modified_at`, `_source`
+- optional: `also_known_as` when populated
+
+#### Movie (`mc_type=movie`) vs TV (`mc_type=tv`/`TV_SERIES`) population
+
+- Movie documents populate:
+  - `release_date`
+  - `runtime`
+  - `budget`
+  - `revenue`
+  - `spoken_languages`
+  - `director` as a dict (`id`, `name`, `name_normalized`)
+  - `production_companies`, `production_countries`
+- TV documents populate:
+  - `first_air_date`, `last_air_date`
+  - `status`
+  - `series_status`
+  - `number_of_seasons`
+  - `number_of_episodes`
   - `created_by`, `created_by_ids`
   - `networks`, `network`
   - `production_companies`, `production_countries`
-  - `budget`, `revenue`
-  - `spoken_languages`
-  - `created_at`, `modified_at`, `_source`
-  - optional: `also_known_as` (only present when set on the document)
-
-### Movies vs TV split
-
-- Movie documents (`mc_type=movie`) generally carry:
-  - `release_date`
-  - `runtime`
-  - `budget`, `revenue`
-  - `spoken_languages`
-  - Movie-oriented metadata in the common field set (see above)
-- TV documents (`mc_type=tv`/`TV_SERIES`) generally carry:
-  - `first_air_date`, `last_air_date`
-  - `number_of_seasons`, `number_of_episodes`
-  - `series_status`
-  - `created_by`, `created_by_ids`
-  - `networks`, `network`
 
 ### Indexed (queryable/sortable) media fields
 
-`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id`, `director.name_normalized`, `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids`, `watch_providers.on_demand_platform_ids`, `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
+`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
+
+### Example documents
+
+```json
+{
+  "id": "tmdb_movie_550",
+  "mc_type": "movie",
+  "title": "Fight Club",
+  "search_title": "Fight Club",
+  "release_date": "1999-10-15",
+  "runtime": 139,
+  "budget": 63000000,
+  "revenue": 100853753,
+  "spoken_languages": ["en"],
+  "director": {"id": "7467", "name": "David Fincher", "name_normalized": "david_fincher"},
+  "production_companies": ["Fox 2000 Pictures"],
+  "status": "Released",
+  "watch_providers": {
+    "watch_region": "US",
+    "primary_provider_type": "flatrate",
+    "streaming_platform_ids": ["143", "528", "2383"],
+    "on_demand_platform_ids": ["8", "9"],
+    "primary_provider_id": 143
+  }
+}
+```
+
+```json
+{
+  "id": "tmdb_tv_1396",
+  "mc_type": "tv",
+  "title": "Breaking Bad",
+  "search_title": "Breaking Bad",
+  "first_air_date": "2008-01-20",
+  "last_air_date": "2013-09-29",
+  "number_of_seasons": 5,
+  "number_of_episodes": 62,
+  "created_by": ["Vince Gilligan"],
+  "created_by_ids": [14396],
+  "networks": ["AMC"],
+  "network": "AMC",
+  "series_status": "binge",
+  "watch_providers": {
+    "watch_region": "US",
+    "primary_provider_type": "flatrate",
+    "streaming_platform_ids": ["143", "528", "2383"],
+    "on_demand_platform_ids": ["8", "9"],
+    "primary_provider_id": 143
+  }
+}
+```
 
 ## `idx:people` (`person:`)
 
