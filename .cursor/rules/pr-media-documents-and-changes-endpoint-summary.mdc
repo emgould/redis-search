@@ -1,0 +1,43 @@
+---
+description: PR summary for complete working-tree changes before media backfill validation PR
+globs:
+  - "scripts/test_get_media_details_chat.py"
+  - "src/api/tmdb/models.py"
+  - "src/api/tmdb/tmdb_models.py"
+  - "src/core/normalize.py"
+  - "web/app.py"
+  - ".cursor/rules/created-at-modified-at-changes-endpoint.mdc"
+  - ".cursor/rules/media-index-enhancements-plan.mdc"
+alwaysApply: true
+---
+
+# PR Summary (all working-tree changes)
+
+This PR includes every local change in the branch at commit time, including the media document field expansion and `/api/changes` pagination fix.
+
+## 1) Media document schema expansion
+
+- Expanded API model payloads to carry additional media fields (`origin_country`, `original_title`, `original_language`, `tagline`, `production_companies`, `production_countries`, `budget`, `revenue`, `spoken_languages`, `networks`, `created_by`, etc.) in:
+  - `src/api/tmdb/models.py`
+  - `src/api/tmdb/tmdb_models.py`
+- Extended TMDB normalizer document shape to preserve those fields in:
+  - `src/core/normalize.py`
+- Updated Redis document serialization (`document_to_redis`) to include expanded media fields.
+
+## 2) Test script output alignment
+
+- Updated media details test script to normalize live TMDB output and print the normalized Redis document:
+  - `scripts/test_get_media_details_chat.py`
+
+## 3) `/api/changes` endpoint fix
+
+- Fixed pagination cursor behavior under `_source` filtering so paging advances by requested page size (`take`) instead of filtered-match count, preventing stalls when many rows are filtered out.
+- Added metadata to each index result to make client paging/debugging easier (`raw_count`, `raw_total`, `next_start`).
+- Updated request contract from `limit` to `start`/`take` in docs and implementation:
+  - `web/app.py`
+  - `.cursor/rules/created-at-modified-at-changes-endpoint.mdc`
+  - `.cursor/rules/media-index-enhancements-plan.mdc`
+
+## Notes
+
+- Branch includes all modified files in this repo state when the PR was created, not a subset.

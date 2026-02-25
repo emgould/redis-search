@@ -53,6 +53,7 @@ class MCBaseMediaItem(MCBaseItem):
     genre_ids: list[int] = Field(default_factory=list)
     genres: list[str] = Field(default_factory=list)
     original_language: str | None = None
+    origin_country: list[str] = Field(default_factory=list)
     adult: bool = False
 
     # Streaming availability
@@ -76,6 +77,10 @@ class MCBaseMediaItem(MCBaseItem):
     # Search/sorting metadata
     relevancy_debug: dict[str, Any] | None = None
     final_score: float | None = None
+    original_title: str | None = None
+    production_companies: list[str] = Field(default_factory=list)
+    production_countries: list[str] = Field(default_factory=list)
+    tagline: str | None = None
 
 
 class MCMovieItem(MCBaseMediaItem):
@@ -85,6 +90,7 @@ class MCMovieItem(MCBaseMediaItem):
     release_date: str | None = None
     revenue: int | None = None
     runtime: int | None = None
+    budget: int | None = None
     spoken_languages: list[str] = Field(default_factory=list)
     release_dates: dict[str, Any] = Field(default_factory=dict)  # TMDB release dates by country
 
@@ -158,6 +164,7 @@ class MCMovieItem(MCBaseMediaItem):
             poster_path=item.poster_path,
             backdrop_path=item.backdrop_path,
             release_date=item.release_date,
+            revenue=item.revenue,
         )
 
         return movie_item
@@ -231,6 +238,17 @@ class MCMovieItem(MCBaseMediaItem):
             runtime=item.runtime,
             revenue=item.revenue,
             spoken_languages=[lang.english_name for lang in item.spoken_languages],
+            production_companies=[company.name for company in item.production_companies],
+            production_countries=[
+                country.iso_3166_1 or country.name for country in item.production_countries
+            ],
+            budget=item.budget,
+            original_title=item.original_title,
+            vote_average=item.vote_average,
+            vote_count=item.vote_count,
+            popularity=item.popularity,
+            tagline=item.tagline,
+            origin_country=item.origin_country,
         )
         return media_item
 
@@ -365,11 +383,14 @@ class MCTvItem(MCBaseMediaItem):
     status: str | None = None
     spoken_languages: list[str] = Field(default_factory=list)
     network: str | None = None  # Normalized from TMDB networks array (first network name)
+    networks: list[str] | None = None  # Normalized from TMDB networks array (first network name)
     airdate_time: datetime | None = None
     duration: int | None = None
     last_episode_to_air: MCEpisodeSummary | None = None
     next_episode_to_air: MCEpisodeSummary | None = None
     series_status: SeriesStatus = "binge"
+    created_by: list[str] = Field(default_factory=list)
+    created_by_ids: list[int] = Field(default_factory=list)
 
     @classmethod
     def from_tv_search(cls, item: "TMDBSearchTv", image_base_url: str | None = None) -> "MCTvItem":
@@ -421,6 +442,7 @@ class MCTvItem(MCBaseMediaItem):
             overview=item.overview,
             genre_ids=item.genre_ids,
             original_language=item.original_language,
+            original_title=item.original_name,
             media_type=MCType.TV_SERIES.value,
             content_type=MCType.TV_SERIES.value,  # Use MCType enum value for type safety
             adult=item.adult,
@@ -429,6 +451,9 @@ class MCTvItem(MCBaseMediaItem):
             spoken_languages=[item.original_language] if item.original_language else [],
             first_air_date=item.first_air_date,
             origin_country=item.origin_country,
+            vote_count=metrics["vote_count"],
+            vote_average=metrics["vote_average"],
+            popularity=metrics["popularity"],
         )
 
         return tv_item
@@ -530,6 +555,7 @@ class MCTvItem(MCBaseMediaItem):
             genre_ids=genre_ids,
             genres=genres,
             original_language=item.original_language,
+            original_title=item.original_name,
             images=images,
             status=item.status,
             media_type=MCType.TV_SERIES.value,
@@ -543,9 +569,20 @@ class MCTvItem(MCBaseMediaItem):
             last_air_date=item.last_air_date,
             number_of_seasons=item.number_of_seasons,
             number_of_episodes=item.number_of_episodes,
-            network=item.networks[0].name if item.networks else None,
             last_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.last_episode_to_air),
             next_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.next_episode_to_air),
+            tagline=item.tagline,
+            vote_count=metrics.get("vote_count", 0),
+            vote_average=metrics.get("vote_average", 0),
+            popularity=metrics.get("popularity", 0),
+            created_by=[creator.name for creator in item.created_by],
+            created_by_ids=[creator.id for creator in item.created_by],
+            networks=[network.name for network in item.networks],
+            network=item.networks[0].name if item.networks else None,
+            production_companies=[company.name for company in item.production_companies],
+            production_countries=[
+                country.iso_3166_1 or country.name for country in item.production_countries
+            ],
         )
         return media_item
 

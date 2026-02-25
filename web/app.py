@@ -2988,14 +2988,17 @@ async def _search_index_changes(
     redis_index: str,
     since: int,
     until_val: str,
-    limit: int,
+    start: int,
+    take: int,
     change_source: str | None,
 ) -> tuple[str, dict[str, Any]]:
     """Run a modified_at range query on a single index and return parsed docs."""
     redis = get_redis()
     query_str = f"@modified_at:[{since} {until_val}]"
-    q = SearchQuery(query_str).paging(0, limit).sort_by("modified_at", asc=False)
+    q = SearchQuery(query_str).paging(start, take).sort_by("modified_at", asc=False)
     result = await redis.ft(redis_index).search(q)
+    raw_docs_count = len(result.docs) if hasattr(result, "docs") else 0
+    raw_total = getattr(result, "total", None)
 
     documents: list[dict[str, Any]] = []
     for doc in result.docs:
@@ -3009,7 +3012,15 @@ async def _search_index_changes(
             continue
         documents.append(parsed)
 
-    return index_name, {"count": len(documents), "documents": documents}
+    return index_name, {
+        "count": len(documents),
+        "raw_count": raw_docs_count,
+        "start": start,
+        "take": take,
+        "next_start": start + take,
+        "raw_total": raw_total,
+        "documents": documents,
+    }
 
 
 @app.get("/api/changes")
@@ -3023,7 +3034,8 @@ async def api_changes(
         default=None,
         description="Comma-separated index names (media,people,podcast,book,author). Default: all.",
     ),
-    limit: int = Query(default=100, ge=1, le=1000, description="Max documents per source"),
+    start: int = Query(default=0, ge=0, description="Start offset per source"),
+    take: int = Query(default=100, ge=1, le=1000, description="Page size per source"),
     change_source: str | None = Query(
         default=None,
         description="Filter by _source field value (e.g. 'backfill')",
@@ -3049,7 +3061,7 @@ async def api_changes(
         resolved.append((canonical, redis_name))
 
     tasks = [
-        _search_index_changes(name, redis_idx, since, until_val, limit, change_source)
+        _search_index_changes(name, redis_idx, since, until_val, start, take, change_source)
         for name, redis_idx in resolved
     ]
     outcomes = await asyncio.gather(*tasks, return_exceptions=True)
@@ -3066,6 +3078,8 @@ async def api_changes(
         content={
             "since": since,
             "until": until if until is not None else None,
+            "start": start,
+            "take": take,
             "sources": [name for name, _ in resolved],
             "results": results,
         }
