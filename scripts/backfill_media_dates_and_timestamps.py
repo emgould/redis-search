@@ -124,6 +124,9 @@ async def backfill(
 
             if not force:
                 source_marks = await redis.execute_command("JSON.MGET", *keys, "$._source")
+                if not isinstance(source_marks, list):
+                    source_marks = []
+
                 import json
 
                 todo_keys = []
@@ -149,6 +152,14 @@ async def backfill(
 
                 # Try to get titles for better 404 logging, fallback safely
                 titles = await redis.execute_command("JSON.MGET", *todo_keys, "$.title")
+
+                # execute_command("JSON.MGET") returns a list (or None if totally empty, though unlikely with keys)
+                if not isinstance(source_ids, list):
+                    source_ids = []
+                if not isinstance(mc_types, list):
+                    mc_types = []
+                if not isinstance(titles, list):
+                    titles = []
 
                 batch = []
                 import json
@@ -252,7 +263,7 @@ async def backfill(
                                 "404 for tmdb_id=%s — removing stale key %s", tmdb_id, key
                             )
                             if not output_file:
-                                await redis.json().delete(key)
+                                await redis.delete(key)
                             stats["deleted"] += 1
                             entry = {"tmdb_id": tmdb_id, "title": title, "key": key}
                             if mc_type_str == "movie":
