@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from contracts.models import MCSources, MCSubType, MCType
 
 from api.podcast.models import (
     EpisodeListResponse,
@@ -21,6 +20,7 @@ from api.podcast.models import (
     PodcastWithLatestEpisode,
 )
 from api.podcast.wrappers import podcast_wrapper
+from contracts.models import MCSources, MCSubType, MCType
 from utils.pytest_utils import write_snapshot
 
 pytestmark = pytest.mark.unit

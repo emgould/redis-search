@@ -604,9 +604,9 @@ class RedisCache:
 
         def decorator(func):
             async def inner1(*args, **kwargs):
-                # Early exit if cache disabled
-                cacheDisabled = kwargs.pop("no_cache", False)
-                if DISABLE_CACHE or instance.disableCache or cacheDisabled:
+                # Global cache disable still bypasses both read/write
+                no_cache = kwargs.pop("no_cache", False)
+                if DISABLE_CACHE or instance.disableCache:
                     return await func(*args, **kwargs)
 
                 # Generate cache key
@@ -632,11 +632,13 @@ class RedisCache:
                 noExpiration = expiry == -1
 
                 try:
-                    # SYNCHRONOUS cache read - no event loop issues!
-                    cachedEntry = instance.read(cache_key, noExpiration, mutable)
-                    if cachedEntry is not None:
-                        instance.logging.debug(f"Cache hit: {cache_key}")
-                        return cachedEntry.data
+                    # no_cache=True skips read path only; write path still runs below
+                    if not no_cache:
+                        # SYNCHRONOUS cache read - no event loop issues!
+                        cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                        if cachedEntry is not None:
+                            instance.logging.debug(f"Cache hit: {cache_key}")
+                            return cachedEntry.data
 
                     # Cache miss - execute the async function
                     instance.logging.debug(f"Cache miss: {cache_key}")

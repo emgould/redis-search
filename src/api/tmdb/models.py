@@ -4,12 +4,13 @@ be returned to the front end as part of fullfilling a request
 Follows the same pattern as podcast_models.py with Pydantic 2.0
 """
 
-from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, date, datetime, timedelta
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import Field
 
 from api.tmdb.tmdb_models import (
+    TMDBEpisodeSummary,
     TMDBMovieDetailsResult,
     TMDBPersonDetailsResult,
     TMDBSearchMovie,
@@ -69,10 +70,9 @@ class MCBaseMediaItem(MCBaseItem):
     watch_providers: dict[str, Any] = Field(default_factory=dict)
     keywords: list[dict[str, Any]] = Field(default_factory=list)
     keywords_count: int = 0
-
+    us_rating: str | None = None
     # Status
     status: str | None = None
-
     # Search/sorting metadata
     relevancy_debug: dict[str, Any] | None = None
     final_score: float | None = None
@@ -175,6 +175,7 @@ class MCMovieItem(MCBaseMediaItem):
             MCBaseMediaItem with standardized fields
         """
         genre_ids = [genre.id for genre in item.genres]
+        genres = [genre.name for genre in item.genres]
 
         # Build processed item data - direct attribute access
         images = []
@@ -217,6 +218,7 @@ class MCMovieItem(MCBaseMediaItem):
             title=item.title,
             overview=item.overview,
             genre_ids=genre_ids,
+            genres=genres,
             original_language=item.original_language,
             images=images,
             status=item.status,
@@ -231,6 +233,123 @@ class MCMovieItem(MCBaseMediaItem):
             spoken_languages=[lang.english_name for lang in item.spoken_languages],
         )
         return media_item
+
+
+class MCEpisodeSummary(BaseModelWithMethods):
+    """Lightweight episode summary for last/next episode on TV detail responses."""
+
+    _MAX_PROVIDER_IDS: ClassVar[set[int]] = {384, 1899}
+    _APPLE_PROVIDER_IDS: ClassVar[set[int]] = {2, 350}
+
+    episode_id: int
+    name: str
+    air_date: str | None = None
+    episode_number: int | None = None
+    episode_type: str | None = None
+    season_number: int | None = None
+    still_image: dict[str, str] | None = None
+    air_datetime_utc: str | None = None
+
+    @staticmethod
+    def _parse_air_date(air_date: str | None) -> datetime | None:
+        if not air_date:
+            return None
+        try:
+            base_date = datetime.strptime(air_date, "%Y-%m-%d")
+            return base_date.replace(tzinfo=UTC)
+        except ValueError:
+            return None
+
+    @classmethod
+    def _is_max_source(cls, source_names: list[str], provider_ids: list[int] | None = None) -> bool:
+        if provider_ids and any(
+            provider_id in cls._MAX_PROVIDER_IDS for provider_id in provider_ids
+        ):
+            return True
+        normalized_names = [name.strip().lower() for name in source_names]
+        return any(
+            name == "max"
+            or name.startswith("max ")
+            or name.endswith(" max")
+            or ("max" in name and "cinemax" not in name)
+            or "hbo max" in name
+            or "hbo" in name
+            or "home box office" in name
+            or "max amazon channel" in name
+            for name in normalized_names
+        )
+
+    @classmethod
+    def _is_apple_tv_source(
+        cls, source_names: list[str], provider_ids: list[int] | None = None
+    ) -> bool:
+        if provider_ids and any(
+            provider_id in cls._APPLE_PROVIDER_IDS for provider_id in provider_ids
+        ):
+            return True
+        normalized_names = [name.strip().lower() for name in source_names]
+        return any(
+            "apple tv" in name
+            or "apple tv+" in name
+            or "appletv+" in name
+            or "apple tv plus" in name
+            for name in normalized_names
+        )
+
+    @classmethod
+    def _compute_air_datetime_utc(
+        cls, air_date: str | None, source_names: list[str], provider_ids: list[int] | None = None
+    ) -> str | None:
+        base_air_datetime = cls._parse_air_date(air_date)
+        if not base_air_datetime:
+            return None
+
+        if cls._is_apple_tv_source(source_names, provider_ids):
+            # Apple TV episodes are effectively available the day after the TMDB air_date.
+            availability_datetime = base_air_datetime + timedelta(days=1)
+        elif cls._is_max_source(source_names, provider_ids):
+            availability_datetime = base_air_datetime.replace(hour=21, minute=0, second=0)
+        else:
+            availability_datetime = base_air_datetime
+
+        return availability_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @classmethod
+    def from_tmdb(
+        cls,
+        episode: TMDBEpisodeSummary | None,
+        image_base_url: str | None = None,
+        source_names: list[str] | None = None,
+        provider_ids: list[int] | None = None,
+    ) -> "MCEpisodeSummary | None":
+        if episode is None:
+            return None
+        still_image = None
+        if episode.still_path and image_base_url:
+            still_image = {
+                "small": f"{image_base_url}w185{episode.still_path}",
+                "medium": f"{image_base_url}w300{episode.still_path}",
+                "original": f"{image_base_url}original{episode.still_path}",
+            }
+
+        resolved_source_names = source_names or []
+        air_datetime_utc = cls._compute_air_datetime_utc(
+            episode.air_date, resolved_source_names, provider_ids
+        )
+
+        return cls(
+            episode_id=episode.id,
+            name=episode.name,
+            air_date=episode.air_date,
+            episode_number=episode.episode_number,
+            episode_type=episode.episode_type,
+            season_number=episode.season_number,
+            still_image=still_image,
+            air_datetime_utc=air_datetime_utc,
+        )
+
+
+SeriesStatus = Literal["new_season", "active", "binge", "catch_up", "over"]
 
 
 class MCTvItem(MCBaseMediaItem):
@@ -248,6 +367,9 @@ class MCTvItem(MCBaseMediaItem):
     network: str | None = None  # Normalized from TMDB networks array (first network name)
     airdate_time: datetime | None = None
     duration: int | None = None
+    last_episode_to_air: MCEpisodeSummary | None = None
+    next_episode_to_air: MCEpisodeSummary | None = None
+    series_status: SeriesStatus = "binge"
 
     @classmethod
     def from_tv_search(cls, item: "TMDBSearchTv", image_base_url: str | None = None) -> "MCTvItem":
@@ -311,6 +433,45 @@ class MCTvItem(MCBaseMediaItem):
 
         return tv_item
 
+    def _episode_source_names(self) -> tuple[list[str], list[int]]:
+        source_names: list[str] = []
+        provider_ids: list[int] = []
+
+        watch_providers = getattr(self, "watch_providers", {})
+        if isinstance(watch_providers, dict):
+            primary = watch_providers.get("primary_provider")
+            if isinstance(primary, dict) and isinstance(primary.get("provider_name"), str):
+                source_names.append(primary["provider_name"])
+            if isinstance(primary, dict) and isinstance(primary.get("provider_id"), int):
+                provider_ids.append(primary["provider_id"])
+
+            # Episode availability timing should use primary_provider first
+            # and fall back to flatrate providers only.
+            flatrate = watch_providers.get("flatrate")
+            if isinstance(flatrate, list):
+                for provider in flatrate:
+                    if isinstance(provider, dict) and isinstance(
+                        provider.get("provider_name"), str
+                    ):
+                        source_names.append(provider["provider_name"])
+                    if isinstance(provider, dict) and isinstance(provider.get("provider_id"), int):
+                        provider_ids.append(provider["provider_id"])
+
+        return source_names, provider_ids
+
+    def apply_episode_availability_rules(self) -> None:
+        source_names, provider_ids = self._episode_source_names()
+        last_episode = getattr(self, "last_episode_to_air", None)
+        if last_episode:
+            last_episode.air_datetime_utc = MCEpisodeSummary._compute_air_datetime_utc(
+                last_episode.air_date, source_names, provider_ids
+            )
+        next_episode = getattr(self, "next_episode_to_air", None)
+        if next_episode:
+            next_episode.air_datetime_utc = MCEpisodeSummary._compute_air_datetime_utc(
+                next_episode.air_date, source_names, provider_ids
+            )
+
     @classmethod
     def from_tv_details(
         cls, item: "TMDBTvDetailsResult", image_base_url: str | None = None
@@ -325,6 +486,7 @@ class MCTvItem(MCBaseMediaItem):
             MCTvItem with standardized fields
         """
         genre_ids = [genre.id for genre in item.genres]
+        genres = [genre.name for genre in item.genres]
 
         # Build processed item data - direct attribute access
         images = []
@@ -366,6 +528,7 @@ class MCTvItem(MCBaseMediaItem):
             title=item.name,
             overview=item.overview,
             genre_ids=genre_ids,
+            genres=genres,
             original_language=item.original_language,
             images=images,
             status=item.status,
@@ -381,8 +544,316 @@ class MCTvItem(MCBaseMediaItem):
             number_of_seasons=item.number_of_seasons,
             number_of_episodes=item.number_of_episodes,
             network=item.networks[0].name if item.networks else None,
+            last_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.last_episode_to_air),
+            next_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.next_episode_to_air),
         )
         return media_item
+
+
+def compute_series_status(
+    tmdb_status: str | None,
+    next_episode_to_air: TMDBEpisodeSummary | MCEpisodeSummary | None,
+    last_episode_to_air: TMDBEpisodeSummary | MCEpisodeSummary | None,
+) -> SeriesStatus:
+    next_episode_exists = next_episode_to_air is not None
+    if next_episode_exists:
+        next_episode_number = next_episode_to_air.episode_number
+    else:
+        next_episode_number = None
+
+    if last_episode_to_air is not None:
+        last_episode_type = last_episode_to_air.episode_type
+    else:
+        last_episode_type = None
+    """Classify series state using MediaCircle status precedence rules."""
+    normalized_status = (tmdb_status or "").strip().lower()
+    if normalized_status in {"canceled", "cancelled"}:
+        return "over"
+    if (last_episode_type or "").strip().lower() == "finale" and next_episode_exists:
+        return "catch_up"
+    if next_episode_exists and next_episode_number == 1:
+        return "new_season"
+    if next_episode_exists:
+        return "active"
+    return "binge"
+
+
+class MCTvLifecycleEnrichment(BaseModelWithMethods):
+    """Lifecycle metadata for TV series progression and episode availability."""
+
+    series_status: SeriesStatus = "binge"
+    series_completed: bool = False
+    next_episode_air_date: str | None = None
+    next_episode_number: int | None = None
+    next_episode_season: int | None = None
+    last_episode_air_date: str | None = None
+    last_episode_number: int | None = None
+    last_episode_season: int | None = None
+    num_seasons_released: int = 0
+    num_episodes_released: int = 0
+    runtime: int | None = None
+
+    @staticmethod
+    def _parse_date(value: str | None) -> date | None:
+        """Parse YYYY-MM-DD values returned by TMDB."""
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    @classmethod
+    def _compute_series_status(
+        cls,
+        tmdb_status: str | None,
+        next_episode_exists: bool,
+        next_episode_number: int | None,
+        last_episode_type: str | None,
+    ) -> SeriesStatus:
+        """Classify series state using MediaCircle status precedence rules."""
+        normalized_status = (tmdb_status or "").strip().lower()
+        if normalized_status in {"canceled", "cancelled"}:
+            return "over"
+        if (last_episode_type or "").strip().lower() == "finale" and next_episode_exists:
+            return "catch_up"
+        if next_episode_exists and next_episode_number == 1:
+            return "new_season"
+        if next_episode_exists:
+            return "active"
+        return "binge"
+
+    @classmethod
+    def _compute_released_counts(cls, details: "TMDBTvDetailsResult") -> tuple[int, int]:
+        """Estimate released seasons/episodes using aired-season metadata."""
+        last_episode = details.last_episode_to_air
+        valid_seasons = [season for season in details.seasons if season.season_number > 0]
+
+        if last_episode and last_episode.season_number and last_episode.episode_number:
+            released_season_count = max(0, last_episode.season_number)
+            previous_episodes = sum(
+                max(0, season.episode_count)
+                for season in valid_seasons
+                if season.season_number < released_season_count
+            )
+            released_episodes = previous_episodes + max(0, last_episode.episode_number)
+            return released_season_count, released_episodes
+
+        today = date.today()
+        released_seasons = []
+        for season in valid_seasons:
+            season_air_date = cls._parse_date(season.air_date)
+            if season_air_date is None or season_air_date <= today:
+                released_seasons.append(season)
+        released_episodes = sum(max(0, season.episode_count) for season in released_seasons)
+        return len(released_seasons), released_episodes
+
+    @staticmethod
+    def _is_valid_runtime(value: int | None) -> bool:
+        """Validate runtime candidates from TMDB payloads."""
+        return isinstance(value, int) and value > 0
+
+    @classmethod
+    def _estimate_runtime(cls, details: "TMDBTvDetailsResult") -> int | None:
+        """
+        Estimate per-episode runtime using all available TMDB TV detail signals.
+
+        Source priority:
+        1) show-level `episode_run_time` values
+        2) `last_episode_to_air.runtime`
+        3) `next_episode_to_air.runtime`
+        """
+        candidates: list[int] = []
+
+        for runtime in details.episode_run_time:
+            if cls._is_valid_runtime(runtime):
+                candidates.append(runtime)
+
+        last_episode_runtime = (
+            details.last_episode_to_air.runtime if details.last_episode_to_air else None
+        )
+        next_episode_runtime = (
+            details.next_episode_to_air.runtime if details.next_episode_to_air else None
+        )
+
+        if isinstance(last_episode_runtime, int) and last_episode_runtime > 0:
+            candidates.append(last_episode_runtime)
+        if isinstance(next_episode_runtime, int) and next_episode_runtime > 0:
+            candidates.append(next_episode_runtime)
+
+        if not candidates:
+            return None
+
+        # Median guards against outliers like specials or double-length premieres.
+        sorted_candidates = sorted(candidates)
+        middle_index = len(sorted_candidates) // 2
+        if len(sorted_candidates) % 2 == 1:
+            return sorted_candidates[middle_index]
+        return round((sorted_candidates[middle_index - 1] + sorted_candidates[middle_index]) / 2)
+
+    @classmethod
+    def from_tv_details(
+        cls,
+        details: "TMDBTvDetailsResult",
+    ) -> "MCTvLifecycleEnrichment":
+        """Build lifecycle metadata from TMDB TV details."""
+        next_episode = details.next_episode_to_air
+        last_episode = details.last_episode_to_air
+        runtime = cls._estimate_runtime(details)
+
+        released_seasons, released_episodes = cls._compute_released_counts(details)
+
+        series_status = cls._compute_series_status(
+            tmdb_status=details.status,
+            next_episode_exists=next_episode is not None,
+            next_episode_number=next_episode.episode_number if next_episode else None,
+            last_episode_type=last_episode.episode_type if last_episode else None,
+        )
+        series_completed = (details.status or "").strip().lower() == "ended"
+
+        return cls(
+            series_status=series_status,
+            series_completed=series_completed,
+            next_episode_air_date=next_episode.air_date if next_episode else None,
+            next_episode_number=next_episode.episode_number if next_episode else None,
+            next_episode_season=next_episode.season_number if next_episode else None,
+            last_episode_air_date=last_episode.air_date if last_episode else None,
+            last_episode_number=last_episode.episode_number if last_episode else None,
+            last_episode_season=last_episode.season_number if last_episode else None,
+            num_seasons_released=released_seasons,
+            num_episodes_released=released_episodes,
+            runtime=runtime,
+        )
+
+    @classmethod
+    def from_batch_item(cls, item: "MCTvBatchEnrichmentItem") -> "MCTvLifecycleEnrichment | None":
+        """Map batch-enrichment output into the nested TV lifecycle payload."""
+        if item.error:
+            return None
+        return cls(
+            series_status=item.series_status,
+            series_completed=item.series_completed,
+            next_episode_air_date=item.next_episode_air_date,
+            next_episode_number=item.next_episode_number,
+            next_episode_season=item.next_episode_season,
+            last_episode_air_date=item.last_episode_air_date,
+            last_episode_number=item.last_episode_number,
+            last_episode_season=item.last_episode_season,
+            num_seasons_released=item.num_seasons_released,
+            num_episodes_released=item.num_episodes_released,
+            runtime=item.runtime,
+        )
+
+
+class MCTvSeasonRuntimeEpisode(BaseModelWithMethods):
+    """Per-episode runtime payload for a TV season."""
+
+    episode_id: int
+    episode_number: int
+    name: str
+    overview: str | None = None
+    image: str | None = None
+    air_date: str | None = None
+    runtime: int | None = None
+
+
+class MCTvSeasonRuntimeResponse(BaseModelWithMethods):
+    """TV season runtime summary payload."""
+
+    tmdb_id: int
+    season_number: int
+    num_episodes: int = 0
+    avg_runtime: int | None = None
+    cume_runtime: int = 0
+    episodes: list[MCTvSeasonRuntimeEpisode] = Field(default_factory=list)
+    data_source: str = "TMDB TV Season Runtime"
+    error: str | None = None
+    status_code: int = 200
+
+
+class MCTvBatchEnrichmentRequestItem(BaseModelWithMethods):
+    """Request item for the TV batch enrichment endpoint."""
+
+    mc_id: str
+    mc_source_id: str
+
+    def tmdb_id(self) -> int | None:
+        """Return TMDB ID parsed from mc_source_id."""
+        try:
+            return int(self.mc_source_id)
+        except (TypeError, ValueError):
+            return None
+
+
+class MCTvBatchEnrichmentRequest(BaseModelWithMethods):
+    """Payload model for TV batch enrichment requests."""
+
+    items: list[MCTvBatchEnrichmentRequestItem] = Field(default_factory=list)
+
+
+class MCTvBatchEnrichmentItem(BaseModelWithMethods):
+    """Lightweight TV metadata used to classify release lifecycle."""
+
+    mc_id: str
+    mc_source_id: str
+    series_status: SeriesStatus = "binge"
+    series_completed: bool = False
+    next_episode_air_date: str | None = None
+    next_episode_number: int | None = None
+    next_episode_season: int | None = None
+    last_episode_air_date: str | None = None
+    last_episode_number: int | None = None
+    last_episode_season: int | None = None
+    num_seasons_released: int = 0
+    num_episodes_released: int = 0
+    runtime: int | None = None
+    error: str | None = None
+
+    @classmethod
+    def from_tv_details(
+        cls,
+        request_item: MCTvBatchEnrichmentRequestItem,
+        details: "TMDBTvDetailsResult",
+    ) -> "MCTvBatchEnrichmentItem":
+        """Create a lightweight enrichment item from TMDB TV details."""
+        lifecycle = MCTvLifecycleEnrichment.from_tv_details(details)
+
+        return cls(
+            mc_id=request_item.mc_id,
+            mc_source_id=request_item.mc_source_id,
+            series_status=lifecycle.series_status,
+            series_completed=lifecycle.series_completed,
+            next_episode_air_date=lifecycle.next_episode_air_date,
+            next_episode_number=lifecycle.next_episode_number,
+            next_episode_season=lifecycle.next_episode_season,
+            last_episode_air_date=lifecycle.last_episode_air_date,
+            last_episode_number=lifecycle.last_episode_number,
+            last_episode_season=lifecycle.last_episode_season,
+            num_seasons_released=lifecycle.num_seasons_released,
+            num_episodes_released=lifecycle.num_episodes_released,
+            runtime=lifecycle.runtime,
+        )
+
+    @classmethod
+    def from_error(
+        cls, request_item: MCTvBatchEnrichmentRequestItem, error: str
+    ) -> "MCTvBatchEnrichmentItem":
+        """Create an enrichment item for failed per-item fetches."""
+        return cls(
+            mc_id=request_item.mc_id,
+            mc_source_id=request_item.mc_source_id,
+            error=error,
+        )
+
+
+class MCTvBatchEnrichmentResponse(BaseModelWithMethods):
+    """Response model for TV batch enrichment endpoint."""
+
+    items: list[MCTvBatchEnrichmentItem] = Field(default_factory=list)
+    total_results: int = 0
+    data_source: str = "TMDB TV batch enrichment"
+    error: str | None = None
+    status_code: int = 200
 
 
 class MCMovieCreditMediaItem(MCMovieItem):

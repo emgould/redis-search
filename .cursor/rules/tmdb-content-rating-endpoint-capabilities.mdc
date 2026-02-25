@@ -1,0 +1,70 @@
+# TMDB Content Rating Endpoint Capabilities
+
+## Overview
+
+The new content rating utility supports both TV and movie lookups using TMDB endpoints and returns a normalized payload that includes:
+
+- `rating`: the country-specific certification/rating value
+- `release_date`: the associated movie release-date timestamp when available (`None` for TV)
+
+Results are cached with a 2-year TTL because content ratings are generally stable.
+
+## New API Surface
+
+- Core service method:
+  - `TMDBService.get_content_rating(tmdb_id: int, region: str = "US", media_type: str | MCType = "tv") -> dict[str, str | None] | None`
+- Wrapper helper:
+  - `get_content_rating_async(tmdb_id: int, region: str = "US", content_type: str = "tv") -> dict[str, str | None] | None`
+- Test helper script:
+  - `scripts/test_tmdb_content_rating_chat.py` (interactive and one-shot modes for manual verification)
+
+## Behavior by Media Type
+
+### TV (`media_type="tv"`)
+
+- TMDB endpoint: `GET /tv/{tmdb_id}/content_ratings`
+- Response parse:
+  - Look for `results[]` entries by `iso_3166_1 == region`
+  - Return the matching entry’s `rating`
+  - Return payload:
+    - `{"rating": "<tv_rating>", "release_date": None}`
+
+### Movie (`media_type="movie"`)
+
+- TMDB endpoint: `GET /movie/{tmdb_id}/release_dates`
+- Response parse:
+  - Look for `results[]` entries by `iso_3166_1 == region`
+  - Iterate `release_dates[]` entries
+  - Return first non-empty `certification`
+  - Return payload:
+    - `{"rating": "<movie_certification>", "release_date": "<release_date_string>"}` (when present)
+
+## Regional Matching
+
+- `region` is normalized to uppercase.
+- Matching is done with a strict country code match on each entry’s `iso_3166_1`.
+- If no region match exists, return `None`.
+
+## Caching and Missing Data
+
+- Cache keying is handled by `TMDBContentRatingCache` with a default TTL of 2 years.
+- Cache decorators:
+  - Core method uses prefix `content_ratings`
+  - Wrapper uses prefix `content_rating`
+- If parsing produces no usable rating, function returns `None`.
+- `None` values are not cached by Redis cache policy (`allow_empty=False`), so repeated cache writes are avoided for misses.
+
+## Failure Modes
+
+- If TMDB payload shape is unexpected (missing/invalid `results`, `release_dates`, etc.), return `None`.
+- If TMDB call fails or processing throws, return `None` and log an error.
+
+## Example Outputs
+
+- TV:
+  - Input: `tmdb_id=1396`, `region="US"`, `media_type="tv"`
+  - Output: `{"rating": "TV-MA", "release_date": None}`
+- Movie:
+  - Input: `tmdb_id=238`, `region="US"`, `media_type="movie"`
+  - Output: `{"rating": "R", "release_date": "1999-11-13T00:00:00.000Z"}`
+

@@ -8,7 +8,6 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from contracts.models import MCSources, MCType
 
 from api.tmdb.models import MCMovieItem, MCTvItem
 from api.watchmode.models import (
@@ -17,6 +16,7 @@ from api.watchmode.models import (
     WatchmodeWhatsNewResponse,
 )
 from api.watchmode.wrappers import watchmode_wrapper
+from contracts.models import MCSources, MCType
 
 
 class TestGetWhatsNew:

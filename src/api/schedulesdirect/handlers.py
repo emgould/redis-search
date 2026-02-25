@@ -7,7 +7,6 @@ import logging
 from typing import Any
 
 import requests
-from contracts.models import MCType
 from firebase_functions import https_fn
 
 from api.schedulesdirect.channel_filters import ChannelType
@@ -16,6 +15,7 @@ from api.schedulesdirect.models import (
     SchedulesDirectServiceUnavailableError,
 )
 from api.schedulesdirect.wrappers import schedules_direct_wrapper
+from contracts.models import MCType
 
 logger = logging.getLogger(__name__)
 

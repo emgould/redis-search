@@ -1,23 +1,15 @@
 """Shared streaming provider constants for ETL filtering."""
 
 MAJOR_STREAMING_PROVIDERS = {
+    "Amazon Prime",
     "Netflix",
-    "Netflix Standard with Ads",
-    "Amazon Prime Video",
-    "Amazon Video",
     "Hulu",
-    "Max",
     "HBO Max",
+    "Max",
     "Disney Plus",
-    "Disney+",
     "Peacock",
-    "Peacock Premium",
-    "Apple TV Plus",
     "Apple TV",
     "Paramount Plus",
-    "Paramount+",
-    "Fubo",
-    "FuboTV",
     "fuboTV",
 }
 

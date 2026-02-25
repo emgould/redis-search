@@ -5,9 +5,9 @@ Follows the same pattern as tmdb/models.py with Pydantic 2.0
 
 from typing import Any
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType, generate_mc_id
 from pydantic import Field, model_validator
 
+from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType, generate_mc_id
 from utils.pydantic_tools import BaseModelWithMethods
 
 # ============================================================================

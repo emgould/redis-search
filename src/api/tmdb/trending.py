@@ -6,8 +6,6 @@ HTTP endpoint handlers for TMDB-related Firebase Functions.
 import asyncio
 from typing import Any, Union, cast
 
-from contracts.models import MCSearchResponse, MCType
-
 from api.subapi.flixpatrol.wrappers import flixpatrol_wrapper
 from api.tmdb.core import TMDBFunctionCache
 from api.tmdb.models import (
@@ -22,6 +20,7 @@ from api.tmdb.tmdb_models import (
     TMDBSearchMovie,
     TMDBSearchTv,
 )
+from contracts.models import MCSearchResponse, MCType
 from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 

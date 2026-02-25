@@ -6,7 +6,6 @@ Tests TMDBPersonService functionality.
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from contracts.models import MCSearchResponse
 
 from api.tmdb.models import (
     MCMovieItem,
@@ -19,6 +18,7 @@ from api.tmdb.tmdb_models import (
     TMDBMovieDetailsResult,
     TMDBPersonMovieCreditsResponse,
 )
+from contracts.models import MCSearchResponse
 
 pytestmark = pytest.mark.unit
 

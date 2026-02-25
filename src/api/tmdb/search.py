@@ -10,8 +10,6 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCType
-
 from api.subapi.comscore import comscore_wrapper
 from api.tmdb.core import TMDBService
 from api.tmdb.models import (
@@ -19,13 +17,20 @@ from api.tmdb.models import (
     MCKeywordItem,
     MCKeywordSearchResponse,
     MCMovieItem,
+    MCTvBatchEnrichmentItem,
+    MCTvBatchEnrichmentRequestItem,
     MCTvItem,
+    MCTvSeasonRuntimeEpisode,
+    MCTvSeasonRuntimeResponse,
 )
 from api.tmdb.tmdb_models import (
     TMDBRawMultiSearchRawResponse,
     TMDBSearchMovie,
     TMDBSearchTv,
+    TMDBSeasonDetailsResult,
+    TMDBTvDetailsResult,
 )
+from contracts.models import MCBaseItem, MCSearchResponse, MCType
 from utils.get_logger import get_logger
 from utils.soft_comparison import _levenshtein_distance
 
@@ -120,7 +125,7 @@ class TMDBSearchService(TMDBService):
                 break
 
         # Process items into MCBaseMediaItem dicts
-        processed_items: list[MCBaseMediaItem] = []
+        processed_items: list[MCMovieItem] = []
         for item in all_items:
             mc_item = MCMovieItem.from_movie_search(
                 TMDBSearchMovie.model_validate(item), image_base_url=self.image_base_url
@@ -367,6 +372,215 @@ class TMDBSearchService(TMDBService):
             len(results),
         )
         return results
+
+    async def get_tv_batch_enrichment(
+        self,
+        items: list[MCTvBatchEnrichmentRequestItem],
+        batch_size: int = 10,
+        **kwargs: Any,
+    ) -> list[MCTvBatchEnrichmentItem]:
+        """Fetch lightweight TV lifecycle metadata for a batch of TMDB IDs."""
+        if not items:
+            return []
+
+        async def enrich_item(
+            item: MCTvBatchEnrichmentRequestItem,
+        ) -> MCTvBatchEnrichmentItem:
+            tmdb_id = item.tmdb_id()
+            if tmdb_id is None or tmdb_id <= 0:
+                return MCTvBatchEnrichmentItem.from_error(item, "Invalid mc_source_id")
+
+            try:
+                payload = await self._make_request(
+                    f"tv/{tmdb_id}",
+                    {"language": "en-US"},
+                    no_cache=True,
+                )
+                if not payload:
+                    return MCTvBatchEnrichmentItem.from_error(item, "TV details not found")
+
+                details = TMDBTvDetailsResult.model_validate(payload)
+                enriched = MCTvBatchEnrichmentItem.from_tv_details(item, details)
+
+                # If show-level runtime is missing, aggregate from season runtimes concurrently.
+                if enriched.runtime is None:
+                    season_count = details.number_of_seasons
+                    if season_count:
+                        if season_count <= 0:
+                            season_count = len([s for s in details.seasons if s.season_number > 0])
+                        avg_runtime, _cume_runtime = await self._get_series_runtime_aggregate(
+                            tmdb_id=tmdb_id,
+                            num_seasons=season_count,
+                            no_cache=kwargs.get("no_cache", False),
+                        )
+                        if avg_runtime is not None:
+                            enriched.runtime = avg_runtime
+
+                return enriched
+            except Exception as exc:
+                logger.warning(
+                    "get_tv_batch_enrichment: Failed for tmdb_id=%s error=%s",
+                    tmdb_id,
+                    exc,
+                )
+                return MCTvBatchEnrichmentItem.from_error(item, str(exc))
+
+        tasks = [enrich_item(item) for item in items]
+        results = await self._batch_process(
+            tasks, batch_size=batch_size, delay_between_batches=0.05
+        )
+
+        processed: list[MCTvBatchEnrichmentItem] = []
+        for index, result in enumerate(results):
+            if isinstance(result, Exception):
+                processed.append(MCTvBatchEnrichmentItem.from_error(items[index], str(result)))
+            elif isinstance(result, MCTvBatchEnrichmentItem):
+                processed.append(result)
+            else:
+                processed.append(
+                    MCTvBatchEnrichmentItem.from_error(items[index], "Unknown enrichment error")
+                )
+        return processed
+
+    @staticmethod
+    def _coerce_positive_runtime(value: int | None) -> int | None:
+        if isinstance(value, int) and value > 0:
+            return value
+        return None
+
+    def _compute_season_runtime_metrics(
+        self,
+        runtimes: list[int | None],
+    ) -> tuple[int | None, int]:
+        """
+        Compute season avg/cume while ignoring nulls for avg and backfilling null episodes with avg.
+        """
+        known_runtimes = [runtime for runtime in runtimes if runtime is not None]
+        if not known_runtimes:
+            return None, 0
+
+        avg_runtime = round(sum(known_runtimes) / len(known_runtimes))
+        missing_count = len(runtimes) - len(known_runtimes)
+        cume_runtime = sum(known_runtimes) + (missing_count * avg_runtime)
+        return avg_runtime, cume_runtime
+
+    async def _get_series_runtime_aggregate(
+        self,
+        tmdb_id: int,
+        num_seasons: int,
+        **kwargs: Any,
+    ) -> tuple[int | None, int]:
+        """
+        Aggregate runtime across all seasons:
+        - avg_runtime: average of non-null season averages
+        - cume_runtime: sum of season cumulative runtimes
+        """
+        if num_seasons <= 0:
+            return None, 0
+
+        tasks = [
+            self.get_tv_season_runtime(tmdb_id=tmdb_id, season_number=season_number, **kwargs)
+            for season_number in range(1, num_seasons + 1)
+        ]
+        season_results = await self._batch_process(tasks, batch_size=5, delay_between_batches=0.05)
+
+        season_averages: list[int] = []
+        total_cume = 0
+        for result in season_results:
+            if isinstance(result, Exception) or not isinstance(result, MCTvSeasonRuntimeResponse):
+                continue
+            if result.status_code != 200:
+                continue
+            if result.avg_runtime is not None:
+                season_averages.append(result.avg_runtime)
+            total_cume += result.cume_runtime
+
+        aggregate_avg = (
+            round(sum(season_averages) / len(season_averages)) if season_averages else None
+        )
+        return aggregate_avg, total_cume
+
+    async def get_tv_season_runtime(
+        self,
+        tmdb_id: int,
+        season_number: int,
+        **kwargs: Any,
+    ) -> MCTvSeasonRuntimeResponse:
+        """Get runtime rollup for all episodes in a TV season."""
+        if tmdb_id <= 0:
+            return MCTvSeasonRuntimeResponse(
+                tmdb_id=tmdb_id,
+                season_number=season_number,
+                error="tmdb_id must be a positive integer",
+                status_code=400,
+            )
+        if season_number < 0:
+            return MCTvSeasonRuntimeResponse(
+                tmdb_id=tmdb_id,
+                season_number=season_number,
+                error="season_number must be zero or greater",
+                status_code=400,
+            )
+
+        try:
+            payload = await self._make_request(
+                f"tv/{tmdb_id}/season/{season_number}",
+                {"language": "en-US"},
+                **kwargs,
+            )
+            if not payload:
+                return MCTvSeasonRuntimeResponse(
+                    tmdb_id=tmdb_id,
+                    season_number=season_number,
+                    error="Season details not found",
+                    status_code=404,
+                )
+
+            details = TMDBSeasonDetailsResult.model_validate(payload)
+            episodes: list[MCTvSeasonRuntimeEpisode] = []
+            runtime_values: list[int | None] = []
+
+            for episode in details.episodes:
+                runtime = self._coerce_positive_runtime(episode.runtime)
+                runtime_values.append(runtime)
+                image_url = None
+                if episode.still_path and self.image_base_url:
+                    image_url = f"{self.image_base_url}w300{episode.still_path}"
+
+                episodes.append(
+                    MCTvSeasonRuntimeEpisode(
+                        episode_id=episode.id,
+                        episode_number=episode.episode_number,
+                        name=episode.name,
+                        overview=episode.overview,
+                        image=image_url,
+                        air_date=episode.air_date,
+                        runtime=runtime,
+                    )
+                )
+
+            avg_runtime, cume_runtime = self._compute_season_runtime_metrics(runtime_values)
+            return MCTvSeasonRuntimeResponse(
+                tmdb_id=tmdb_id,
+                season_number=season_number,
+                num_episodes=len(episodes),
+                avg_runtime=avg_runtime,
+                cume_runtime=cume_runtime,
+                episodes=episodes,
+            )
+        except Exception as exc:
+            logger.error(
+                "get_tv_season_runtime: failed tmdb_id=%s season_number=%s error=%s",
+                tmdb_id,
+                season_number,
+                exc,
+            )
+            return MCTvSeasonRuntimeResponse(
+                tmdb_id=tmdb_id,
+                season_number=season_number,
+                error=str(exc),
+                status_code=500,
+            )
 
     """
     Legacy Unified Search Support

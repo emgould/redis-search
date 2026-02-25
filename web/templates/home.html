@@ -273,6 +273,24 @@ Shows{% endblock %} {% block body %}
   </div>
 </div>
 
+<!-- JSON View Modal (Redis Doc / Media Details) -->
+<div id="json-modal" class="fixed inset-0 z-[70] hidden">
+  <div id="json-modal-backdrop" class="absolute inset-0 bg-black/90 backdrop-blur-sm"></div>
+  <div class="absolute inset-4 md:inset-8 lg:inset-16 flex flex-col">
+    <div class="relative bg-surface-900 rounded-2xl border border-surface-700 shadow-2xl flex flex-col max-h-full">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700 flex-shrink-0">
+        <h3 id="json-modal-title" class="text-lg font-semibold text-white"></h3>
+        <button id="json-modal-close" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors">
+          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <pre id="json-modal-content" class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/search-controller.js"></script>
 <script>
   const searchInput = document.getElementById("search-input");
@@ -787,6 +805,17 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
+    // Build lookup for TV/movie items (for View Redis Doc button)
+    window._itemsByMcId = {};
+    for (const cat of categories) {
+      for (const item of cat.items || []) {
+        if (item && (item.mc_type === "tv" || item.mc_type === "movie")) {
+          const key = item.id || item.mc_id;
+          if (key) window._itemsByMcId[key] = item;
+        }
+      }
+    }
+
     // Render each category section
     resultsList.innerHTML = categories
       .map((category, catIndex) => {
@@ -978,8 +1007,16 @@ Shows{% endblock %} {% block body %}
       }
             </div>
             
-            <!-- Arrow -->
-            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <!-- Action buttons + Arrow -->
+            <div class="flex-shrink-0 self-center flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" onclick="event.stopPropagation(); showRedisDoc('${item.id || item.mc_id || ""}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    View Redis Doc
+                </button>
+                <button type="button" onclick="event.stopPropagation(); fetchMediaDetails(${sourceId || 0}, '${item.mc_type || "movie"}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    View Media Details
+                </button>
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -1843,10 +1880,62 @@ Shows{% endblock %} {% block body %}
   iframeModalBackdrop.addEventListener("click", closeIframeModal);
   iframeModalClose.addEventListener("click", closeIframeModal);
 
-  // Handle Escape key for both modals
+  // JSON modal (Redis Doc / Media Details)
+  const jsonModal = document.getElementById("json-modal");
+  const jsonModalTitle = document.getElementById("json-modal-title");
+  const jsonModalContent = document.getElementById("json-modal-content");
+  const jsonModalClose = document.getElementById("json-modal-close");
+  const jsonModalBackdrop = document.getElementById("json-modal-backdrop");
+
+  function openJsonModal(title, jsonStr) {
+    jsonModalTitle.textContent = title;
+    jsonModalContent.textContent = jsonStr;
+    jsonModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeJsonModal() {
+    jsonModal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  jsonModalBackdrop.addEventListener("click", closeJsonModal);
+  jsonModalClose.addEventListener("click", closeJsonModal);
+
+  window.showRedisDoc = function (mcId) {
+    const item = window._itemsByMcId && mcId ? window._itemsByMcId[mcId] : null;
+    if (!item) {
+      openJsonModal("Redis Doc (not found)", JSON.stringify({ error: "Item not found in results" }, null, 2));
+      return;
+    }
+    openJsonModal("Redis Doc", JSON.stringify(item, null, 2));
+  };
+
+  window.fetchMediaDetails = async function (tmdbId, mediaType) {
+    if (!tmdbId || !mediaType) {
+      openJsonModal("Media Details", JSON.stringify({ error: "Missing tmdb_id or media_type" }, null, 2));
+      return;
+    }
+    openJsonModal("Media Details", "Loading...");
+    try {
+      const base = typeof getApiUrl === "function" ? getApiUrl("/api/media-details") : "/api/media-details";
+      const params = new URLSearchParams({ tmdb_id: tmdbId, media_type: mediaType });
+      const resp = await fetch(`${base}?${params}`);
+      const data = await resp.json();
+      jsonModalTitle.textContent = "Media Details";
+      jsonModalContent.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      jsonModalTitle.textContent = "Media Details";
+      jsonModalContent.textContent = JSON.stringify({ error: String(err) }, null, 2);
+    }
+  };
+
+  // Handle Escape key for all modals
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (!iframeModal.classList.contains("hidden")) {
+      if (!jsonModal.classList.contains("hidden")) {
+        closeJsonModal();
+      } else if (!iframeModal.classList.contains("hidden")) {
         closeIframeModal();
       } else if (!modal.classList.contains("hidden")) {
         closeModal();

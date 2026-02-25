@@ -13,11 +13,6 @@ Run with: pytest services/nytimes/tests/test_integration.py -v
 import os
 
 import pytest
-from contracts.models import (
-    MCSources,
-    MCSubType,
-    MCType,
-)
 
 from api.nytimes.auth import nytimes_auth
 from api.nytimes.core import NYTimesService
@@ -26,6 +21,11 @@ from api.nytimes.models import (
     NYTimesBook,
     NYTimesListNamesResponse,
     NYTimesOverviewResponse,
+)
+from contracts.models import (
+    MCSources,
+    MCSubType,
+    MCType,
 )
 
 pytestmark = pytest.mark.integration
@@ -369,9 +369,8 @@ class TestNYTimesWrapperIntegration:
     @pytest.mark.asyncio
     async def test_search_person_works_async(self, real_nytimes_api_key):
         """Test search_person_works_async wrapper function."""
-        from contracts.models import MCPersonSearchRequest
-
         from api.nytimes.wrappers import nytimes_wrapper
+        from contracts.models import MCPersonSearchRequest
         from utils.pytest_utils import write_snapshot
 
         # Reset auth and wrapper caches to pick up environment variable
@@ -459,9 +458,8 @@ class TestNYTimesWrapperIntegration:
     @pytest.mark.asyncio
     async def test_search_person_works_async_invalid_source(self, real_nytimes_api_key):
         """Test search_person_works_async with invalid source."""
-        from contracts.models import MCPersonSearchRequest
-
         from api.nytimes.wrappers import nytimes_wrapper
+        from contracts.models import MCPersonSearchRequest
 
         # Reset auth and wrapper caches
         nytimes_auth._nytimes_api_key = None
@@ -491,9 +489,8 @@ class TestNYTimesWrapperIntegration:
     @pytest.mark.asyncio
     async def test_search_person_works_async_invalid_author_name(self, real_nytimes_api_key):
         """Test search_person_works_async with invalid/empty author name."""
-        from contracts.models import MCPersonSearchRequest
-
         from api.nytimes.wrappers import nytimes_wrapper
+        from contracts.models import MCPersonSearchRequest
 
         # Reset auth and wrapper caches
         nytimes_auth._nytimes_api_key = None
@@ -523,9 +520,8 @@ class TestNYTimesWrapperIntegration:
     @pytest.mark.asyncio
     async def test_search_person_works_async_author_not_found(self, real_nytimes_api_key):
         """Test search_person_works_async with non-existent author name."""
-        from contracts.models import MCPersonSearchRequest
-
         from api.nytimes.wrappers import nytimes_wrapper
+        from contracts.models import MCPersonSearchRequest
 
         # Reset auth and wrapper caches
         nytimes_auth._nytimes_api_key = None

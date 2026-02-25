@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Add src to path for imports
@@ -235,6 +236,8 @@ async def enrich_redis_documents(
                     # Update each field individually
                     for field, value in updates.items():
                         await redis.json().set(key, f"$.{field}", value)  # type: ignore[misc]
+                    now_ts = int(datetime.now(UTC).timestamp())
+                    await redis.json().set(key, "$.modified_at", now_ts)  # type: ignore[misc]
 
                 if source == "json":
                     stats["enriched_from_json"] += 1

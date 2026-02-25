@@ -17,6 +17,9 @@ Usage:
     # Copy specific indices
     python scripts/copy_to_local.py --indices media people
 
+    # Custom batch size (default 1000, overrides COPY_TO_LOCAL_BATCH_SIZE env)
+    python scripts/copy_to_local.py --batch-size 500
+
     # JSON output for API integration
     python scripts/copy_to_local.py --list --json
 """
@@ -27,6 +30,7 @@ import json
 import os
 import sys
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 from redis.asyncio import Redis
@@ -36,6 +40,18 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 # Load environment
 env_file = os.getenv("ENV_FILE", "config/local.env")
 load_dotenv(env_file)
+
+_project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_project_root / "src"))
+
+from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
+
+INDEX_TO_ETL_JOBS: dict[str, list[str]] = {
+    "media": ["tmdb_movie_changes_movie", "tmdb_tv_changes_tv"],
+    "people": ["tmdb_person_changes_person"],
+    "podcast": ["podcastindex_changes_podcast"],
+    "author": ["bestseller_authors_book"],
+}
 
 
 @dataclass
@@ -206,7 +222,7 @@ async def copy_documents(
     target: Redis,
     prefix: str,
     dry_run: bool = False,
-    batch_size: int = 100,
+    batch_size: int = 1000,
 ) -> tuple[int, int, list[str]]:
     """
     Copy all documents with given prefix from source to target.
@@ -259,6 +275,7 @@ async def copy_index(
     target: Redis,
     index_info: IndexInfo,
     dry_run: bool = False,
+    batch_size: int = 1000,
 ) -> dict:
     """
     Copy a single index from source (public) to target (local).
@@ -315,7 +332,7 @@ async def copy_index(
 
         print("      Copying documents...")
         copied, errors, error_msgs = await copy_documents(
-            source, target, prefix, dry_run=False
+            source, target, prefix, dry_run=False, batch_size=batch_size
         )
         result["docs_copied"] = copied
         result["errors"] = errors
@@ -369,11 +386,65 @@ async def list_available_indices(
     return index_infos
 
 
+def sync_etl_metadata(copied_indices: list[str], dry_run: bool = False) -> None:
+    """Sync ETL job states from source (dev/prod) to local for copied indices."""
+    jobs_to_sync: set[str] = set()
+    for idx_name in copied_indices:
+        friendly = idx_name[4:] if idx_name.startswith("idx:") else idx_name
+        if friendly in INDEX_TO_ETL_JOBS:
+            jobs_to_sync.update(INDEX_TO_ETL_JOBS[friendly])
+
+    if not jobs_to_sync:
+        return
+
+    gcs_bucket = os.getenv("GCS_BUCKET")
+    if not gcs_bucket:
+        print("   ⚠️  GCS_BUCKET not set, skipping ETL metadata sync")
+        return
+
+    source_prefix = os.getenv("PUBLIC_GCS_ETL_PREFIX", "redis-search/etl/dev")
+    local_prefix = os.getenv("GCS_ETL_PREFIX", "redis-search/etl/local")
+
+    if source_prefix == local_prefix:
+        print("   ⚠️  Source and local GCS prefixes are identical, skipping metadata sync")
+        return
+
+    print(f"   Syncing ETL metadata: {source_prefix} → {local_prefix}")
+
+    source_store = ETLMetadataStore(
+        config=ETLStateConfig(gcs_bucket=gcs_bucket, gcs_prefix=source_prefix)
+    )
+    local_store = ETLMetadataStore(
+        config=ETLStateConfig(gcs_bucket=gcs_bucket, gcs_prefix=local_prefix)
+    )
+
+    source_states = source_store.get_all_job_states()
+    local_states = local_store.get_all_job_states()
+
+    synced: list[str] = []
+    for job_name in sorted(jobs_to_sync):
+        if job_name in source_states:
+            state = source_states[job_name]
+            if dry_run:
+                print(f"      Would sync {job_name}: {state.last_run_date} ({state.last_status})")
+            else:
+                local_states[job_name] = state
+                synced.append(job_name)
+                print(f"      Synced {job_name}: {state.last_run_date} ({state.last_status})")
+        else:
+            print(f"      ⚠️  No source state for {job_name}")
+
+    if synced:
+        local_store.save_job_states(local_states)
+        print(f"   ✅ Saved {len(synced)} job state(s) to local metadata")
+
+
 async def main(
     dry_run: bool = False,
     indices_to_copy: list[str] | None = None,
     list_only: bool = False,
     output_json: bool = False,
+    batch_size: int = 1000,
 ) -> int:
     """
     Main copy function.
@@ -383,6 +454,7 @@ async def main(
         indices_to_copy: List of index names to copy (None = all)
         list_only: Just list available indices
         output_json: Output JSON format (for API integration)
+        batch_size: Documents per pipeline batch (env: COPY_TO_LOCAL_BATCH_SIZE)
 
     Returns exit code (0 = success, 1 = error).
     """
@@ -419,6 +491,9 @@ async def main(
     if dry_run:
         print("🔍 DRY RUN MODE - No changes will be made")
         print()
+
+    print(f"   Batch size: {batch_size:,} documents per pipeline")
+    print()
 
     # Connect to public Redis (SOURCE)
     print("🔌 Connecting to Public Redis...")
@@ -495,7 +570,9 @@ async def main(
     for info in available_indices:
         print(f"   📦 Index: {info.name} ({info.redis_name})")
         # NOTE: source is public, target is local
-        result = await copy_index(public_redis, local_redis, info, dry_run=dry_run)
+        result = await copy_index(
+            public_redis, local_redis, info, dry_run=dry_run, batch_size=batch_size
+        )
         results.append(result)
         total_copied += result["docs_copied"]
         total_errors += result["errors"]
@@ -503,6 +580,13 @@ async def main(
             print("      ✅ Success")
         else:
             print("      ❌ Failed")
+        print()
+
+    # Sync ETL metadata for successfully copied indices
+    successfully_copied = [r["index"] for r in results if r["success"]]
+    if successfully_copied:
+        print("📋 Syncing ETL metadata...")
+        sync_etl_metadata(successfully_copied, dry_run=dry_run)
         print()
 
     # Final summary
@@ -551,6 +635,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Output JSON format (for API integration)",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=int(os.getenv("COPY_TO_LOCAL_BATCH_SIZE", "1000")),
+        help="Documents per pipeline batch (default: 1000, env: COPY_TO_LOCAL_BATCH_SIZE)",
+    )
 
     args = parser.parse_args()
 
@@ -560,6 +650,7 @@ if __name__ == "__main__":
             indices_to_copy=args.indices,
             list_only=args.list,
             output_json=args.json,
+            batch_size=args.batch_size,
         )
     )
     sys.exit(exit_code)

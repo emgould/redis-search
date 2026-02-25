@@ -46,12 +46,30 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}/firebase/python_functions",
+      "cwd": "${workspaceFolder}",
       "env": {  
-        "PYTHONPATH": "${workspaceFolder}/firebase/python_functions",
-        "FIREBASE_AUTH_EMULATOR_HOST": "localhost:9099"
+        "PYTHONPATH": "${workspaceFolder}/src",
       },
-      "envFile": "${workspaceFolder}/firebase/python_functions/.env",
+      "envFile": "${workspaceFolder}/config/local.env",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Run backfill test",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": [
+        "--limit",
+        "20",
+        "--output",
+        "data/backfill_sample_no_cache.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {  
+        "PYTHONPATH": "${workspaceFolder}/src",
+      },
+      "envFile": "${workspaceFolder}/config/local.env",
       "justMyCode": false
     }
   ]

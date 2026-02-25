@@ -5,9 +5,9 @@ Events are clusters of related articles about the same news story.
 
 from datetime import datetime
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from pydantic import ConfigDict, Field, model_validator
 
+from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

@@ -15,12 +15,6 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from contracts.models import (
-    MCSearchResponse,
-    MCSources,
-    MCSubType,
-    MCType,
-)
 from firebase_functions import https_fn
 
 from api.tmdb.handlers import TMDBHandler
@@ -37,6 +31,12 @@ from api.tmdb.models import (
     TMDBSearchTVResponse,
 )
 from api.tmdb.wrappers import search_person_async
+from contracts.models import (
+    MCSearchResponse,
+    MCSources,
+    MCSubType,
+    MCType,
+)
 from utils.pytest_utils import write_snapshot
 
 pytestmark = pytest.mark.integration

@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from redis.commands.search.field import NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 
 from core.iptc import expand_keywords, normalize_tag
+from core.normalize import resolve_timestamps
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -263,8 +265,7 @@ async def load_books_to_redis(
         # Load books
         start_time = time.time()
         last_update = start_time
-        pipeline = redis.pipeline() if not dry_run else None
-        batch_count = 0
+        prepared: list[tuple[str, dict[str, Any]]] = []
 
         with open(input_file, encoding="utf8") as f:
             for line in f:
@@ -279,8 +280,6 @@ async def load_books_to_redis(
                 try:
                     book = json.loads(line)
                     redis_doc = mc_book_to_redis_doc(book)
-
-                    # Redis key
                     key = f"{KEY_PREFIX}{redis_doc['id']}"
 
                     if dry_run:
@@ -288,14 +287,8 @@ async def load_books_to_redis(
                         if stats["loaded"] <= 3:
                             logger.info(f"  [DRY RUN] {redis_doc['title']} -> {key}")
                     else:
-                        pipeline.json().set(key, "$", redis_doc)  # type: ignore
-                        batch_count += 1
+                        prepared.append((key, redis_doc))
                         stats["loaded"] += 1
-
-                        if batch_count >= BATCH_SIZE:
-                            await pipeline.execute()  # type: ignore
-                            pipeline = redis.pipeline()
-                            batch_count = 0
 
                 except Exception as e:
                     stats["errors"] += 1
@@ -315,9 +308,26 @@ async def load_books_to_redis(
                     sys.stdout.flush()
                     last_update = current_time
 
-        # Execute remaining batch
-        if not dry_run and batch_count > 0:
-            await pipeline.execute()  # type: ignore
+        if not dry_run:
+            for i in range(0, len(prepared), BATCH_SIZE):
+                batch = prepared[i : i + BATCH_SIZE]
+                now_ts = int(datetime.now(UTC).timestamp())
+
+                read_pipe = redis.pipeline()
+                for key, _ in batch:
+                    read_pipe.json().get(key)
+                existing_docs: list[object] = await read_pipe.execute()
+
+                write_pipe = redis.pipeline()
+                for (key, redis_doc), existing in zip(
+                    batch, existing_docs, strict=True
+                ):
+                    existing_dict = existing if isinstance(existing, dict) else None
+                    ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                    redis_doc["created_at"] = ca
+                    redis_doc["modified_at"] = ma
+                    write_pipe.json().set(key, "$", redis_doc)
+                await write_pipe.execute()
 
         sys.stdout.write("\n")
 

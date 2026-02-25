@@ -28,7 +28,7 @@ import os
 import time
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -38,7 +38,7 @@ from adapters.config import load_env
 from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
-from core.normalize import document_to_redis, normalize_document
+from core.normalize import document_to_redis, normalize_document, resolve_timestamps
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from etl.documentary_filter import is_documentary, is_eligible_documentary
 from utils.get_logger import get_logger
@@ -48,7 +48,7 @@ logger = get_logger(__name__)
 
 # Batch size for concurrent API calls
 # Keep small to avoid overwhelming TMDB's rate limit (40 req/sec)
-BATCH_SIZE = 10
+BATCH_SIZE = 20
 
 # Retry configuration
 MAX_RETRIES = 3
@@ -73,6 +73,7 @@ class ETLPhaseStats:
     items_processed: int = 0
     items_success: int = 0
     items_failed: int = 0
+    items_skipped: int = 0
     errors: list[str] = field(default_factory=list)
 
     @property
@@ -136,6 +137,7 @@ class ChangesETLStats:
                 "duration_seconds": self.fetch_phase.duration_seconds,
                 "items_processed": self.fetch_phase.items_processed,
                 "items_success": self.fetch_phase.items_success,
+                "items_skipped": self.fetch_phase.items_skipped,
                 "items_failed": self.fetch_phase.items_failed,
                 "items_per_second": self.fetch_phase.items_per_second,
                 "errors": self.fetch_phase.errors[:10],
@@ -170,7 +172,11 @@ class TMDBChangesETL(TMDBService):
         return self.staging_dir / f"tmdb_changes_{media_type}_{run_date}_errors.json.gz"
 
     async def _fetch_changes_page(
-        self, media_type: Literal["tv", "movie", "person"], start_date: str, end_date: str, page: int
+        self,
+        media_type: Literal["tv", "movie", "person"],
+        start_date: str,
+        end_date: str,
+        page: int,
     ) -> dict:
         """Fetch a single page of changes."""
         endpoint = f"/{media_type}/changes"
@@ -229,22 +235,16 @@ class TMDBChangesETL(TMDBService):
             return False
 
         # Check for major streaming platforms.
-        # Handle multiple formats:
-        # 1. Raw TMDB API: {"watch/providers": {"results": {"US": {"flatrate": [...]}}}}
-        # 2. Pydantic model_dump: {"watch_providers": {"flatrate": [...], "region": "US"}}
-        watch_providers = item.get("watch/providers", {}).get("results", {}).get("US", {})
-        if not watch_providers:
-            watch_providers = item.get("watch_providers", {})
-        flatrate = watch_providers.get("flatrate", [])
+        watch_providers = item.get("watch_providers", {})
 
-        if not flatrate:
-            log_fn(
-                f"Filter: {item_name} no flatrate. wp_keys={list(watch_providers.keys()) if watch_providers else 'empty'}"
-            )
-        provider_names = {p.get("provider_name") for p in flatrate if p.get("provider_name")}
+        all_providers: list[dict] = []
+        for key in ("flatrate", "buy", "rent"):
+            all_providers.extend(watch_providers.get(key, []))
+
+        provider_names = {p.get("provider_name") for p in all_providers if p.get("provider_name")}
         has_streaming = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
 
-        if flatrate and not has_streaming:
+        if all_providers and not has_streaming:
             log_fn(f"Filter: {item_name} providers={provider_names} not in MAJOR")
 
         if media_type == "tv":
@@ -305,7 +305,8 @@ class TMDBChangesETL(TMDBService):
         start_date: str,
         end_date: str,
         stats: ChangesETLStats,
-        max_batches: int = 0,  # ETL should always bypass cache
+        max_batches: int = 0,
+        existing_ids: set[int] | None = None,
     ) -> Path:
         """Phase 1: Fetch all data from TMDB and save to staging file."""
         stats.fetch_phase.started_at = datetime.now()
@@ -351,10 +352,6 @@ class TMDBChangesETL(TMDBService):
                     self.get_media_details(
                         mid,
                         mc_type,
-                        include_cast=True,
-                        include_videos=True,
-                        include_watch_providers=True,
-                        include_keywords=True,
                     )
                     for mid in batch
                 ]
@@ -374,9 +371,8 @@ class TMDBChangesETL(TMDBService):
                     continue
 
                 if result is None:
-                    stats.fetch_phase.items_failed += 1
-                    stats.enrichment_errors += 1
-                    logger.warning(f"Null result for {tmdb_id}")
+                    stats.fetch_phase.items_skipped += 1
+                    logger.debug(f"Null result for {tmdb_id}")
                     continue
 
                 # Raw API returns dict directly, person service returns model
@@ -390,8 +386,8 @@ class TMDBChangesETL(TMDBService):
                     continue
 
                 if not item_dict or item_dict.get("status_code") == 404:
-                    stats.fetch_phase.items_failed += 1
-                    logger.warning(f"Empty or 404 for {tmdb_id}")
+                    stats.fetch_phase.items_skipped += 1
+                    logger.debug(f"Empty or 404 for {tmdb_id}")
                     continue
 
                 # Check for enrichment errors (e.g. partial failures in get_media_details)
@@ -412,9 +408,14 @@ class TMDBChangesETL(TMDBService):
                         f"DEBUG first item popularity={item_dict.get('popularity')} vote_count={item_dict.get('vote_count')}"
                     )
 
-                # Apply filter
+                # Existing items always pass — we must update them
                 stats.enriched_count += 1
-                if media_type == "person":
+                is_existing = existing_ids is not None and tmdb_id in existing_ids
+
+                if is_existing:
+                    enriched_items.append(item_dict)
+                    stats.passed_filter += 1
+                elif media_type == "person":
                     if self._passes_person_filter(item_dict):
                         enriched_items.append(item_dict)
                         stats.passed_filter += 1
@@ -547,18 +548,14 @@ class TMDBChangesETL(TMDBService):
                 batch = items[i : i + batch_size]
                 batch_start = time.time()
 
-                pipe = redis.pipeline()
-
+                prepared: list[tuple[str, dict[str, Any]]] = []
                 for item in batch:
                     stats.load_phase.items_processed += 1
-
                     try:
-                        # Normalize and prepare for Redis
                         if media_type == "person":
                             doc_dict = self._normalize_person(item)
-                            # For person, doc_dict is already in Redis format
                             key = f"{prefix}{doc_dict['id']}"
-                            redis_doc = doc_dict
+                            prepared.append((key, doc_dict))
                         else:
                             doc = normalize_document(item, genre_mapping=genre_mapping)
                             if doc is None:
@@ -567,19 +564,32 @@ class TMDBChangesETL(TMDBService):
                                     f"{item.get('id')}: normalize_document returned None"
                                 )
                                 continue
-                            # Use doc.id (mc_id like "tmdb_tv_12345") for key consistency
-                            # This matches etl_service.py which uses search_doc.id
                             key = f"{prefix}{doc.id}"
                             redis_doc = document_to_redis(doc)
-
-                        pipe.json().set(key, "$", redis_doc)
-                        stats.load_phase.items_success += 1
-
+                            prepared.append((key, redis_doc))
                     except Exception as e:
                         stats.load_phase.items_failed += 1
                         stats.load_phase.errors.append(f"{item.get('id')}: {e}")
 
-                await pipe.execute()
+                if prepared:
+                    now_ts = int(datetime.now(UTC).timestamp())
+                    read_pipe = redis.pipeline()
+                    for key, _ in prepared:
+                        read_pipe.json().get(key)
+                    existing_docs: list[object] = await read_pipe.execute()
+
+                    write_pipe = redis.pipeline()
+                    for (key, redis_doc), existing in zip(prepared, existing_docs, strict=True):
+                        existing_dict = existing if isinstance(existing, dict) else None
+                        ca, ma, src = resolve_timestamps(
+                            existing_dict, now_ts, source_tag="nightly_etl"
+                        )
+                        redis_doc["created_at"] = ca
+                        redis_doc["modified_at"] = ma
+                        redis_doc["_source"] = src
+                        write_pipe.json().set(key, "$", redis_doc)
+                        stats.load_phase.items_success += 1
+                    await write_pipe.execute()
 
                 batch_time = time.time() - batch_start
                 items_per_sec = len(batch) / batch_time if batch_time > 0 else 0
@@ -699,8 +709,34 @@ async def run_nightly_etl(
 
     # Phase 1: Fetch
     if not load_only:
+        # Build set of existing tmdb_ids so updates to indexed items bypass the filter
+        existing_ids: set[int] | None = None
+        if media_type in ("movie", "tv"):
+            prefix = "media:tmdb_movie_" if media_type == "movie" else "media:tmdb_tv_"
+            existing_ids = set()
+            redis = Redis(
+                host=redis_host,
+                port=redis_port,
+                password=redis_password or None,
+                decode_responses=True,
+            )
+            try:
+                cursor = 0
+                while True:
+                    cursor, keys = await redis.scan(cursor=cursor, match=f"{prefix}*", count=1000)
+                    for k in keys:
+                        try:
+                            existing_ids.add(int(k[len(prefix):]))
+                        except ValueError:
+                            continue
+                    if cursor == 0:
+                        break
+                logger.info(f"Found {len(existing_ids)} existing {media_type} items in index")
+            finally:
+                await redis.aclose()
+
         staging_path = await etl.fetch_and_stage(
-            media_type, start_date, end_date, stats, max_batches
+            media_type, start_date, end_date, stats, max_batches, existing_ids=existing_ids
         )
 
         print("📊 Phase 1 (Fetch) Results:")
@@ -714,7 +750,9 @@ async def run_nightly_etl(
                 f"{stats.documentary_passed_filter}/{stats.documentary_passed_filter + stats.documentary_failed_filter}"
             )
             print(f"  Documentary override fails: {stats.documentary_failed_filter}")
-        print(f"  Errors: {stats.fetch_phase.items_failed}")
+        print(f"  Skipped (empty/404): {stats.fetch_phase.items_skipped}")
+        if stats.fetch_phase.items_failed:
+            print(f"  Errors: {stats.fetch_phase.items_failed}")
         print(f"  Duration: {stats.fetch_phase.duration_seconds:.1f}s")
         print(f"  Rate: {stats.fetch_phase.items_per_second:.1f} items/sec")
         print(f"  Staging file: {staging_path}")

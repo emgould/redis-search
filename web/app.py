@@ -17,10 +17,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
+from redis.commands.search.query import Query as SearchQuery
 
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
+from api.tmdb.core import TMDBService
+from contracts.models import MCType
+from core.normalize import document_to_redis, normalize_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
 from etl.etl_metadata import ETLMetadataStore
@@ -39,6 +43,7 @@ from services.search_service import (
     search,
     search_stream,
 )
+from utils.genre_mapping import get_genre_mapping_with_fallback
 from web.routes.openlibrary_etl import router as openlibrary_etl_router
 
 # Project root directory for subprocess cwd
@@ -2389,6 +2394,85 @@ async def api_get_details(
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
+    """Convert TMDB media details to JSON-serializable dict."""
+    if payload is None:
+        return None
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump(mode="json")  # type: ignore[no-any-return]
+    if hasattr(payload, "to_dict"):
+        return payload.to_dict()  # type: ignore[no-any-return]
+    if isinstance(payload, dict):
+        return payload
+    return {"value": str(payload)}
+
+
+@app.get("/api/media-details")
+async def api_get_media_details(
+    tmdb_id: int = Query(..., description="TMDB numeric ID"),
+    media_type: str = Query(..., description="'movie' or 'tv'"),
+    doc: bool = Query(
+        default=False,
+        description="If true, normalize through ETL pipeline and return Redis index document",
+    ),
+    region: str = Query(default="US", description="Region code"),
+    _ui: None = Depends(require_web_ui_enabled),
+):
+    """
+    Fetch TMDB media details for a single title (mirrors get_media_details.py).
+
+    Without doc: returns raw TMDB media details.
+    With doc=true: returns normalized Redis index document.
+    """
+    if not os.getenv("TMDB_READ_TOKEN"):
+        return JSONResponse(
+            status_code=503,
+            content={"error": "TMDB_READ_TOKEN is not set. Cannot fetch media details."},
+        )
+    if media_type.lower() not in ("tv", "movie"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "media_type must be 'tv' or 'movie'"},
+        )
+    try:
+        mc_type = MCType.TV_SERIES if media_type.lower() == "tv" else MCType.MOVIE
+        service = TMDBService()
+        details = await service.get_media_details(
+            tmdb_id=tmdb_id,
+            media_type=mc_type,
+            region=region.upper(),
+            no_cache=True,
+        )
+        if details is None or details.error:
+            err = details.error if details else "no result"
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Error fetching {media_type} {tmdb_id}: {err}"},
+            )
+        if not doc:
+            payload = _media_details_to_serializable(details)
+            return JSONResponse(content=payload or {})
+        item_dict = _media_details_to_serializable(details)
+        if item_dict is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to serialize media details"},
+            )
+        item_dict["_media_type"] = media_type.lower()
+        genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+        normalized = normalize_document(item_dict, genre_mapping=genre_mapping)
+        if normalized is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Normalizer returned None — item did not produce a document"},
+            )
+        redis_doc = document_to_redis(normalized)
+        return JSONResponse(content=redis_doc)
+    except Exception as e:
+        logging.exception("Error fetching media details")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.get("/api/cast-names", response_model=CastNameSearchResponse)
 async def api_get_cast_names(
     query: str | None = Query(default=None, description="Title to search for (e.g., 'The Matrix')"),
@@ -2889,6 +2973,105 @@ async def get_etl_job_states(_: None = Depends(require_api_key)):
         )
 
 
+# ---------------------------------------------------------------------------
+# Changes feed — documents modified in a time range across indexes
+# ---------------------------------------------------------------------------
+
+_CHANGES_SOURCE_ALIASES: dict[str, str] = {
+    "person": "people",
+    "podcast": "podcasts",
+}
+
+
+async def _search_index_changes(
+    index_name: str,
+    redis_index: str,
+    since: int,
+    until_val: str,
+    limit: int,
+    change_source: str | None,
+) -> tuple[str, dict[str, Any]]:
+    """Run a modified_at range query on a single index and return parsed docs."""
+    redis = get_redis()
+    query_str = f"@modified_at:[{since} {until_val}]"
+    q = SearchQuery(query_str).paging(0, limit).sort_by("modified_at", asc=False)
+    result = await redis.ft(redis_index).search(q)
+
+    documents: list[dict[str, Any]] = []
+    for doc in result.docs:
+        parsed: dict[str, Any] = {"id": doc.id}
+        if hasattr(doc, "json") and doc.json:
+            try:
+                parsed.update(json.loads(doc.json))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if change_source and parsed.get("_source") != change_source:
+            continue
+        documents.append(parsed)
+
+    return index_name, {"count": len(documents), "documents": documents}
+
+
+@app.get("/api/changes")
+async def api_changes(
+    since: int = Query(..., description="Inclusive start of range (Unix timestamp)"),
+    until: int | None = Query(
+        default=None,
+        description="Inclusive end of range (Unix timestamp); omit for open-ended",
+    ),
+    sources: str | None = Query(
+        default=None,
+        description="Comma-separated index names (media,people,podcast,book,author). Default: all.",
+    ),
+    limit: int = Query(default=100, ge=1, le=1000, description="Max documents per source"),
+    change_source: str | None = Query(
+        default=None,
+        description="Filter by _source field value (e.g. 'backfill')",
+    ),
+) -> JSONResponse:
+    """Return documents modified in a time range, across one or more indexes."""
+    until_val = str(until) if until is not None else "+inf"
+
+    if sources:
+        requested = [s.strip() for s in sources.split(",") if s.strip()]
+    else:
+        requested = list(INDEX_CONFIGS.keys())
+
+    resolved: list[tuple[str, str]] = []
+    for src in requested:
+        canonical = _CHANGES_SOURCE_ALIASES.get(src, src)
+        if canonical not in INDEX_CONFIGS:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Unknown source: {src}"},
+            )
+        redis_name = str(INDEX_CONFIGS[canonical]["redis_name"])
+        resolved.append((canonical, redis_name))
+
+    tasks = [
+        _search_index_changes(name, redis_idx, since, until_val, limit, change_source)
+        for name, redis_idx in resolved
+    ]
+    outcomes = await asyncio.gather(*tasks, return_exceptions=True)
+
+    results: dict[str, dict[str, Any]] = {}
+    for outcome in outcomes:
+        if isinstance(outcome, BaseException):
+            logging.exception("Changes query failed", exc_info=outcome)
+            continue
+        name, data = outcome
+        results[name] = data
+
+    return JSONResponse(
+        content={
+            "since": since,
+            "until": until if until is not None else None,
+            "sources": [name for name, _ in resolved],
+            "results": results,
+        }
+    )
+
+
 # Index configurations - maps index name to (redis_index_name, prefix, schema)
 INDEX_CONFIGS = {
     "media": {
@@ -2909,17 +3092,34 @@ INDEX_CONFIGS = {
             # Cast filtering (arrays) - cast_names normalized
             TagField("$.cast_ids[*]", as_name="cast_ids"),
             TagField("$.cast_names[*]", as_name="cast_names"),
-            # Director fields (normalized)
-            TagField("$.director_id", as_name="director_id"),
-            TagField("$.director_name", as_name="director_name"),
+            # Director object (JSONPath into nested dict)
+            TagField("$.director.id", as_name="director_id"),
+            TagField("$.director.name_normalized", as_name="director_name"),
             # Keywords (IPTC expanded, normalized)
             TagField("$.keywords[*]", as_name="keywords"),
             # Origin country (normalized ISO codes)
             TagField("$.origin_country[*]", as_name="origin_country"),
+            # watch_providers indexed subfields
+            TagField("$.watch_providers.watch_region", as_name="watch_region"),
+            TagField("$.watch_providers.primary_provider_type", as_name="primary_provider_type"),
+            TagField(
+                "$.watch_providers.streaming_platform_ids[*]", as_name="streaming_platform_ids"
+            ),
+            TagField(
+                "$.watch_providers.on_demand_platform_ids[*]", as_name="on_demand_platform_ids"
+            ),
+            NumericField(
+                "$.watch_providers.primary_provider_id",
+                as_name="primary_provider_id",
+                sortable=True,
+            ),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),
             NumericField("$.year", as_name="year", sortable=True),
+            # Document lifecycle timestamps
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "people": {
@@ -2937,6 +3137,8 @@ INDEX_CONFIGS = {
             TagField("$.source", as_name="source"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "podcasts": {
@@ -2962,6 +3164,8 @@ INDEX_CONFIGS = {
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "author": {
@@ -2984,6 +3188,8 @@ INDEX_CONFIGS = {
             NumericField("$.work_count", as_name="work_count", sortable=True),
             NumericField("$.quality_score", as_name="quality_score", sortable=True),
             NumericField("$.wikidata_birth_year", as_name="birth_year", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
     "book": {
@@ -3022,6 +3228,8 @@ INDEX_CONFIGS = {
             # NEW: Popularity fields
             NumericField("$.popularity_score", as_name="popularity_score", sortable=True),
             NumericField("$.edition_count", as_name="edition_count", sortable=True),
+            NumericField("$.created_at", as_name="created_at", sortable=True),
+            NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
 }

@@ -4,7 +4,6 @@ Tests Pydantic model validation and field mapping.
 """
 
 import pytest
-from contracts.models import MCSources, MCType
 
 from api.newsai.models import (
     MCNewsItem,
@@ -14,6 +13,7 @@ from api.newsai.models import (
     NewsSourcesResponse,
     TrendingNewsResponse,
 )
+from contracts.models import MCSources, MCType
 
 pytestmark = pytest.mark.unit
 

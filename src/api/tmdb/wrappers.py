@@ -6,7 +6,11 @@ These maintain backward compatibility with existing Firebase Functions.
 
 from typing import Any
 
-from api.tmdb.core import TMDBFunctionCache
+from api.tmdb.core import (
+    TMDBContentRatingCache,
+    TMDBFunctionCache,
+    TMDBService,
+)
 from api.tmdb.models import (
     MCBaseMediaItem,
     MCGenreSearchResponse,
@@ -17,6 +21,10 @@ from api.tmdb.models import (
     MCPersonCreditsResponse,
     MCPersonDetailsResponse,
     MCPopularTVResponse,
+    MCTvBatchEnrichmentRequestItem,
+    MCTvBatchEnrichmentResponse,
+    MCTvItem,
+    MCTvSeasonRuntimeResponse,
     TMDBSearchGenreResponse,
     TMDBSearchMovieResponse,
     TMDBSearchMultiResponse,
@@ -25,7 +33,6 @@ from api.tmdb.models import (
 from api.tmdb.person import TMDBPersonService
 from api.tmdb.search import TMDBSearchService
 from api.tmdb.search_with_credits import search_person_with_credits
-from api.tmdb.tmdb_models import TMDBProvidersResponse
 from api.tmdb.trending import get_trending_movies, get_trending_tv_shows
 from contracts.models import (
     MCBaseItem,
@@ -39,6 +46,28 @@ from utils.get_logger import get_logger
 from utils.redis_cache import RedisCache
 
 logger = get_logger(__name__)
+
+
+async def _get_tv_network_name(tmdb_id: int, watch_region: str) -> str | None:
+    try:
+        service = TMDBService()
+        tv_details = await service.get_media_details(
+            tmdb_id=tmdb_id,
+            media_type=MCType.TV_SERIES,
+            include_cast=False,
+            include_videos=False,
+            include_watch_providers=False,
+            include_keywords=False,
+        )
+        network_name = getattr(tv_details, "network", None)
+        return network_name if isinstance(network_name, str) and network_name.strip() else None
+    except Exception:
+        logger.debug(
+            "Unable to fetch TV network for streaming provider resolution",
+            extra={"tmdb_id": tmdb_id, "watch_region": watch_region},
+        )
+        return None
+
 
 """
 Trending Wrappers
@@ -188,6 +217,79 @@ async def get_popular_tv_async(limit: int = 50, **kwargs: Any) -> MCPopularTVRes
             error=str(e),
             status_code=500,
         )
+
+
+@RedisCache.use_cache(TMDBFunctionCache, prefix="tv_batch_enrichment_wrapper_v0.01")
+async def get_tv_batch_enrichment_async(
+    items: list[MCTvBatchEnrichmentRequestItem], **kwargs: Any
+) -> MCTvBatchEnrichmentResponse:
+    """Async wrapper for lightweight TV lifecycle enrichment by TMDB ID."""
+    data_source = "TMDB TV Batch Enrichment"
+    try:
+        service = TMDBSearchService()
+        results = await service.get_tv_batch_enrichment(items=items, **kwargs)
+
+        return MCTvBatchEnrichmentResponse(
+            items=results,
+            total_results=len(results),
+            data_source=data_source,
+        )
+    except Exception as e:
+        logger.error(f"Error in get_tv_batch_enrichment_async: {e}")
+        return MCTvBatchEnrichmentResponse(
+            items=[],
+            total_results=0,
+            data_source=data_source,
+            error=str(e),
+            status_code=500,
+        )
+
+
+@RedisCache.use_cache(TMDBFunctionCache, prefix="tv_season_runtime_wrapper")
+async def get_tv_season_runtime_async(
+    tmdb_id: int, season_number: int, **kwargs: Any
+) -> MCTvSeasonRuntimeResponse:
+    """Async wrapper for TMDB TV season runtime rollup."""
+    data_source = "TMDB TV Season Runtime"
+    try:
+        service = TMDBSearchService()
+        response = await service.get_tv_season_runtime(
+            tmdb_id=tmdb_id,
+            season_number=season_number,
+            **kwargs,
+        )
+        response.data_source = data_source
+        return response
+    except Exception as e:
+        logger.error(f"Error in get_tv_season_runtime_async: {e}")
+        return MCTvSeasonRuntimeResponse(
+            tmdb_id=tmdb_id,
+            season_number=season_number,
+            data_source=data_source,
+            error=str(e),
+            status_code=500,
+        )
+
+
+@RedisCache.use_cache(TMDBFunctionCache, prefix="movie_now_playing_ids")
+async def get_movie_now_playing_ids_async(region: str = "US") -> list[int]:
+    """Return tmdb IDs currently in theaters from TMDB now-playing endpoint."""
+    try:
+        service = TMDBSearchService()
+        results = await service.get_now_playing(
+            region=region,
+            limit=200,
+            include_details=False,
+            sort_by_box_office=False,
+        )
+        return [
+            item.tmdb_id
+            for item in results
+            if hasattr(item, "tmdb_id") and isinstance(item.tmdb_id, int)
+        ]
+    except Exception as e:
+        logger.error("Error getting now-playing movie IDs for region %s: %s", region, e)
+        return []
 
 
 """
@@ -481,12 +583,9 @@ async def find_genres_async(query: str = "", page: int = 1) -> MCGenreSearchResp
         MCGenreSearchResponse - MCSearchResponse derivative
     """
     try:
-        from api.tmdb.core import TMDBService
-
         service = TMDBService()
         genres = await service.find_genres_async()
 
-        # Convert TMDBGenre list to MCGenreItem list
         from api.tmdb.models import MCGenreItem
 
         genre_items = [MCGenreItem(id=g.id, name=g.name) for g in genres]
@@ -585,6 +684,12 @@ async def get_media_details_async(
     """
 
     try:
+        # Preserve force-refresh intent for downstream calls while still
+        # allowing Redis decorator-level no_cache handling.
+        force_refresh = bool(kwargs.pop("force_refresh", False))
+        if force_refresh:
+            kwargs["no_cache"] = True
+
         # Convert content_type string to MCType enum
         if content_type == "tv":
             mc_type = MCType.TV_SERIES
@@ -602,7 +707,11 @@ async def get_media_details_async(
             include_videos=True,
             include_watch_providers=True,
             include_keywords=True,
+            **kwargs,
         )
+
+        if isinstance(details, MCTvItem):
+            details.apply_episode_availability_rules()
 
         if details.error:
             # Return error dict with proper structure
@@ -624,42 +733,93 @@ async def get_media_details_async(
         )
 
 
-@RedisCache.use_cache(TMDBFunctionCache, prefix="get_tv_providers_wrapper")
-async def get_providers_async(
-    media_type: MCType, region: str = "US", **kwargs: Any
-) -> TMDBProvidersResponse:
+@RedisCache.use_cache(TMDBFunctionCache, prefix="get_watch_providers_for_title_wrapper")
+async def get_watch_providers_for_title_async(
+    tmdb_id: int, content_type: str, region: str = "US"
+) -> dict[str, Any]:
     """
-    Get list of available TV streaming providers from TMDB.
+    Get watch providers (streaming, rent, buy) for a specific movie or TV show.
 
     Args:
+        tmdb_id: TMDB ID of the movie or TV show
+        content_type: "movie" or "tv"
         region: Region code (default "US")
-        **kwargs: Additional arguments
 
     Returns:
-        List of TV providers sorted by display_priority or None if not found
+        Dict with watch_providers (flatrate, rent, buy arrays) and streaming_platform
     """
     try:
-        from api.tmdb.core import TMDBService
-
         service = TMDBService()
-        providers = await service.get_providers(media_type, region, **kwargs)
 
-        if providers.error:
-            logger.error(f"Error getting providers for region {region}: {providers.error}")
-            return providers  # type: ignore[no-any-return]
+        # Map content_type to MCType
+        if content_type == "movie":
+            media_type = MCType.MOVIE
+        elif content_type == "tv":
+            media_type = MCType.TV_SERIES
+        else:
+            return {"error": f"Invalid content_type: {content_type}"}
 
-        return providers  # type: ignore[no-any-return]
+        # Call the internal method to get watch providers
+        result = await service._get_watch_providers(tmdb_id, media_type, region)
+
+        if not result:
+            return {
+                "tmdb_id": tmdb_id,
+                "content_type": content_type,
+                "watch_providers": {},
+                "streaming_platform": None,
+            }
+
+        return {
+            "tmdb_id": tmdb_id,
+            "content_type": content_type,
+            "watch_providers": result.get("watch_providers", {}),
+            "streaming_platform": result.get("streaming_platform"),
+        }
 
     except Exception as e:
-        logger.error(f"Error getting providers for region {region}: {e}")
-        list_type = "tv" if media_type == MCType.TV_SERIES else "movie"
-        return TMDBProvidersResponse(
-            list_type=list_type,  # type: ignore[arg-type]
-            results=[],
-            mc_type=MCType.PROVIDERS_LIST,
-            error=str(e),
-            status_code=500,
+        logger.error(f"Error getting watch providers for {content_type} {tmdb_id}: {e}")
+        return {
+            "tmdb_id": tmdb_id,
+            "content_type": content_type,
+            "error": str(e),
+        }
+
+
+@RedisCache.use_cache(TMDBContentRatingCache, prefix="content_rating")
+async def get_content_rating_async(
+    tmdb_id: int, region: str = "US", content_type: str = "tv"
+) -> dict[str, str | None] | None:
+    """
+    Get content rating (and release date when available) for a movie or TV title.
+
+    Args:
+        tmdb_id: TMDB movie/TV ID.
+        region: Region code (default "US").
+        content_type: "tv" or "movie" (default "tv").
+
+    Returns:
+        Dict with rating and release_date, or None if not found.
+    """
+    try:
+        normalized_content_type = content_type.strip().lower() if content_type else "tv"
+        if normalized_content_type not in {"movie", "tv"}:
+            raise ValueError(f"Invalid content_type: {content_type}")
+
+        service = TMDBService()
+        return await service.get_content_rating(
+            tmdb_id=tmdb_id,
+            region=region,
+            media_type=normalized_content_type,
         )
+    except Exception as error:
+        logger.error(
+            "Error getting content rating for %s in region %s: %s",
+            tmdb_id,
+            region,
+            error,
+        )
+        return None
 
 
 """

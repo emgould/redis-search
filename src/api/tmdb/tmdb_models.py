@@ -377,6 +377,7 @@ class TMDBEpisodeSummary(BaseModelWithMethods):
     vote_count: int = 0
     air_date: str | None = None
     episode_number: int | None = None
+    episode_type: str | None = None
     production_code: str | None = None
     runtime: int | None = None
     season_number: int | None = None
@@ -395,6 +396,27 @@ class TMDBSeasonSummary(BaseModelWithMethods):
     poster_path: str | None = None
     season_number: int = 0
     vote_average: float = 0.0
+
+
+class TMDBSeasonEpisode(BaseModelWithMethods):
+    """Episode model for TV season detail responses."""
+
+    id: int
+    episode_number: int
+    name: str
+    overview: str = ""
+    still_path: str | None = None
+    air_date: str | None = None
+    runtime: int | None = None
+
+
+class TMDBSeasonDetailsResult(BaseModelWithMethods):
+    """Model for TMDB TV season details from /tv/{id}/season/{season_number}."""
+
+    id: int
+    name: str
+    season_number: int
+    episodes: list[TMDBSeasonEpisode] = Field(default_factory=list)
 
 
 class TMDBKeyword(BaseModelWithMethods):
