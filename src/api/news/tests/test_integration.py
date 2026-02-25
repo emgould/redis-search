@@ -13,12 +13,12 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from contracts.models import MCSources, MCSubType, MCType
 from firebase_functions import https_fn
 
 from api.news.handlers import NewsHandler
 from api.news.models import MCNewsItem
 from api.news.wrappers import news_wrapper, search_person_async
+from contracts.models import MCSources, MCSubType, MCType
 from utils.pytest_utils import write_snapshot
 
 pytestmark = pytest.mark.integration

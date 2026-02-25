@@ -13,16 +13,16 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from contracts.models import (
-    MCSources,
-    MCSubType,
-    MCType,
-)
 from firebase_functions import https_fn
 
 from api.openlibrary.handlers import OpenLibraryHandler
 from api.openlibrary.models import MCAuthorItem, MCBookItem
 from api.openlibrary.wrappers import openlibrary_wrapper, search_person_async
+from contracts.models import (
+    MCSources,
+    MCSubType,
+    MCType,
+)
 from utils.pytest_utils import write_snapshot
 
 pytestmark = pytest.mark.integration

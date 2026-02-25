@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from contracts.models import MCSearchResponse, MCType
 from pydantic import Field, model_validator
 
+from contracts.models import MCSearchResponse, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

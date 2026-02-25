@@ -3,7 +3,6 @@ Tests for OpenLibrary Pydantic models.
 """
 
 import pytest
-from contracts.models import MCType
 from pydantic import ValidationError
 
 from api.openlibrary.models import (
@@ -11,6 +10,7 @@ from api.openlibrary.models import (
     CoverUrlsResponse,
     MCBookItem,
 )
+from contracts.models import MCType
 
 
 class TestMCBookItem:

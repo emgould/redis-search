@@ -277,7 +277,7 @@ async def test_method_decorator(redis_cache):
     assert service.call_count == 1
     assert data1 == data2
 
-    # Different instance, same logic? 
+    # Different instance, same logic?
     # Logic uses func name + args. 'self' is the first arg.
     # Standard Cache v2 logic includes 'self' in args if it's not a classmethod on Cache.
     # The decorator implementation in RedisCache calls `get_cache_key`.
@@ -289,7 +289,7 @@ async def test_method_decorator(redis_cache):
     service2 = Service()
     data3 = await service2.fetch_data(100)
     # Should use cache because `self` is ignored in key generation by default logic
-    assert service2.call_count == 0 
+    assert service2.call_count == 0
     assert data3 == data1
 
     print("✅ Class method decorator working correctly (ignoring self)")

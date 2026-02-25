@@ -5,9 +5,9 @@ Follows Pydantic 2.0 patterns with full type safety.
 
 from datetime import datetime
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from pydantic import ConfigDict, Field, model_validator
 
+from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

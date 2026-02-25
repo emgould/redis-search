@@ -399,12 +399,13 @@ class TMDBService(Auth, BaseAPIClient):
         if include_release_dates and media_type == MCType.MOVIE:
             release_dates_result = details_data.get("release_dates", {})
             if isinstance(release_dates_result, dict) and isinstance(details, MCMovieItem):
-                details.release_dates = release_dates_result.get("release_dates", {})
+                details.release_dates = release_dates_result.get("results", {})
+
                 rating = await self.get_content_rating(
                     tmdb_id=tmdb_id,
                     region=region,
                     media_type=media_type,
-                    data=details.release_dates,
+                    data=details_data.get("release_dates", {}),
                 )
                 details.us_rating = rating.get("rating", None) if rating else None
 
@@ -908,6 +909,7 @@ class TMDBService(Auth, BaseAPIClient):
         region: str = "US",
         media_type: str | MCType = "tv",
         data: dict[str, Any] | None = None,
+        **kwargs,
     ) -> dict[str, str | None] | None:
         """
         Get content rating details for a movie or TV title in a region.
@@ -927,10 +929,11 @@ class TMDBService(Auth, BaseAPIClient):
             normalized_media_type = media_type.strip().lower() if media_type else "tv"
 
         try:
-            if normalized_media_type == "movie":
-                data = await self._make_request(f"movie/{tmdb_id}/release_dates")
-            else:
-                data = await self._make_request(f"tv/{tmdb_id}/content_ratings")
+            if not data:
+                if normalized_media_type == "movie":
+                    data = await self._make_request(f"movie/{tmdb_id}/release_dates")
+                else:
+                    data = await self._make_request(f"tv/{tmdb_id}/content_ratings")
 
             if not isinstance(data, dict):
                 return None

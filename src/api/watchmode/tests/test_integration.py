@@ -152,9 +152,8 @@ class TestWatchmodeWrappersIntegration:
         # Set API keys via environment (wrapper loads from env/SecretParam)
         import os
 
-        from contracts.models import MCSources, MCType
-
         from api.watchmode.auth import watchmode_auth
+        from contracts.models import MCSources, MCType
 
         original_watchmode = os.environ.get("WATCHMODE_API_KEY")
         original_tmdb = os.environ.get("TMDB_READ_TOKEN")
@@ -215,9 +214,8 @@ class TestWatchmodeWrappersIntegration:
         # Set API key via environment (wrapper loads from env/SecretParam)
         import os
 
-        from contracts.models import MCSources, MCType
-
         from api.watchmode.auth import watchmode_auth
+        from contracts.models import MCSources, MCType
 
         original_watchmode = os.environ.get("WATCHMODE_API_KEY")
         os.environ["WATCHMODE_API_KEY"] = WATCHMODE_API_KEY

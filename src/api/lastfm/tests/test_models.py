@@ -3,7 +3,6 @@ Tests for LastFM Pydantic models.
 """
 
 import pytest
-from contracts.models import MCType
 from pydantic import ValidationError
 
 from api.lastfm._models import OdesliPlatformLinks
@@ -15,6 +14,7 @@ from api.lastfm.models import (
     SpotifyAlbumMetadata,
     SpotifyTokenResponse,
 )
+from contracts.models import MCType
 
 
 class TestMCMusicAlbum:

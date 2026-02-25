@@ -10,10 +10,9 @@ import re
 from collections.abc import Coroutine
 from typing import Any, cast
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCType
-
 from api.tmdb.models import MCPersonCreditsResult
 from api.tmdb.person import TMDBPersonService
+from contracts.models import MCBaseItem, MCSearchResponse, MCType
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)

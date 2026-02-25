@@ -5,8 +5,9 @@ Follows Pydantic 2.0 patterns with full type safety.
 
 from typing import Any
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCSubType, MCType
 from pydantic import BaseModel, Field, model_validator
+
+from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCSubType, MCType
 
 
 class MCMusicAlbum(MCBaseItem):

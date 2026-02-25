@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from contracts.models import MCBaseItem, MCSources, MCType
 from pydantic import Field, model_validator
 
 from api.tmdb.models import MCMovieItem, MCTvItem
+from contracts.models import MCBaseItem, MCSources, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

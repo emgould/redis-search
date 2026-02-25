@@ -6,9 +6,9 @@ Provides drop-in replacement for news API models.
 
 from datetime import datetime
 
-from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from pydantic import ConfigDict, Field, model_validator
 
+from contracts.models import MCBaseItem, MCSearchResponse, MCSources, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 

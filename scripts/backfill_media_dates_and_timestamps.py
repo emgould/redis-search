@@ -50,6 +50,7 @@ from core.normalize import (  # noqa: E402
     normalize_document,
     resolve_timestamps,
 )
+from utils.genre_mapping import get_genre_mapping_with_fallback  # noqa: E402
 from utils.get_logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
@@ -96,6 +97,13 @@ async def backfill(
     try:
         await redis.ping()  # type: ignore[misc]
         service = TMDBService()
+
+        genre_mapping: dict[int, str] = {}
+        try:
+            genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+            logger.info("Loaded %d genre mappings", len(genre_mapping))
+        except Exception as e:
+            logger.warning("Failed to load genre mapping: %s. Genres will be empty.", e)
 
         saved = await redis.get(CURSOR_KEY)
         cursor = int(saved) if saved else 0
@@ -279,7 +287,7 @@ async def backfill(
 
                         stats["fetched"] += 1
 
-                        doc = normalize_document(item_dict)
+                        doc = normalize_document(item_dict, genre_mapping=genre_mapping)
                         if doc is None:
                             stats["normalize_failed"] += 1
                             logger.warning("Normalize returned None for tmdb_id=%s", tmdb_id)

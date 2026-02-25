@@ -6,7 +6,6 @@ Tests TMDBSearchService functionality.
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from contracts.models import MCSearchResponse, MCType
 
 from api.tmdb.models import (
     MCBaseMediaItem,
@@ -18,6 +17,7 @@ from api.tmdb.tmdb_models import (
     TMDBKeyword,
     TMDBKeywordGenreResponse,
 )
+from contracts.models import MCSearchResponse, MCType
 
 pytestmark = pytest.mark.unit
 
