@@ -13,6 +13,9 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from core.normalize import document_to_redis, normalize_document
+from utils.genre_mapping import get_genre_mapping_with_fallback
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -86,8 +89,23 @@ async def run_once(tmdb_id: int, media_type: str, region: str, indent: int) -> i
         no_cache=True,
     )
 
-    payload = _to_serializable(details)
-    print(json.dumps(payload, indent=indent, default=str, ensure_ascii=False))
+    item_dict = _to_serializable(details)
+    print(json.dumps(item_dict, indent=indent, default=str, ensure_ascii=False))
+
+    if item_dict is None:
+        print("Failed to serialize media details.", file=sys.stderr)
+        sys.exit(2)
+
+    item_dict["_media_type"] = media_type
+    genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+    doc = normalize_document(item_dict, genre_mapping=genre_mapping)
+    if doc is None:
+        print("Normalizer returned None — item did not produce a document.", file=sys.stderr)
+        sys.exit(2)
+
+    redis_doc = document_to_redis(doc)
+    print(json.dumps(redis_doc, indent=indent, default=str, ensure_ascii=False))
+
     return 0 if details and not details.error else 2
 
 

@@ -36,6 +36,8 @@ class TMDBSearchMovie(BaseModel):
     video: bool = False
     vote_average: float = 0.0
     vote_count: int = 0
+    budget: int | None = None
+    revenue: int | None = None
 
 
 class TMDBSearchMovieEnhanced(TMDBSearchMovie):
@@ -197,6 +199,7 @@ class TMDBMovieDetailsResult(BaseModelWithMethods):
     title: str
     original_title: str
     original_language: str
+    origin_country: list[str] = Field(default_factory=list)
 
     # Content metadata
     adult: bool = False

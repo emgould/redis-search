@@ -342,7 +342,8 @@ Schema locations: web/app.py INDEX_CONFIGS, scripts/build_redis_index.py, migrat
 - `since` (required): Unix timestamp or ISO 8601 — inclusive start of range
 - `until` (optional): Unix timestamp or ISO 8601 — inclusive end; omit for "since X onward"
 - `sources` (optional): Comma-separated `media,person,podcast,book,author` — default all
-- `limit` (optional): Max docs per source (e.g. 100)
+- `start` (optional): Zero-based start offset per source. Default `0`.
+- `take` (optional): Page size per source. Default `100`, maximum `1000`.
 - `change_source` (optional): filter by `_source` (e.g. `backfill`) for migration windows
 
 Implementation: Query `@modified_at:[since until]` on each requested index in parallel. If `change_source` is provided, post-filter on `_source` (or add index support later if needed). Endpoint returns documents that changed (were modified) in the window, not created.

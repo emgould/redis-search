@@ -66,7 +66,7 @@ class SearchDocument:
     source_id: str  # Original ID from source (e.g., "12345" for TMDB)
     # Sortable/filterable fields
     year: int | None  # Release/publish year
-    popularity: float  # Normalized popularity score (0-100)
+    popularity: float  # Normalized MC popularity score (0-100)
     rating: float  # Rating score (0-10)
     # Display fields (stored, not indexed)
     image: str | None  # Medium poster/profile image URL
@@ -84,6 +84,8 @@ class SearchDocument:
     keywords: list[str] = field(default_factory=list)
     # Origin country (indexed as TagFields - normalized ISO codes)
     origin_country: list[str] = field(default_factory=list)
+    original_language: str | None = None  # Original language for the media item
+    original_title: str | None = None  # Original title for the media item
     # Date fields (stored, not indexed)
     release_date: str | None = None  # YYYY-MM-DD, movies only
     first_air_date: str | None = None  # YYYY-MM-DD, TV only
@@ -99,6 +101,22 @@ class SearchDocument:
     also_known_as: str | None = None  # Pipe-separated alternate names for search
     status: str | None = None  # TV show status
     series_status: str | None = None  # TV show series status
+    tagline: str | None = None  # Tagline for the media item
+    vote_count: int | None = None  # Vote count for the media item
+    vote_average: float | None = None  # Vote average for the media item
+    popularity_tmdb: float | None = None  # TMDB Popularity score for the media item
+    runtime: int | None = None  # Runtime for the media item
+    number_of_seasons: int | None = None  # Number of seasons for the media item
+    number_of_episodes: int | None = None  # Number of episodes for the media item
+    created_by: list[str] | None = None  # List of creators for the media item
+    created_by_ids: list[int] | None = None  # List of creator IDs for the media item
+    networks: list[str] | None = None  # List of networks for the media item
+    network: str | None = None  # Normalized from TMDB networks array (first network name)
+    production_companies: list[str] | None = None  # List of production companies for the media item
+    production_countries: list[str] | None = None  # List of production countries for the media item
+    budget: int | None = None  # Budget for the media item
+    revenue: int | None = None  # Revenue for the media item
+    spoken_languages: list[str] | None = None  # List of spoken languages for the media item
 
 
 class BaseNormalizer(ABC):
@@ -452,6 +470,9 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             source_id=source_id,
             year=self._extract_year(raw),
             popularity=self._compute_popularity(raw),
+            vote_count=raw.get("vote_count"),
+            vote_average=raw.get("vote_average"),
+            popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
             overview=self._extract_overview(raw),
@@ -463,12 +484,21 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             director=director,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
+            original_title=raw.get("original_title"),
+            original_language=raw.get("original_language"),
             release_date=dates["release_date"],
             first_air_date=dates["first_air_date"],
             last_air_date=dates["last_air_date"],
             us_rating=raw.get("us_rating"),
             watch_providers=raw.get("watch_providers"),
             status=raw.get("status"),
+            tagline=raw.get("tagline"),
+            production_companies=raw.get("production_companies"),
+            production_countries=raw.get("production_countries"),
+            budget=raw.get("budget"),
+            revenue=raw.get("revenue"),
+            spoken_languages=raw.get("spoken_languages"),
+            runtime=raw.get("runtime"),
         )
 
 
@@ -504,6 +534,9 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             source_id=source_id,
             year=self._extract_year(raw),
             popularity=self._compute_popularity(raw),
+            vote_count=raw.get("vote_count"),
+            vote_average=raw.get("vote_average"),
+            popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
             overview=self._extract_overview(raw),
@@ -515,6 +548,8 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             director=None,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
+            original_language=raw.get("original_language"),
+            original_title=raw.get("original_title"),
             release_date=dates["release_date"],
             first_air_date=dates["first_air_date"],
             last_air_date=dates["last_air_date"],
@@ -522,6 +557,15 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             watch_providers=raw.get("watch_providers"),
             status=raw.get("status"),
             series_status=raw.get("series_status"),
+            number_of_seasons=raw.get("number_of_seasons"),
+            number_of_episodes=raw.get("number_of_episodes"),
+            created_by=raw.get("created_by"),
+            created_by_ids=raw.get("created_by_ids"),
+            tagline=raw.get("tagline"),
+            networks=raw.get("networks"),
+            network=raw.get("network"),
+            production_companies=raw.get("production_companies"),
+            production_countries=raw.get("production_countries"),
         )
 
 
@@ -719,6 +763,24 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "watch_providers": doc.watch_providers,
         "status": doc.status,
         "series_status": doc.series_status,
+        "tagline": doc.tagline,
+        "vote_count": doc.vote_count,
+        "vote_average": doc.vote_average,
+        "popularity_tmdb": doc.popularity_tmdb,
+        "runtime": doc.runtime,
+        "original_language": doc.original_language,
+        "original_title": doc.original_title,
+        "number_of_seasons": doc.number_of_seasons,
+        "number_of_episodes": doc.number_of_episodes,
+        "created_by": doc.created_by,
+        "created_by_ids": doc.created_by_ids,
+        "networks": doc.networks,
+        "network": doc.network,
+        "production_companies": doc.production_companies,
+        "production_countries": doc.production_countries,
+        "budget": doc.budget,
+        "revenue": doc.revenue,
+        "spoken_languages": doc.spoken_languages,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,
