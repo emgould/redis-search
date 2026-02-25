@@ -97,6 +97,8 @@ class SearchDocument:
     _source: str | None = None  # Write provenance (e.g. "backfill")
     # Person-specific fields (for people index)
     also_known_as: str | None = None  # Pipe-separated alternate names for search
+    status: str | None = None  # TV show status
+    series_status: str | None = None  # TV show series status
 
 
 class BaseNormalizer(ABC):
@@ -328,10 +330,14 @@ class BaseTMDBNormalizer(BaseNormalizer):
         """
         director_raw: dict[str, Any] | None = None
 
+        # In MCBaseMediaItem / get_media_details, director is exposed as top-level 'director'
+        # Check this first.
         candidate = raw.get("director", {})
         if isinstance(candidate, dict) and candidate.get("id"):
             director_raw = candidate
-        else:
+
+        # Fallback to legacy tmdb_cast nested object
+        if not director_raw:
             tmdb_cast = raw.get("tmdb_cast", {})
             if isinstance(tmdb_cast, dict):
                 candidate = tmdb_cast.get("director", {})
@@ -378,9 +384,7 @@ class BaseTMDBNormalizer(BaseNormalizer):
         if not countries:
             prod_countries = raw.get("production_countries", [])
             if prod_countries:
-                countries = [
-                    c.get("iso_3166_1", "") for c in prod_countries if isinstance(c, dict)
-                ]
+                countries = [c.get("iso_3166_1", "") for c in prod_countries if isinstance(c, dict)]
 
         # Normalize country codes (lowercase)
         return [normalize_tag(c) for c in countries if c and normalize_tag(c)]
@@ -464,6 +468,7 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             last_air_date=dates["last_air_date"],
             us_rating=raw.get("us_rating"),
             watch_providers=raw.get("watch_providers"),
+            status=raw.get("status"),
         )
 
 
@@ -515,6 +520,8 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             last_air_date=dates["last_air_date"],
             us_rating=raw.get("us_rating"),
             watch_providers=raw.get("watch_providers"),
+            status=raw.get("status"),
+            series_status=raw.get("series_status"),
         )
 
 
@@ -710,6 +717,8 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "last_air_date": doc.last_air_date,
         "us_rating": doc.us_rating,
         "watch_providers": doc.watch_providers,
+        "status": doc.status,
+        "series_status": doc.series_status,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,

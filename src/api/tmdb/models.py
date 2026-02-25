@@ -70,10 +70,9 @@ class MCBaseMediaItem(MCBaseItem):
     watch_providers: dict[str, Any] = Field(default_factory=dict)
     keywords: list[dict[str, Any]] = Field(default_factory=list)
     keywords_count: int = 0
-
+    us_rating: str | None = None
     # Status
     status: str | None = None
-
     # Search/sorting metadata
     relevancy_debug: dict[str, Any] | None = None
     final_score: float | None = None
@@ -316,11 +315,13 @@ class MCEpisodeSummary(BaseModelWithMethods):
     @classmethod
     def from_tmdb(
         cls,
-        episode: TMDBEpisodeSummary,
+        episode: TMDBEpisodeSummary | None,
         image_base_url: str | None = None,
         source_names: list[str] | None = None,
         provider_ids: list[int] | None = None,
-    ) -> "MCEpisodeSummary":
+    ) -> "MCEpisodeSummary | None":
+        if episode is None:
+            return None
         still_image = None
         if episode.still_path and image_base_url:
             still_image = {
@@ -346,6 +347,9 @@ class MCEpisodeSummary(BaseModelWithMethods):
         )
 
 
+SeriesStatus = Literal["new_season", "active", "binge", "catch_up", "over"]
+
+
 class MCTvItem(MCBaseMediaItem):
     """Base model for TMDB media items (movies and TV shows)."""
 
@@ -363,6 +367,7 @@ class MCTvItem(MCBaseMediaItem):
     duration: int | None = None
     last_episode_to_air: MCEpisodeSummary | None = None
     next_episode_to_air: MCEpisodeSummary | None = None
+    series_status: SeriesStatus = "binge"
 
     @classmethod
     def from_tv_search(cls, item: "TMDBSearchTv", image_base_url: str | None = None) -> "MCTvItem":
@@ -535,11 +540,38 @@ class MCTvItem(MCBaseMediaItem):
             number_of_seasons=item.number_of_seasons,
             number_of_episodes=item.number_of_episodes,
             network=item.networks[0].name if item.networks else None,
+            last_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.last_episode_to_air),
+            next_episode_to_air=MCEpisodeSummary.from_tmdb(episode=item.next_episode_to_air),
         )
         return media_item
 
 
-SeriesStatus = Literal["new_season", "active", "binge", "catch_up", "over"]
+def compute_series_status(
+    tmdb_status: str | None,
+    next_episode_to_air: TMDBEpisodeSummary | MCEpisodeSummary | None,
+    last_episode_to_air: TMDBEpisodeSummary | MCEpisodeSummary | None,
+) -> SeriesStatus:
+    next_episode_exists = next_episode_to_air is not None
+    if next_episode_exists:
+        next_episode_number = next_episode_to_air.episode_number
+    else:
+        next_episode_number = None
+
+    if last_episode_to_air is not None:
+        last_episode_type = last_episode_to_air.episode_type
+    else:
+        last_episode_type = None
+    """Classify series state using MediaCircle status precedence rules."""
+    normalized_status = (tmdb_status or "").strip().lower()
+    if normalized_status in {"canceled", "cancelled"}:
+        return "over"
+    if (last_episode_type or "").strip().lower() == "finale" and next_episode_exists:
+        return "catch_up"
+    if next_episode_exists and next_episode_number == 1:
+        return "new_season"
+    if next_episode_exists:
+        return "active"
+    return "binge"
 
 
 class MCTvLifecycleEnrichment(BaseModelWithMethods):

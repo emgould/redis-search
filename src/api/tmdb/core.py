@@ -7,17 +7,23 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+from pathlib import Path
 from typing import Any, cast
 
 from api.subapi.comscore import BoxOfficeData, comscore_wrapper
 from api.tmdb.auth import Auth
-from api.tmdb.models import MCBaseMediaItem, MCMovieItem, MCTvItem
+from api.tmdb.models import MCBaseMediaItem, MCMovieItem, MCTvItem, compute_series_status
 from api.tmdb.tmdb_models import (
     TMDBGenre,
     TMDBKeyword,
     TMDBMovieDetailsResult,
     TMDBProvidersResponse,
     TMDBTvDetailsResult,
+)
+from api.tmdb.update_provider_map import MasterEntry, reconcile_provider_map
+from api.tmdb.utils.provider_utils import (
+    build_streaming_platform_summary,
+    preprocess_watch_provider_data,
 )
 from contracts.models import MCType
 from utils.base_api_client import BaseAPIClient
@@ -264,8 +270,10 @@ class TMDBService(Auth, BaseAPIClient):
         include_watch_providers: bool = True,
         include_keywords: bool = True,
         include_release_dates: bool = True,
+        include_content_ratings: bool = True,
         cast_limit: int = 5,
-        no_cache: bool = False,
+        video_limit: int = 5,
+        region: str = "US",
         **kwargs: Any,
     ) -> MCBaseMediaItem:
         """
@@ -289,6 +297,25 @@ class TMDBService(Auth, BaseAPIClient):
             endpoint = f"movie/{tmdb_id}"
 
         params = {"language": "en-US"}
+        append_to_response = []
+        if include_cast:
+            append_to_response.append("credits")
+        if include_videos:
+            append_to_response.append("videos")
+        if include_watch_providers:
+            append_to_response.append("watch/providers")
+        if include_keywords:
+            append_to_response.append("keywords")
+        if include_release_dates:
+            append_to_response.append("release_dates")
+        if include_content_ratings:
+            if media_type == MCType.MOVIE and not include_release_dates:
+                append_to_response.append("release_dates")
+            else:
+                append_to_response.append("content_ratings")
+
+        if append_to_response:
+            params["append_to_response"] = ",".join(append_to_response)
 
         details_data = await self._make_request(endpoint, params)
         if not details_data:
@@ -322,88 +349,81 @@ class TMDBService(Auth, BaseAPIClient):
             details.status_code = 404
             return details
 
-        # Add additional details in parallel
-        tasks = []
-
         if include_cast:
-            tasks.append(("cast", self._get_cast_and_crew(tmdb_id, media_type, limit=cast_limit)))
+            cast_result = self._parse_cast_and_crew(
+                details_data.get("credits", {}), limit=cast_limit
+            )
+            details.tmdb_cast = cast_result.get("tmdb_cast", {})
+            details.main_cast = cast_result.get("main_cast", [])
+            details.director = details.tmdb_cast.get("director", {})
 
         if include_videos:
-            tasks.append(("videos", self._get_videos(tmdb_id, media_type)))
+            video_result = self._parse_videos(details_data.get("videos", {}))
+            details.tmdb_videos = video_result.get("tmdb_videos", {})
+            details.primary_trailer = video_result.get("primary_trailer", {})
+            details.trailers = video_result.get("trailers", [])
+            details.trailers = details.trailers[0:video_limit] if details.trailers else []
+            details.clips = video_result.get("clips", [])
+            details.clips = details.clips[0:video_limit] if details.clips else []
+            teasers = video_result.get("tmdb_videos", {}).get("trailers", [])
+            teasers = teasers[0:video_limit] if teasers else []
+            other = video_result.get("tmdb_videos", {}).get("other", [])
+            other = other[0:video_limit] if other else []
+            details.tmdb_videos["trailers"] = details.trailers
+            details.tmdb_videos["teasers"] = teasers
+            details.tmdb_videos["clips"] = details.clips
+            details.tmdb_videos["other"] = other
 
         if include_watch_providers:
-            tasks.append(
-                (
-                    "watch_providers",
-                    self._get_watch_providers(tmdb_id, media_type, no_cache=no_cache),
-                )
+            watch_providers_result = self._parse_watch_providers(
+                details_data.get("watch/providers", {}), tmdb_id, media_type, "US"
             )
+            details.watch_providers = await self.custom_watch_provider(
+                tmdb_id,
+                content_type=media_type.value,
+                watch_providers=watch_providers_result.get("watch_providers", {}),
+                watch_region=region,
+            )
+            if details.watch_providers:
+                primary = details.watch_providers.get("primary_provider")
+                details.streaming_platform = (
+                    primary.get("provider_name") if isinstance(primary, dict) else None
+                )
+                details.availability_type = details.watch_providers.get("primary_provider_type")
 
         if include_keywords:
-            tasks.append(("keywords", self._get_keywords(tmdb_id, media_type)))
+            keywords_result = self._parse_keywords(details_data.get("keywords", {}), media_type)
+            details.keywords = keywords_result.get("keywords", [])
+            details.keywords_count = keywords_result.get("keywords_count", 0)
 
-        # Only fetch release_dates for movies (TV shows use different air date structure)
         if include_release_dates and media_type == MCType.MOVIE:
-            tasks.append(("release_dates", self._get_release_dates(tmdb_id)))
+            release_dates_result = details_data.get("release_dates", {})
+            if isinstance(release_dates_result, dict) and isinstance(details, MCMovieItem):
+                details.release_dates = release_dates_result.get("release_dates", {})
+                rating = await self.get_content_rating(
+                    tmdb_id=tmdb_id,
+                    region=region,
+                    media_type=media_type,
+                    data=details.release_dates,
+                )
+                details.us_rating = rating.get("rating", None) if rating else None
 
-        if tasks:
-            results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
+        if include_content_ratings and media_type == MCType.TV_SERIES:
+            rating = await self.get_content_rating(
+                tmdb_id=tmdb_id,
+                region=region,
+                media_type=media_type,
+                data=details_data.get("content_ratings", {}),
+            )
+            details.us_rating = rating.get("rating", None) if rating else None
 
-            # Track enrichment failures — any failure means incomplete data
-            enrichment_failures: list[str] = []
-
-            # Process results
-            for task_name, task_result in zip(tasks, results, strict=True):
-                if task_name[0] == "cast":
-                    cast_result = task_result
-                    if isinstance(cast_result, Exception):
-                        enrichment_failures.append(f"cast: {cast_result}")
-                    elif isinstance(cast_result, dict):
-                        details.tmdb_cast = cast_result.get("tmdb_cast", {})
-                        details.main_cast = cast_result.get("main_cast", [])
-                elif task_name[0] == "videos":
-                    video_result = task_result
-                    if isinstance(video_result, Exception):
-                        enrichment_failures.append(f"videos: {video_result}")
-                    elif isinstance(video_result, dict):
-                        details.tmdb_videos = video_result.get("tmdb_videos", {})
-                        details.primary_trailer = video_result.get("primary_trailer", {})
-                        details.trailers = video_result.get("trailers", [])
-                        details.clips = video_result.get("clips", [])
-                elif task_name[0] == "watch_providers":
-                    provider_result = task_result
-                    if isinstance(provider_result, Exception):
-                        enrichment_failures.append(f"watch_providers: {provider_result}")
-                    elif isinstance(provider_result, dict):
-                        details.watch_providers = provider_result.get("watch_providers", {})
-                        details.streaming_platform = provider_result.get("streaming_platform")
-                        if isinstance(details, MCTvItem):
-                            details.apply_episode_availability_rules()
-                elif task_name[0] == "keywords":
-                    keywords_result = task_result
-                    if isinstance(keywords_result, Exception):
-                        enrichment_failures.append(f"keywords: {keywords_result}")
-                    elif isinstance(keywords_result, dict):
-                        details.keywords = keywords_result.get("keywords", [])
-                        details.keywords_count = keywords_result.get("keywords_count", 0)
-                elif task_name[0] == "release_dates":
-                    release_dates_result = task_result
-                    if isinstance(release_dates_result, Exception):
-                        enrichment_failures.append(f"release_dates: {release_dates_result}")
-                    elif isinstance(release_dates_result, dict) and isinstance(
-                        details, MCMovieItem
-                    ):
-                        details.release_dates = release_dates_result.get("release_dates", {})
-
-            # If any enrichment step failed, flag the result as an error.
-            # This prevents caching (RedisCache skips entries with .error set)
-            # and surfaces the failure to callers like the ETL.
-            if enrichment_failures:
-                failed_steps = ", ".join(enrichment_failures)
-                logger.warning(f"Enrichment failed for {media_type} {tmdb_id}: {failed_steps}")
-                details.error = f"Partial enrichment failure: {failed_steps}"
-                details.status_code = 500
-
+        # Update series_status
+        if isinstance(details, MCTvItem):
+            details.series_status = compute_series_status(
+                tmdb_status=details_data.get("status", None),
+                next_episode_to_air=details.next_episode_to_air,
+                last_episode_to_air=details.last_episode_to_air,
+            )
         return details
 
     @RedisCache.use_cache(TMDBCache, prefix="enhance_media_item")
@@ -506,7 +526,12 @@ class TMDBService(Auth, BaseAPIClient):
         data = await self._make_request(endpoint)
         if not data:
             return {}
+        result = self._parse_cast_and_crew(data, limit=limit)
+        return result
 
+    def _parse_cast_and_crew(
+        self, data: dict[str, Any], limit: int | None = None
+    ) -> dict[str, Any]:
         cast_data = data.get("cast", [])
         crew_data = data.get("crew", [])
 
@@ -548,7 +573,7 @@ class TMDBService(Auth, BaseAPIClient):
         # Find director
         director = None
         cast_limit = limit or len(crew_data)
-        for crew_member in sorted(crew_data, key=lambda x: x.get("order", 999))[:cast_limit]:
+        for crew_member in sorted(crew_data, key=lambda x: x.get("order", 999)):
             if crew_member.get("job") == "Director":
                 profile_path = crew_member.get("profile_path")
                 director = {
@@ -604,8 +629,107 @@ class TMDBService(Auth, BaseAPIClient):
         if not data:
             return {}
 
-        videos = data.get("results", [])
+        result = self._parse_videos(data)
+        return result
 
+    def _parse_videos(self, data: dict[str, Any]) -> dict[str, Any]:
+        videos = data.get("results", [])
+        trailers = []
+        teasers = []
+        clips = []
+        behind_the_scenes = []
+        other_videos = []
+
+        for video in videos:
+            video_type = video.get("type", "").lower()
+            site = video.get("site", "")
+
+            video_info = {
+                "id": video.get("id"),
+                "key": video.get("key"),
+                "name": video.get("name"),
+                "site": site,
+                "type": video.get("type"),
+                "official": video.get("official", False),
+                "published_at": video.get("published_at"),
+                "size": video.get("size", 1080),
+                "iso_639_1": video.get("iso_639_1", "en"),
+                "iso_3166_1": video.get("iso_3166_1", "US"),
+            }
+
+            # Generate URLs
+            if site.lower() == "youtube":
+                video_info["url"] = f"https://www.youtube.com/watch?v={video.get('key')}"
+                video_info["embed_url"] = f"https://www.youtube.com/embed/{video.get('key')}"
+                video_info["thumbnail_url"] = (
+                    f"https://img.youtube.com/vi/{video.get('key')}/maxresdefault.jpg"
+                )
+            elif site.lower() == "vimeo":
+                video_info["url"] = f"https://vimeo.com/{video.get('key')}"
+                video_info["embed_url"] = f"https://player.vimeo.com/video/{video.get('key')}"
+
+            # Categorize by type
+            if video_type == "trailer":
+                trailers.append(video_info)
+            elif video_type == "teaser":
+                teasers.append(video_info)
+            elif video_type == "clip":
+                clips.append(video_info)
+            elif video_type in ["behind the scenes", "making of"]:
+                behind_the_scenes.append(video_info)
+            else:
+                other_videos.append(video_info)
+
+        # Sort by official status and publication date
+        def sort_videos(video_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return sorted(
+                video_list,
+                key=lambda x: (not x.get("official", False), x.get("published_at", "")),
+                reverse=True,
+            )
+
+        sorted_trailers = sort_videos(trailers)
+        sorted_teasers = sort_videos(teasers)
+        sorted_clips = sort_videos(clips)
+        sorted_behind_the_scenes = sort_videos(behind_the_scenes)
+        sorted_other = sort_videos(other_videos)
+
+        result = {
+            "tmdb_videos": {
+                "trailers": sorted_trailers,
+                "teasers": sorted_teasers,
+                "clips": sorted_clips,
+                "behind_the_scenes": sorted_behind_the_scenes,
+                "other": sorted_other,
+                "total_videos": len(videos),
+                "video_categories": {
+                    "trailers_count": len(sorted_trailers),
+                    "teasers_count": len(sorted_teasers),
+                    "clips_count": len(sorted_clips),
+                    "behind_the_scenes_count": len(sorted_behind_the_scenes),
+                    "other_count": len(sorted_other),
+                },
+            }
+        }
+
+        # Add primary trailer (prefer trailers over teasers)
+        all_promotional = sorted_trailers + sorted_teasers
+        if all_promotional:
+            result["primary_trailer"] = all_promotional[0]
+            result["tmdb_videos"]["primary_trailer"] = all_promotional[0]
+
+        # Add legacy compatibility fields
+        if sorted_trailers:
+            result["trailers"] = sorted_trailers  # type: ignore[assignment]
+
+        if sorted_clips:
+            result["clips"] = sorted_clips  # type: ignore[assignment]
+
+        return result
+
+    def parse_videos(
+        self, videos: list[dict[str, Any]], limit: int | None = None
+    ) -> dict[str, Any]:
         # Categorize videos
         trailers = []
         teasers = []
@@ -727,7 +851,12 @@ class TMDBService(Auth, BaseAPIClient):
         data = await self._make_request(endpoint, params)
         if not data:
             return {}
+        result = self._parse_watch_providers(data, tmdb_id, media_type, region)
+        return result
 
+    def _parse_watch_providers(
+        self, data: dict[str, Any], tmdb_id: int, media_type: MCType, region: str
+    ) -> dict[str, Any]:
         results = data.get("results", {})
         region_data = results.get(region, {})
 
@@ -774,7 +903,11 @@ class TMDBService(Auth, BaseAPIClient):
 
     @RedisCache.use_cache(TMDBContentRatingCache, prefix="content_ratings")
     async def get_content_rating(
-        self, tmdb_id: int, region: str = "US", media_type: str | MCType = "tv"
+        self,
+        tmdb_id: int,
+        region: str = "US",
+        media_type: str | MCType = "tv",
+        data: dict[str, Any] | None = None,
     ) -> dict[str, str | None] | None:
         """
         Get content rating details for a movie or TV title in a region.
@@ -891,28 +1024,8 @@ class TMDBService(Auth, BaseAPIClient):
                     error=f"No data returned for {list_type} providers",
                     status_code=404,
                 )
-
-            data_with_type = {**data, "list_type": list_type}
-            response = TMDBProvidersResponse.model_validate(data_with_type)
-            providers = response.results
-
-            if not providers:
-                logger.warning(f"No TV providers found for region {region}")
-                return TMDBProvidersResponse(
-                    list_type=list_type,  # type: ignore[arg-type]
-                    results=[],
-                    mc_type=MCType.PROVIDERS_LIST,
-                    error=f"No {list_type} providers found for region {region}",
-                    status_code=404,
-                )
-
-            # Filter out providers with "Channel" in their name
-            filtered_providers = [p for p in providers if "channel" not in p.provider_name.lower()]
-
-            # Sort by display_priority
-            response.results = sorted(filtered_providers, key=lambda x: x.display_priority)
-
-            return response
+            result = self._parse_providers(data, list_type, region)
+            return result
 
         except Exception as e:
             logger.error(f"Error getting providers for region {region}: {e}")
@@ -923,6 +1036,177 @@ class TMDBService(Auth, BaseAPIClient):
                 error=str(e),
                 status_code=500,
             )
+
+    @RedisCache.use_cache(TMDBCache, prefix="now_playing_ids")
+    async def get_now_playing_ids(
+        self,
+        region: str = "US",
+        limit: int = 50,
+        **kwargs,
+    ) -> list[str]:
+        """
+        Get movies currently playing in theaters from TMDB.
+        Supports concurrent pagination to fetch multiple pages efficiently.
+
+        Args:
+            region: Region code for theaters (e.g., 'US', 'CA', 'GB')
+            limit: Maximum number of movies to return (default: 50)
+            include_details: Whether to include watch providers, cast, videos, and keywords
+            sort_by_box_office: If True, sort movies by Comscore box office rankings (US only)
+            **kwargs: Additional arguments passed to media details enhancement
+
+        Returns:
+            List of MCMovieItem objects representing now playing movies
+        """
+        endpoint = "movie/now_playing"
+        base_params = {"language": "en-US", "region": region}
+
+        # Calculate how many pages we need
+        pages_needed = max(1, (limit + 19) // 20)
+        pages_needed = min(pages_needed, 10)
+
+        # Create concurrent requests for all needed pages
+        async def fetch_page(page_num: int) -> dict[str, Any] | None:
+            params = {**base_params, "page": page_num}
+            result = await self._make_request(endpoint, params)
+            return cast(dict[str, Any] | None, result)
+
+        # Fetch all pages concurrently
+        page_tasks = [fetch_page(page) for page in range(1, pages_needed + 1)]
+        page_results = await asyncio.gather(*page_tasks, return_exceptions=True)
+
+        # Combine all results and deduplicate
+        seen_ids = set()
+
+        for page_data in page_results:
+            if isinstance(page_data, Exception):
+                logger.warning(f"Error fetching now playing page: {page_data}")
+                continue
+
+            if page_data and isinstance(page_data, dict) and "results" in page_data:
+                for item in page_data["results"]:
+                    tmdb_id = item.get("id")
+                    if tmdb_id and tmdb_id not in seen_ids and item.get("poster_path") is not None:
+                        seen_ids.add(tmdb_id)
+
+                    if len(seen_ids) >= limit:
+                        break
+
+        return list(seen_ids)
+
+    async def custom_watch_provider(
+        self,
+        tmdb_id: int,
+        content_type: str,
+        watch_providers: dict[str, Any],
+        watch_region: str = "US",
+    ) -> dict[str, Any]:
+        """
+        Resolve streaming platform ids, platform names, and primary platform for a title.
+
+        The summary is built from:
+        - watch/providers/{movie|tv} (via watch_region) for canonical ids/names
+        - watch providers on the title (primary/flatrate/rent/buy)
+
+        Args:
+            tmdb_id: TMDB ID of the movie or TV title
+            content_type: "movie" or "tv"
+            watch_region: TMDB watch provider region (default: "US")
+
+        Returns:
+        Dict with:
+            {
+            "streaming_platform_ids": list[int],
+            "streaming_platforms": list[dict[str, Any]],
+            "primary_provider": dict[str, Any] | None,
+            "primary_provider_id": int | None,
+            "primary_provider_type": str | None,
+            "on_demand_platform_ids": list[int],
+            "on_demand_platforms": list[dict[str, Any]],
+            }
+        `streaming_platform_ids`/`streaming_platforms` are resolved from the selected
+        primary platform plus its mapped aggregator ids.
+
+        Note:
+        - Movie content uses TMDB's `display_priority` values when ranking providers.
+        - TV content prefers network-derived base-provider ranking from the static display map.
+        """
+        try:
+            if content_type not in {"movie", "tv"}:
+                raise ValueError(f"Invalid content_type: {content_type}")
+
+            provider_data = preprocess_watch_provider_data(watch_providers)
+            response = build_streaming_platform_summary(
+                watch_region=watch_region,
+                flat_rate_providers=provider_data["flat_rate_providers"],
+                on_demand_providers=provider_data["on_demand_providers"],
+            )
+
+            is_in_theater = False
+            if content_type == "movie":
+                try:
+                    now_playing_movie_ids = await self.get_now_playing_ids(region=watch_region)
+                    is_in_theater = tmdb_id in now_playing_movie_ids
+                except Exception as error:
+                    logger.warning(
+                        "Unable to verify now-playing status for tmdb_id=%s, region=%s: %s",
+                        tmdb_id,
+                        watch_region,
+                        error,
+                    )
+                if is_in_theater:
+                    response["primary_provider_type"] = "in theater"
+                    if (
+                        not response["primary_provider"]
+                        and response["on_demand_platforms"]
+                        and len(response["on_demand_platform_ids"]) > 0
+                    ):
+                        response["primary_provider"] = response["on_demand_platforms"][0]
+                        response["primary_provider_id"] = response["on_demand_platform_ids"][0]
+
+            if (
+                not response["primary_provider"]
+                and response["on_demand_platforms"]
+                and len(response["on_demand_platform_ids"]) > 0
+            ):
+                response["primary_provider"] = response["on_demand_platforms"][0]
+                response["primary_provider_id"] = response["on_demand_platform_ids"][0]
+                response["primary_provider_type"] = "on_demand"
+
+            return response
+        except Exception as e:
+            logger.error(
+                "Error generating streaming platform summary for %s %s: %s",
+                content_type,
+                tmdb_id,
+                e,
+            )
+            return {}
+
+    def _parse_providers(
+        self, data: dict[str, Any], list_type: str, region: str
+    ) -> TMDBProvidersResponse:
+        data_with_type = {**data, "list_type": list_type}
+        response = TMDBProvidersResponse.model_validate(data_with_type)
+        providers = response.results
+
+        if not providers:
+            logger.warning(f"No TV providers found for region {region}")
+            return TMDBProvidersResponse(
+                list_type=list_type,  # type: ignore[arg-type]
+                results=[],
+                mc_type=MCType.PROVIDERS_LIST,
+                error=f"No {list_type} providers found for region {region}",
+                status_code=404,
+            )
+
+        # Filter out providers with "Channel" in their name
+        filtered_providers = [p for p in providers if "channel" not in p.provider_name.lower()]
+
+        # Sort by display_priority
+        response.results = sorted(filtered_providers, key=lambda x: x.display_priority)
+
+        return response
 
     async def _get_keywords(self, tmdb_id: int, media_type: MCType) -> dict[str, Any]:
         """Get keywords for a movie or TV show.
@@ -947,6 +1231,9 @@ class TMDBService(Auth, BaseAPIClient):
         if not data:
             return {}
 
+        return self._parse_keywords(data, media_type)
+
+    def _parse_keywords(self, data: dict[str, Any], media_type: MCType) -> dict[str, Any]:
         # Process keywords data - NOTE: TV shows use 'results', movies use 'keywords'
         keywords_raw = (
             data.get("results", []) if media_type == MCType.TV_SERIES else data.get("keywords", [])
@@ -1148,6 +1435,85 @@ class TMDBService(Auth, BaseAPIClient):
             logger.error(f"Error sorting movies by box office: {e}")
             # Return original movies as dicts if sorting fails
             return [m.model_dump() for m in movies]
+
+    @RedisCache.use_cache(TMDBFunctionCache, prefix="get_tv_providers_wrapper")
+    async def get_providers_async(
+        self, media_type: MCType, region: str = "US", **kwargs: Any
+    ) -> TMDBProvidersResponse:
+        """
+        Get list of available TV streaming providers from TMDB.
+
+        Args:
+            region: Region code (default "US")
+            **kwargs: Additional arguments
+
+        Returns:
+            List of TV providers sorted by display_priority or None if not found
+        """
+        try:
+            providers = await self.get_providers(media_type, region, **kwargs)
+
+            if providers.error:
+                logger.error(f"Error getting providers for region {region}: {providers.error}")
+                return providers  # type: ignore[no-any-return]
+
+            return providers  # type: ignore[no-any-return]
+
+        except Exception as e:
+            logger.error(f"Error getting providers for region {region}: {e}")
+            list_type = "tv" if media_type == MCType.TV_SERIES else "movie"
+            return TMDBProvidersResponse(
+                list_type=list_type,  # type: ignore[arg-type]
+                results=[],
+                mc_type=MCType.PROVIDERS_LIST,
+                error=str(e),
+                status_code=500,
+            )
+
+    async def refresh_provider_map(self, region: str = "US") -> dict[str, Any]:
+        """
+        Fetch the full TMDB watch-provider catalogue for both movie and TV,
+        deduplicate, and reconcile against provider_map.json.
+
+        Args:
+            region: TMDB watch-provider region (default "US").
+
+        Returns:
+            Summary dict with counts for skipped, attached, added, and total entries.
+        """
+        movie_response = await self.get_providers(MCType.MOVIE, region)
+        tv_response = await self.get_providers(MCType.TV_SERIES, region)
+        provider_map_path = Path(__file__).resolve().parent / "data" / "provider_map.json"
+
+        seen_ids: set[int] = set()
+        master_entries: list[MasterEntry] = []
+        for provider in [*movie_response.results, *tv_response.results]:
+            if provider.provider_id not in seen_ids:
+                seen_ids.add(provider.provider_id)
+                master_entries.append(
+                    {
+                        "provider_id": provider.provider_id,
+                        "provider_name": provider.provider_name,
+                        "logo_path": provider.logo_path,
+                    }
+                )
+
+        report = reconcile_provider_map(master_entries, provider_map_path)
+
+        logger.info(
+            "Provider map refreshed: %d skipped, %d attached, %d added, %d total",
+            len(report["skipped"]),
+            len(report["attached"]),
+            len(report["added"]),
+            report["total_entries"],
+        )
+
+        return {
+            "skipped": len(report["skipped"]),
+            "attached": len(report["attached"]),
+            "added": len(report["added"]),
+            "total_entries": report["total_entries"],
+        }
 
 
 tmdb_service = TMDBService()

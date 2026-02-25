@@ -33,7 +33,6 @@ from api.tmdb.models import (
 from api.tmdb.person import TMDBPersonService
 from api.tmdb.search import TMDBSearchService
 from api.tmdb.search_with_credits import search_person_with_credits
-from api.tmdb.tmdb_models import TMDBProvidersResponse
 from api.tmdb.trending import get_trending_movies, get_trending_tv_shows
 from contracts.models import (
     MCBaseItem,
@@ -821,42 +820,6 @@ async def get_content_rating_async(
             error,
         )
         return None
-
-
-@RedisCache.use_cache(TMDBFunctionCache, prefix="get_tv_providers_wrapper")
-async def get_providers_async(
-    media_type: MCType, region: str = "US", **kwargs: Any
-) -> TMDBProvidersResponse:
-    """
-    Get list of available TV streaming providers from TMDB.
-
-    Args:
-        region: Region code (default "US")
-        **kwargs: Additional arguments
-
-    Returns:
-        List of TV providers sorted by display_priority or None if not found
-    """
-    try:
-        service = TMDBService()
-        providers = await service.get_providers(media_type, region, **kwargs)
-
-        if providers.error:
-            logger.error(f"Error getting providers for region {region}: {providers.error}")
-            return providers  # type: ignore[no-any-return]
-
-        return providers  # type: ignore[no-any-return]
-
-    except Exception as e:
-        logger.error(f"Error getting providers for region {region}: {e}")
-        list_type = "tv" if media_type == MCType.TV_SERIES else "movie"
-        return TMDBProvidersResponse(
-            list_type=list_type,  # type: ignore[arg-type]
-            results=[],
-            mc_type=MCType.PROVIDERS_LIST,
-            error=str(e),
-            status_code=500,
-        )
 
 
 """

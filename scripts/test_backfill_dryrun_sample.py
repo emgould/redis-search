@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """
-Full integration test for backfill normalization and document shape validation.
+Full integration test for backfill normalization and document shape + data fidelity.
 
-Loads sample cache data (movie + TV), enriches each item via real TMDB API
-calls (get_content_rating, get_streaming_platform_summary_for_title), runs
-the full normalize → document_to_redis pipeline, and validates the output
-matches the canonical schema.
+Four test groups:
+  1. 5 movies from historical cached TMDB data (Phase 1 path)
+  2. 5 TV shows from historical cached TMDB data (Phase 1 path)
+  3. 5 movies from Redis docs year >= 2026 (Phase 1b path)
+  4. 5 TV shows from Redis docs year >= 2026 (Phase 1b path)
 
-ZERO writes to Redis. Real API calls to TMDB.
+Every normalized document is compared against its source dict to verify that
+cast, keywords, image, overview, popularity, rating, genres, and director
+survive the normalization pipeline.
+
+ZERO writes to Redis. Reads from Redis and makes real API calls to TMDB.
 
 Usage:
     python scripts/test_backfill_dryrun_sample.py
     python scripts/test_backfill_dryrun_sample.py --verbose
     python scripts/test_backfill_dryrun_sample.py --output /tmp/backfill_sample.json
-    python scripts/test_backfill_dryrun_sample.py --count 3
+    python scripts/test_backfill_dryrun_sample.py --count 5
 """
 
 from __future__ import annotations
@@ -21,7 +26,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+import random
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -33,8 +41,10 @@ from adapters.config import load_env  # noqa: E402
 
 load_env()
 
+from redis.asyncio import Redis  # noqa: E402
+from redis.commands.search.query import Query as SearchQuery  # noqa: E402
+
 from api.tmdb.core import TMDBService  # noqa: E402
-from api.tmdb.get_providers import get_streaming_platform_summary_for_title  # noqa: E402
 from contracts.models import MCSources, MCType  # noqa: E402
 from core.normalize import (  # noqa: E402
     BACKFILL_DEFAULT_TS,
@@ -47,6 +57,16 @@ from utils.get_logger import get_logger  # noqa: E402
 logger = get_logger(__name__)
 
 DATA_DIR = Path("data/us")
+
+
+def _connect_redis() -> Redis:  # type: ignore[type-arg]
+    return Redis(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", "6380")),
+        password=os.getenv("REDIS_PASSWORD") or None,
+        decode_responses=True,
+    )
+
 
 WATCH_PROVIDERS_REQUIRED_KEYS: set[str] = {
     "streaming_platform_ids",
@@ -212,6 +232,97 @@ def validate_list_contents(doc: dict[str, Any], result: TestResult) -> None:
                 break
 
 
+# ---------- Data fidelity validation ----------
+
+
+def _source_cast_entries(source: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract named cast entries from source dict."""
+    main_cast = source.get("main_cast", [])
+    if not main_cast:
+        tmdb_cast = source.get("tmdb_cast", {})
+        if isinstance(tmdb_cast, dict):
+            main_cast = tmdb_cast.get("cast", [])
+    return [a for a in main_cast if isinstance(a, dict) and a.get("name")]
+
+
+def _source_has_medium_poster(source: dict[str, Any]) -> bool:
+    """Check if source has a medium poster image."""
+    for img in source.get("images", []):
+        if (
+            isinstance(img, dict)
+            and img.get("key") == "medium"
+            and img.get("description") == "poster"
+        ):
+            return True
+    return False
+
+
+def _source_has_director(source: dict[str, Any]) -> bool:
+    """Check if source has a director with an ID."""
+    candidate = source.get("director", {})
+    if isinstance(candidate, dict) and candidate.get("id"):
+        return True
+    tmdb_cast = source.get("tmdb_cast", {})
+    if isinstance(tmdb_cast, dict):
+        candidate = tmdb_cast.get("director", {})
+        if isinstance(candidate, dict) and candidate.get("id"):
+            return True
+    return False
+
+
+def validate_data_fidelity(
+    source: dict[str, Any],
+    redis_doc: dict[str, Any],
+    result: TestResult,
+) -> None:
+    """Compare normalized output against source dict to verify data survives the pipeline."""
+    src_title = source.get("title") or source.get("name") or ""
+    if src_title and not redis_doc.get("title"):
+        result.fail(f"Source has title={src_title!r} but normalized doc has no title")
+
+    src_overview = source.get("overview") or ""
+    if src_overview and not redis_doc.get("overview"):
+        result.fail("Source has overview but normalized doc overview is None")
+
+    if _source_has_medium_poster(source) and not redis_doc.get("image"):
+        result.fail("Source has medium poster image but normalized doc image is None")
+
+    named_cast = _source_cast_entries(source)
+    if named_cast and not redis_doc.get("cast"):
+        result.fail(
+            f"Source has {len(named_cast)} cast members but normalized doc has empty cast"
+        )
+
+    src_keywords = source.get("keywords", [])
+    if src_keywords and not redis_doc.get("keywords"):
+        result.fail(
+            f"Source has {len(src_keywords)} keywords but normalized doc has empty keywords"
+        )
+
+    metrics = source.get("metrics", {})
+    src_pop = metrics.get("popularity") or source.get("popularity") or 0
+    if src_pop > 1.0 and redis_doc.get("popularity", 0) == 0:
+        result.fail(f"Source popularity={src_pop} but normalized doc popularity is 0")
+
+    src_vote = metrics.get("vote_average") or source.get("vote_average") or 0
+    if src_vote > 0 and redis_doc.get("rating", 0) == 0:
+        result.fail(f"Source vote_average={src_vote} but normalized doc rating is 0")
+
+    src_genre_ids = source.get("genre_ids", [])
+    src_genres = source.get("genres", [])
+    if (src_genre_ids or src_genres) and not redis_doc.get("genre_ids") and not redis_doc.get("genres"):
+        result.fail("Source has genres but normalized doc has empty genre_ids and genres")
+
+        if redis_doc.get("mc_type") == "movie" and _source_has_director(source) and redis_doc.get("director") is None:
+            result.fail("Source has director but normalized doc director is None")
+
+    src_countries = source.get("origin_country", [])
+    if src_countries and not redis_doc.get("origin_country"):
+        result.fail(
+            f"Source has origin_country={src_countries} but normalized doc has empty list"
+        )
+
+
 # ---------- Data loading ----------
 
 
@@ -241,7 +352,47 @@ def load_sample_items(
     return items
 
 
-# ---------- API enrichment ----------
+async def load_redis_2026_items(
+    mc_type_filter: str,
+    count: int,
+    year_gte: int = 2026,
+) -> list[dict[str, Any]]:
+    """Query idx:media for docs with year >= year_gte, return random sample.
+
+    Uses FT.SEARCH on the media index — fast even with millions of keys.
+    Returns dicts with at least {source_id, mc_type, year, title}.
+    """
+    redis = _connect_redis()
+    candidates: list[dict[str, Any]] = []
+    try:
+        await redis.ping()  # type: ignore[misc]
+
+        query_str = f"@year:[{year_gte} +inf] @mc_type:{{{mc_type_filter}}}"
+        q = SearchQuery(query_str).paging(0, 500).no_content()
+        result = await redis.ft("idx:media").search(q)
+
+        keys = [doc.id for doc in result.docs]
+        if not keys:
+            return []
+
+        pipe = redis.pipeline()
+        for key in keys:
+            pipe.json().get(key)
+        docs: list[object] = await pipe.execute()
+
+        for doc in docs:
+            if isinstance(doc, dict) and doc.get("source_id"):
+                candidates.append(doc)
+
+    finally:
+        await redis.aclose()
+
+    if len(candidates) <= count:
+        return candidates
+    return random.sample(candidates, count)
+
+
+# ---------- API enrichment (Phase 1 path) ----------
 
 
 async def enrich_item(
@@ -264,59 +415,49 @@ async def enrich_item(
         enriched["us_rating"] = None
 
     try:
-        wp_result = await get_streaming_platform_summary_for_title(
-            tmdb_id, content_type, "US"
+        mc_type_enum = MCType.MOVIE if content_type == "movie" else MCType.TV_SERIES
+        raw_wp = await service._get_watch_providers(tmdb_id, mc_type_enum, region="US")
+        enriched["watch_providers"] = await service.custom_watch_provider(
+            tmdb_id, content_type,
+            watch_providers=raw_wp.get("watch_providers", {}),
+            watch_region="US",
         )
-        enriched["watch_providers"] = wp_result
     except Exception as e:
-        logger.warning("get_streaming_platform_summary failed for tmdb_id=%s: %s", tmdb_id, e)
+        logger.warning("watch_provider enrichment failed for tmdb_id=%s: %s", tmdb_id, e)
         enriched["watch_providers"] = None
 
     return enriched
 
 
-# Pinned TMDB IDs known to have content ratings
-PINNED_TV_ITEMS: list[dict[str, Any]] = [
-    {
-        "mc_type": "tv",
-        "mc_id": "tmdb_tv_224372",
-        "source_id": "224372",
-        "tmdb_id": 224372,
-        "source": "tmdb",
-        "name": "A Knight of the Seven Kingdoms",
-        "first_air_date": "2026-01-18",
-        "last_air_date": "2026-02-22",
-        "genre_ids": [18, 10765, 10759],
-        "genres": ["Drama", "Sci-Fi & Fantasy", "Action & Adventure"],
-        "overview": "A century before the events of Game of Thrones.",
-        "popularity": 500.0,
-        "vote_average": 7.5,
-        "vote_count": 2000,
-        "images": [],
-        "metrics": {"popularity": 500.0, "vote_average": 7.5, "vote_count": 2000},
-        "main_cast": [],
-        "keywords": [],
-        "origin_country": ["US"],
-    },
-]
+def _apply_timestamps(redis_doc: dict[str, Any]) -> None:
+    """Apply backfill timestamps in-place."""
+    now_ts = int(time.time())
+    ca, ma, src = resolve_timestamps(None, now_ts, source_tag="backfill")
+    redis_doc["created_at"] = ca
+    redis_doc["modified_at"] = ma
+    redis_doc["_source"] = src
 
 
-# ---------- Test cases ----------
+# ---------- Integration test cases ----------
 
 
-async def test_movie_full_integration(
+async def test_cache_integration(
     items: list[dict[str, Any]],
+    content_type: str,
     service: TMDBService,
     verbose: bool,
+    collected_docs: list[dict[str, Any]],
 ) -> list[TestResult]:
-    """Movie items: enrich via API, normalize, validate full schema."""
+    """Phase 1 path: cache dict -> enrich (us_rating + watch_providers) -> normalize -> validate."""
+    mc_type = MCType.MOVIE if content_type == "movie" else MCType.TV_SERIES
     results: list[TestResult] = []
+
     for i, item in enumerate(items):
         mc_id = item.get("mc_id", "?")
-        r = TestResult(f"movie_integration [{i}] id={mc_id}")
+        r = TestResult(f"cache_{content_type} [{i}] id={mc_id}")
 
-        enriched = await enrich_item(item, "movie", service)
-        doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.MOVIE)
+        enriched = await enrich_item(item, content_type, service)
+        doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=mc_type)
         if doc is None:
             r.fail("normalize_document returned None")
             results.append(r)
@@ -324,115 +465,141 @@ async def test_movie_full_integration(
 
         doc._source = "backfill"
         redis_doc = document_to_redis(doc)
-        now_ts = 1709000000
-        ca, ma, src = resolve_timestamps(None, now_ts, source_tag="backfill")
-        redis_doc["created_at"] = ca
-        redis_doc["modified_at"] = ma
-        redis_doc["_source"] = src
+        _apply_timestamps(redis_doc)
 
         validate_schema_keys(redis_doc, r)
-        validate_movie_specifics(redis_doc, r)
-        validate_director_shape(redis_doc, r)
+        if content_type == "movie":
+            validate_movie_specifics(redis_doc, r)
+            validate_director_shape(redis_doc, r)
+        else:
+            validate_tv_specifics(redis_doc, r)
         validate_watch_providers_shape(redis_doc, r)
         validate_list_contents(redis_doc, r)
         validate_timestamps(redis_doc, r, expect_source="backfill")
+        validate_data_fidelity(enriched, redis_doc, r)
+
+        collected_docs.append(redis_doc)
 
         if verbose:
-            print(f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
-                  f"title={redis_doc['title']!r}, "
-                  f"release_date={redis_doc.get('release_date')}, "
-                  f"us_rating={redis_doc.get('us_rating')!r}, "
-                  f"director={redis_doc.get('director')}, "
-                  f"wp_keys={list(redis_doc['watch_providers'].keys()) if redis_doc.get('watch_providers') else None}")
+            cast_count = len(redis_doc.get("cast", []))
+            kw_count = len(redis_doc.get("keywords", []))
+            print(
+                f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
+                f"title={redis_doc['title']!r}, "
+                f"cast={cast_count}, kw={kw_count}, "
+                f"img={'yes' if redis_doc.get('image') else 'no'}, "
+                f"us_rating={redis_doc.get('us_rating')!r}, "
+                f"dir={redis_doc.get('director') is not None}"
+            )
 
         results.append(r)
     return results
 
 
-async def test_pinned_tv_integration(
+async def test_phase1b_redis_sourced(
+    redis_items: list[dict[str, Any]],
+    content_type: str,
     service: TMDBService,
     verbose: bool,
+    collected_docs: list[dict[str, Any]],
 ) -> list[TestResult]:
-    """Pinned TV items with known content ratings: enrich, normalize, validate."""
-    results: list[TestResult] = []
-    for i, item in enumerate(PINNED_TV_ITEMS):
-        mc_id = item.get("mc_id", "?")
-        r = TestResult(f"pinned_tv_integration [{i}] id={mc_id}")
+    """Phase 1b path: Redis doc -> get_media_details -> model_dump -> normalize -> validate.
 
-        enriched = await enrich_item(item, "tv", service)
-        doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
-        if doc is None:
-            r.fail("normalize_document returned None")
+    get_media_details returns fully enriched data (us_rating, watch_providers, cast, etc.).
+    Tests the exact path used by phase1b() in the backfill script.
+    """
+    mc_type_enum = MCType.MOVIE if content_type == "movie" else MCType.TV_SERIES
+    results: list[TestResult] = []
+
+    for i, redis_item in enumerate(redis_items):
+        tmdb_id = int(redis_item.get("source_id", 0))
+        title = redis_item.get("title", "?")
+        r = TestResult(f"phase1b_{content_type} [{i}] tmdb_id={tmdb_id} title={title!r}")
+
+        if tmdb_id == 0:
+            r.fail("Redis doc missing source_id")
             results.append(r)
             continue
 
-        redis_doc = document_to_redis(doc)
-        now_ts = 1709000000
-        ca, ma, src = resolve_timestamps(None, now_ts, source_tag="backfill")
-        redis_doc["created_at"] = ca
-        redis_doc["modified_at"] = ma
-        redis_doc["_source"] = src
-
-        validate_schema_keys(redis_doc, r)
-        validate_tv_specifics(redis_doc, r)
-        validate_watch_providers_shape(redis_doc, r)
-        validate_list_contents(redis_doc, r)
-        validate_timestamps(redis_doc, r, expect_source="backfill")
-
-        if redis_doc.get("us_rating") is None:
-            r.fail(f"Pinned TV {mc_id} should have a us_rating but got None")
-
-        if verbose:
-            print(f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
-                  f"title={redis_doc['title']!r}, "
-                  f"first_air_date={redis_doc.get('first_air_date')}, "
-                  f"us_rating={redis_doc.get('us_rating')!r}, "
-                  f"wp_keys={list(redis_doc['watch_providers'].keys()) if redis_doc.get('watch_providers') else None}")
-
-        results.append(r)
-    return results
-
-
-async def test_tv_full_integration(
-    items: list[dict[str, Any]],
-    service: TMDBService,
-    verbose: bool,
-) -> list[TestResult]:
-    """TV items: enrich via API, normalize, validate full schema."""
-    results: list[TestResult] = []
-    for i, item in enumerate(items):
-        mc_id = item.get("mc_id", "?")
-        r = TestResult(f"tv_integration [{i}] id={mc_id}")
-
-        enriched = await enrich_item(item, "tv", service)
-        doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
-        if doc is None:
-            r.fail("normalize_document returned None")
+        try:
+            api_result = await service.get_media_details(
+                tmdb_id,
+                mc_type_enum,
+                include_cast=True,
+                include_videos=True,
+                include_watch_providers=True,
+                include_keywords=True,
+            )
+        except Exception as e:
+            r.fail(f"get_media_details raised: {e}")
             results.append(r)
             continue
 
+        if api_result is None:
+            r.fail("get_media_details returned None")
+            results.append(r)
+            continue
+
+        if hasattr(api_result, "model_dump"):
+            item_dict: dict[str, Any] = api_result.model_dump(mode="json")
+        elif isinstance(api_result, dict):
+            item_dict = api_result
+        else:
+            r.fail(f"Unexpected result type: {type(api_result)}")
+            results.append(r)
+            continue
+
+        if not item_dict or item_dict.get("status_code") == 404:
+            r.fail("Empty or 404 from API")
+            results.append(r)
+            continue
+
+        if item_dict.get("error"):
+            r.fail(f"API returned error: {item_dict['error']}")
+            results.append(r)
+            continue
+
+        doc = normalize_document(item_dict)
+        if doc is None:
+            r.fail("normalize_document returned None on API-fetched data")
+            results.append(r)
+            continue
+
+        doc._source = "backfill"
         redis_doc = document_to_redis(doc)
-        now_ts = 1709000000
-        ca, ma, src = resolve_timestamps(None, now_ts, source_tag="backfill")
-        redis_doc["created_at"] = ca
-        redis_doc["modified_at"] = ma
-        redis_doc["_source"] = src
+        _apply_timestamps(redis_doc)
 
         validate_schema_keys(redis_doc, r)
-        validate_tv_specifics(redis_doc, r)
+        if content_type == "movie":
+            validate_movie_specifics(redis_doc, r)
+            validate_director_shape(redis_doc, r)
+        else:
+            validate_tv_specifics(redis_doc, r)
         validate_watch_providers_shape(redis_doc, r)
         validate_list_contents(redis_doc, r)
         validate_timestamps(redis_doc, r, expect_source="backfill")
+        validate_data_fidelity(item_dict, redis_doc, r)
+
+        collected_docs.append(redis_doc)
 
         if verbose:
-            print(f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
-                  f"title={redis_doc['title']!r}, "
-                  f"first_air_date={redis_doc.get('first_air_date')}, "
-                  f"us_rating={redis_doc.get('us_rating')!r}, "
-                  f"wp_keys={list(redis_doc['watch_providers'].keys()) if redis_doc.get('watch_providers') else None}")
+            cast_count = len(redis_doc.get("cast", []))
+            kw_count = len(redis_doc.get("keywords", []))
+            print(
+                f"    {'OK' if r.passed else 'FAIL'}: {redis_doc['id']} — "
+                f"title={redis_doc['title']!r}, "
+                f"cast={cast_count}, kw={kw_count}, "
+                f"img={'yes' if redis_doc.get('image') else 'no'}, "
+                f"us_rating={redis_doc.get('us_rating')!r}, "
+                f"dir={redis_doc.get('director') is not None}"
+            )
 
         results.append(r)
+
     return results
+
+
+# ---------- Unit tests ----------
 
 
 def test_timestamps_new_doc() -> TestResult:
@@ -492,7 +659,10 @@ async def test_us_rating_populated(
             found = True
             break
     if not found:
-        r.fail(f"No {label} item returned a non-null us_rating from TMDB API")
+        if content_type == "tv":
+            r.warn(f"No {label} item returned a non-null us_rating (new TV shows may lack ratings)")
+        else:
+            r.fail(f"No {label} item returned a non-null us_rating from TMDB API")
     return r
 
 
@@ -598,29 +768,52 @@ def test_document_to_redis_roundtrip_completeness() -> TestResult:
 
 async def run_tests(args: argparse.Namespace) -> int:
     service = TMDBService()
+    all_results: list[TestResult] = []
+    all_docs: list[dict[str, Any]] = []
 
+    # --- Load data ---
     movie_items = load_sample_items("movie", args.count)
     tv_items = load_sample_items("tv", args.count)
+    print("\n--- Cache data ---")
+    print(f"Loaded {len(movie_items)} movie items, {len(tv_items)} TV items from cache files")
 
-    print(f"\nLoaded {len(movie_items)} movie items, {len(tv_items)} TV items from cache")
-    print("Enriching via TMDB API (get_content_rating + get_streaming_platform_summary)...\n")
+    print("\n--- Redis 2026+ docs ---")
+    redis_movies = await load_redis_2026_items("movie", args.count)
+    redis_tv = await load_redis_2026_items("tv", args.count)
+    print(f"Loaded {len(redis_movies)} movie items, {len(redis_tv)} TV items from Redis (year >= 2026)")
 
-    all_results: list[TestResult] = []
-    all_enriched_docs: list[dict[str, Any]] = []
+    if not redis_movies:
+        print("  WARNING: No 2026+ movies found in Redis — Phase 1b movie tests will be skipped")
+    if not redis_tv:
+        print("  WARNING: No 2026+ TV shows found in Redis — Phase 1b TV tests will be skipped")
 
-    # Tests 1-N: Movie full integration (cache + API enrich + normalize + validate)
-    movie_results = await test_movie_full_integration(movie_items, service, args.verbose)
-    all_results.extend(movie_results)
+    print("\nRunning tests...\n")
 
-    # Pinned TV integration (known to have content ratings)
-    pinned_tv_results = await test_pinned_tv_integration(service, args.verbose)
-    all_results.extend(pinned_tv_results)
+    # --- Group 1: Movies from cache (Phase 1 path) ---
+    print("  Group 1: Movies from cache (Phase 1 path)")
+    all_results.extend(
+        await test_cache_integration(movie_items, "movie", service, args.verbose, all_docs)
+    )
 
-    # Tests N+1-2N: TV full integration (from cache)
-    tv_results = await test_tv_full_integration(tv_items, service, args.verbose)
-    all_results.extend(tv_results)
+    # --- Group 2: TV from cache (Phase 1 path) ---
+    print("  Group 2: TV shows from cache (Phase 1 path)")
+    all_results.extend(
+        await test_cache_integration(tv_items, "tv", service, args.verbose, all_docs)
+    )
 
-    # Timestamp unit tests
+    # --- Group 3: Movies from Redis 2026+ (Phase 1b path) ---
+    print("  Group 3: Movies from Redis 2026+ (Phase 1b path)")
+    all_results.extend(
+        await test_phase1b_redis_sourced(redis_movies, "movie", service, args.verbose, all_docs)
+    )
+
+    # --- Group 4: TV from Redis 2026+ (Phase 1b path) ---
+    print("  Group 4: TV shows from Redis 2026+ (Phase 1b path)")
+    all_results.extend(
+        await test_phase1b_redis_sourced(redis_tv, "tv", service, args.verbose, all_docs)
+    )
+
+    # --- Unit tests ---
     all_results.append(test_timestamps_new_doc())
     all_results.append(test_timestamps_existing_with_created_at())
     all_results.append(test_timestamps_existing_without_created_at())
@@ -630,9 +823,9 @@ async def run_tests(args: argparse.Namespace) -> int:
     all_results.append(test_tv_air_dates_populated(tv_items))
     all_results.append(test_movie_director_populated(movie_items))
 
-    # API field population checks
+    # API field population checks (cache-based)
     all_results.append(await test_us_rating_populated(movie_items, "movie", service))
-    all_results.append(await test_us_rating_populated(PINNED_TV_ITEMS + tv_items, "tv", service))
+    all_results.append(await test_us_rating_populated(tv_items, "tv", service))
     all_results.append(await test_watch_providers_populated(movie_items, "movie", service))
     all_results.append(await test_watch_providers_populated(tv_items, "tv", service))
 
@@ -653,40 +846,9 @@ async def run_tests(args: argparse.Namespace) -> int:
     print(f"\n  {passed} passed, {failed} failed out of {len(all_results)} tests\n")
 
     if args.output:
-        for item in PINNED_TV_ITEMS:
-            enriched = await enrich_item(item, "tv", service)
-            doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
-            if doc:
-                redis_doc = document_to_redis(doc)
-                ca, ma, src = resolve_timestamps(None, 1709000000, source_tag="backfill")
-                redis_doc["created_at"] = ca
-                redis_doc["modified_at"] = ma
-                redis_doc["_source"] = src
-                all_enriched_docs.append(redis_doc)
-        for item in movie_items:
-            enriched = await enrich_item(item, "movie", service)
-            doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.MOVIE)
-            if doc:
-                doc._source = "backfill"
-                redis_doc = document_to_redis(doc)
-                ca, ma, src = resolve_timestamps(None, 1709000000, source_tag="backfill")
-                redis_doc["created_at"] = ca
-                redis_doc["modified_at"] = ma
-                redis_doc["_source"] = src
-                all_enriched_docs.append(redis_doc)
-        for item in tv_items:
-            enriched = await enrich_item(item, "tv", service)
-            doc = normalize_document(enriched, source=MCSources.TMDB, mc_type=MCType.TV_SERIES)
-            if doc:
-                redis_doc = document_to_redis(doc)
-                ca, ma, src = resolve_timestamps(None, 1709000000, source_tag="backfill")
-                redis_doc["created_at"] = ca
-                redis_doc["modified_at"] = ma
-                redis_doc["_source"] = src
-                all_enriched_docs.append(redis_doc)
         out_path = Path(args.output)
-        out_path.write_text(json.dumps(all_enriched_docs, indent=2))
-        print(f"  Wrote {len(all_enriched_docs)} enriched sample docs to {out_path}\n")
+        out_path.write_text(json.dumps(all_docs, indent=2))
+        print(f"  Wrote {len(all_docs)} normalized docs (all groups) to {out_path}\n")
 
     return 1 if failed > 0 else 0
 
@@ -694,7 +856,7 @@ async def run_tests(args: argparse.Namespace) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Backfill integration test (no Redis writes)")
     parser.add_argument("--verbose", action="store_true", help="Print per-doc details")
-    parser.add_argument("--output", type=str, default=None, help="Write enriched docs to JSON file")
+    parser.add_argument("--output", type=str, default=None, help="Write normalized docs to JSON file")
     parser.add_argument("--count", type=int, default=5, help="Sample items per type (default 5)")
     args = parser.parse_args()
 

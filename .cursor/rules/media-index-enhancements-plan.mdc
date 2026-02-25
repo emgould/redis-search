@@ -371,6 +371,17 @@ When `get_content_rating` or `get_streaming_platform_summary_for_title` fails fo
 - **watch_providers:** Not in cache; stays `null` in Phase 1
 - Supports: `--dry-run`, `--year-lte`, `--type movie|tv`
 
+### Phase 1b: Re-fetch 2026+ Redis docs from TMDB API (full re-normalize)
+
+- **Problem:** Phase 1 loads from cache files, but existing media docs in Redis from Jan–Feb 2026 nightly ETL runs have the old schema (flat `director_id`/`director_name`, no date fields, no timestamps, no `us_rating`, no `watch_providers`). Phase 2+2b only does partial updates — it bolts on `us_rating` and `watch_providers` but doesn't restructure the document.
+- **Source:** Existing Redis media docs (`media:*`) filtered by `year >= 2026` (configurable via `--year-gte`)
+- **Flow:** Scan → filter → `TMDBService.get_media_details` → `model_dump` → enrich (`get_content_rating` + `get_streaming_platform_summary_for_title`) → `normalize_document` → `document_to_redis` → `resolve_timestamps` (read-before-write) → `JSON.SET` full replace
+- **Key difference from Phase 2+2b:** This is a **full document replace** producing a complete new-schema doc, not a partial update
+- **Rate limiting:** Batches of 10 with 0.5s delay between batches
+- **Failure policy:** On API failure for a doc, skip entirely and log WARNING (don't write a half-baked doc)
+- **_source:** Set to `"backfill"`
+- Supports: `--dry-run`, `--limit`, `--year-gte` (default 2026)
+
 ### Phase 2: us_rating (separate pass)
 
 - **Source of tmdb_ids:** Existing Redis media docs (`media:*`) — Redis is source of truth
@@ -414,6 +425,7 @@ No changes. These scripts copy the full document; created_at and modified_at are
 **scripts/backfill_media_dates_and_timestamps.py**
 
 - Phase 1: From cache data (dates + timestamps + director for media)
+- Phase 1b: Re-fetch 2026+ Redis docs from TMDB API (full re-normalize + enrich)
 - Phase 2: us_rating backfill (Redis docs as source of tmdb_ids)
 - Phase 2b: watch_providers backfill (Redis docs as source of tmdb_ids)
 - Phase 3: Timestamps for person, podcast, book, author
@@ -435,11 +447,15 @@ Adding created_at/modified_at requires drop + recreate indexes. Use `dropindex d
 5. **DONE** Nightly ETL: Add get_content_rating and get_streaming_platform_summary_for_title calls for us_rating and watch_providers
 6. **DONE** Backfill script: Phase 1, 2, 2b, 2+2b, 3 (scripts/backfill_media_dates_and_timestamps.py)
 7. **DONE** GET /api/changes endpoint (web/app.py)
+8. **DONE** Phase 1b: Re-fetch 2026+ Redis docs (scripts/backfill_media_dates_and_timestamps.py --phase 1b), integration test added to test_backfill_dryrun_sample.py
 
 ### Operational Steps (Post-Deploy)
 
 1. Drop + recreate indexes: `FT.DROPINDEX idx:media` (delete_documents=False), then run build_redis_index.py
 2. Run Phase 1 backfill for movies: `python scripts/backfill_media_dates_and_timestamps.py --phase 1 --type movie`
 3. Run Phase 1 backfill for TV: `python scripts/backfill_media_dates_and_timestamps.py --phase 1 --type tv`
-4. Run Phase 2+2b combined: `python scripts/backfill_media_dates_and_timestamps.py --phase 2+2b`
-5. Run Phase 3 non-media timestamps: `python scripts/backfill_media_dates_and_timestamps.py --phase 3`
+4. Run Phase 1b re-fetch 2026+ docs: `python scripts/backfill_media_dates_and_timestamps.py --phase 1b`
+5. Run Phase 2+2b combined (pre-2026 docs that Phase 1 covered but 1b didn't): `python scripts/backfill_media_dates_and_timestamps.py --phase 2+2b`
+6. Run Phase 3 non-media timestamps: `python scripts/backfill_media_dates_and_timestamps.py --phase 3`
+
+**Execution order rationale:** Phase 1b fully replaces 2026+ docs (including `us_rating` and `watch_providers`), making Phase 2+2b unnecessary for those docs. Phase 2+2b is still needed for pre-2026 docs that came from Phase 1 cache files (which lack `us_rating` and `watch_providers`).
