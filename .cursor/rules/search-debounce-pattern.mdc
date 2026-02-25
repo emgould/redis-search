@@ -112,6 +112,14 @@ controller.triggerSearch(query);        // fire Tier 2 immediately
 | `/api/autocomplete` | 1 | GET (fetch) | Local RediSearch only |
 | `/api/search` | 2 (batch) | GET (fetch) | All sources |
 | `/api/search/stream` | 2 (stream) | GET (EventSource SSE) | All sources, streamed per-source |
+| `/api/media-details` | — | GET | TMDB (tv/movie inspection) |
+
+## Result Item JSON Inspection (TV/Movie)
+
+TV and movie result items show two hover buttons:
+
+- **View Redis Doc** — Displays the JSON of the doc returned by autocomplete/search (no API call).
+- **View Media Details** — Fetches from TMDB via `GET /api/media-details?tmdb_id=&media_type=` (mirrors `scripts/get_media_details.py`) and displays raw or normalized JSON. Requires `TMDB_READ_TOKEN`.
 
 ## Adding New Sources
 

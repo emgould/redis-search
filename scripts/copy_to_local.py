@@ -30,6 +30,7 @@ import json
 import os
 import sys
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 from redis.asyncio import Redis
@@ -39,6 +40,18 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 # Load environment
 env_file = os.getenv("ENV_FILE", "config/local.env")
 load_dotenv(env_file)
+
+_project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_project_root / "src"))
+
+from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
+
+INDEX_TO_ETL_JOBS: dict[str, list[str]] = {
+    "media": ["tmdb_movie_changes_movie", "tmdb_tv_changes_tv"],
+    "people": ["tmdb_person_changes_person"],
+    "podcast": ["podcastindex_changes_podcast"],
+    "author": ["bestseller_authors_book"],
+}
 
 
 @dataclass
@@ -373,6 +386,59 @@ async def list_available_indices(
     return index_infos
 
 
+def sync_etl_metadata(copied_indices: list[str], dry_run: bool = False) -> None:
+    """Sync ETL job states from source (dev/prod) to local for copied indices."""
+    jobs_to_sync: set[str] = set()
+    for idx_name in copied_indices:
+        friendly = idx_name[4:] if idx_name.startswith("idx:") else idx_name
+        if friendly in INDEX_TO_ETL_JOBS:
+            jobs_to_sync.update(INDEX_TO_ETL_JOBS[friendly])
+
+    if not jobs_to_sync:
+        return
+
+    gcs_bucket = os.getenv("GCS_BUCKET")
+    if not gcs_bucket:
+        print("   ⚠️  GCS_BUCKET not set, skipping ETL metadata sync")
+        return
+
+    source_prefix = os.getenv("PUBLIC_GCS_ETL_PREFIX", "redis-search/etl/dev")
+    local_prefix = os.getenv("GCS_ETL_PREFIX", "redis-search/etl/local")
+
+    if source_prefix == local_prefix:
+        print("   ⚠️  Source and local GCS prefixes are identical, skipping metadata sync")
+        return
+
+    print(f"   Syncing ETL metadata: {source_prefix} → {local_prefix}")
+
+    source_store = ETLMetadataStore(
+        config=ETLStateConfig(gcs_bucket=gcs_bucket, gcs_prefix=source_prefix)
+    )
+    local_store = ETLMetadataStore(
+        config=ETLStateConfig(gcs_bucket=gcs_bucket, gcs_prefix=local_prefix)
+    )
+
+    source_states = source_store.get_all_job_states()
+    local_states = local_store.get_all_job_states()
+
+    synced: list[str] = []
+    for job_name in sorted(jobs_to_sync):
+        if job_name in source_states:
+            state = source_states[job_name]
+            if dry_run:
+                print(f"      Would sync {job_name}: {state.last_run_date} ({state.last_status})")
+            else:
+                local_states[job_name] = state
+                synced.append(job_name)
+                print(f"      Synced {job_name}: {state.last_run_date} ({state.last_status})")
+        else:
+            print(f"      ⚠️  No source state for {job_name}")
+
+    if synced:
+        local_store.save_job_states(local_states)
+        print(f"   ✅ Saved {len(synced)} job state(s) to local metadata")
+
+
 async def main(
     dry_run: bool = False,
     indices_to_copy: list[str] | None = None,
@@ -514,6 +580,13 @@ async def main(
             print("      ✅ Success")
         else:
             print("      ❌ Failed")
+        print()
+
+    # Sync ETL metadata for successfully copied indices
+    successfully_copied = [r["index"] for r in results if r["success"]]
+    if successfully_copied:
+        print("📋 Syncing ETL metadata...")
+        sync_etl_metadata(successfully_copied, dry_run=dry_run)
         print()
 
     # Final summary

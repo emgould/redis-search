@@ -16,7 +16,7 @@ Usage:
     python scripts/backfill_media_dates_and_timestamps.py --dry-run --scan-count 100
 
     # Full backfill of entire index
-    python scripts/backfill_media_dates_and_timestamps.py --concurrency 20
+    python scripts/backfill_media_dates_and_timestamps.py
 
     # Force re-run over already-processed documents
     python scripts/backfill_media_dates_and_timestamps.py --force
@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 import time
@@ -86,7 +87,6 @@ async def backfill(
         "fetch_failed": 0,
         "normalize_failed": 0,
         "skipped_source": 0,
-        "skipped_invalid": 0,
         "deleted": 0,
     }
     deleted_movies: list[dict[str, Any]] = []
@@ -122,12 +122,13 @@ async def backfill(
         while True:
             cursor, keys = await redis.scan(cursor=cursor, match="media:*", count=scan_count)
 
+            keys = [k for k in keys if k != CURSOR_KEY]
+
             if not keys:
                 if cursor == 0:
                     break
                 continue
 
-            # Accumulate keys from the SCAN
             stats["scanned"] += len(keys)
 
             if not force:
@@ -135,16 +136,16 @@ async def backfill(
                 if not isinstance(source_marks, list):
                     source_marks = []
 
-                import json
-
                 todo_keys = []
                 for k, m in zip(keys, source_marks, strict=True):
                     if m is None or m == [None]:
                         todo_keys.append(k)
                         continue
                     try:
-                        parsed = json.loads(m[0])
-                        if parsed != "backfill":
+                        val = json.loads(m[0]) if isinstance(m[0], str) else m[0]
+                        if isinstance(val, list):
+                            val = val[0] if val else None
+                        if val != "backfill":
                             todo_keys.append(k)
                     except (json.JSONDecodeError, TypeError, IndexError):
                         todo_keys.append(k)
@@ -170,46 +171,59 @@ async def backfill(
                     titles = []
 
                 batch = []
-                import json
 
                 for k, sid, mtype, t in zip(todo_keys, source_ids, mc_types, titles, strict=True):
-                    # Validate fields are present
                     if not sid or sid == [None] or not mtype or mtype == [None]:
-                        stats["skipped_invalid"] += 1
-                        continue
+                        logger.error(
+                            "FATAL: Invalid document key=%s source_id=%s mc_type=%s", k, sid, mtype
+                        )
+                        raise SystemExit(
+                            f"Aborting: media key {k} has no source_id or mc_type"
+                        )
 
-                    # JSON.MGET returns a list of matching values. Since we query root-level, it's a 1-item list containing a JSON string.
-                    # Example: sid is '["1991"]' when querying `$.source_id`
                     try:
-                        import json
+                        sid_val = json.loads(sid) if isinstance(sid, str) else sid
+                        mtype_val = json.loads(mtype) if isinstance(mtype, str) else mtype
 
-                        # If key was deleted between SCAN and MGET, sid/mtype will be None
-                        if not sid or not mtype:
-                            stats["skipped_invalid"] += 1
-                            continue
+                        if isinstance(sid_val, list):
+                            sid_val = sid_val[0]
+                        if isinstance(mtype_val, list):
+                            mtype_val = mtype_val[0]
 
-                        # Parse outer JSON array to get inner value
-                        source_id_parsed = json.loads(sid)
-                        mc_type_parsed = json.loads(mtype)
+                        if not sid_val or not mtype_val:
+                            logger.error(
+                                "FATAL: Empty parsed fields key=%s source_id=%s mc_type=%s", k, sid, mtype
+                            )
+                            raise SystemExit(
+                                f"Aborting: media key {k} parsed to empty source_id or mc_type"
+                            )
 
-                        if not source_id_parsed or not mc_type_parsed:
-                            stats["skipped_invalid"] += 1
-                            continue
+                        source_id_val = int(sid_val)
+                        mc_type_str = str(mtype_val)
 
-                        source_id_val = int(source_id_parsed[0])
-                        mc_type_str = str(mc_type_parsed[0])
-
-                    except (json.JSONDecodeError, ValueError, TypeError, IndexError):
-                        stats["skipped_invalid"] += 1
-                        continue
+                    except SystemExit:
+                        raise
+                    except Exception as e:
+                        logger.error(
+                            "FATAL: Parse error key=%s source_id=%s mc_type=%s err=%s", k, sid, mtype, e
+                        )
+                        raise SystemExit(
+                            f"Aborting: media key {k} failed to parse: {e}"
+                        ) from e
 
                     if mc_type_str not in ("movie", "tv"):
-                        stats["skipped_invalid"] += 1
-                        continue
+                        logger.error(
+                            "FATAL: Unexpected mc_type key=%s mc_type=%s", k, mc_type_str
+                        )
+                        raise SystemExit(
+                            f"Aborting: media key {k} has unexpected mc_type={mc_type_str!r}"
+                        )
 
                     try:
-                        t_parsed = json.loads(t) if t else []
-                        title_val = str(t_parsed[0]) if t_parsed else "?"
+                        t_val = json.loads(t) if isinstance(t, str) else t
+                        if isinstance(t_val, list):
+                            t_val = t_val[0] if t_val else None
+                        title_val = str(t_val) if t_val else "?"
                     except (json.JSONDecodeError, ValueError, TypeError, IndexError):
                         title_val = "?"
 
@@ -232,10 +246,7 @@ async def backfill(
                             service.get_media_details(
                                 tmdb_id,
                                 mc_type_enum,
-                                include_cast=True,
-                                include_videos=True,
-                                include_watch_providers=True,
-                                include_keywords=True,
+                                no_cache=True,
                             )
                         )
 
@@ -337,11 +348,10 @@ async def backfill(
             if stats["scanned"] - stats.get("last_log_scanned", 0) >= 1000 or cursor == 0:
                 stats["last_log_scanned"] = stats["scanned"]
                 logger.info(
-                    "  Progress: scanned=%d, processed=%d, skipped_source=%d, skipped_invalid=%d, fetched=%d, written=%d",
+                    "  Progress: scanned=%d, processed=%d, skipped_source=%d, fetched=%d, written=%d",
                     stats["scanned"],
                     stats["processed_this_run"],
                     stats["skipped_source"],
-                    stats["skipped_invalid"],
                     stats["fetched"],
                     stats["written"],
                 )
@@ -359,8 +369,6 @@ async def backfill(
             await redis.delete(CURSOR_KEY)
 
         if output_file and all_docs_for_output:
-            import json
-
             out_path = Path(output_file)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with out_path.open("w") as f:

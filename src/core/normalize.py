@@ -15,10 +15,10 @@ import math
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
-from src.contracts.models import MCSources, MCSubType, MCType
-from src.core.iptc import expand_keywords, normalize_tag
+from contracts.models import MCSources, MCSubType, MCType
+from core.iptc import expand_keywords, normalize_tag
 
 # Regex to strip apostrophes (straight + curly) from titles for search indexing.
 # RediSearch tokenizes apostrophes as word separators, so "It's" becomes ["it", "s"].
@@ -401,7 +401,7 @@ class BaseTMDBNormalizer(BaseNormalizer):
             return []
 
         # Use IPTC expander to get all aliases
-        return expand_keywords(keywords)
+        return cast(list[str], expand_keywords(keywords))
 
     def _build_profile_url(self, profile_path: str | None) -> str | None:
         """Build full profile image URL from TMDB path."""

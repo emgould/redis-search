@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -77,6 +77,11 @@ help:
 	@echo "    make cache-version-set PREFIX=<prefix> VERSION=<ver> REDIS=local - Set version"
 	@echo "    make cache-version-list REDIS=local                 - List all cache prefix versions"
 	@echo "    make cache-version-seed REDIS=local                 - Seed all cache versions into Redis"
+	@echo ""
+	@echo "  Backfill & ETL Status:"
+	@echo "    make last-etl-date - Show last successful ETL run date per job"
+	@echo "    make etl-media startdate=YYYY-MM-DD - Run movie + TV ETL from a start date"
+	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -371,3 +376,56 @@ versions = get_all_cache_versions(); \
 
 cache-version-seed:
 	@bash -c '$(CACHE_REDIS_ENV) && python scripts/seed_cache_versions.py'
+
+# Show last successful ETL run date for each job
+last-etl-date:
+	@. venv/bin/activate && python -c "\
+	import sys; sys.path.insert(0, 'src'); \
+	from adapters.config import load_env; load_env(); \
+	from etl.etl_metadata import ETLMetadataStore; \
+	store = ETLMetadataStore(); \
+	states = store.get_all_job_states(); \
+	print(); \
+	print('Job Name                       Last Run Date   Status    Changes  Upserted'); \
+	print('-' * 85); \
+	[print(f'  {n:28s} {s.last_run_date or \"—\":14s}  {s.last_status or \"—\":8s}  {s.last_changes_found:>7,}  {s.last_documents_upserted:>8,}') for n, s in sorted(states.items())]; \
+	print(); \
+	"
+
+# Run media ETL (movie + TV) with a start date override
+# Usage: make etl-media startdate=2025-02-20
+etl-media:
+	@if [ -z "$(startdate)" ]; then echo "ERROR: startdate is required. Usage: make etl-media startdate=YYYY-MM-DD"; exit 1; fi
+	@echo "Running media ETL from $(startdate)..."
+	@echo ""
+	@echo "=== Movie ETL ==="
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python src/etl/tmdb_nightly_etl.py -m movie --start-date $(startdate)'
+	@echo ""
+	@echo "=== TV ETL ==="
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python src/etl/tmdb_nightly_etl.py -m tv --start-date $(startdate)'
+
+# Fetch TMDB media details for a single title
+# Usage: make get-media-details-tv ID=12345
+#        make get-media-details-movie ID=67890
+get-media-details-tv:
+	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make get-media-details-tv ID=<tmdb_id>"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) tv'
+
+get-media-details-movie:
+	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make get-media-details-movie ID=<tmdb_id>"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) movie'
+
+# Fetch TMDB details and normalize to the index document (same pipeline as ETL)
+# Usage: make get-doc-tv ID=12345
+#        make get-doc-movie ID=67890
+get-doc-tv:
+	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make get-doc-tv ID=<tmdb_id>"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) tv --doc'
+
+get-doc-movie:
+	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make get-doc-movie ID=<tmdb_id>"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) movie --doc'
+
+# Run media index backfill (re-fetch all docs from TMDB API)
+backfill:
+	@. venv/bin/activate && python scripts/backfill_media_dates_and_timestamps.py $(ARGS)

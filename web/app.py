@@ -22,6 +22,9 @@ from redis.commands.search.query import Query as SearchQuery
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
+from api.tmdb.core import TMDBService
+from contracts.models import MCType
+from core.normalize import document_to_redis, normalize_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
 from etl.etl_metadata import ETLMetadataStore
@@ -40,6 +43,7 @@ from services.search_service import (
     search,
     search_stream,
 )
+from utils.genre_mapping import get_genre_mapping_with_fallback
 from web.routes.openlibrary_etl import router as openlibrary_etl_router
 
 # Project root directory for subprocess cwd
@@ -2390,6 +2394,85 @@ async def api_get_details(
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
+    """Convert TMDB media details to JSON-serializable dict."""
+    if payload is None:
+        return None
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump(mode="json")  # type: ignore[no-any-return]
+    if hasattr(payload, "to_dict"):
+        return payload.to_dict()  # type: ignore[no-any-return]
+    if isinstance(payload, dict):
+        return payload
+    return {"value": str(payload)}
+
+
+@app.get("/api/media-details")
+async def api_get_media_details(
+    tmdb_id: int = Query(..., description="TMDB numeric ID"),
+    media_type: str = Query(..., description="'movie' or 'tv'"),
+    doc: bool = Query(
+        default=False,
+        description="If true, normalize through ETL pipeline and return Redis index document",
+    ),
+    region: str = Query(default="US", description="Region code"),
+    _ui: None = Depends(require_web_ui_enabled),
+):
+    """
+    Fetch TMDB media details for a single title (mirrors get_media_details.py).
+
+    Without doc: returns raw TMDB media details.
+    With doc=true: returns normalized Redis index document.
+    """
+    if not os.getenv("TMDB_READ_TOKEN"):
+        return JSONResponse(
+            status_code=503,
+            content={"error": "TMDB_READ_TOKEN is not set. Cannot fetch media details."},
+        )
+    if media_type.lower() not in ("tv", "movie"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "media_type must be 'tv' or 'movie'"},
+        )
+    try:
+        mc_type = MCType.TV_SERIES if media_type.lower() == "tv" else MCType.MOVIE
+        service = TMDBService()
+        details = await service.get_media_details(
+            tmdb_id=tmdb_id,
+            media_type=mc_type,
+            region=region.upper(),
+            no_cache=True,
+        )
+        if details is None or details.error:
+            err = details.error if details else "no result"
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Error fetching {media_type} {tmdb_id}: {err}"},
+            )
+        if not doc:
+            payload = _media_details_to_serializable(details)
+            return JSONResponse(content=payload or {})
+        item_dict = _media_details_to_serializable(details)
+        if item_dict is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to serialize media details"},
+            )
+        item_dict["_media_type"] = media_type.lower()
+        genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+        normalized = normalize_document(item_dict, genre_mapping=genre_mapping)
+        if normalized is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Normalizer returned None — item did not produce a document"},
+            )
+        redis_doc = document_to_redis(normalized)
+        return JSONResponse(content=redis_doc)
+    except Exception as e:
+        logging.exception("Error fetching media details")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.get("/api/cast-names", response_model=CastNameSearchResponse)
 async def api_get_cast_names(
     query: str | None = Query(default=None, description="Title to search for (e.g., 'The Matrix')"),
@@ -3019,9 +3102,17 @@ INDEX_CONFIGS = {
             # watch_providers indexed subfields
             TagField("$.watch_providers.watch_region", as_name="watch_region"),
             TagField("$.watch_providers.primary_provider_type", as_name="primary_provider_type"),
-            TagField("$.watch_providers.streaming_platform_ids[*]", as_name="streaming_platform_ids"),
-            TagField("$.watch_providers.on_demand_platform_ids[*]", as_name="on_demand_platform_ids"),
-            NumericField("$.watch_providers.primary_provider_id", as_name="primary_provider_id", sortable=True),
+            TagField(
+                "$.watch_providers.streaming_platform_ids[*]", as_name="streaming_platform_ids"
+            ),
+            TagField(
+                "$.watch_providers.on_demand_platform_ids[*]", as_name="on_demand_platform_ids"
+            ),
+            NumericField(
+                "$.watch_providers.primary_provider_id",
+                as_name="primary_provider_id",
+                sortable=True,
+            ),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.rating", as_name="rating", sortable=True),

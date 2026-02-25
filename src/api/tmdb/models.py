@@ -175,6 +175,7 @@ class MCMovieItem(MCBaseMediaItem):
             MCBaseMediaItem with standardized fields
         """
         genre_ids = [genre.id for genre in item.genres]
+        genres = [genre.name for genre in item.genres]
 
         # Build processed item data - direct attribute access
         images = []
@@ -217,6 +218,7 @@ class MCMovieItem(MCBaseMediaItem):
             title=item.title,
             overview=item.overview,
             genre_ids=genre_ids,
+            genres=genres,
             original_language=item.original_language,
             images=images,
             status=item.status,
@@ -484,6 +486,7 @@ class MCTvItem(MCBaseMediaItem):
             MCTvItem with standardized fields
         """
         genre_ids = [genre.id for genre in item.genres]
+        genres = [genre.name for genre in item.genres]
 
         # Build processed item data - direct attribute access
         images = []
@@ -525,6 +528,7 @@ class MCTvItem(MCBaseMediaItem):
             title=item.name,
             overview=item.overview,
             genre_ids=genre_ids,
+            genres=genres,
             original_language=item.original_language,
             images=images,
             status=item.status,
