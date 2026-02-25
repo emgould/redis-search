@@ -1,0 +1,153 @@
+---
+description: Redis index payload schema by index
+globs: ["web/app.py", "src/core/normalize.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py"]
+alwaysApply: false
+---
+
+# using_redis_search
+
+## Summary
+
+Each index returns full JSON documents from the Redis JSON key.
+`media:*`, `person:*`, `podcast:*`, `author:*`, and `book:*` payloads include display fields beyond what is indexed for filtering/ranking.
+
+## `idx:media` (`media:`)
+
+### What consumers get
+
+- Common fields from `SearchDocument` (via `document_to_redis` in `src/core/normalize.py`):
+  - `id`, `title`, `search_title`
+  - `mc_type`, `mc_subtype`, `source`, `source_id`
+  - `year`, `popularity`, `rating`
+  - `image`, `overview`
+  - `genre_ids`, `genres`
+  - `cast_ids`, `cast_names`, `cast`
+  - `director`, `keywords`
+  - `origin_country`
+  - `original_language`, `original_title`
+  - `release_date`, `first_air_date`, `last_air_date`
+  - `us_rating`
+  - `watch_providers`
+  - `status`, `series_status`
+  - `tagline`
+  - `vote_count`, `vote_average`, `popularity_tmdb`
+  - `runtime`, `number_of_seasons`, `number_of_episodes`
+  - `created_by`, `created_by_ids`
+  - `networks`, `network`
+  - `production_companies`, `production_countries`
+  - `budget`, `revenue`
+  - `spoken_languages`
+  - `created_at`, `modified_at`, `_source`
+  - optional: `also_known_as` (only present when set on the document)
+
+### Movies vs TV split
+
+- Movie documents (`mc_type=movie`) generally carry:
+  - `release_date`
+  - `runtime`
+  - `budget`, `revenue`
+  - `spoken_languages`
+  - Movie-oriented metadata in the common field set (see above)
+- TV documents (`mc_type=tv`/`TV_SERIES`) generally carry:
+  - `first_air_date`, `last_air_date`
+  - `number_of_seasons`, `number_of_episodes`
+  - `series_status`
+  - `created_by`, `created_by_ids`
+  - `networks`, `network`
+
+### Indexed (queryable/sortable) media fields
+
+`search_title`, `mc_type`, `mc_subtype`, `spoken_language`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id`, `director.name_normalized`, `keywords`, `origin_country`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids`, `watch_providers.on_demand_platform_ids`, `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `created_at`, `modified_at`.
+
+## `idx:people` (`person:`)
+
+### What consumers get
+
+- Base fields from `SearchDocument`:
+  - `id`, `title`, `search_title`
+  - `mc_type`, `mc_subtype`, `source`, `source_id`
+  - `year`, `popularity`, `rating`
+  - `image`, `overview`
+  - `created_at`, `modified_at`, `_source` if present
+- Person enrichment fields added by `PersonETLService` before write:
+  - `also_known_as` (pipe-joined string; added for search)
+  - `known_for_department`
+  - `birthday`, `deathday`
+  - `place_of_birth`
+  - `age`, `is_deceased`
+  - `known_for_titles` (top known-for works)
+- `mc_type`/`mc_subtype` are used to separate person archetypes (actor/director/writer/etc.).
+
+### Indexed fields for people
+
+`search_title`, `also_known_as`, `mc_type`, `mc_subtype`, `source`, `popularity`, `created_at`, `modified_at`.
+
+## `idx:podcasts` (`podcast:`)
+
+### What consumers get
+
+- Base fields from `SearchDocument`:
+  - `id`, `title`, `search_title`
+  - `mc_type`, `mc_subtype` (normally null for podcasts), `source`, `source_id`
+  - `year`, `popularity`, `rating`
+  - `image`, `overview`
+  - `genre_ids`, `genres`
+  - `created_at`, `modified_at`, `_source`
+- Podcast-specific display fields injected in ETL:
+  - `title`, `url`, `site`, `author`, `owner_name`
+  - `language` (normalized string tag)
+  - `categories` (array)
+  - `author_normalized`
+  - `episode_count`, `itunes_id`, `podcast_guid`, `popularity_score`
+  - `last_update_time` (ISO timestamp string)
+  - `artwork`, `trend_score`, `spotify_url`, `relevancy_score`
+
+### Indexed fields for podcasts
+
+`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `popularity`, `episode_count`, `created_at`, `modified_at`.
+
+## `idx:author` (`author:`)
+
+### What consumers get
+
+- Stored fields from `mc_author_to_redis_doc`:
+  - `id`, `key`, `source_id`
+  - `search_title`, `name`, `bio`
+  - `mc_type`, `mc_subtype`, `source`
+  - `birth_date`, `death_date`
+  - `remote_ids`, `openlibrary_key`, `openlibrary_url`
+  - `work_count`, `quality_score`
+  - `wikidata_id`, `wikidata_name`, `wikidata_birth_year`
+  - `image`, `images`, `photo_urls`
+  - `author_links`
+  - `created_at`, `modified_at`
+
+### Indexed fields for author
+
+`search_title`, `name`, `bio`, `mc_type`, `mc_subtype`, `source`, `wikidata_id`, `openlibrary_key`, `work_count`, `quality_score`, `birth_year`.
+
+## `idx:book` (`book:`)
+
+### What consumers get
+
+- Stored fields from `mc_book_to_redis_doc`:
+  - `id`, `key`, `source_id`
+  - `search_title`, `title`, `description`
+  - `author`, `author_name`, `author_search`
+  - `matching_author_olids`, `author_olids`
+  - `author_normalized`
+  - `mc_type`, `source`
+  - `openlibrary_key`, `openlibrary_url`
+  - `isbn`, `primary_isbn13`, `primary_isbn10`
+  - `first_publish_year`, `publisher`, `first_sentence`
+  - `subject`, `subjects`, `subjects_search`, `subjects_normalized`
+  - `language`
+  - `cover_i`, `cover_available`, `cover_urls`, `book_image`, `image`, `images`
+  - `ratings_average`, `ratings_count`, `readinglog_count`
+  - `number_of_pages`
+  - `edition_count`, `author_quality_score`, `popularity_score`
+  - `created_at`, `modified_at`
+
+### Indexed fields for books
+
+`search_title`, `title`, `author_search`, `author`, `description`, `subjects_search`, `mc_type`, `source`, `openlibrary_key`, `primary_isbn13`, `primary_isbn10`, `author_olid`, `cover_available`, `author_normalized`, `subjects`, `first_publish_year`, `ratings_average`, `ratings_count`, `readinglog_count`, `number_of_pages`, `popularity_score`, `edition_count`.
