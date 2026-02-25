@@ -170,7 +170,11 @@ class TMDBChangesETL(TMDBService):
         return self.staging_dir / f"tmdb_changes_{media_type}_{run_date}_errors.json.gz"
 
     async def _fetch_changes_page(
-        self, media_type: Literal["tv", "movie", "person"], start_date: str, end_date: str, page: int
+        self,
+        media_type: Literal["tv", "movie", "person"],
+        start_date: str,
+        end_date: str,
+        page: int,
     ) -> dict:
         """Fetch a single page of changes."""
         endpoint = f"/{media_type}/changes"
@@ -578,13 +582,14 @@ class TMDBChangesETL(TMDBService):
                     existing_docs: list[object] = await read_pipe.execute()
 
                     write_pipe = redis.pipeline()
-                    for (key, redis_doc), existing in zip(
-                        prepared, existing_docs, strict=True
-                    ):
+                    for (key, redis_doc), existing in zip(prepared, existing_docs, strict=True):
                         existing_dict = existing if isinstance(existing, dict) else None
-                        ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                        ca, ma, src = resolve_timestamps(
+                            existing_dict, now_ts, source_tag="nightly_etl"
+                        )
                         redis_doc["created_at"] = ca
                         redis_doc["modified_at"] = ma
+                        redis_doc["_source"] = src
                         write_pipe.json().set(key, "$", redis_doc)
                         stats.load_phase.items_success += 1
                     await write_pipe.execute()
