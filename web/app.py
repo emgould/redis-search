@@ -2411,37 +2411,42 @@ def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
 async def api_get_media_details(
     tmdb_id: int = Query(..., description="TMDB numeric ID"),
     media_type: str = Query(..., description="'movie' or 'tv'"),
-    doc: bool = Query(
-        default=False,
-        description="If true, normalize through ETL pipeline and return Redis index document",
-    ),
-    region: str = Query(default="US", description="Region code"),
-    _ui: None = Depends(require_web_ui_enabled),
-):
+) -> JSONResponse:
     """
-    Fetch TMDB media details for a single title (mirrors get_media_details.py).
+    Return the Redis index document for a media item.
 
-    Without doc: returns raw TMDB media details.
-    With doc=true: returns normalized Redis index document.
+    Checks idx:media first. On cache miss, fetches from TMDB, normalizes,
+    persists to Redis, and returns the document.
     """
+    mt = media_type.lower()
+    if mt not in ("tv", "movie"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "media_type must be 'tv' or 'movie'"},
+        )
+
+    redis = get_redis()
+    key = f"media:tmdb_{mt}_{tmdb_id}"
+
+    try:
+        cached: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
+        if cached is not None:
+            return JSONResponse(content={"id": key, **cached})
+    except Exception as e:
+        logging.warning("Redis lookup failed for %s: %s", key, e)
+
     if not os.getenv("TMDB_READ_TOKEN"):
         return JSONResponse(
             status_code=503,
             content={"error": "TMDB_READ_TOKEN is not set. Cannot fetch media details."},
         )
-    if media_type.lower() not in ("tv", "movie"):
-        return JSONResponse(
-            status_code=400,
-            content={"error": "media_type must be 'tv' or 'movie'"},
-        )
+
     try:
-        mc_type = MCType.TV_SERIES if media_type.lower() == "tv" else MCType.MOVIE
+        mc_type = MCType.TV_SERIES if mt == "tv" else MCType.MOVIE
         service = TMDBService()
         details = await service.get_media_details(
             tmdb_id=tmdb_id,
             media_type=mc_type,
-            region=region.upper(),
-            no_cache=True,
         )
         if details is None or details.error:
             err = details.error if details else "no result"
@@ -2449,16 +2454,15 @@ async def api_get_media_details(
                 status_code=404,
                 content={"error": f"Error fetching {media_type} {tmdb_id}: {err}"},
             )
-        if not doc:
-            payload = _media_details_to_serializable(details)
-            return JSONResponse(content=payload or {})
+
         item_dict = _media_details_to_serializable(details)
         if item_dict is None:
             return JSONResponse(
                 status_code=500,
                 content={"error": "Failed to serialize media details"},
             )
-        item_dict["_media_type"] = media_type.lower()
+
+        item_dict["_media_type"] = mt
         genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
         normalized = normalize_document(item_dict, genre_mapping=genre_mapping)
         if normalized is None:
@@ -2466,8 +2470,16 @@ async def api_get_media_details(
                 status_code=500,
                 content={"error": "Normalizer returned None — item did not produce a document"},
             )
+
+        now_ts = int(datetime.now().timestamp())
+        normalized.created_at = now_ts
+        normalized.modified_at = now_ts
+        normalized._source = "api"
+
         redis_doc = document_to_redis(normalized)
-        return JSONResponse(content=redis_doc)
+        await redis.json().set(key, "$", redis_doc)  # type: ignore[misc]
+
+        return JSONResponse(content={"id": key, **redis_doc})
     except Exception as e:
         logging.exception("Error fetching media details")
         return JSONResponse(status_code=500, content={"error": str(e)})
