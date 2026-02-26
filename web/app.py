@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -355,6 +356,7 @@ async def etl_page(
             "request": request,
             "current_env": current_env.value,
             "redis_connected": redis_connected,
+            "cloud_run_available": bool(os.getenv("CLOUD_RUN_ETL_URL", "")),
         },
     )
 
@@ -2807,6 +2809,83 @@ async def get_nightly_etl_status(_: None = Depends(require_api_key)):
             "result": _nightly_etl_status.get("result"),
         }
     )
+
+
+# ============================================================
+# Cloud Run ETL Proxy Endpoints
+# ============================================================
+
+_CLOUD_RUN_ETL_URL = os.getenv("CLOUD_RUN_ETL_URL", "").rstrip("/")
+_CLOUD_RUN_ETL_API_KEY = os.getenv("ETL_API_KEY", "")
+
+
+@app.post("/api/etl/cloud/trigger")
+async def trigger_cloud_etl(
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Proxy ETL trigger to the Cloud Run dev instance."""
+    if not _CLOUD_RUN_ETL_URL:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": "CLOUD_RUN_ETL_URL not configured"},
+        )
+
+    body: dict[str, Any] = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(
+                f"{_CLOUD_RUN_ETL_URL}/api/etl/trigger",
+                json=body,
+                headers={
+                    "X-API-Key": _CLOUD_RUN_ETL_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            )
+            return JSONResponse(status_code=resp.status_code, content=resp.json())
+        except httpx.ConnectError as e:
+            return JSONResponse(
+                status_code=502,
+                content={"success": False, "error": f"Cannot reach Cloud Run: {e}"},
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=502,
+                content={"success": False, "error": f"Cloud Run proxy error: {e}"},
+            )
+
+
+@app.get("/api/etl/cloud/status")
+async def get_cloud_etl_status(_: None = Depends(require_api_key)) -> JSONResponse:
+    """Proxy ETL status from the Cloud Run dev instance."""
+    if not _CLOUD_RUN_ETL_URL:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": "CLOUD_RUN_ETL_URL not configured"},
+        )
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(
+                f"{_CLOUD_RUN_ETL_URL}/api/etl/status",
+                headers={"X-API-Key": _CLOUD_RUN_ETL_API_KEY},
+            )
+            return JSONResponse(status_code=resp.status_code, content=resp.json())
+        except httpx.ConnectError as e:
+            return JSONResponse(
+                status_code=502,
+                content={"success": False, "error": f"Cannot reach Cloud Run: {e}"},
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=502,
+                content={"success": False, "error": f"Cloud Run proxy error: {e}"},
+            )
 
 
 @app.post("/api/etl/job/trigger")

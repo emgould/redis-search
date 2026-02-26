@@ -39,6 +39,8 @@ services:
       PUBLIC_REDIS_HOST: host.docker.internal
       PUBLIC_REDIS_PORT: "6381"
       ENVIRONMENT: local
+      # Cloud Run dev instance for remote ETL triggering
+      CLOUD_RUN_ETL_URL: ${CLOUD_RUN_ETL_URL:-}
       GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
     volumes:
       - ../config:/app/config:ro

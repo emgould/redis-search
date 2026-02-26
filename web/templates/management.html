@@ -1,23 +1,6 @@
 {% extends "base.html" %} {% block title %}Management - Redis Search{% endblock
 %} {% block body %}
 <div class="min-h-full">
-  <!-- Header -->
-  <header class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="/" class="text-xl font-semibold text-white hover:text-brand-400 transition-colors">
-        ← Media Search
-      </a>
-      <div class="flex items-center gap-4">
-        <a href="/etl" class="text-sm text-surface-400 hover:text-white transition-colors">
-          ETL Runner →
-        </a>
-        <h1 class="text-lg font-medium text-surface-300">
-          Management Dashboard
-        </h1>
-      </div>
-    </div>
-  </header>
-
   <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
     <!-- Redis Environment Switcher -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
