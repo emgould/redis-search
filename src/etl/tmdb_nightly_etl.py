@@ -206,8 +206,54 @@ class TMDBChangesETL(TMDBService):
 
         return list(set(ids))  # Dedupe
 
+    @staticmethod
+    def _extract_major_provider_names(item: dict) -> set[str]:
+        """Extract provider names from both raw TMDB and custom provider structures.
+
+        Raw TMDB shape (bulk loader / pre-enrichment):
+            watch_providers = {"flatrate": [...], "buy": [...], "rent": [...]}
+
+        Custom provider shape (post get_media_details enrichment):
+            watch_providers = {
+                "streaming_platforms": [{"provider_name": ...}, ...],
+                "on_demand_platforms": [{"provider_name": ...}, ...],
+                "primary_provider": {"provider_name": ...},
+            }
+            streaming_platform = "Netflix"  (top-level on item)
+        """
+        names: set[str] = set()
+        watch_providers = item.get("watch_providers") or {}
+
+        # Raw TMDB structure (flatrate / buy / rent)
+        for key in ("flatrate", "buy", "rent"):
+            for p in watch_providers.get(key, []):
+                if isinstance(p, dict) and p.get("provider_name"):
+                    names.add(p["provider_name"])
+
+        # Custom provider structure (streaming_platforms / on_demand_platforms)
+        for key in ("streaming_platforms", "on_demand_platforms"):
+            for p in watch_providers.get(key, []):
+                if isinstance(p, dict) and p.get("provider_name"):
+                    names.add(p["provider_name"])
+
+        primary = watch_providers.get("primary_provider")
+        if isinstance(primary, dict) and primary.get("provider_name"):
+            names.add(primary["provider_name"])
+
+        # Top-level streaming_platform set by get_media_details
+        sp = item.get("streaming_platform")
+        if isinstance(sp, str) and sp and sp != "In Theaters":
+            names.add(sp)
+
+        return names
+
     def _passes_media_filter(self, item: dict) -> bool:
-        """Check if media item passes quality filters."""
+        """Check if media item passes quality filters.
+
+        Aligned with bulk-loader rules in etl_service.py:
+        - If available to stream (flatrate), rent, or buy from a major provider → include.
+        - Handles both raw TMDB and custom (post-enrichment) provider structures.
+        """
         item_name = item.get("title") or item.get("name") or item.get("id")
         log_fn = logger.info if self.verbose else logger.debug
         media_type = str(item.get("_media_type") or item.get("media_type") or "").lower()
@@ -234,17 +280,18 @@ class TMDBChangesETL(TMDBService):
             log_fn(f"Filter reject {item_name}: no poster_path")
             return False
 
-        # Check for major streaming platforms.
-        watch_providers = item.get("watch_providers", {})
+        # Check for major provider availability (flatrate, buy, or rent)
+        provider_names = self._extract_major_provider_names(item)
+        has_major_provider = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
 
-        all_providers: list[dict] = []
-        for key in ("flatrate", "buy", "rent"):
-            all_providers.extend(watch_providers.get(key, []))
+        # "In Theaters" counts as available
+        is_in_theaters = item.get("streaming_platform") == "In Theaters" or (
+            item.get("watch_providers") or {}
+        ).get("primary_provider_type") == "in theater"
 
-        provider_names = {p.get("provider_name") for p in all_providers if p.get("provider_name")}
-        has_streaming = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
+        has_availability = has_major_provider or is_in_theaters
 
-        if all_providers and not has_streaming:
+        if provider_names and not has_major_provider:
             log_fn(f"Filter: {item_name} providers={provider_names} not in MAJOR")
 
         if media_type == "tv":
@@ -253,10 +300,11 @@ class TMDBChangesETL(TMDBService):
             last_air_date = item.get("last_air_date") or ""
             has_recent_activity = bool(last_air_date and last_air_date >= TV_SHOW_CUTOFF_DATE)
 
-            passed_tv_filter = is_returning_series or has_recent_activity or has_streaming
+            passed_tv_filter = is_returning_series or has_recent_activity or has_availability
             if not passed_tv_filter:
                 log_fn(
-                    f"Filter reject {item_name}: status={status}, last_air_date={last_air_date}, has_streaming={has_streaming}"
+                    f"Filter reject {item_name}: status={status}, last_air_date={last_air_date}, "
+                    f"has_availability={has_availability}"
                 )
             return passed_tv_filter
 
@@ -278,7 +326,7 @@ class TMDBChangesETL(TMDBService):
             if runtime < 40:
                 return False
 
-        # Check release info
+        # Check release info (raw TMDB release_dates structure)
         release_dates = item.get("release_dates", {}).get("results", [])
         has_theatrical = False
         for country in release_dates:
@@ -288,9 +336,9 @@ class TMDBChangesETL(TMDBService):
                         has_theatrical = True
                         break
 
-        if not has_streaming and not has_theatrical:
-            log_fn(f"Filter reject {item_name}: no streaming or theatrical")
-        return has_streaming or has_theatrical
+        if not has_availability and not has_theatrical:
+            log_fn(f"Filter reject {item_name}: no major provider or theatrical")
+        return has_availability or has_theatrical
 
     def _passes_person_filter(self, person: dict) -> bool:
         """Check if person passes quality filters."""

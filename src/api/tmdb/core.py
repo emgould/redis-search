@@ -399,11 +399,12 @@ class TMDBService(Auth, BaseAPIClient):
         if include_release_dates and media_type == MCType.MOVIE:
             release_dates_result = details_data.get("release_dates", {})
             if isinstance(release_dates_result, dict) and isinstance(details, MCMovieItem):
+                details.release_dates = release_dates_result
                 result = await self.get_content_rating(
                     tmdb_id=tmdb_id,
                     region=region,
                     media_type=media_type,
-                    data=details_data.get("release_dates", {}),
+                    data=release_dates_result,
                 )
                 details.us_rating = result.get("rating", None) if result else None
                 details.release_date = result.get("release_date", None) if result else None

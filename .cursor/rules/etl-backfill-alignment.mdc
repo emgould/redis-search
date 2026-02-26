@@ -1,0 +1,72 @@
+---
+description: Align media ETL filter logic with backfill/bulk loader rules
+globs:
+  - "src/etl/tmdb_nightly_etl.py"
+  - "src/services/etl_service.py"
+  - "scripts/backfill_theatrical_movies.py"
+  - "scripts/deploy_web_cr.sh"
+alwaysApply: false
+---
+
+# ETL Backfill Rule Alignment
+
+## Principle
+
+If a title is available to **stream (flatrate), rent, or buy** from a major provider, it should be ETL'd into Redis. The media ETL must follow the same logic as the backfill/bulk loader.
+
+## Backfill Rules (Source of Truth)
+
+### Bulk Loader ([src/services/etl_service.py](src/services/etl_service.py))
+
+**Movies** (lines 524-541):
+- For movies **older than 10 years**: require at least one of `flatrate`, `buy`, or `rent` from `MAJOR_STREAMING_PROVIDERS`.
+- For newer movies: no provider requirement (pass other filters like popularity, vote_count, runtime).
+
+**TV** (lines 481-506):
+- Pass if: Returning Series, OR `last_air_date >= TV_SHOW_CUTOFF_DATE` (2023-01-01), OR on major platform.
+- Major platform check uses **flatrate only** (not buy/rent).
+
+### Backfill Theatrical ([scripts/backfill_theatrical_movies.py](scripts/backfill_theatrical_movies.py))
+
+- Documentaries: use `is_eligible_documentary()` (poster + major provider + within 10 years).
+- Non-documentaries: keep if `poster_path` present; no explicit rent/buy filter in backfill (it loads discovered theatrical releases).
+
+### TMDB API Validation ([src/api/tmdb/core.py](src/api/tmdb/core.py))
+
+`is_vaild_movie` / `is_vaild_tv` (lines 197-256): For enriched items, require:
+- `streaming_platform == "In Theaters"`, OR
+- `watch_providers.flatrate`, OR
+- `watch_providers.buy`, OR
+- `watch_providers.rent`
+
+(Any non-empty presence; not restricted to major providers in this check.)
+
+## Fixes Applied (2026-02-26)
+
+### 1. Provider extraction handles both structures
+
+`_extract_major_provider_names()` in `tmdb_nightly_etl.py` now reads provider names from:
+- Raw TMDB: `watch_providers.flatrate`, `.buy`, `.rent`
+- Custom (post-enrichment): `watch_providers.streaming_platforms`, `.on_demand_platforms`, `.primary_provider`
+- Top-level: `item.streaming_platform`
+
+### 2. `_passes_media_filter` aligned with bulk loader
+
+- Flatrate, buy, or rent from a major provider all count as availability.
+- "In Theaters" (via `streaming_platform` or `primary_provider_type`) counts as available.
+- TV: Returning Series OR recent activity OR has availability.
+- Movies: popularity + vote_count + runtime gates, then require major provider or theatrical.
+
+### 3. Theatrical release_dates populated
+
+`get_media_details` in `core.py` now sets `details.release_dates = release_dates_result` so the ETL filter can inspect US theatrical release types (2, 3).
+
+### 4. Date window robustness
+
+`get_job_start_date` in `etl_runner.py` caps computed `start_date` to at most yesterday, ensuring a minimum 2-day TMDB changes window for early-morning runs.
+
+### 5. PodcastIndex disk space fix
+
+Root cause: Cloud Run gen1 backs `/tmp` with RAM (2Gi memory = 2Gi total). The podcast ETL downloads ~500MB `.tgz` and extracts to ~2GB `.db`, needing ~2.5GB peak temp space. Error: `[Errno 28] No space left on device`.
+
+Fix: Bumped Cloud Run memory from 2Gi to 4Gi in `scripts/deploy_web_cr.sh`. This gives `/tmp` sufficient headroom for the podcast DB download and extraction.

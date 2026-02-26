@@ -93,7 +93,7 @@ gcloud run deploy "${SERVICE_NAME}" \
     --set-secrets "/secrets/env=${SECRET_NAME}:latest" \
     --set-env-vars "DISABLE_WEB_UI=true" \
             --allow-unauthenticated \
-    --memory 2Gi \
+    --memory 4Gi \
     --cpu 2 \
     --timeout 3600 \
     --min-instances 1 \
