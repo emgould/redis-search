@@ -14,11 +14,21 @@ services:
       - RIPROXYEULA=true
       # volatile-lru only evicts keys with TTL (cache), NEVER permanent data (media, person, indices)
       - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 8gb --maxmemory-policy volatile-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+      start_period: 10s
 
   web:
     build:
       context: ..
       dockerfile: docker/cloudrun.Dockerfile
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     env_file:
       - ../config/local.env
     environment:
@@ -41,7 +51,8 @@ services:
     ports:
       - "9001:8080"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     # Override CMD to enable live reload
     command: sh -c "uvicorn web.app:app --host 0.0.0.0 --port 8080 --reload --reload-dir /app/web --reload-dir /app/src"
 
@@ -66,7 +77,8 @@ services:
       - ../config:/app/config:ro
       - ../data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     profiles:
       - etl
     # Default: run ETL once. Override with: docker compose --profile etl run etl cron

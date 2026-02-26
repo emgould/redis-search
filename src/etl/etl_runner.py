@@ -191,25 +191,29 @@ class ETLRunner:
 
         Priority:
         1. Override if provided
-        2. Last successful run date + 1 day
+        2. Last successful run date + 1 day (capped to yesterday at latest)
         3. Yesterday (default)
+
+        The cap to yesterday ensures a minimum 2-day window when end_date
+        defaults to today; TMDB change indexes lag and may not reflect
+        same-day changes for early-morning runs.
         """
         if override:
             return override
 
+        yesterday = date.today() - timedelta(days=1)
+
         # Check last successful run
         last_run = self.metadata_store.get_last_run_date(job_name)
         if last_run:
-            # Start from day after last run
             try:
                 last_date = datetime.strptime(last_run, "%Y-%m-%d").date()
                 start_date = last_date + timedelta(days=1)
+                start_date = min(start_date, yesterday)
                 return start_date.isoformat()
             except ValueError:
                 pass
 
-        # Default to yesterday
-        yesterday = date.today() - timedelta(days=1)
         return yesterday.isoformat()
 
     async def run_job(
