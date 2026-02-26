@@ -1,7 +1,19 @@
+{% extends "base.html" %} {% block title %}Autocomplete Test - Redis Search{%
+endblock %} {% block body %}
+<div class="min-h-full">
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+    <h2 class="text-2xl font-semibold">Autocomplete Test</h2>
 
-<h2>Autocomplete Test</h2>
-<form>
-  <input type="text" name="q" value="{{ query }}" />
-  <button>Search</button>
-</form>
-<pre>{{ results | tojson(indent=2) }}</pre>
+    <form class="flex gap-3">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search..."
+        class="flex-1 px-4 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
+      <button class="px-5 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium transition-colors">
+        Search
+      </button>
+    </form>
+
+    <pre
+      class="bg-surface-800 rounded-lg p-4 text-sm text-surface-300 overflow-x-auto max-h-[70vh]">{{ results | tojson(indent=2) }}</pre>
+  </main>
+</div>
+{% endblock %}

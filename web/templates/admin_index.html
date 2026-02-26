@@ -1,18 +1,36 @@
+{% extends "base.html" %} {% block title %}Index Info - Redis Search{% endblock
+%} {% block body %}
+<div class="min-h-full">
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-6">
+    <h2 class="text-2xl font-semibold">Redis Search Index Information</h2>
 
-<h2>Redis Search Index Information</h2>
+    {% if info.error %}
+    <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+      <p class="text-red-400"><span class="font-semibold">Error:</span> {{ info.error }}</p>
+    </div>
+    {% else %}
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6 space-y-6">
+      <div>
+        <h3 class="text-lg font-medium text-surface-300 mb-2">Document Count</h3>
+        <p class="text-2xl font-bold text-brand-400">{{ info.num_docs }}</p>
+      </div>
 
-{% if info.error %}
-  <p><b>Error:</b> {{ info.error }}</p>
-{% else %}
-  <h3>Fields</h3>
-  <pre>{{ info.fields | tojson(indent=2) }}</pre>
+      <div>
+        <h3 class="text-lg font-medium text-surface-300 mb-2">Index Memory Usage (bytes)</h3>
+        <p class="text-lg text-surface-200">{{ info.inverted_sz_bytes }}</p>
+      </div>
 
-  <h3>Document Count</h3>
-  <pre>{{ info.num_docs }}</pre>
+      <div>
+        <h3 class="text-lg font-medium text-surface-300 mb-2">Fields</h3>
+        <pre class="bg-surface-800 rounded-lg p-4 text-sm text-surface-300 overflow-x-auto max-h-96">{{ info.fields | tojson(indent=2) }}</pre>
+      </div>
 
-  <h3>Index Memory Usage (bytes)</h3>
-  <pre>{{ info.inverted_sz_bytes }}</pre>
-
-  <h3>Full FT.INFO</h3>
-  <pre>{{ info | tojson(indent=2) }}</pre>
-{% endif %}
+      <div>
+        <h3 class="text-lg font-medium text-surface-300 mb-2">Full FT.INFO</h3>
+        <pre class="bg-surface-800 rounded-lg p-4 text-sm text-surface-300 overflow-x-auto max-h-96">{{ info | tojson(indent=2) }}</pre>
+      </div>
+    </section>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

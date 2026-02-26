@@ -1,29 +1,6 @@
 {% extends "base.html" %} {% block title %}ETL Runner - Redis Search{% endblock
 %} {% block body %}
 <div class="min-h-full">
-  <!-- Header -->
-  <header
-    class="border-b border-surface-800 bg-surface-900/50 backdrop-blur-sm"
-  >
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a
-        href="/"
-        class="text-xl font-semibold text-white hover:text-brand-400 transition-colors"
-      >
-        ← Media Search
-      </a>
-      <div class="flex items-center gap-4">
-        <a
-          href="/management"
-          class="text-sm text-surface-400 hover:text-white transition-colors"
-        >
-          Management →
-        </a>
-        <h1 class="text-lg font-medium text-surface-300">ETL Runner</h1>
-      </div>
-    </div>
-  </header>
-
   <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
     <!-- Redis Environment Banner -->
     <div
@@ -53,7 +30,7 @@
     <!-- Run Full ETL Section -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-        <span class="text-2xl">🚀</span> Run Full ETL(local)
+        <span class="text-2xl">🚀</span> Run Full ETL
       </h2>
 
       <p class="text-surface-400 mb-6">
@@ -95,7 +72,7 @@
         id="btn-full-etl"
         class="px-6 py-3 bg-brand-600 hover:bg-brand-500 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        🚀 Run Full ETL(local)
+        🚀 Run Full ETL
       </button>
 
       <!-- Full ETL Status -->
@@ -321,6 +298,79 @@ Loading configuration...</pre
   </main>
 </div>
 
+<!-- Full ETL Target Choice Modal -->
+<div
+  id="full-etl-target-modal"
+  class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+  style="display: none"
+>
+  <div
+    class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4"
+  >
+    <div
+      class="flex items-center justify-between p-4 border-b border-surface-700"
+    >
+      <h3 class="text-lg font-semibold flex items-center gap-2">
+        <span>🚀</span>
+        <span>Choose ETL Target</span>
+      </h3>
+      <button
+        onclick="closeTargetModal()"
+        class="text-surface-400 hover:text-white p-1 rounded"
+      >
+        ✕
+      </button>
+    </div>
+    <div class="p-5">
+      <p class="text-surface-300 mb-4">
+        Where should the full ETL run?
+      </p>
+      <div class="space-y-3">
+        <button
+          onclick="closeTargetModal(); executeFullEtl('local');"
+          class="w-full flex items-center gap-3 p-4 bg-surface-800 hover:bg-surface-700 border border-surface-600 hover:border-brand-500/50 rounded-lg transition-colors text-left"
+        >
+          <span class="text-2xl">🐳</span>
+          <div>
+            <p class="font-medium text-white">Local (Docker)</p>
+            <p class="text-sm text-surface-400">Run ETL in local Docker container, writes to local Redis</p>
+          </div>
+        </button>
+        {% if cloud_run_available %}
+        <button
+          onclick="closeTargetModal(); executeFullEtl('cloud');"
+          class="w-full flex items-center gap-3 p-4 bg-surface-800 hover:bg-surface-700 border border-surface-600 hover:border-amber-500/50 rounded-lg transition-colors text-left"
+        >
+          <span class="text-2xl">☁️</span>
+          <div>
+            <p class="font-medium text-white">Cloud Run (Dev)</p>
+            <p class="text-sm text-surface-400">Trigger ETL on Cloud Run instance, writes to GCE Redis</p>
+          </div>
+        </button>
+        {% else %}
+        <div
+          class="w-full flex items-center gap-3 p-4 bg-surface-800/50 border border-surface-700 rounded-lg opacity-50 cursor-not-allowed"
+        >
+          <span class="text-2xl">☁️</span>
+          <div>
+            <p class="font-medium text-surface-400">Cloud Run (Dev)</p>
+            <p class="text-sm text-surface-500">CLOUD_RUN_ETL_URL not configured</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="flex justify-end p-4 border-t border-surface-700">
+      <button
+        onclick="closeTargetModal()"
+        class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Job Modal -->
 <div
   id="job-modal"
@@ -416,6 +466,8 @@ Loading configuration...</pre
 </div>
 
 <script>
+  let etlTarget = "local";
+
   // Format number with commas
   function formatNumber(num) {
     return (num || 0).toLocaleString();
@@ -429,10 +481,27 @@ Loading configuration...</pre
   }
 
   // ============================================================
+  // Full ETL Target Modal
+  // ============================================================
+
+  function openTargetModal() {
+    document.getElementById("full-etl-target-modal").style.display = "flex";
+  }
+
+  function closeTargetModal() {
+    document.getElementById("full-etl-target-modal").style.display = "none";
+  }
+
+  // ============================================================
   // Full ETL Functions
   // ============================================================
 
-  async function triggerFullEtl() {
+  function triggerFullEtl() {
+    openTargetModal();
+  }
+
+  async function executeFullEtl(target) {
+    etlTarget = target || "local";
     const btn = document.getElementById("btn-full-etl");
     const statusEl = document.getElementById("full-etl-status");
     const indicatorEl = document.getElementById("full-etl-indicator");
@@ -444,7 +513,8 @@ Loading configuration...</pre
     resultEl.classList.add("hidden");
     indicatorEl.textContent = "⏳";
     indicatorEl.className = "animate-spin";
-    labelEl.textContent = "Starting ETL run...";
+    const targetLabel = etlTarget === "cloud" ? "Cloud Run" : "Local Docker";
+    labelEl.textContent = `Starting ETL on ${targetLabel}...`;
     labelEl.className = "font-medium text-brand-400";
 
     // Reset progress
@@ -456,12 +526,16 @@ Loading configuration...</pre
       document.getElementById("full-etl-start-date").value || null;
     const endDate = document.getElementById("full-etl-end-date").value || null;
 
+    const triggerUrl = etlTarget === "cloud"
+      ? "/api/etl/cloud/trigger"
+      : "/api/etl/trigger";
+
     try {
       const body = {};
       if (startDate) body.start_date = startDate;
       if (endDate) body.end_date = endDate;
 
-      const res = await fetch("/api/etl/trigger", {
+      const res = await fetch(triggerUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -490,8 +564,12 @@ Loading configuration...</pre
     const progressLabel = document.getElementById("full-etl-progress-label");
     const resultEl = document.getElementById("full-etl-result");
 
+    const statusUrl = etlTarget === "cloud"
+      ? "/api/etl/cloud/status"
+      : "/api/etl/status";
+
     try {
-      const res = await fetch("/api/etl/status");
+      const res = await fetch(statusUrl);
       const data = await res.json();
 
       // Update progress
