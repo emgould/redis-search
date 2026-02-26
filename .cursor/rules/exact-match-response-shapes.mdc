@@ -114,50 +114,39 @@ data: {}
 
 ## TypeScript Types (Mobile / Clients)
 
-### SearchResponse (evolved)
+All types are now defined in `src/contracts/*.ts` with a barrel export from `src/contracts/index.ts`.
 
 ```typescript
-export interface SearchResponse {
-  exact_match: ExactMatchItem | null;  // NEW
-  tv: MCBaseItem[];
-  movie: MCBaseItem[];
-  person: MCBaseItem[];
-  podcast: MCBaseItem[];
-  author: MCBaseItem[];
-  book: MCBaseItem[];
-  news: MCBaseItem[];
-  video: MCBaseItem[];
-  ratings: MCBaseItem[];
-  artist: MCBaseItem[];
-  album: MCBaseItem[];
-}
-
-export interface ExactMatchCastMember {
-  name: string;
-  id: string | null;
-}
-
-export interface ExactMatchItem extends Omit<MCBaseItem, "cast"> {
-  cast: ExactMatchCastMember[];
-}
+import type {
+  SearchResponse,
+  ExactMatchItem,
+  ExactMatchCastEntry,
+  StreamResultEvent,
+  StreamExactMatchEvent,
+  StreamDoneEvent,
+} from "@/contracts";
 ```
 
 ### Stream event handlers
 
 ```typescript
-// Result event - unchanged shape
+import type { StreamResultEvent, ExactMatchItem, StreamDoneEvent } from "@/contracts";
+
 es.addEventListener("result", (e) => {
-  const data: { source: SearchSource; results: MCBaseItem[]; latency_ms: number } = JSON.parse(e.data);
-  // ...
+  const data: StreamResultEvent = JSON.parse(e.data);
+  // data.source, data.results, data.latency_ms
 });
 
-// NEW: exact_match event
 es.addEventListener("exact_match", (e) => {
   const item: ExactMatchItem = JSON.parse(e.data);
   // Surface immediately - likely what user is looking for
 });
 
-es.addEventListener("done", () => es.close());
+es.addEventListener("done", (e) => {
+  const data: StreamDoneEvent = JSON.parse(e.data);
+  // data.source_hint may be present
+  es.close();
+});
 ```
 
 ---

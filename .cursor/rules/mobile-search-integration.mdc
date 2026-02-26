@@ -28,99 +28,43 @@ const API_BASE_URL = "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app";
 
 ## TypeScript Types
 
+All API response types are defined as precise per-source interfaces in
+`src/contracts/*.ts` with a barrel export from `src/contracts/index.ts`.
+
 ```typescript
-// types/search.ts
-
-/**
- * Valid source types for filtering searches
- */
-export type SearchSource = 
-  | "tv" 
-  | "movie" 
-  | "person" 
-  | "podcast" 
-  | "author" 
-  | "book" 
-  | "news" 
-  | "video" 
-  | "ratings" 
-  | "artist" 
-  | "album";
-
-/**
- * Base item interface - all results conform to this structure
- */
-export interface MCBaseItem {
-  mc_id: string;           // Unique MediaCircle ID (e.g., "tmdb_tv_2288")
-  mc_type: string;         // Content type (tv, movie, person, etc.)
-  mc_subtype?: string;     // Optional subtype
-  source: string;          // Data source (tmdb, spotify, youtube, etc.)
-  source_id: string;       // ID in the source system
-  
-  // Display fields
-  search_title?: string;   // Display title
-  name?: string;           // Alternative name field (for people, artists)
-  title?: string;          // Alternative title field (for videos, news)
-  
-  // Media metadata
-  year?: number;
-  popularity?: string | number;
-  rating?: number;
-  image?: string;          // Poster/thumbnail URL
-  thumbnail_url?: string;  // Alternative image field
-  overview?: string;       // Description/synopsis
-  
-  // Additional fields vary by source type
-  cast?: string[];
-  genres?: string[];
-  
-  // Links and external IDs
-  links?: Array<{ url: string; type: string }>;
-  external_ids?: Record<string, string>;
-}
-
-export interface ExactMatchCastMember {
-  name: string;
-  id: string | null;
-}
-
-export interface MCExactMatchItem extends Omit<MCBaseItem, "cast"> {
-  cast: ExactMatchCastMember[];
-}
-
-/**
- * Search/Autocomplete response structure
- */
-export interface SearchResponse {
-  exact_match: MCExactMatchItem | null;  // When query exactly matches an entity
-  tv: MCBaseItem[];
-  movie: MCBaseItem[];
-  person: MCBaseItem[];
-  podcast: MCBaseItem[];
-  author: MCBaseItem[];
-  book: MCBaseItem[];
-  news: MCBaseItem[];
-  video: MCBaseItem[];
-  ratings: MCBaseItem[];
-  artist: MCBaseItem[];
-  album: MCBaseItem[];
-}
-
-/**
- * Streaming result event structure (event: "result")
- */
-export interface StreamEvent {
-  source: SearchSource;
-  results: MCBaseItem[];
-  latency_ms: number;
-}
-
-/**
- * Exact match event (event: "exact_match"): single MCBaseItem when query
- * exactly matches an entity. Emitted as soon as a source yields a match.
- * May fire multiple times per stream.
- */
+// Import everything from the contracts barrel
+import type {
+  // Indexed source items (from Redis via parse_doc)
+  MediaItem, MovieItem, TvItem, MediaDetailResponse,
+  PersonItem, PersonDetailResponse,
+  PodcastItem, PodcastDetailResponse,
+  AuthorItem, AuthorDetailResponse,
+  BookItem, BookDetailResponse,
+  // Brokered API source items (from external APIs via model_dump)
+  NewsItem,
+  VideoItem,
+  RatingsItem,
+  ArtistItem,
+  AlbumItem,
+  // Response envelopes
+  SearchResponse,
+  AutocompleteResponse,
+  StreamResultEvent,
+  StreamExactMatchEvent,
+  StreamDoneEvent,
+  ExactMatchCastEntry,
+  DetailsErrorResponse,
+} from "@/contracts";
 ```
+
+Key points:
+- Every indexed item (media, person, podcast, author, book) has both `id` and `mc_id` (identical values, e.g. `"tmdb_movie_550"`).
+- Brokered API items (news, video, ratings, artist, album) carry the full `MCBaseItem` fields (`mc_id`, `links`, `images`, `metrics`, etc.).
+- Exact-match items have `cast` restructured from `string[]` to `ExactMatchCastEntry[]`.
+- SSE streams emit `result`, `exact_match`, and `done` event types.
+- `/api/details` returns enriched types (`MediaDetailResponse`, `PersonDetailResponse`, etc.) with additional live-API data.
+
+See `src/contracts/` for the complete field-level documentation.
 
 ---
 
