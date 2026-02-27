@@ -53,6 +53,8 @@ PROJECT_ROOT = str(Path(__file__).parent.parent)
 # Check if web UI is disabled (for Cloud Run deployment without auth)
 WEB_UI_DISABLED = os.getenv("DISABLE_WEB_UI", "").lower() in ("true", "1", "yes")
 
+GENRE_MAPPING = None
+
 
 def require_web_ui_enabled() -> None:
     """
@@ -2413,6 +2415,7 @@ def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
 async def api_get_media_details(
     mc_id: str = Query(..., description="MediaCircle ID"),
     media_type: str | None = Query(default=None, description="Media type"),
+    allow_insert: bool = Query(default=False, description="Allow insert of new media"),
 ) -> JSONResponse:
     """
     Return the Redis index document for a media item.
@@ -2425,16 +2428,20 @@ async def api_get_media_details(
             status_code=400,
             content={"error": "media_type must be 'tv' or 'movie'"},
         )
-
+    global GENRE_MAPPING
     redis = get_redis()
-    key = f"media:{mc_id}"
+    key = mc_id if mc_id.startswith("media:") else f"media:{mc_id}"
 
     try:
         cached: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
         if cached is not None:
             return JSONResponse(content=cached)
+        elif not allow_insert:
+            logging.warning("Redis lookup failed for %s: no cached data", key)
+            return JSONResponse(status_code=404, content={"error": "Media not found"})
     except Exception as e:
         logging.warning("Redis lookup failed for %s: %s", key, e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
     # We are falling back
     if not os.getenv("TMDB_READ_TOKEN"):
@@ -2466,8 +2473,8 @@ async def api_get_media_details(
             )
 
         item_dict["_media_type"] = mc_type.value
-        genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
-        normalized = normalize_document(item_dict, genre_mapping=genre_mapping)
+        GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
+        normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
         if normalized is None:
             return JSONResponse(
                 status_code=500,
@@ -3239,6 +3246,7 @@ INDEX_CONFIGS = {
             # Document lifecycle timestamps
             NumericField("$.created_at", as_name="created_at", sortable=True),
             NumericField("$.modified_at", as_name="modified_at", sortable=True),
+            TagField("$._source", as_name="_source"),
         ),
     },
     "people": {

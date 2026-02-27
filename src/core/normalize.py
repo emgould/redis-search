@@ -167,9 +167,11 @@ class BaseTMDBNormalizer(BaseNormalizer):
         """Extract the numeric TMDB ID from raw data."""
         tmdb_id = raw.get("tmdb_id") or raw.get("id")
 
-        # If tmdb_id is a string like "tmdb_1396", extract the numeric part
-        if isinstance(tmdb_id, str) and tmdb_id.startswith("tmdb_"):
-            tmdb_id = tmdb_id[5:]  # Remove "tmdb_" prefix
+        if isinstance(tmdb_id, str):
+            for prefix in ("tmdb_movie_", "tmdb_tv_", "tmdb_person_", "tmdb_"):
+                if tmdb_id.startswith(prefix):
+                    tmdb_id = tmdb_id[len(prefix):]
+                    break
 
         return str(tmdb_id) if tmdb_id else None
 
