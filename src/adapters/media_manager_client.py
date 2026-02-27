@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any, TypedDict
 
@@ -165,3 +166,32 @@ class MediaManagerClient:
             tv_updated=data.get("tv_updated", 0),
             total_errors=data.get("total_errors", 0),
         )
+
+    async def poll_until_drained(
+        self,
+        poll_interval: float = 5.0,
+        max_wait: float = 1800.0,
+    ) -> StatusResponse:
+        """Poll ``/insert-docs/status`` until ``queue_depth == 0``.
+
+        Returns the final status response once drained or after *max_wait*
+        seconds elapse.
+        """
+        waited = 0.0
+        while waited < max_wait:
+            status = await self.get_status()
+            if status["queue_depth"] == 0:
+                logger.info(
+                    "Queue drained (total_processed=%d)", status["total_processed"]
+                )
+                return status
+            logger.info(
+                "Waiting for queue drain: queue_depth=%d, total_processed=%d (%.0fs elapsed)",
+                status["queue_depth"],
+                status["total_processed"],
+                waited,
+            )
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
+        logger.warning("Max wait %.0fs reached, queue may not be fully drained", max_wait)
+        return await self.get_status()

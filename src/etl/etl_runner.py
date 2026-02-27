@@ -18,6 +18,7 @@ from typing import Any, Literal
 import yaml  # type: ignore[import-untyped]
 
 from adapters.config import load_env
+from adapters.media_manager_client import MediaManagerClient
 from etl.bestseller_author_etl import BestsellerETLStats
 from etl.etl_metadata import (
     ETLMetadataStore,
@@ -222,6 +223,7 @@ class ETLRunner:
         params: JobRunParams,
         start_date_override: str | None = None,
         end_date_override: str | None = None,
+        media_manager_client: MediaManagerClient | None = None,
     ) -> JobRunResult:
         """
         Run a single ETL job.
@@ -290,6 +292,11 @@ class ETLRunner:
 
                 # Cast media_type to the literal type
                 media_type_literal: Literal["tv", "movie", "person"] = params.media_type  # type: ignore[assignment]
+                mm_client = (
+                    media_manager_client
+                    if params.media_type in ("movie", "tv")
+                    else None
+                )
                 stats = await etl_func(
                     media_type=media_type_literal,
                     start_date=start_date,
@@ -299,6 +306,7 @@ class ETLRunner:
                     redis_password=self.config.redis_password,
                     verbose=params.verbose,
                     max_batches=params.max_batches,
+                    media_manager_client=mm_client,
                 )
 
             # Update result from stats (all ETL types have compatible interfaces)
@@ -307,6 +315,8 @@ class ETLRunner:
             result.changes_found = stats.total_changes_found
             result.documents_upserted = stats.load_phase.items_success
             result.documents_skipped = stats.failed_filter
+            if isinstance(stats, ChangesETLStats):
+                result.mm_docs_sent = stats.mm_docs_sent
 
             # Collect all errors - bestseller ETL also has search_phase
             all_errors = stats.fetch_phase.errors + stats.load_phase.errors
@@ -373,12 +383,28 @@ class ETLRunner:
         self._run_metadata.total_jobs = total_runs
         self._run_metadata.add_log(f"Starting ETL run with {total_runs} job runs")
 
+        # Create Media Manager client if configured (non-fatal)
+        mm_client: MediaManagerClient | None = None
+        mm_url = os.getenv("MEDIA_MANAGER_API_URL")
+        if mm_url:
+            try:
+                mm_client = MediaManagerClient()
+                await mm_client.health_check()
+                self._run_metadata.add_log("Media Manager health check passed")
+            except Exception as e:
+                logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                if mm_client:
+                    await mm_client.close()
+                mm_client = None
+                self._run_metadata.add_log(f"Media Manager unavailable: {e}")
+
         print("=" * 60)
         print("🚀 ETL Runner - Starting Full Run")
         print("=" * 60)
         print(f"  Run ID: {self._run_metadata.run_id}")
         print(f"  Total jobs: {total_runs}")
         print(f"  Redis: {self.config.redis_host}:{self.config.redis_port}")
+        print(f"  Media Manager: {'enabled' if mm_client else 'disabled'}")
         print()
 
         # Run each job sequentially
@@ -394,6 +420,7 @@ class ETLRunner:
                     params,
                     start_date_override=start_date_override,
                     end_date_override=end_date_override,
+                    media_manager_client=mm_client,
                 )
 
                 # Track result
@@ -410,6 +437,7 @@ class ETLRunner:
                 self._run_metadata.total_changes_found += result.changes_found
                 self._run_metadata.total_documents_upserted += result.documents_upserted
                 self._run_metadata.total_errors += result.errors_count
+                self._run_metadata.total_mm_docs_sent += result.mm_docs_sent
 
                 # Update job state (don't let GCS failures kill the whole run)
                 try:
@@ -433,6 +461,27 @@ class ETLRunner:
                             },
                         }
                     )
+
+        # Flush Media Manager if any docs were sent across all jobs
+        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
+            try:
+                logger.info("Polling Media Manager queue before flush...")
+                await mm_client.poll_until_drained()
+                logger.info("Flushing Media Manager session...")
+                flush_resp = await mm_client.flush()
+                logger.info("Media Manager flush: %s", flush_resp)
+                self._run_metadata.add_log(
+                    f"Media Manager flush: movies_added={flush_resp['movies_added']}, "
+                    f"tv_added={flush_resp['tv_added']}, "
+                    f"movies_updated={flush_resp['movies_updated']}, "
+                    f"tv_updated={flush_resp['tv_updated']}"
+                )
+            except Exception as e:
+                logger.error("Media Manager flush failed: %s", e)
+                self._run_metadata.add_log(f"Media Manager flush error: {e}")
+
+        if mm_client:
+            await mm_client.close()
 
         # Finalize run metadata
         self._run_metadata.completed_at = datetime.now()
@@ -478,6 +527,8 @@ class ETLRunner:
         print(f"  Jobs failed: {self._run_metadata.jobs_failed}")
         print(f"  Total changes found: {self._run_metadata.total_changes_found}")
         print(f"  Total documents upserted: {self._run_metadata.total_documents_upserted}")
+        if self._run_metadata.total_mm_docs_sent > 0:
+            print(f"  Media Manager docs sent: {self._run_metadata.total_mm_docs_sent}")
         print(f"  Total errors: {self._run_metadata.total_errors}")
         if self._run_metadata.duration_seconds:
             print(f"  Duration: {self._run_metadata.duration_seconds:.1f}s")
