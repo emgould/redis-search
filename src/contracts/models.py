@@ -222,7 +222,7 @@ def generate_mc_id(item: dict[str, Any], mc_type: MCType) -> str:
         str: The unique identifier (always returns a value, uses hash fallback if needed)
 
     Rules by type:
-        - movie/tv: "tmdb_{tmdb_id}"
+        - movie/tv: "tmdb_{mc_type}_{tmdb_id}"
         - podcast: "podcast_{id}"
         - podcast_episode: "episode_{id}"
         - book: "book_{openlibrary_key|isbn13|isbn10}"
@@ -235,7 +235,7 @@ def generate_mc_id(item: dict[str, Any], mc_type: MCType) -> str:
     if mc_type in (MCType.MOVIE, MCType.TV_SERIES):
         tmdb_id = item.get("tmdb_id") or item.get("id")
         if tmdb_id:
-            return f"tmdb_{tmdb_id}"
+            return f"tmdb_{mc_type.value}_{tmdb_id}"
 
     elif mc_type == MCType.PODCAST:
         podcast_id = item.get("id")

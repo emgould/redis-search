@@ -21,7 +21,7 @@ from utils.pydantic_tools import BaseModelWithMethods
 class TMDBSearchMovie(BaseModel):
     """Model for a movie result from TMDB search API."""
 
-    adult: bool = False
+    adult: bool | None = False
     backdrop_path: str | None = None
     id: int | None = None
     title: str | None = None
@@ -55,7 +55,7 @@ class TMDBMovieMultiSearch(TMDBSearchMovie):
 class TMDBSearchTv(BaseModel):
     """Model for tv search result from TMDB search API."""
 
-    adult: bool = False
+    adult: bool | None = False
     backdrop_path: str | None = None
     genre_ids: list[int] = Field(default_factory=list)
     id: int
@@ -83,7 +83,7 @@ class TMDBTVMultiSearch(TMDBSearchTv):
 class TMDBPersonTvCredits(BaseModel):
     """Model for a TV show result from TMDB search API."""
 
-    adult: bool = False
+    adult: bool | None = False
     backdrop_path: str | None = None
     genre_ids: list[int] = Field(default_factory=list)
     id: int
@@ -106,7 +106,7 @@ class TMDBPersonTvCredits(BaseModel):
 class TMDBSearchPersonItem(BaseModelWithMethods):
     """Model for a person result from TMDB search API."""
 
-    adult: bool = False
+    adult: bool | None = False
     gender: int | None = None
     id: int
     known_for_department: str | None = None
@@ -120,7 +120,7 @@ class TMDBSearchPersonItem(BaseModelWithMethods):
 class TMDBPersonDetailsResult(BaseModelWithMethods):
     """Model for TMDB person details API response."""
 
-    adult: bool = False
+    adult: bool | None = False
     also_known_as: list[str] = Field(default_factory=list)
     biography: str = ""
     birthday: str | None = None
@@ -202,7 +202,7 @@ class TMDBMovieDetailsResult(BaseModelWithMethods):
     origin_country: list[str] = Field(default_factory=list)
 
     # Content metadata
-    adult: bool = False
+    adult: bool | None = False
     video: bool = False
     overview: str = ""
     tagline: str | None = None
@@ -244,7 +244,7 @@ class TMDBTvDetailsResult(BaseModelWithMethods):
     original_language: str
 
     # Content metadata
-    adult: bool = False
+    adult: bool | None = False
     overview: str = ""
     tagline: str | None = None
     homepage: str | None = None

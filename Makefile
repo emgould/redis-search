@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -425,6 +425,14 @@ get-doc-tv:
 get-doc-movie:
 	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make get-doc-movie ID=<tmdb_id>"; exit 1; fi
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) movie --doc'
+
+# Fetch TMDB media details, normalize, and insert into Redis index
+# Usage: make add ID=1396 TYPE=tv
+#        make add ID=550 TYPE=movie
+add:
+	@if [ -z "$(ID)" ]; then echo "ERROR: ID is required. Usage: make add ID=<tmdb_id> TYPE=<movie|tv>"; exit 1; fi
+	@if [ -z "$(TYPE)" ]; then echo "ERROR: TYPE is required. Usage: make add ID=<tmdb_id> TYPE=<movie|tv>"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/get_media_details.py $(ID) $(TYPE) --add'
 
 # Run media index backfill (re-fetch all docs from TMDB API)
 backfill:

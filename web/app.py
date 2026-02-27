@@ -2414,7 +2414,6 @@ def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
 @app.get("/api/media-details")
 async def api_get_media_details(
     mc_id: str = Query(..., description="MediaCircle ID"),
-    media_type: str | None = Query(default=None, description="Media type"),
     allow_insert: bool = Query(default=False, description="Allow insert of new media"),
 ) -> JSONResponse:
     """
@@ -2423,11 +2422,6 @@ async def api_get_media_details(
     Checks idx:media first. On cache miss, fetches from TMDB, normalizes,
     persists to Redis, and returns the document.
     """
-    if media_type and media_type.lower() not in ("tv", "movie"):
-        return JSONResponse(
-            status_code=400,
-            content={"error": "media_type must be 'tv' or 'movie'"},
-        )
     global GENRE_MAPPING
     redis = get_redis()
     key = mc_id if mc_id.startswith("media:") else f"media:{mc_id}"
@@ -2451,9 +2445,9 @@ async def api_get_media_details(
         )
 
     try:
-        mc_type = MCType.TV_SERIES if media_type and media_type.lower() == "tv" else MCType.MOVIE
+        mc_type = MCType.TV_SERIES if "tv" in mc_id else MCType.MOVIE
         service = TMDBService()
-        tmdb_id = int(mc_id.split("_")[1])
+        tmdb_id = int(mc_id.split("_")[-1])
         details = await service.get_media_details(
             tmdb_id=tmdb_id,
             media_type=mc_type,
@@ -2462,7 +2456,7 @@ async def api_get_media_details(
             err = details.error if details else "no result"
             return JSONResponse(
                 status_code=404,
-                content={"error": f"Error fetching {media_type} {tmdb_id}: {err}"},
+                content={"error": f"Error fetching {mc_type.value} {tmdb_id}: {err}"},
             )
 
         item_dict = _media_details_to_serializable(details)

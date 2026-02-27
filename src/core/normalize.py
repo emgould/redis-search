@@ -180,7 +180,7 @@ class BaseTMDBNormalizer(BaseNormalizer):
         source_id = self.extract_source_id(raw)
         if source_id:
             if self.mc_type in (MCType.MOVIE, MCType.TV_SERIES):
-                return f"tmdb_{source_id}"
+                return f"tmdb_{self.mc_type.value}_{source_id}"
             return f"tmdb_person_{source_id}"
         return None
 
@@ -764,15 +764,13 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
     search_title is normalized (apostrophes stripped) for consistent tokenization.
     The original title is preserved in the 'title' field for display.
     """
-    # Canonical identifier used by media docs and exact-match lookups.
-    # For movie/tv this must be {source}_{source_id} (e.g. tmdb_550).
     media_mc_id = (
-        f"{doc.source.value}_{doc.source_id}"
+        f"{doc.source.value}_{doc.mc_type.value}_{doc.source_id}"
         if doc.mc_type in (MCType.MOVIE, MCType.TV_SERIES)
         else doc.id
     )
     result: dict[str, Any] = {
-        "id": doc.id,
+        "id": media_mc_id,
         "mc_id": media_mc_id,
         "title": doc.search_title,
         "search_title": normalize_search_title(doc.search_title),
