@@ -723,7 +723,7 @@ def test_document_to_redis_roundtrip_completeness() -> TestResult:
 
     r = TestResult("document_to_redis_completeness")
     doc = SearchDocument(
-        id="tmdb_movie_99999",
+        id="tmdb_99999",
         search_title="Test Movie",
         mc_type=MCType.MOVIE,
         mc_subtype=None,

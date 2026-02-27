@@ -20,7 +20,8 @@ All keys are present when values are available, and absent fields are omitted by
 
 #### Shared payload keys (`document_to_redis`)
 
-- `id`: `tmdb_movie_<id>` or `tmdb_tv_<id>`
+- `id`: canonical identifier (`{source}_{source_id}`), e.g. `tmdb_550`
+- `mc_id`: canonical identifier (`{source}_{source_id}`), e.g. `tmdb_550`
 - `title`: display title
 - `search_title`: indexed title tokenized version
 - `mc_type`: `movie` or `tv`
@@ -73,13 +74,14 @@ All keys are present when values are available, and absent fields are omitted by
 
 ### Indexed (queryable/sortable) media fields
 
-`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
+`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `mc_id`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
 
 ### Example documents
 
 ```json
 {
-  "id": "tmdb_movie_550",
+  "id": "tmdb_550",
+  "mc_id": "tmdb_550",
   "mc_type": "movie",
   "title": "Fight Club",
   "search_title": "Fight Club",
@@ -103,7 +105,8 @@ All keys are present when values are available, and absent fields are omitted by
 
 ```json
 {
-  "id": "tmdb_tv_1396",
+  "id": "tmdb_1396",
+  "mc_id": "tmdb_1396",
   "mc_type": "tv",
   "title": "Breaking Bad",
   "search_title": "Breaking Bad",

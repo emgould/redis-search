@@ -29,11 +29,11 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 
 ## 1. Media Index (`idx:media`)
 
-**Key Format:** `media:tmdb_{movie|tv}_{tmdb_id}`
+**Key Format:** `media:tmdb_{tmdb_id}`
 
 **Example Keys:**
-- `media:tmdb_movie_550` (Fight Club)
-- `media:tmdb_tv_1396` (Breaking Bad)
+- `media:tmdb_550` (Fight Club)
+- `media:tmdb_1396` (Breaking Bad)
 
 ### Schema (Indexed Fields)
 
@@ -47,6 +47,7 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 | `original_title` | TEXT | 1.0 | Original title |
 | `tagline` | TEXT | 1.0 | Tagline |
 | `source` | TAG | - | Data source: `tmdb` |
+| `mc_id` | TAG | - | Canonical media ID (`{source}_{source_id}`), e.g. `tmdb_550` |
 | `genre_ids[*]` | TAG | - | TMDB genre IDs as strings (e.g., "35", "18") |
 | `genres[*]` | TAG | - | Genre names normalized (e.g., `comedy`, `science_fiction`) |
 | `cast_ids[*]` | TAG | - | TMDB person IDs for cast members |
@@ -74,7 +75,8 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 
 ```json
 {
-  "id": "tmdb_movie_550",
+  "id": "tmdb_550",
+  "mc_id": "tmdb_550",
   "title": "Fight Club",
   "search_title": "Fight Club",
   "mc_type": "movie",
@@ -145,7 +147,8 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 
 ```json
 {
-  "id": "tmdb_tv_1396",
+  "id": "tmdb_1396",
+  "mc_id": "tmdb_1396",
   "title": "Breaking Bad",
   "search_title": "Breaking Bad",
   "mc_type": "tv",

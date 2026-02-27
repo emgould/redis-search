@@ -388,9 +388,9 @@ async def load_from_gcs(media_types: list[str], use_legacy: bool = False) -> Non
     # Show sample
     if total_seeded > 0:
         # Updated to use new key format
-        sample_keys = await redis_client.keys("media:tmdb_movie_*")
+        sample_keys = await redis_client.keys("media:tmdb_*")
         if not sample_keys:
-            sample_keys = await redis_client.keys("media:tmdb_tv_*")
+            sample_keys = await redis_client.keys("media:*")
         if sample_keys:
             sample = await redis_client.json().get(sample_keys[0])
             print()

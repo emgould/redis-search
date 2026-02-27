@@ -58,7 +58,7 @@ import type {
 ```
 
 Key points:
-- Every indexed item (media, person, podcast, author, book) has both `id` and `mc_id` (identical values, e.g. `"tmdb_movie_550"`).
+- Every indexed item (media, person, podcast, author, book) has both `id` and `mc_id` (identical values, e.g. `"tmdb_550"`).
 - Brokered API items (news, video, ratings, artist, album) carry the full `MCBaseItem` fields (`mc_id`, `links`, `images`, `metrics`, etc.).
 - Exact-match items have `cast` restructured from `string[]` to `ExactMatchCastEntry[]`.
 - SSE streams emit `result`, `exact_match`, and `done` event types.
@@ -617,7 +617,7 @@ GET /api/autocomplete?q=breaking+bad&sources=tv,person
   "exact_match": null,
   "tv": [
     {
-      "mc_id": "tmdb_tv_1396",
+      "mc_id": "tmdb_1396",
       "mc_type": "tv",
       "source": "tmdb",
       "source_id": "1396",

@@ -65,7 +65,7 @@ export interface MediaWatchProviders {
 // ---------------------------------------------------------------------------
 
 export interface MediaItem {
-  /** mc_id value, e.g. "tmdb_movie_550" or "tmdb_tv_1396" */
+  /** mc_id value, e.g. "tmdb_550" or "tmdb_1396" */
   id: string;
   /** Alias of id — always injected by parse_doc() */
   mc_id: string;

@@ -7,16 +7,16 @@ Bypasses the intake filter — sends the document as-is.
 
 Usage:
     # Send a movie
-    python scripts/send_to_media_manager.py tmdb_movie_238
+    python scripts/send_to_media_manager.py tmdb_238
 
     # Send a TV show
-    python scripts/send_to_media_manager.py tmdb_tv_1396
+    python scripts/send_to_media_manager.py tmdb_1396
 
     # Multiple IDs
-    python scripts/send_to_media_manager.py tmdb_movie_238 tmdb_tv_1396
+    python scripts/send_to_media_manager.py tmdb_238 tmdb_1396
 
     # Dry run (validates doc against Media Manager but skips FAISS upsert)
-    python scripts/send_to_media_manager.py tmdb_movie_238 --dry-run
+    python scripts/send_to_media_manager.py tmdb_238 --dry-run
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ async def main() -> None:
     parser.add_argument(
         "ids",
         nargs="+",
-        help="One or more mc_ids (e.g. tmdb_movie_238 tmdb_tv_1396)",
+        help="One or more mc_ids (e.g. tmdb_238 tmdb_1396)",
     )
     parser.add_argument(
         "--dry-run",
