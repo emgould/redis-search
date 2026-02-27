@@ -18,13 +18,13 @@ These files contain `first_air_date`, `last_air_date` (TV), `release_date` (movi
 
 ## Final Normalized Document Shape
 
-After ETL and backfill complete, media documents in Redis (`media:tmdb_movie_*`, `media:tmdb_tv_*`) will have this shape:
+After ETL and backfill complete, media documents in Redis (`media:tmdb_*`) will have this shape:
 
 ### Movie Example
 
 ```json
 {
-  "id": "tmdb_movie_550",
+  "id": "tmdb_550",
   "title": "Fight Club",
   "search_title": "Fight Club",
   "mc_type": "movie",
@@ -72,7 +72,7 @@ After ETL and backfill complete, media documents in Redis (`media:tmdb_movie_*`,
 
 ```json
 {
-  "id": "tmdb_tv_1396",
+  "id": "tmdb_1396",
   "title": "Breaking Bad",
   "search_title": "Breaking Bad",
   "mc_type": "tv",

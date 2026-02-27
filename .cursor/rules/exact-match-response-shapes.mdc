@@ -39,7 +39,7 @@ The exact match feature adds a new `exact_match` property to search and autocomp
 ```json
 {
   "exact_match": {
-    "mc_id": "tmdb_movie_238",
+    "mc_id": "tmdb_238",
     "mc_type": "movie",
     "source": "tmdb",
     "source_id": "238",

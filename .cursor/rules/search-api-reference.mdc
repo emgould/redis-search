@@ -288,7 +288,7 @@ All search results follow the **MCBaseItem** contract:
 
 ```json
 {
-  "mc_id": "tmdb_tv_1396",
+  "mc_id": "tmdb_1396",
   "mc_type": "tv",
   "mc_subtype": null,
   "source": "tmdb",
@@ -311,7 +311,7 @@ The `exact_match` object still follows item contract fields, but its cast payloa
 ```json
 {
   "exact_match": {
-    "mc_id": "tmdb_movie_238",
+    "mc_id": "tmdb_238",
     "mc_type": "movie",
     "source": "tmdb",
     "source_id": "238",
