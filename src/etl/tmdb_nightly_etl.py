@@ -35,12 +35,14 @@ from typing import Any, Literal, cast
 from redis.asyncio import Redis
 
 from adapters.config import load_env
+from adapters.media_manager_client import MediaManagerClient
 from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, resolve_timestamps
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from etl.documentary_filter import is_documentary, is_eligible_documentary
+from etl.media_manager_filter import passes_media_manager_filter
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
 
@@ -114,6 +116,12 @@ class ChangesETLStats:
     # Output
     staging_file: str = ""
 
+    # Media Manager push stats
+    mm_docs_sent: int = 0
+    mm_docs_queued: int = 0
+    mm_docs_filtered: int = 0
+    mm_errors: int = 0
+
     # Live progress tracking (used by web UI status polling)
     current_batch: int = 0
     total_batches: int = 0
@@ -149,6 +157,12 @@ class ChangesETLStats:
                 "items_failed": self.load_phase.items_failed,
                 "items_per_second": self.load_phase.items_per_second,
                 "errors": self.load_phase.errors[:10],
+            },
+            "media_manager": {
+                "docs_sent": self.mm_docs_sent,
+                "docs_queued": self.mm_docs_queued,
+                "docs_filtered": self.mm_docs_filtered,
+                "errors": self.mm_errors,
             },
         }
 
@@ -536,8 +550,9 @@ class TMDBChangesETL(TMDBService):
         redis_port: int,
         redis_password: str | None,
         stats: ChangesETLStats,
+        media_manager_client: MediaManagerClient | None = None,
     ) -> None:
-        """Phase 2: Load from staging file to Redis."""
+        """Phase 2: Load from staging file to Redis, optionally push to Media Manager."""
         stats.load_phase.started_at = datetime.now()
         stats.load_phase.phase = "load_to_redis"
         stats.current_phase = "load"
@@ -567,6 +582,10 @@ class TMDBChangesETL(TMDBService):
                 logger.info(f"Loaded {len(genre_mapping)} genres")
             except Exception as e:
                 logger.warning(f"Failed to load genre mapping: {e}. Continuing without it.")
+
+        push_to_mm = media_manager_client is not None and media_type in ("movie", "tv")
+        mm_buffer: list[dict[str, Any]] = []
+        mm_batch_size = 100
 
         # Connect to Redis
         redis = Redis(
@@ -639,6 +658,21 @@ class TMDBChangesETL(TMDBService):
                         stats.load_phase.items_success += 1
                     await write_pipe.execute()
 
+                    if push_to_mm and media_manager_client is not None:
+                        for _key, redis_doc in prepared:
+                            passed, _reason = passes_media_manager_filter(redis_doc)
+                            if passed:
+                                mm_buffer.append(redis_doc)
+                            else:
+                                stats.mm_docs_filtered += 1
+
+                        while len(mm_buffer) >= mm_batch_size:
+                            mm_batch = mm_buffer[:mm_batch_size]
+                            mm_buffer = mm_buffer[mm_batch_size:]
+                            await self._send_mm_batch(
+                                media_manager_client, mm_batch, stats
+                            )
+
                 batch_time = time.time() - batch_start
                 items_per_sec = len(batch) / batch_time if batch_time > 0 else 0
 
@@ -647,10 +681,19 @@ class TMDBChangesETL(TMDBService):
                     f"({batch_time:.2f}s, {items_per_sec:.0f} items/sec)"
                 )
 
+            # Flush remaining MM buffer
+            if push_to_mm and media_manager_client is not None and mm_buffer:
+                await self._send_mm_batch(media_manager_client, mm_buffer, stats)
+
             total_time = time.time() - load_start
             logger.info(f"Phase 2 complete: {stats.load_phase.items_success} items loaded")
             logger.info(f"  Duration: {total_time:.1f}s")
             logger.info(f"  Rate: {stats.load_phase.items_success / total_time:.1f} items/sec")
+            if stats.mm_docs_sent > 0:
+                logger.info(
+                    f"  Media Manager: sent={stats.mm_docs_sent}, "
+                    f"queued={stats.mm_docs_queued}, filtered={stats.mm_docs_filtered}"
+                )
 
         finally:
             await redis.aclose()
@@ -659,7 +702,6 @@ class TMDBChangesETL(TMDBService):
 
         # Save load errors to separate file if any
         if stats.load_phase.errors:
-            # Extract media_type and date from staging path for errors filename
             errors_path = staging_path.parent / staging_path.name.replace(
                 ".json.gz", "_load_errors.json.gz"
             )
@@ -675,6 +717,25 @@ class TMDBChangesETL(TMDBService):
                     indent=2,
                 )
             logger.info(f"Load errors saved to {errors_path}")
+
+    @staticmethod
+    async def _send_mm_batch(
+        client: MediaManagerClient,
+        batch: list[dict[str, Any]],
+        stats: ChangesETLStats,
+    ) -> None:
+        """Submit a batch of documents to Media Manager. Non-fatal on error."""
+        try:
+            resp = await client.insert_docs(batch)
+            stats.mm_docs_sent += len(batch)
+            stats.mm_docs_queued += resp["queued"]
+            if resp["errors"]:
+                stats.mm_errors += len(resp["errors"])
+                for err in resp["errors"]:
+                    logger.warning("Media Manager insert error: %s", err)
+        except Exception as exc:
+            stats.mm_errors += len(batch)
+            logger.error("Media Manager insert failed: %s", exc)
 
     def _normalize_person(self, person: dict) -> dict:
         """Normalize person data for Redis."""
@@ -704,6 +765,7 @@ async def run_nightly_etl(
     max_batches: int = 0,
     verbose: bool = False,
     stats: ChangesETLStats | None = None,
+    media_manager_client: MediaManagerClient | None = None,
 ) -> ChangesETLStats:
     """
     Run the two-phase changes ETL.
@@ -722,6 +784,7 @@ async def run_nightly_etl(
         max_batches: Max batches to process (0 = unlimited)
         verbose: Enable verbose logging (shows filter rejection reasons)
         stats: Optional pre-created stats object for live progress tracking
+        media_manager_client: Optional client for pushing docs to Media Manager
     """
     load_env()
 
@@ -813,12 +876,25 @@ async def run_nightly_etl(
 
         if staging_path and staging_path.exists():
             logger.info(f"Loading from {staging_path}")
-            await etl.load_from_staging(staging_path, redis_host, redis_port, redis_password, stats)
+            await etl.load_from_staging(
+                staging_path,
+                redis_host,
+                redis_port,
+                redis_password,
+                stats,
+                media_manager_client=media_manager_client,
+            )
 
             print()
             print("📊 Phase 2 (Load) Results:")
             print(f"  Items loaded: {stats.load_phase.items_success}")
             print(f"  Errors: {stats.load_phase.items_failed}")
+            if stats.mm_docs_sent > 0:
+                print(
+                    f"  Media Manager: {stats.mm_docs_sent} sent, "
+                    f"{stats.mm_docs_queued} queued, "
+                    f"{stats.mm_docs_filtered} filtered"
+                )
             print(f"  Duration: {stats.load_phase.duration_seconds:.1f}s")
             print(f"  Rate: {stats.load_phase.items_per_second:.1f} items/sec")
             print()

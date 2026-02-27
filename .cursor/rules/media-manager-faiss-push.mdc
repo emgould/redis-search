@@ -1,12 +1,19 @@
-# Media Manager FAISS Push — Backfill & Client
+# Media Manager FAISS Push — Backfill, ETL & Client
 
 ## Overview
 
 Redis Search pushes media documents to the Media Manager FAISS index via HTTP.
-The adapter (`src/adapters/media_manager_client.py`) wraps the three `/insert-docs`
-endpoints. The backfill script (`scripts/backfill_media_manager_faiss.py`) seeds the
-FAISS index from existing `idx:media` documents using the same SCAN control model as
-`scripts/backfill_media_dates_and_timestamps.py`.
+The adapter (`src/adapters/media_manager_client.py`) wraps the `/insert-docs`
+endpoints. Two paths feed documents into Media Manager:
+
+1. **Backfill** (`scripts/backfill_media_manager_faiss.py`): Seeds the FAISS index
+   from existing `idx:media` documents using Redis SCAN.
+2. **Nightly ETL** (`src/etl/tmdb_nightly_etl.py` via `ETLRunner`): Pushes
+   newly changed/created movie and TV documents to Media Manager as part of the
+   daily ETL pipeline, immediately after they are written to Redis.
+
+Both paths use the shared `passes_media_manager_filter` from
+`src/etl/media_manager_filter.py` as the intake gate.
 
 ## Environment Variables
 
@@ -17,6 +24,9 @@ FAISS index from existing `idx:media` documents using the same SCAN control mode
 
 Both are defined in `config/local.env` and `config/etl.dev.env`.
 
+If `MEDIA_MANAGER_API_URL` is not set, the nightly ETL skips Media Manager
+push entirely (Redis writes still proceed normally).
+
 ## MediaManagerClient
 
 Async `httpx` client at `src/adapters/media_manager_client.py`.
@@ -26,6 +36,43 @@ Async `httpx` client at `src/adapters/media_manager_client.py`.
 - `insert_docs(documents, dry_run)` — `POST /insert-docs` with batch of up to 100 docs.
 - `get_status()` — `GET /insert-docs/status` for queue depth and session stats.
 - `flush()` — `POST /insert-docs/flush`, blocks until queue drains.
+- `poll_until_drained(poll_interval, max_wait)` — Polls status until `queue_depth == 0`.
+- `close()` — Closes the underlying httpx client.
+
+## Nightly ETL Integration
+
+### How It Works
+
+1. `ETLRunner.run_all()` creates a `MediaManagerClient` and runs a health check
+   before any jobs execute. If the health check fails, MM push is disabled for
+   the entire run (Redis ETL proceeds unaffected).
+2. For each **movie** or **tv** TMDB job, the MM client is passed through
+   `run_nightly_etl()` → `load_from_staging()`.
+3. Inside `load_from_staging`, after each batch is written to Redis, each document
+   is evaluated by `passes_media_manager_filter`. Qualifying docs are buffered and
+   submitted to `/insert-docs` in batches of 100.
+4. **Person**, **podcast**, and **bestseller** jobs do not push to Media Manager.
+5. After all jobs complete, `ETLRunner` polls until the queue drains, then calls
+   `/insert-docs/flush` once to finalize the session. Flush errors are logged but
+   do not fail the ETL run.
+
+### Stats
+
+`ChangesETLStats` tracks four MM-specific counters:
+- `mm_docs_sent` — documents submitted to `/insert-docs`
+- `mm_docs_queued` — documents accepted into the queue by Media Manager
+- `mm_docs_filtered` — documents rejected by `passes_media_manager_filter`
+- `mm_errors` — insert errors (network or server-side)
+
+These propagate into `JobRunResult.mm_docs_sent` and
+`ETLRunMetadata.total_mm_docs_sent` for end-of-run reporting.
+
+### Error Handling
+
+All Media Manager operations are **non-fatal** to the core ETL:
+- Health check failure at startup → MM push disabled, ETL continues.
+- Individual `insert_docs` failure → logged, error count incremented, next batch proceeds.
+- Flush failure → logged, does not affect ETL status.
 
 ## Backfill Script Usage
 
@@ -53,31 +100,8 @@ python scripts/backfill_media_manager_faiss.py
 | `--dry-run` | off | Scan + validate only, no endpoint submissions |
 | `--no-flush` | off | Skip `/insert-docs/flush` after all batches |
 
-### Dry-Run Behavior
-
-1. Connects to Redis, scans `media:*` keys in batches.
-2. Reads full JSON documents via `JSON.MGET`, validates required fields.
-3. Runs endpoint health check (`GET /health`) to confirm reachability.
-4. Prints summary of document counts by type and validation stats.
-5. Does **not** call `/insert-docs` or `/insert-docs/flush`.
-
-### Live Run Behavior
-
-1. Redis connect + `GET /health` preflight — fails fast if target is down.
-2. SCAN + JSON.MGET docs in batches, POST to `/insert-docs`.
-3. Unless `--no-flush`: polls `/insert-docs/status` until `queue_depth == 0`, then calls `/insert-docs/flush`.
-4. Prints full summary with queued/skipped/error counts.
-
 ### Finalization Strategy
 
-The script uses **poll-before-flush**: after submitting all batches, it polls
-`/insert-docs/status` every 5 seconds until the queue is empty, then calls flush.
-This avoids long blocking flush calls and ensures the HTTP request completes quickly.
-
-The 1-hour client timeout serves as a fail-safe for the entire session.
-
-## Future: Nightly ETL Integration
-
-The `MediaManagerClient` is designed for reuse in `src/etl/tmdb_nightly_etl.py`.
-The nightly ETL will push changed/new documents after Redis writes, using the same
-`insert_docs` → poll → `flush` pattern. This is a separate follow-up PR.
+Both the backfill script and the ETL runner use **poll-before-flush**: after
+submitting all batches, poll `/insert-docs/status` every 5 seconds until the
+queue is empty, then call flush. The 1-hour client timeout serves as a fail-safe.

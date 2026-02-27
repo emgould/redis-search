@@ -40,6 +40,7 @@ class JobRunResult:
     documents_upserted: int = 0
     documents_skipped: int = 0
     errors_count: int = 0
+    mm_docs_sent: int = 0
 
     # Error tracking
     error_message: str | None = None
@@ -58,6 +59,7 @@ class JobRunResult:
             "documents_upserted": self.documents_upserted,
             "documents_skipped": self.documents_skipped,
             "errors_count": self.errors_count,
+            "mm_docs_sent": self.mm_docs_sent,
             "error_message": self.error_message,
             "errors": self.errors[:20] if self.errors else [],  # Limit stored errors
         }
@@ -84,6 +86,7 @@ class ETLRunMetadata:
     total_changes_found: int = 0
     total_documents_upserted: int = 0
     total_errors: int = 0
+    total_mm_docs_sent: int = 0
 
     # Job results
     job_results: list[JobRunResult] = field(default_factory=list)
@@ -115,6 +118,7 @@ class ETLRunMetadata:
             "total_changes_found": self.total_changes_found,
             "total_documents_upserted": self.total_documents_upserted,
             "total_errors": self.total_errors,
+            "total_mm_docs_sent": self.total_mm_docs_sent,
             "job_results": [jr.to_dict() for jr in self.job_results],
             "config_snapshot": self.config_snapshot,
             "logs": self.logs[-500] if len(self.logs) > 500 else self.logs,  # Keep last 500 logs
@@ -409,6 +413,7 @@ class ETLMetadataStore:
             total_changes_found=data.get("total_changes_found", 0),
             total_documents_upserted=data.get("total_documents_upserted", 0),
             total_errors=data.get("total_errors", 0),
+            total_mm_docs_sent=data.get("total_mm_docs_sent", 0),
             config_snapshot=data.get("config_snapshot", {}),
             logs=data.get("logs", []),
         )
@@ -430,6 +435,7 @@ class ETLMetadataStore:
                 documents_upserted=jr_data.get("documents_upserted", 0),
                 documents_skipped=jr_data.get("documents_skipped", 0),
                 errors_count=jr_data.get("errors_count", 0),
+                mm_docs_sent=jr_data.get("mm_docs_sent", 0),
                 error_message=jr_data.get("error_message"),
                 errors=jr_data.get("errors", []),
             )
