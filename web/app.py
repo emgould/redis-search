@@ -2411,8 +2411,8 @@ def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
 
 @app.get("/api/media-details")
 async def api_get_media_details(
-    tmdb_id: int = Query(..., description="TMDB numeric ID"),
-    media_type: str = Query(..., description="'movie' or 'tv'"),
+    mc_id: str = Query(..., description="MediaCircle ID"),
+    media_type: str | None = Query(default=None, description="Media type"),
 ) -> JSONResponse:
     """
     Return the Redis index document for a media item.
@@ -2420,23 +2420,23 @@ async def api_get_media_details(
     Checks idx:media first. On cache miss, fetches from TMDB, normalizes,
     persists to Redis, and returns the document.
     """
-    mt = media_type.lower()
-    if mt not in ("tv", "movie"):
+    if media_type and media_type.lower() not in ("tv", "movie"):
         return JSONResponse(
             status_code=400,
             content={"error": "media_type must be 'tv' or 'movie'"},
         )
 
     redis = get_redis()
-    key = f"media:tmdb_{mt}_{tmdb_id}"
+    key = f"media:{mc_id}"
 
     try:
         cached: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
         if cached is not None:
-            return JSONResponse(content={"id": key, **cached})
+            return JSONResponse(content=cached)
     except Exception as e:
         logging.warning("Redis lookup failed for %s: %s", key, e)
 
+    # We are falling back
     if not os.getenv("TMDB_READ_TOKEN"):
         return JSONResponse(
             status_code=503,
@@ -2444,8 +2444,9 @@ async def api_get_media_details(
         )
 
     try:
-        mc_type = MCType.TV_SERIES if mt == "tv" else MCType.MOVIE
+        mc_type = MCType.TV_SERIES if media_type and media_type.lower() == "tv" else MCType.MOVIE
         service = TMDBService()
+        tmdb_id = int(mc_id.split("_")[1])
         details = await service.get_media_details(
             tmdb_id=tmdb_id,
             media_type=mc_type,
@@ -2464,7 +2465,7 @@ async def api_get_media_details(
                 content={"error": "Failed to serialize media details"},
             )
 
-        item_dict["_media_type"] = mt
+        item_dict["_media_type"] = mc_type.value
         genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
         normalized = normalize_document(item_dict, genre_mapping=genre_mapping)
         if normalized is None:
@@ -3088,11 +3089,13 @@ async def _search_index_changes(
     query_str = f"@modified_at:[{since} {until_val}]"
     q = SearchQuery(query_str).paging(start, take).sort_by("modified_at", asc=False)
     result = await redis.ft(redis_index).search(q)
-    raw_docs_count = len(result.docs) if hasattr(result, "docs") else 0
+    docs_raw = getattr(result, "docs", [])
+    docs: list[Any] = docs_raw if isinstance(docs_raw, list) else []
+    raw_docs_count = len(docs)
     raw_total = getattr(result, "total", None)
 
     documents: list[dict[str, Any]] = []
-    for doc in result.docs:
+    for doc in docs:
         parsed: dict[str, Any] = {"id": doc.id}
         if hasattr(doc, "json") and doc.json:
             try:
@@ -3195,6 +3198,8 @@ INDEX_CONFIGS = {
             TextField("$.tagline", as_name="tagline", weight=1.0),
             # Source filter
             TagField("$.source", as_name="source"),
+            # Canonical cross-system identifier for exact lookup
+            TagField("$.mc_id", as_name="mc_id"),
             # Genre filtering (arrays) - normalized (lowercase, underscores)
             TagField("$.genre_ids[*]", as_name="genre_ids"),
             TagField("$.genres[*]", as_name="genres"),
@@ -3423,10 +3428,15 @@ async def index_info(request: Request, _ui: None = Depends(require_web_ui_enable
     try:
         raw = await redis.ft("idx:media").info()
         info = {}
-        for i in range(0, len(raw), 2):
-            key = raw[i]
-            val = raw[i + 1]
-            info[key] = val
+        if isinstance(raw, list):
+            for i in range(0, len(raw), 2):
+                key = raw[i]
+                val = raw[i + 1]
+                info[key] = val
+        elif isinstance(raw, dict):
+            info = raw
+        else:
+            info = {"raw": str(raw)}
     except Exception as e:
         info = {"error": str(e)}
 

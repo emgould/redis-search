@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Fix id and mc_id fields in the media index to match generate_mc_id format.
+Fix id and mc_id fields in the media index to canonical source/source_id format.
 
-Scans all media:* documents and updates both id and mc_id from
-"tmdb_movie_238" / "tmdb_tv_1396" to the canonical "tmdb_238" / "tmdb_1396"
-format produced by generate_mc_id. Both fields are set to the same value.
+Scans all media:* documents and updates id/mc_id from legacy values like
+"tmdb_movie_238" / "tmdb_tv_1396" to canonical "tmdb_238", derived from
+existing document fields as {source}_{source_id}.
 
 Usage:
     # Dry run — report mismatches without writing
@@ -51,11 +51,6 @@ def _connect_redis() -> Redis:  # type: ignore[type-arg]
     )
 
 
-def _correct_mc_id(source_id: str) -> str:
-    """Generate the canonical mc_id: tmdb_{source_id}."""
-    return f"tmdb_{source_id}"
-
-
 async def fix_mc_ids(
     scan_count: int,
     limit: int | None,
@@ -66,7 +61,7 @@ async def fix_mc_ids(
         "checked": 0,
         "fixed": 0,
         "already_correct": 0,
-        "missing_source_id": 0,
+        "missing_source_or_source_id": 0,
     }
 
     redis = _connect_redis()
@@ -89,7 +84,7 @@ async def fix_mc_ids(
 
             pipe = redis.pipeline()
             for key in keys:
-                pipe.json().get(key, "$.source_id", "$.id", "$.mc_id")  # type: ignore[union-attr]
+                pipe.json().get(key, "$.source", "$.source_id", "$.id", "$.mc_id")  # type: ignore[union-attr]
             raw_results: list[object] = await pipe.execute()
 
             write_pipe = redis.pipeline()
@@ -99,20 +94,22 @@ async def fix_mc_ids(
                 if not isinstance(raw, dict):
                     continue
 
+                source_val = raw.get("$.source")
                 source_id_val = raw.get("$.source_id")
                 id_val = raw.get("$.id")
                 mc_id_val = raw.get("$.mc_id")
 
+                source = source_val[0] if isinstance(source_val, list) and source_val else None
                 source_id = source_id_val[0] if isinstance(source_id_val, list) and source_id_val else None
                 current_id = id_val[0] if isinstance(id_val, list) and id_val else None
                 current_mc_id = mc_id_val[0] if isinstance(mc_id_val, list) and mc_id_val else None
 
-                if not source_id:
-                    stats["missing_source_id"] += 1
+                if not source or not source_id:
+                    stats["missing_source_or_source_id"] += 1
                     continue
 
                 stats["checked"] += 1
-                correct = _correct_mc_id(str(source_id))
+                correct = f"{source}_{source_id}"
 
                 if current_id == correct and current_mc_id == correct:
                     stats["already_correct"] += 1
@@ -163,7 +160,7 @@ def _print_stats(stats: dict[str, Any], elapsed: float, dry_run: bool) -> None:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Fix id and mc_id fields in media index to canonical tmdb_{source_id} format"
+        description="Fix id and mc_id fields in media index to canonical {source}_{source_id} format"
     )
     parser.add_argument(
         "--scan-count", type=int, default=500,

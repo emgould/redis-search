@@ -58,7 +58,7 @@ class SearchDocument:
     """
 
     # Indexed fields
-    id: str  # mc_id - Unique identifier (e.g., "tmdb_movie_12345")
+    id: str  # Unique identifier (e.g., "tmdb_12345")
     search_title: str  # Primary searchable title
     mc_type: MCType  # Content type (movie, tv, book, etc.)
     mc_subtype: MCSubType | None  # Subtype (actor, director, author, etc.)
@@ -174,20 +174,12 @@ class BaseTMDBNormalizer(BaseNormalizer):
         return str(tmdb_id) if tmdb_id else None
 
     def extract_id(self, raw: dict) -> str | None:
-        """Extract the mc_id (e.g., tmdb_movie_12345) from raw data."""
-        # Always regenerate mc_id with type prefix to avoid collisions
-        # between movies and TV shows that share the same TMDB numeric ID
-        type_prefix = (
-            "movie"
-            if self.mc_type == MCType.MOVIE
-            else "tv"
-            if self.mc_type == MCType.TV_SERIES
-            else "person"
-        )
-
+        """Extract the canonical TMDB identifier from raw data."""
         source_id = self.extract_source_id(raw)
         if source_id:
-            return f"tmdb_{type_prefix}_{source_id}"
+            if self.mc_type in (MCType.MOVIE, MCType.TV_SERIES):
+                return f"tmdb_{source_id}"
+            return f"tmdb_person_{source_id}"
         return None
 
     def _extract_title(self, raw: dict) -> str:
@@ -777,8 +769,16 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
     search_title is normalized (apostrophes stripped) for consistent tokenization.
     The original title is preserved in the 'title' field for display.
     """
+    # Canonical identifier used by media docs and exact-match lookups.
+    # For movie/tv this must be {source}_{source_id} (e.g. tmdb_550).
+    media_mc_id = (
+        f"{doc.source.value}_{doc.source_id}"
+        if doc.mc_type in (MCType.MOVIE, MCType.TV_SERIES)
+        else doc.id
+    )
     result: dict[str, Any] = {
         "id": doc.id,
+        "mc_id": media_mc_id,
         "title": doc.search_title,
         "search_title": normalize_search_title(doc.search_title),
         "mc_type": doc.mc_type.value,

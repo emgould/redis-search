@@ -823,7 +823,7 @@ async def run_nightly_etl(
         # Build set of existing tmdb_ids so updates to indexed items bypass the filter
         existing_ids: set[int] | None = None
         if media_type in ("movie", "tv"):
-            prefix = "media:tmdb_movie_" if media_type == "movie" else "media:tmdb_tv_"
+            prefix = "media:tmdb_"
             existing_ids = set()
             redis = Redis(
                 host=redis_host,
@@ -837,7 +837,9 @@ async def run_nightly_etl(
                     cursor, keys = await redis.scan(cursor=cursor, match=f"{prefix}*", count=1000)
                     for k in keys:
                         try:
-                            existing_ids.add(int(k[len(prefix):]))
+                            suffix = k[len(prefix):]
+                            if suffix.isdigit():
+                                existing_ids.add(int(suffix))
                         except ValueError:
                             continue
                     if cursor == 0:
