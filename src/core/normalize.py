@@ -70,7 +70,7 @@ class SearchDocument:
     rating: float  # Rating score (0-10)
     # Display fields (stored, not indexed)
     image: str | None  # Medium poster/profile image URL
-    overview: str | None  # Truncated description/bio
+    overview: str | None  # Description/bio
     # Genre fields (indexed as TagFields - normalized)
     genre_ids: list[str]  # TMDB genre IDs as strings (e.g., ["35", "18", "10751"])
     genres: list[str]  # Genre names normalized (e.g., ["comedy", "drama", "family"])
@@ -454,7 +454,6 @@ class BaseTMDBNormalizer(BaseNormalizer):
         if not keywords:
             return []
 
-        # Use IPTC expander to get all aliases
         return cast(list[str], expand_keywords(keywords))
 
     def _build_profile_url(self, profile_path: str | None) -> str | None:
@@ -463,14 +462,10 @@ class BaseTMDBNormalizer(BaseNormalizer):
             return None
         return f"https://image.tmdb.org/t/p/w185{profile_path}"
 
-    def _extract_overview(self, raw: dict, max_length: int = 200) -> str | None:
-        """Extract and truncate overview/description."""
+    def _extract_overview(self, raw: dict) -> str | None:
+        """Extract overview/description."""
         overview = raw.get("overview") or raw.get("biography") or ""
-        if not overview:
-            return None
-        if len(overview) <= max_length:
-            return overview
-        return overview[:max_length].rsplit(" ", 1)[0] + "..."
+        return overview if overview else None
 
 
 class TMDBMovieNormalizer(BaseTMDBNormalizer):
@@ -496,7 +491,6 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
         director = self._extract_director(raw)
         dates = self._extract_dates(raw, self.mc_type)
-
         return SearchDocument(
             id=doc_id,
             search_title=title,
@@ -560,7 +554,6 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
 
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
         dates = self._extract_dates(raw, self.mc_type)
-
         return SearchDocument(
             id=doc_id,
             search_title=title,
