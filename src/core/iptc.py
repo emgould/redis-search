@@ -11,6 +11,7 @@ keyword expansion for better search coverage.
 
 import json
 import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -167,9 +168,9 @@ def normalize_tag(value: str) -> str:
     if not value:
         return ""
     value = value.strip().lower()
-    # Replace any non-alphanumeric characters with underscore
+    value = unicodedata.normalize("NFKD", value)
+    value = value.encode("ascii", "ignore").decode("ascii")
     value = re.sub(r"[^a-z0-9]+", "_", value)
-    # Remove leading/trailing underscores
     return value.strip("_")
 
 
