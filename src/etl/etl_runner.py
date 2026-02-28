@@ -18,7 +18,7 @@ from typing import Any, Literal
 import yaml  # type: ignore[import-untyped]
 
 from adapters.config import load_env
-from adapters.media_manager_client import MediaManagerClient
+from adapters.media_manager_client import MEDIA_INDEX_NAMES, MediaManagerClient
 from etl.bestseller_author_etl import BestsellerETLStats
 from etl.etl_metadata import (
     ETLMetadataStore,
@@ -480,6 +480,20 @@ class ETLRunner:
                 logger.error("Media Manager flush failed: %s", e)
                 self._run_metadata.add_log(f"Media Manager flush error: {e}")
 
+        # Rebuild FAISS indexes after flush
+        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
+            try:
+                logger.info("Rebuilding Media Manager FAISS indexes...")
+                rebuild_results = await mm_client.rebuild_all_indexes()
+                for r in rebuild_results:
+                    self._run_metadata.add_log(
+                        f"Index '{r['index_name']}' rebuilt: "
+                        f"{r['total_documents']} docs in {r['duration_seconds']:.1f}s"
+                    )
+            except Exception as e:
+                logger.error("Media Manager index rebuild failed: %s", e)
+                self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
+
         if mm_client:
             await mm_client.close()
 
@@ -576,15 +590,34 @@ class ETLRunner:
                 completed_at=datetime.now(),
             )
 
-        # Create params
-        params = JobRunParams(
-            media_type=media_type,
-            verbose=verbose,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
+        mm_client: MediaManagerClient | None = None
+        if media_type in ("movie", "tv"):
+            mm_url = os.getenv("MEDIA_MANAGER_API_URL")
+            if mm_url:
+                try:
+                    mm_client = MediaManagerClient()
+                    await mm_client.health_check()
+                    logger.info("Media Manager health check passed")
+                except Exception as e:
+                    logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                    if mm_client:
+                        await mm_client.close()
+                    mm_client = None
 
-        return await self.run_job(job_config, params, start_date, end_date)
+        try:
+            # Create params
+            params = JobRunParams(
+                media_type=media_type,
+                verbose=verbose,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            return await self.run_job(job_config, params, start_date, end_date, media_manager_client=mm_client)
+        finally:
+            if mm_client:
+                await mm_client.close()
 
 
 # Convenience functions for running ETL
@@ -653,13 +686,62 @@ async def run_single_etl(
         raise ValueError(f"Invalid media_type: {media_type}")
     media_type_literal: Literal["tv", "movie", "person"] = media_type  # type: ignore[assignment]
 
-    return await run_nightly_etl(
-        media_type=media_type_literal,
-        start_date=start_date,
-        end_date=end_date,
-        redis_host=host,
-        redis_port=port,
-        redis_password=password,
-        verbose=verbose,
-        stats=stats,
-    )
+    # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
+    mm_client: MediaManagerClient | None = None
+    if media_type in ("movie", "tv"):
+        mm_url = os.getenv("MEDIA_MANAGER_API_URL")
+        if mm_url:
+            try:
+                mm_client = MediaManagerClient()
+                await mm_client.health_check()
+                logger.info("Media Manager health check passed")
+            except Exception as e:
+                logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                if mm_client:
+                    await mm_client.close()
+                mm_client = None
+        else:
+            logger.info("Media Manager not configured (MEDIA_MANAGER_API_URL not set)")
+
+    try:
+        result_stats = await run_nightly_etl(
+            media_type=media_type_literal,
+            start_date=start_date,
+            end_date=end_date,
+            redis_host=host,
+            redis_port=port,
+            redis_password=password,
+            verbose=verbose,
+            stats=stats,
+            media_manager_client=mm_client,
+        )
+
+        # Flush and rebuild the relevant FAISS index if docs were sent
+        if mm_client and result_stats.mm_docs_sent > 0:
+            try:
+                logger.info("Polling Media Manager queue before flush...")
+                await mm_client.poll_until_drained()
+                logger.info("Flushing Media Manager session...")
+                flush_resp = await mm_client.flush()
+                logger.info("Media Manager flush: %s", flush_resp)
+            except Exception as e:
+                logger.error("Media Manager flush failed: %s", e)
+
+            index_name = MEDIA_INDEX_NAMES.get(media_type)
+            if index_name:
+                try:
+                    logger.info("Rebuilding Media Manager index '%s'...", index_name)
+                    rebuild_resp = await mm_client.rebuild_index(index_name)
+                    logger.info(
+                        "Index '%s' rebuilt: %d docs in %.1fs",
+                        rebuild_resp["index_name"],
+                        rebuild_resp["total_documents"],
+                        rebuild_resp["duration_seconds"],
+                    )
+                except Exception as e:
+                    logger.error("Media Manager index rebuild failed: %s", e)
+
+        return result_stats
+    finally:
+        if mm_client:
+            await mm_client.close()

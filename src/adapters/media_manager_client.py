@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from typing import Any, TypedDict
+from urllib.parse import urlparse
 
 import httpx
 
@@ -13,6 +14,12 @@ from utils.get_logger import get_logger
 logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 3600.0  # 1 hour fail-safe
+REBUILD_TIMEOUT = 900.0  # 15 minutes per index rebuild
+
+MEDIA_INDEX_NAMES: dict[str, str] = {
+    "movie": "movie-index",
+    "tv": "tv-index",
+}
 
 
 class InsertDocsResponse(TypedDict):
@@ -40,6 +47,13 @@ class FlushResponse(TypedDict):
     movies_updated: int
     tv_updated: int
     total_errors: int
+
+
+class RebuildIndexResponse(TypedDict):
+    status: str
+    index_name: str
+    total_documents: int
+    duration_seconds: float
 
 
 class HealthResponse(TypedDict):
@@ -71,6 +85,10 @@ class MediaManagerClient:
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._token:
             headers["X-Internal-Token"] = self._token
+        if "host.docker.internal" in self._base_url:
+            parsed = urlparse(self._base_url)
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            headers["Host"] = f"localhost:{port}"
         return headers
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -166,6 +184,43 @@ class MediaManagerClient:
             tv_updated=data.get("tv_updated", 0),
             total_errors=data.get("total_errors", 0),
         )
+
+    async def rebuild_index(
+        self,
+        index_name: str,
+        re_embedding: bool = False,
+    ) -> RebuildIndexResponse:
+        """POST /api/index/{index_name}/rebuild — blocks until rebuild completes."""
+        client = await self._get_client()
+        logger.info("Rebuilding index '%s' (re_embedding=%s)...", index_name, re_embedding)
+        resp = await client.post(
+            f"/api/index/{index_name}/rebuild",
+            json={"re_embedding": re_embedding},
+            timeout=REBUILD_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data: dict[str, Any] = resp.json()
+        result = RebuildIndexResponse(
+            status=data.get("status", "ok"),
+            index_name=index_name,
+            total_documents=data.get("total_documents", 0),
+            duration_seconds=data.get("duration_seconds", 0.0),
+        )
+        logger.info(
+            "Index '%s' rebuilt: %d documents in %.1fs",
+            index_name,
+            result["total_documents"],
+            result["duration_seconds"],
+        )
+        return result
+
+    async def rebuild_all_indexes(self) -> list[RebuildIndexResponse]:
+        """Rebuild all media indexes (movie-index, tv-index) sequentially."""
+        results: list[RebuildIndexResponse] = []
+        for index_name in MEDIA_INDEX_NAMES.values():
+            result = await self.rebuild_index(index_name)
+            results.append(result)
+        return results
 
     async def poll_until_drained(
         self,
