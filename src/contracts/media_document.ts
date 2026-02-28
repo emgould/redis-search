@@ -85,6 +85,10 @@ export interface MediaItem {
   rating: number;
   /** Medium poster image URL */
   image: string | null;
+  /** Raw TMDB poster path */
+  poster_path: string | null;
+  /** Raw TMDB backdrop path */
+  backdrop_path: string | null;
   /** Truncated description */
   overview: string | null;
 
@@ -99,6 +103,8 @@ export interface MediaItem {
   cast_names: string[];
   /** Display cast names (not normalized) */
   cast: string[];
+  /** TMDB profile_path for top cast members */
+  cast_images: string[];
 
   director: MediaDirector | null;
 
@@ -206,7 +212,6 @@ export interface MediaDetailResponse extends Omit<MediaItem, "watch_providers"> 
   /** YouTube trailer key URL */
   primary_trailer: string | null;
   trailers: Record<string, unknown>[];
-  backdrop_path: string | null;
   /** Full (untruncated) overview from TMDB */
   full_overview?: string;
 }
