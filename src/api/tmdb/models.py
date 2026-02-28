@@ -54,7 +54,7 @@ class MCBaseMediaItem(MCBaseItem):
     genres: list[str] = Field(default_factory=list)
     original_language: str | None = None
     origin_country: list[str] = Field(default_factory=list)
-    adult: bool = False
+    adult: bool | None = False
 
     # Streaming availability
     streaming_platform: str | None = None

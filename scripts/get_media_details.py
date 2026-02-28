@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI script to fetch TMDB media details and optionally normalize to index doc."""
+"""CLI script to fetch TMDB media details, normalize, and optionally insert into Redis."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +27,7 @@ load_dotenv(str(_PROJECT_ROOT / "config" / "local.env"))
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Fetch TMDB media details for a single title.",
-        usage="%(prog)s <tmdb_id> <tv|movie> [--doc] [--region REGION] [--indent N]",
+        usage="%(prog)s <tmdb_id> <tv|movie> [--doc] [--add] [--region REGION] [--indent N]",
     )
     parser.add_argument("tmdb_id", type=int, help="TMDB numeric ID.")
     parser.add_argument("media_type", choices=["tv", "movie"], help="Media type.")
@@ -34,6 +35,11 @@ def _parse_args() -> argparse.Namespace:
         "--doc",
         action="store_true",
         help="Normalize through the full ETL pipeline and output the index document.",
+    )
+    parser.add_argument(
+        "--add",
+        action="store_true",
+        help="Normalize and insert into the Redis media index (implies --doc).",
     )
     parser.add_argument("--region", default="US", help="Region code (default: US).")
     parser.add_argument("--indent", type=int, default=2, help="JSON indent (default: 2).")
@@ -81,7 +87,7 @@ async def main() -> None:
         print(f"Error fetching {args.media_type} {args.tmdb_id}: {err}", file=sys.stderr)
         sys.exit(2)
 
-    if not args.doc:
+    if not args.doc and not args.add:
         payload = _to_serializable(details)
         print(json.dumps(payload, indent=args.indent, default=str, ensure_ascii=False))
         sys.exit(0)
@@ -99,8 +105,33 @@ async def main() -> None:
         print("Normalizer returned None — item did not produce a document.", file=sys.stderr)
         sys.exit(2)
 
+    now_ts = int(datetime.now(UTC).timestamp())
+    doc.created_at = now_ts
+    doc.modified_at = now_ts
+    doc._source = "manual_add"
+
     redis_doc = document_to_redis(doc)
-    print(json.dumps(redis_doc, indent=args.indent, default=str, ensure_ascii=False))
+
+    if args.add:
+        from redis.asyncio import Redis
+
+        redis = Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", "6380")),
+            password=os.getenv("REDIS_PASSWORD") or None,
+            decode_responses=True,
+        )
+        key = f"media:{redis_doc['mc_id']}"
+        await redis.json().set(key, "$", redis_doc)  # type: ignore[misc]
+        await redis.aclose()
+        print(f"Inserted: {key}")
+        title = redis_doc.get("title", "")
+        print(f"  title:   {title}")
+        print(f"  mc_id:   {redis_doc['mc_id']}")
+        print(f"  mc_type: {redis_doc['mc_type']}")
+    else:
+        print(json.dumps(redis_doc, indent=args.indent, default=str, ensure_ascii=False))
+
     sys.exit(0)
 
 

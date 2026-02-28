@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
 """
-Fix id and mc_id fields in the media index to canonical source/source_id format.
+Migrate media index keys and documents to the new mc_id format.
 
-Scans all media:* documents and updates id/mc_id from legacy values like
-"tmdb_movie_238" / "tmdb_tv_1396" to canonical "tmdb_238", derived from
-existing document fields as {source}_{source_id}.
+Old format: mc_id = tmdb_{source_id}       key = media:tmdb_{source_id}
+New format: mc_id = tmdb_{mc_type}_{source_id}  key = media:tmdb_{mc_type}_{source_id}
+
+For each media:* document:
+  1. Read the full document
+  2. Compute new mc_id from source, mc_type, source_id
+  3. Mutate id and mc_id in the document
+  4. Write the updated document to the new key
+  5. Delete the old key
+
+After migration, drop and rebuild idx:media.
 
 Usage:
-    # Dry run — report mismatches without writing
+    # Dry run — report what would change
     python scripts/fix_media_mc_ids.py --dry-run
 
-    # Fix all
+    # Migrate all
     python scripts/fix_media_mc_ids.py
 
-    # Fix with limit
+    # Migrate with limit
     python scripts/fix_media_mc_ids.py --limit 100
+
+    # Migrate + rebuild index
+    python scripts/fix_media_mc_ids.py --rebuild-index
 """
 
 from __future__ import annotations
@@ -25,7 +36,6 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
@@ -36,10 +46,13 @@ from adapters.config import load_env  # noqa: E402
 load_env()
 
 from redis.asyncio import Redis  # noqa: E402
+from redis.commands.search.index_definition import IndexDefinition, IndexType  # noqa: E402
 
 from utils.get_logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
+
+MEDIA_TYPES_WITH_TYPE_IN_KEY = ("movie", "tv")
 
 
 def _connect_redis() -> Redis:  # type: ignore[type-arg]
@@ -51,17 +64,25 @@ def _connect_redis() -> Redis:  # type: ignore[type-arg]
     )
 
 
-async def fix_mc_ids(
+def _compute_new_mc_id(source: str, mc_type: str, source_id: str) -> str:
+    """Compute the canonical mc_id with mc_type included for movie/tv."""
+    if mc_type in MEDIA_TYPES_WITH_TYPE_IN_KEY:
+        return f"{source}_{mc_type}_{source_id}"
+    return f"{source}_{source_id}"
+
+
+async def migrate_mc_ids(
     scan_count: int,
     limit: int | None,
     dry_run: bool,
-) -> dict[str, Any]:
+) -> dict[str, int]:
     stats: dict[str, int] = {
         "scanned": 0,
         "checked": 0,
-        "fixed": 0,
+        "migrated": 0,
         "already_correct": 0,
-        "missing_source_or_source_id": 0,
+        "missing_fields": 0,
+        "old_keys_deleted": 0,
     }
 
     redis = _connect_redis()
@@ -82,59 +103,59 @@ async def fix_mc_ids(
 
             stats["scanned"] += len(keys)
 
-            pipe = redis.pipeline()
+            read_pipe = redis.pipeline()
             for key in keys:
-                pipe.json().get(key, "$.source", "$.source_id", "$.id", "$.mc_id")  # type: ignore[union-attr]
-            raw_results: list[object] = await pipe.execute()
+                read_pipe.json().get(key)  # type: ignore[union-attr]
+            docs: list[object] = await read_pipe.execute()
 
             write_pipe = redis.pipeline()
-            batch_fixes = 0
+            batch_writes = 0
 
-            for key, raw in zip(keys, raw_results, strict=True):
-                if not isinstance(raw, dict):
+            for key, doc in zip(keys, docs, strict=True):
+                if not isinstance(doc, dict):
                     continue
 
-                source_val = raw.get("$.source")
-                source_id_val = raw.get("$.source_id")
-                id_val = raw.get("$.id")
-                mc_id_val = raw.get("$.mc_id")
+                source = doc.get("source")
+                source_id = doc.get("source_id")
+                mc_type = doc.get("mc_type")
 
-                source = source_val[0] if isinstance(source_val, list) and source_val else None
-                source_id = source_id_val[0] if isinstance(source_id_val, list) and source_id_val else None
-                current_id = id_val[0] if isinstance(id_val, list) and id_val else None
-                current_mc_id = mc_id_val[0] if isinstance(mc_id_val, list) and mc_id_val else None
-
-                if not source or not source_id:
-                    stats["missing_source_or_source_id"] += 1
+                if not source or not source_id or not mc_type:
+                    stats["missing_fields"] += 1
                     continue
 
                 stats["checked"] += 1
-                correct = f"{source}_{source_id}"
+                new_mc_id = _compute_new_mc_id(source, mc_type, str(source_id))
+                new_key = f"media:{new_mc_id}"
 
-                if current_id == correct and current_mc_id == correct:
+                if key == new_key and doc.get("id") == new_mc_id and doc.get("mc_id") == new_mc_id:
                     stats["already_correct"] += 1
                     continue
 
                 if not dry_run:
-                    write_pipe.json().set(key, "$.id", correct)  # type: ignore[union-attr]
-                    write_pipe.json().set(key, "$.mc_id", correct)  # type: ignore[union-attr]
-                    batch_fixes += 1
+                    doc["id"] = new_mc_id
+                    doc["mc_id"] = new_mc_id
+                    write_pipe.json().set(new_key, "$", doc)  # type: ignore[union-attr]
+                    if key != new_key:
+                        write_pipe.delete(key)  # type: ignore[union-attr]
+                        stats["old_keys_deleted"] += 1
 
-                stats["fixed"] += 1
+                    batch_writes += 1
 
-            if batch_fixes > 0:
+                stats["migrated"] += 1
+
+            if batch_writes > 0:
                 await write_pipe.execute()
 
             if stats["scanned"] % 5000 < scan_count:
                 logger.info(
-                    "  Progress: scanned=%d, fixed=%d, already_correct=%d",
+                    "  Progress: scanned=%d, migrated=%d, already_correct=%d",
                     stats["scanned"],
-                    stats["fixed"],
+                    stats["migrated"],
                     stats["already_correct"],
                 )
 
-            if limit is not None and stats["fixed"] >= limit:
-                logger.info("Reached limit of %d fixes", limit)
+            if limit is not None and stats["migrated"] >= limit:
+                logger.info("Reached limit of %d migrations", limit)
                 break
 
             if cursor == 0:
@@ -146,21 +167,40 @@ async def fix_mc_ids(
     return stats
 
 
-def _print_stats(stats: dict[str, Any], elapsed: float, dry_run: bool) -> None:
+async def rebuild_media_index() -> None:
+    """Drop and recreate idx:media so it re-indexes all media:* keys."""
+    redis = _connect_redis()
+    try:
+        try:
+            await redis.ft("idx:media").dropindex(delete_documents=False)
+            logger.info("Dropped idx:media")
+        except Exception as e:
+            logger.warning("Could not drop idx:media (may not exist): %s", e)
+
+        from web.app import INDEX_CONFIGS
+
+        schema = INDEX_CONFIGS["media"]["schema"]
+        definition = IndexDefinition(prefix=["media:"], index_type=IndexType.JSON)
+        await redis.ft("idx:media").create_index(schema, definition=definition)
+        logger.info("Recreated idx:media")
+    finally:
+        await redis.aclose()
+
+
+def _print_stats(stats: dict[str, int], elapsed: float, dry_run: bool) -> None:
     prefix = "[DRY RUN] " if dry_run else ""
     print(f"\n{'=' * 60}")
-    print(f"{prefix}Fix id + mc_id — Summary")
+    print(f"{prefix}Migrate media keys — Summary")
     print("=" * 60)
     for k, v in stats.items():
-        if isinstance(v, (int, float)):
-            print(f"  {k}: {v:,}")
+        print(f"  {k}: {v:,}")
     print(f"  elapsed: {elapsed:.2f}s")
     print()
 
 
 async def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Fix id and mc_id fields in media index to canonical {source}_{source_id} format"
+        description="Migrate media:* keys to new mc_id format: tmdb_{mc_type}_{source_id}"
     )
     parser.add_argument(
         "--scan-count", type=int, default=500,
@@ -168,23 +208,32 @@ async def main() -> None:
     )
     parser.add_argument(
         "--limit", type=int, default=None,
-        help="Max documents to fix",
+        help="Max documents to migrate",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
-        help="Report mismatches without writing",
+        help="Report what would change without writing",
+    )
+    parser.add_argument(
+        "--rebuild-index", action="store_true",
+        help="Drop and recreate idx:media after migration",
     )
 
     args = parser.parse_args()
 
     t0 = time.time()
-    result = await fix_mc_ids(
+    result = await migrate_mc_ids(
         scan_count=args.scan_count,
         limit=args.limit,
         dry_run=args.dry_run,
     )
     elapsed = time.time() - t0
     _print_stats(result, elapsed, args.dry_run)
+
+    if args.rebuild_index and not args.dry_run:
+        logger.info("Rebuilding idx:media ...")
+        await rebuild_media_index()
+        logger.info("Index rebuild complete")
 
 
 if __name__ == "__main__":
