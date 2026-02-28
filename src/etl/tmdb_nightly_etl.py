@@ -35,7 +35,7 @@ from typing import Any, Literal, cast
 from redis.asyncio import Redis
 
 from adapters.config import load_env
-from adapters.media_manager_client import MediaManagerClient
+from adapters.media_manager_client import MEDIA_INDEX_NAMES, MediaManagerClient
 from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
@@ -807,6 +807,17 @@ async def run_nightly_etl(
 
     etl = TMDBChangesETL(staging_dir=staging_dir, verbose=verbose)
 
+    # Check Media Manager configuration
+    mm_status = "disabled"
+    if media_type in ("movie", "tv"):
+        mm_url = os.getenv("MEDIA_MANAGER_API_URL")
+        if mm_url:
+            mm_status = "configured"
+        else:
+            mm_status = "not configured (MEDIA_MANAGER_API_URL not set)"
+    else:
+        mm_status = "not applicable (person jobs)"
+
     print("=" * 60)
     print(f"🚀 TMDB Changes ETL v2 - {media_type.upper()}")
     print("=" * 60)
@@ -814,6 +825,7 @@ async def run_nightly_etl(
     print(f"  Redis: {redis_host}:{redis_port}")
     print(f"  Staging dir: {staging_dir}")
     print(f"  Mode: {'fetch only' if fetch_only else 'load only' if load_only else 'full'}")
+    print(f"  Media Manager: {mm_status}")
     print()
 
     staging_path = None
@@ -891,12 +903,19 @@ async def run_nightly_etl(
             print("📊 Phase 2 (Load) Results:")
             print(f"  Items loaded: {stats.load_phase.items_success}")
             print(f"  Errors: {stats.load_phase.items_failed}")
-            if stats.mm_docs_sent > 0:
-                print(
-                    f"  Media Manager: {stats.mm_docs_sent} sent, "
-                    f"{stats.mm_docs_queued} queued, "
-                    f"{stats.mm_docs_filtered} filtered"
-                )
+            if media_type in ("movie", "tv"):
+                if stats.mm_docs_sent > 0:
+                    print(
+                        f"  Media Manager: {stats.mm_docs_sent} sent, "
+                        f"{stats.mm_docs_queued} queued, "
+                        f"{stats.mm_docs_filtered} filtered"
+                    )
+                elif media_manager_client is None:
+                    print("  Media Manager: not configured or unavailable")
+                else:
+                    print(
+                        f"  Media Manager: 0 sent (all {stats.load_phase.items_success} documents filtered out)"
+                    )
             print(f"  Duration: {stats.load_phase.duration_seconds:.1f}s")
             print(f"  Rate: {stats.load_phase.items_per_second:.1f} items/sec")
             print()
@@ -968,18 +987,63 @@ if __name__ == "__main__":
     else:
         logger.info("✅ Cache enabled: Using Redis cache (7-day TTL)")
 
-    asyncio.run(
-        run_nightly_etl(
-            media_type=args.media_type,
-            start_date=args.start_date,
-            end_date=args.end_date,
-            redis_host=args.redis_host,
-            redis_port=args.redis_port,
-            redis_password=args.redis_password,
-            staging_dir=args.staging_dir,
-            fetch_only=args.fetch_only,
-            load_only=args.load_only,
-            staging_file=args.file,
-            max_batches=args.max_batches,  # Default is no_cache=True
-        )
-    )
+    async def run_with_media_manager() -> None:
+        """Run ETL with Media Manager client if configured."""
+        load_env()
+
+        # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
+        mm_client: MediaManagerClient | None = None
+        if args.media_type in ("movie", "tv"):
+            mm_url = os.getenv("MEDIA_MANAGER_API_URL")
+            if mm_url:
+                try:
+                    mm_client = MediaManagerClient()
+                    await mm_client.health_check()
+                    logger.info("Media Manager health check passed")
+                except Exception as e:
+                    logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                    if mm_client:
+                        await mm_client.close()
+                    mm_client = None
+            else:
+                logger.info("Media Manager not configured (MEDIA_MANAGER_API_URL not set)")
+
+        try:
+            result_stats = await run_nightly_etl(
+                media_type=args.media_type,
+                start_date=args.start_date,
+                end_date=args.end_date,
+                redis_host=args.redis_host,
+                redis_port=args.redis_port,
+                redis_password=args.redis_password,
+                staging_dir=args.staging_dir,
+                fetch_only=args.fetch_only,
+                load_only=args.load_only,
+                staging_file=args.file,
+                max_batches=args.max_batches,
+                media_manager_client=mm_client,
+            )
+
+            # Flush and rebuild the relevant FAISS index if docs were sent
+            if mm_client and result_stats.mm_docs_sent > 0:
+                try:
+                    logger.info("Polling Media Manager queue before flush...")
+                    await mm_client.poll_until_drained()
+                    logger.info("Flushing Media Manager session...")
+                    flush_resp = await mm_client.flush()
+                    logger.info("Media Manager flush: %s", flush_resp)
+                except Exception as e:
+                    logger.error("Media Manager flush failed: %s", e)
+
+                index_name = MEDIA_INDEX_NAMES.get(args.media_type)
+                if index_name:
+                    try:
+                        logger.info("Rebuilding Media Manager index '%s'...", index_name)
+                        await mm_client.rebuild_index(index_name)
+                    except Exception as e:
+                        logger.error("Media Manager index rebuild failed: %s", e)
+        finally:
+            if mm_client:
+                await mm_client.close()
+
+    asyncio.run(run_with_media_manager())

@@ -38,6 +38,8 @@ services:
       # Public Redis still goes through host tunnel
       PUBLIC_REDIS_HOST: host.docker.internal
       PUBLIC_REDIS_PORT: "6381"
+      # Media Manager runs on host, not inside this container
+      MEDIA_MANAGER_API_URL: http://host.docker.internal:8098
       ENVIRONMENT: local
       # Cloud Run dev instance for remote ETL triggering
       CLOUD_RUN_ETL_URL: ${CLOUD_RUN_ETL_URL:-}
@@ -72,6 +74,7 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      MEDIA_MANAGER_API_URL: http://host.docker.internal:8098
       ENVIRONMENT: local
       ETL_CONFIG_PATH: /app/config/etl_jobs.yaml
       GOOGLE_APPLICATION_CREDENTIALS: /app/config/media-circle-3db28338ecf4.json
