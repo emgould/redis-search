@@ -78,6 +78,9 @@ class SearchDocument:
     cast_ids: list[str]  # TMDB person IDs as strings for cast members
     cast_names: list[str]  # Cast member names normalized for search/filter
     cast: list[str]  # Cast member names for display (NOT normalized)
+    poster_path: str | None = None  # Raw TMDB poster path (e.g. "/abc.jpg")
+    backdrop_path: str | None = None  # Raw TMDB backdrop path (e.g. "/xyz.jpg")
+    cast_images: list[str] = field(default_factory=list)  # TMDB cast profile paths
     # Director object (indexed via JSONPath into $.director.id, $.director.name_normalized)
     director: dict[str, str] | None = None
     # Keywords (indexed as TagFields - IPTC expanded and normalized)
@@ -375,6 +378,31 @@ class BaseTMDBNormalizer(BaseNormalizer):
 
         return cast_ids, cast_names, cast_display
 
+    def _extract_cast_images(self, raw: dict, limit: int = 5) -> list[str]:
+        """
+        Extract cast profile image paths from TMDB data.
+
+        Returns:
+            List of TMDB profile_path values aligned to top-billed cast members.
+        """
+        cast_images: list[str] = []
+
+        # Try main_cast first, then tmdb_cast.cast
+        main_cast = raw.get("main_cast", [])
+        if not main_cast:
+            tmdb_cast = raw.get("tmdb_cast", {})
+            if isinstance(tmdb_cast, dict):
+                main_cast = tmdb_cast.get("cast", [])
+
+        for actor in main_cast[:limit]:
+            profile_path = actor.get("profile_path")
+            if isinstance(profile_path, str):
+                clean_path = profile_path.strip()
+                if clean_path:
+                    cast_images.append(clean_path)
+
+        return cast_images
+
     def _extract_director(self, raw: dict) -> dict[str, str] | None:
         """
         Extract director data from TMDB data as a structured object.
@@ -489,6 +517,7 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             return None
 
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
+        cast_images = self._extract_cast_images(raw)
         director = self._extract_director(raw)
         dates = self._extract_dates(raw, self.mc_type)
         return SearchDocument(
@@ -505,12 +534,15 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
+            poster_path=raw.get("poster_path"),
+            backdrop_path=raw.get("backdrop_path"),
             overview=self._extract_overview(raw),
             genre_ids=self._extract_genre_ids(raw),
             genres=self._extract_genres(raw, genre_mapping),
             cast_ids=cast_ids,
             cast_names=cast_names,
             cast=cast_display,
+            cast_images=cast_images,
             director=director,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
@@ -553,6 +585,7 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             return None
 
         cast_ids, cast_names, cast_display = self._extract_cast_data(raw)
+        cast_images = self._extract_cast_images(raw)
         dates = self._extract_dates(raw, self.mc_type)
         return SearchDocument(
             id=doc_id,
@@ -568,12 +601,15 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
+            poster_path=raw.get("poster_path"),
+            backdrop_path=raw.get("backdrop_path"),
             overview=self._extract_overview(raw),
             genre_ids=self._extract_genre_ids(raw),
             genres=self._extract_genres(raw, genre_mapping),
             cast_ids=cast_ids,
             cast_names=cast_names,
             cast=cast_display,
+            cast_images=cast_images,
             director=None,
             keywords=self._extract_keywords(raw),
             origin_country=self._extract_origin_country(raw),
@@ -595,6 +631,7 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             network=raw.get("network"),
             production_companies=raw.get("production_companies"),
             production_countries=raw.get("production_countries"),
+            spoken_languages=raw.get("spoken_languages"),
         )
 
 
@@ -782,12 +819,15 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "popularity": doc.popularity,
         "rating": doc.rating,
         "image": doc.image,
+        "poster_path": doc.poster_path,
+        "backdrop_path": doc.backdrop_path,
         "overview": doc.overview,
         "genre_ids": doc.genre_ids,
         "genres": doc.genres,
         "cast_ids": doc.cast_ids,
         "cast_names": doc.cast_names,
         "cast": doc.cast,
+        "cast_images": doc.cast_images,
         "director": doc.director,
         "keywords": doc.keywords,
         "origin_country": doc.origin_country,
