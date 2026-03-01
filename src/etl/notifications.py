@@ -68,9 +68,14 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
         f"{'─' * 60}",
         "  DOCUMENT STATS",
         f"{'─' * 60}",
-        f"  Changes Found:     {format_number(metadata.total_changes_found)}",
+        f"  Changes Found:      {format_number(metadata.total_changes_found)}",
         f"  Documents Upserted: {format_number(metadata.total_documents_upserted)}",
         f"  Total Errors:       {format_number(metadata.total_errors)}",
+        "",
+        f"{'─' * 60}",
+        "  MEDIA MANAGER",
+        f"{'─' * 60}",
+        f"  Docs Sent:          {format_number(metadata.total_mm_docs_sent)}",
         "",
     ]
 
@@ -86,12 +91,15 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
         for job in metadata.job_results:
             status_icon = "✓" if job.status == "success" else "✗" if job.status == "failed" else "○"
             lines.append(f"  {status_icon} {job.job_name}")
-            lines.append(
+            detail = (
                 f"      Changes: {format_number(job.changes_found)} → "
                 f"Upserted: {format_number(job.documents_upserted)} | "
                 f"Errors: {job.errors_count} | "
                 f"Duration: {format_duration(job.duration_seconds)}"
             )
+            if job.mm_docs_sent > 0:
+                detail += f" | MM Sent: {format_number(job.mm_docs_sent)}"
+            lines.append(detail)
             if job.error_message:
                 lines.append(f"      Error: {job.error_message[:100]}")
         lines.append("")
@@ -164,6 +172,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
             if job.status == "failed"
             else "#6b7280"
         )
+        mm_sent_display = format_number(job.mm_docs_sent) if job.mm_docs_sent > 0 else "—"
         job_rows_list.append(
             f"<tr>"
             f'<td style="padding:8px;border-bottom:1px solid #374151">{job.job_name}</td>'
@@ -171,6 +180,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{format_number(job.changes_found)}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{format_number(job.documents_upserted)}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{job.errors_count}</td>'
+            f'<td style="padding:8px;border-bottom:1px solid #374151;text-align:right">{mm_sent_display}</td>'
             f'<td style="padding:8px;border-bottom:1px solid #374151">{format_duration(job.duration_seconds)}</td>'
             f"</tr>"
         )
@@ -192,6 +202,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#22c55e">{format_number(metadata.total_documents_upserted)}</div><div style="font-size:12px;color:#9ca3af">Documents Upserted</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#3b82f6">{format_number(metadata.total_changes_found)}</div><div style="font-size:12px;color:#9ca3af">Changes Found</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:{error_color}">{format_number(metadata.total_errors)}</div><div style="font-size:12px;color:#9ca3af">Errors</div></div>',
+        f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#a78bfa">{format_number(metadata.total_mm_docs_sent)}</div><div style="font-size:12px;color:#9ca3af">MM Docs Sent</div></div>',
         f'<div style="text-align:center"><div style="font-size:28px;font-weight:bold;color:#f3f4f6">{format_duration(metadata.duration_seconds)}</div><div style="font-size:12px;color:#9ca3af">Duration</div></div>',
         "</div>",
         # Job Details Table
@@ -204,6 +215,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         '<th style="padding:10px 8px;text-align:right">Changes</th>',
         '<th style="padding:10px 8px;text-align:right">Upserted</th>',
         '<th style="padding:10px 8px;text-align:right">Errors</th>',
+        '<th style="padding:10px 8px;text-align:right">MM Sent</th>',
         '<th style="padding:10px 8px;text-align:left">Duration</th>',
         "</tr></thead>",
         f"<tbody>{job_rows}</tbody>",
