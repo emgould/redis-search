@@ -260,7 +260,7 @@ class TMDBService(Auth, BaseAPIClient):
         # Basic search result without enrichment - allow it
         return True
 
-    @RedisCache.use_cache(TMDBCache, prefix="media_details")
+    @RedisCache.use_cache(TMDBCache, prefix="media_details_v0.02")
     async def get_media_details(
         self,
         tmdb_id: int,
@@ -271,6 +271,7 @@ class TMDBService(Auth, BaseAPIClient):
         include_keywords: bool = True,
         include_release_dates: bool = True,
         include_content_ratings: bool = True,
+        include_external_ids: bool = True,
         cast_limit: int = 5,
         video_limit: int = 5,
         region: str = "US",
@@ -313,6 +314,8 @@ class TMDBService(Auth, BaseAPIClient):
                 append_to_response.append("release_dates")
             else:
                 append_to_response.append("content_ratings")
+        if include_external_ids:
+            append_to_response.append("external_ids")
 
         if append_to_response:
             params["append_to_response"] = ",".join(append_to_response)
@@ -407,7 +410,9 @@ class TMDBService(Auth, BaseAPIClient):
                     data=release_dates_result,
                 )
                 details.us_rating = result.get("rating", None) if result else None
-                details.release_date = result.get("release_date", None) if result else None
+                rated_release_date = result.get("release_date") if result else None
+                if isinstance(rated_release_date, str) and rated_release_date.strip():
+                    details.release_date = rated_release_date
 
         if include_content_ratings and media_type == MCType.TV_SERIES:
             rating = await self.get_content_rating(
@@ -417,6 +422,11 @@ class TMDBService(Auth, BaseAPIClient):
                 data=details_data.get("content_ratings", {}),
             )
             details.us_rating = rating.get("rating", None) if rating else None
+
+        if include_external_ids:
+            raw_ext = details_data.get("external_ids")
+            if isinstance(raw_ext, dict):
+                details.external_ids = {k: v for k, v in raw_ext.items() if v is not None}
 
         # Update series_status
         if isinstance(details, MCTvItem):
@@ -1272,6 +1282,30 @@ class TMDBService(Auth, BaseAPIClient):
             return {}
 
         return {"release_dates": data}
+
+    async def get_external_ids(
+        self, tmdb_id: int, media_type: MCType
+    ) -> dict[str, str | int] | None:
+        """Fetch external IDs for a movie or TV series from the dedicated TMDB endpoint.
+
+        Returns a dict of non-null external identifiers (imdb_id, tvdb_id,
+        wikidata_id, facebook_id, instagram_id, twitter_id, etc.) or None on
+        failure.  This is lighter weight than ``get_media_details`` because it
+        hits a single sub-resource and skips append_to_response overhead.
+        """
+        if media_type == MCType.MOVIE:
+            path = "movie"
+        elif media_type == MCType.TV_SERIES:
+            path = "tv"
+        else:
+            raise ValueError(f"Invalid media type for external_ids: {media_type}")
+
+        endpoint = f"{path}/{tmdb_id}/external_ids"
+        data = await self._make_request(endpoint)
+        if not data:
+            return None
+
+        return {k: v for k, v in data.items() if v is not None and k != "id"}
 
     @RedisCache.use_cache(TMDBCache, prefix="keyword_search")
     async def find_keywords_async(self, query: str) -> list[TMDBKeyword]:

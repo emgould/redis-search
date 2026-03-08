@@ -117,6 +117,7 @@ class SearchDocument:
     budget: int | None = None  # Budget for the media item
     revenue: int | None = None  # Revenue for the media item
     spoken_languages: list[str] | None = None  # List of spoken languages for the media item
+    external_ids: dict[str, Any] | None = None  # External IDs (imdb_id, tvdb_id, etc.)
 
 
 class BaseNormalizer(ABC):
@@ -529,6 +530,7 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             revenue=raw.get("revenue"),
             spoken_languages=raw.get("spoken_languages"),
             runtime=raw.get("runtime"),
+            external_ids=raw.get("external_ids"),
         )
 
 
@@ -595,6 +597,7 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             network=raw.get("network"),
             production_companies=raw.get("production_companies"),
             production_countries=raw.get("production_countries"),
+            external_ids=raw.get("external_ids"),
         )
 
 
@@ -816,6 +819,7 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "budget": doc.budget,
         "revenue": doc.revenue,
         "spoken_languages": doc.spoken_languages,
+        "external_ids": doc.external_ids,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,
