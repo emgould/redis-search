@@ -1,0 +1,124 @@
+---
+description: Redis clone operations - snapshot/restore, prefix bulk transfer, and validation
+globs: ["scripts/snapshot_to_local.py", "scripts/bulk_clone_prefix.py", "scripts/validate_clone.py", "docker/docker-compose.scratch.yml"]
+alwaysApply: false
+---
+
+# Redis Clone Operations
+
+## Overview
+
+Two tunnel-compatible clone paths for moving data from public Redis to local/scratch Redis, plus a validation harness to prove correctness.
+
+These are additive capabilities. The existing `scripts/copy_to_local.py` (logical JSON rehydration) and `scripts/promote_to_dev.py` remain unchanged.
+
+## Network Topology
+
+All data movement is client-initiated from local. The public GCE VM cannot connect back to local. This rules out server-side `MIGRATE` and `REPLICAOF`.
+
+- Public Redis: GCE VM (`redis-stack-vm`), accessed via IAP tunnel at `localhost:6381`
+- Local Redis: Docker container on `localhost:6380`
+- Scratch Redis: Disposable Docker container on `localhost:6382`
+
+## When To Use Which
+
+| Scenario | Tool | Speed | Scope |
+|----------|------|-------|-------|
+| Full clone of public → local | `snapshot_to_local.py` | Fastest (bulk RDB) | Entire instance |
+| Refresh one index/prefix | `bulk_clone_prefix.py` | Fast (DUMP/RESTORE) | Selected prefixes |
+| Legacy per-doc logical copy | `copy_to_local.py` | Slowest (JSON.GET/SET) | Selected indices |
+
+### Decision criteria
+
+- Use **snapshot/restore** when you want local to be an exact mirror of public and are willing to destroy all local data.
+- Use **prefix bulk transfer** when you want to refresh specific data (e.g., just `media:`) without affecting other local data.
+- Use **existing copy_to_local** only if you need the ETL metadata sync behavior or have a reason to prefer document-level transfer.
+
+## Scratch Redis
+
+A disposable Redis target for safe testing. Never test new clone operations against primary local Redis first.
+
+```bash
+make scratch-redis-up      # start on port 6382
+make scratch-redis-down    # stop
+make scratch-redis-reset   # destroy volume and restart clean
+```
+
+Uses `docker/docker-compose.scratch.yml` with the same Redis Stack image (`redis/redis-stack:7.4.0-v8`) as local and public.
+
+## Snapshot/Restore
+
+`scripts/snapshot_to_local.py`
+
+Full-instance clone via BGSAVE + gcloud SCP + Docker volume replacement.
+
+**How it works:**
+1. Triggers `BGSAVE` on public Redis via tunnel
+2. Downloads RDB file from GCE VM via `gcloud compute scp --tunnel-through-iap`
+3. Stops target Redis container
+4. Replaces RDB in Docker volume (removes AOF to prevent conflicts)
+5. Starts target Redis container
+6. Waits for data load and validates
+
+**Data loss warning:** This replaces ALL data in the target Redis. Default target is scratch.
+
+**Safety:**
+- Default target: scratch (port 6382)
+- `--target local` requires `--confirm-replace`
+- Preflight checks: gcloud availability, tunnel connectivity, version match
+
+## Prefix Bulk Transfer
+
+`scripts/bulk_clone_prefix.py`
+
+Transfers selected key prefixes using Redis-native `DUMP`/`RESTORE` serialization. The client reads serialized bytes from public and writes them to the target without JSON parsing.
+
+**Why DUMP/RESTORE instead of JSON.GET/JSON.SET:**
+- No Python-level JSON deserialization/reserialization
+- Raw binary transfer (fewer bytes, less CPU)
+- Expected 3-10x faster than the logical copy path
+
+**After key transfer**, the script introspects FT index schemas from public and recreates them on the target, which triggers background indexing.
+
+**Safety:**
+- Default target: scratch
+- `--confirm-replace` required for local target
+- Only requested prefixes are affected; unrelated keys are untouched
+
+## Validation Harness
+
+`scripts/validate_clone.py`
+
+Four-level validation to prove clone correctness:
+
+1. **Structural:** Compare `FT._LIST`, per-prefix key counts, per-index `num_docs`
+2. **Content Integrity:** DUMP-compare sampled keys (raw byte equality, no JSON re-parsing)
+3. **Search Smoke:** Run FT.SEARCH queries on each index, compare result counts
+4. **Failure Detection:** Detect partial states (keys without index, empty indexes, count mismatches)
+
+**Must run after every clone operation.** Zero mismatches is the acceptance bar.
+
+## Riskless Test Sequence
+
+Always follow this order:
+
+1. `make scratch-redis-up`
+2. Test prefix clone: `make clone-prefix-to-scratch PREFIXES="media:"`
+3. Validate: `make validate-clone TARGET=scratch`
+4. Reset and test snapshot: `make scratch-redis-reset && make snapshot-to-scratch`
+5. Validate: `make validate-clone TARGET=scratch`
+6. Only after scratch validation passes → use against real local
+
+## Known Prefixes
+
+| Prefix | FT Index | Approx Docs |
+|--------|----------|-------------|
+| `media:` | `idx:media` | ~74k |
+| `person:` | `idx:people` | varies |
+| `podcast:` | `idx:podcasts` | ~151k |
+| `book:` | `idx:book` | ~782k |
+| `author:` | `idx:author` | ~159k |
+
+## Version Compatibility
+
+Redis Stack versions must match between source and target for DUMP/RESTORE and RDB snapshot compatibility. The scratch, local, and public instances all pin to `redis/redis-stack:7.4.0-v8`.

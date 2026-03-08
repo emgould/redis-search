@@ -1,0 +1,28 @@
+# Scratch Redis for safe clone testing.
+# Disposable target for validating snapshot/restore and prefix bulk transfer
+# before running against the primary local Redis instance.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.scratch.yml up -d
+#   docker compose -f docker/docker-compose.scratch.yml down -v   # destroy volume too
+
+name: redis-search-scratch
+
+services:
+  redis-scratch:
+    image: redis/redis-stack:7.4.0-v8
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis_scratch_data:/data
+    environment:
+      - REDIS_ARGS=--appendonly yes --save 60 1 --maxmemory 8gb --maxmemory-policy volatile-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+      start_period: 10s
+
+volumes:
+  redis_scratch_data:
