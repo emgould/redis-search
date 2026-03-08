@@ -261,6 +261,8 @@ class ETLRunner:
                 start_date_override or params.start_date or self.get_job_start_date(job_name)
             )
             end_date = end_date_override or params.end_date or date.today().isoformat()
+            result.effective_start_date = start_date
+            result.effective_end_date = end_date
 
             logger.info(f"Running {job_name}: {start_date} to {end_date}")
 
