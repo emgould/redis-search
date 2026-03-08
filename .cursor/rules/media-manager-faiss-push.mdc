@@ -34,10 +34,105 @@ Async `httpx` client at `src/adapters/media_manager_client.py`.
 - Default timeout: **3600 seconds** (1-hour fail-safe matching Cloud Run limits).
 - `health_check()` — `GET /health`, raises `RuntimeError` if unhealthy or unreachable.
 - `insert_docs(documents, dry_run)` — `POST /insert-docs` with batch of up to 100 docs.
+- `get_metadata(media_id)` — `POST /api/metadata` to check whether a `mc_id` exists.
 - `get_status()` — `GET /insert-docs/status` for queue depth and session stats.
 - `flush()` — `POST /insert-docs/flush`, blocks until queue drains.
 - `poll_until_drained(poll_interval, max_wait)` — Polls status until `queue_depth == 0`.
 - `close()` — Closes the underlying httpx client.
+
+## Media Manager Coverage Audit Script
+
+`scripts/audit_media_manager_coverage.py` checks the Redis media index against
+Media Manager and writes missing documents to a JSON file.
+
+### Overview
+
+- Scans Redis with `SCAN media:*` (same batching pattern as backfill scripts)
+- Reads each key as a JSON document
+- Filters to `mc_type` of `movie` and `tv` only
+- Calls `POST /api/metadata` for each `mc_id`
+- Writes missing items to `data/audit/missing_from_media_manager.json` by default
+
+### Usage
+
+```bash
+# Dry run, no /api/metadata calls (useful to validate scan behavior)
+python scripts/audit_media_manager_coverage.py --dry-run
+
+# Verify the first 100 tv/movie docs only
+python scripts/audit_media_manager_coverage.py --limit 100
+
+# Increase endpoint concurrency
+python scripts/audit_media_manager_coverage.py --concurrency 40 --scan-count 1000
+
+# Write to a custom file
+python scripts/audit_media_manager_coverage.py --output data/audit/missing.json
+```
+
+### Output format
+
+Each output entry includes identifying metadata and the full Redis doc:
+
+```json
+{
+  "mc_id": "tmdb_movie_550",
+  "redis_key": "media:tmdb_movie_550",
+  "source": "tmdb",
+  "source_id": "550",
+  "mc_type": "movie",
+  "title": "Fight Club",
+  "name": "",
+  "redis_doc": { ... full redis-search document ... }
+}
+```
+
+## Load Missing Media Manager Queue Script
+
+`scripts/push_missing_to_media_manager.py` reads the output produced by the
+coverage audit and submits those `redis_doc` payloads to `/insert-docs` for
+Media Manager insertion.
+
+### Usage
+
+```bash
+# Use the default audit output
+python scripts/push_missing_to_media_manager.py
+
+# Skip first N misses and process only M misses
+python scripts/push_missing_to_media_manager.py --skip 200 --take 100
+
+# Dry-run + custom batch
+python scripts/push_missing_to_media_manager.py --dry-run --batch-size 25
+
+# Submit without final flush
+python scripts/push_missing_to_media_manager.py --no-flush
+```
+
+### Input
+
+Input file is expected to be the audit format:
+
+```json
+{
+  "mc_id": "tmdb_movie_550",
+  "redis_doc": {
+    "id": "tmdb_movie_550",
+    "mc_id": "tmdb_movie_550",
+    "...": "..."
+  }
+}
+```
+
+### Behavior
+
+- No content filtering is applied; every `redis_doc` row in the selected window is
+  forwarded to `insert_docs`.
+- `--skip` drops the first N rows from the input list.
+- `--take` limits how many rows are sent (or all rows when omitted).
+- `--batch-size` is capped at `100`.
+- `--dry-run` sets `dry_run=true` on `/insert-docs`.
+- Without `--dry-run` and `--no-flush`, the script polls
+  `/insert-docs/status` and then calls `/insert-docs/flush`.
 
 ## Nightly ETL Integration
 
