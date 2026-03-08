@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -82,6 +82,8 @@ help:
 	@echo "    make last-etl-date - Show last successful ETL run date per job"
 	@echo "    make etl-media startdate=YYYY-MM-DD - Run movie + TV ETL from a start date"
 	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
+	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
+	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
 	@echo ""
 	@echo "  Redis Clone (public → local):"
 	@echo "    make scratch-redis-up    - Start disposable scratch Redis on port 6382"
@@ -447,6 +449,13 @@ add:
 # Run media index backfill (re-fetch all docs from TMDB API)
 backfill:
 	@. venv/bin/activate && python scripts/backfill_media_dates_and_timestamps.py $(ARGS)
+
+# Backfill missing external_ids from TMDB dedicated endpoint
+# Usage: make backfill-external-ids
+#        make backfill-external-ids MC_TYPE=movie
+#        make backfill-external-ids ARGS="--dry-run --limit 100"
+backfill-external-ids:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
 
 # ============================================================================
 # Redis Clone Operations (public → local)
