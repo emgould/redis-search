@@ -142,7 +142,8 @@ async def enrich_from_algolia(
     if store is None:
         store = get_store()
 
-    title = doc.get("title") or doc.get("search_title")
+    raw_title = doc.get("title") or doc.get("search_title") or ""
+    title = raw_title.strip() if isinstance(raw_title, str) else ""
     if not title:
         return False
 
