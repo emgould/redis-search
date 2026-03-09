@@ -13,6 +13,7 @@ from api.newsai.wrappers import newsai_wrapper
 from api.rottentomatoes.wrappers import rottentomatoes_wrapper
 from api.subapi.spotify.wrappers import spotify_wrapper
 from api.tmdb.core import TMDBService
+from api.tmdb.models import MCMovieItem
 from api.tmdb.wrappers import get_person_credits_async
 from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
@@ -154,9 +155,7 @@ def _pick_exact_match(
     return None
 
 
-def _remove_exact_from_results(
-    results: dict[str, Any], exact: dict[str, Any]
-) -> None:
+def _remove_exact_from_results(results: dict[str, Any], exact: dict[str, Any]) -> None:
     """Remove the exact-match item from its source list (in-place).
 
     Uses object identity so only the specific dict returned by
@@ -934,7 +933,9 @@ async def autocomplete_stream(
                     filtered = [
                         p
                         for p in parsed_all
-                        if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
+                        if is_person_autocomplete_match(
+                            q, p.get("search_title", "") or p.get("name", "")
+                        )
                     ]
                     # Re-rank to prioritize exact matches and shorter names
                     parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[:10]
@@ -2073,6 +2074,8 @@ async def _get_media_details(request: DetailsRequest, index_data: dict | None) -
                 include_videos=True,
                 include_watch_providers=True,
                 include_keywords=True,
+                include_release_dates=True,
+                include_content_ratings=True,
                 cast_limit=20,  # Get more cast for detailed view
             )
 
@@ -2092,8 +2095,11 @@ async def _get_media_details(request: DetailsRequest, index_data: dict | None) -
                 result["trailers"] = detailed.trailers or []
                 result["keywords"] = detailed.keywords or []
                 result["genres"] = detailed.genres or []
+                result["us_rating"] = detailed.us_rating
                 result["status"] = detailed.status
                 result["backdrop_path"] = detailed.backdrop_path
+                if isinstance(detailed, MCMovieItem):
+                    result["release_dates"] = detailed.release_dates or {}
                 # Optional attributes that may not exist on all media types
                 result["tagline"] = getattr(detailed, "tagline", None)
                 result["runtime"] = getattr(detailed, "runtime", None)
@@ -2123,6 +2129,8 @@ async def _get_media_details(request: DetailsRequest, index_data: dict | None) -
                 include_videos=True,
                 include_watch_providers=True,
                 include_keywords=True,
+                include_release_dates=True,
+                include_content_ratings=True,
                 cast_limit=20,
             )
 

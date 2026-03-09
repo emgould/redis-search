@@ -76,6 +76,10 @@ Shows{% endblock %} {% block body %}
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
+          <button type="button" id="search-tmdb-btn" onclick="searchTmdb()"
+            class="px-3 py-2 rounded-xl text-xs border border-orange-500/40 text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 hover:text-orange-200 transition-colors whitespace-nowrap">
+            Search TMDB
+          </button>
         </div>
 
         <!-- Filter Buttons -->
@@ -252,11 +256,25 @@ Shows{% endblock %} {% block body %}
     <div class="relative bg-surface-900 rounded-2xl border border-surface-700 shadow-2xl flex flex-col max-h-full">
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700 flex-shrink-0">
         <h3 id="json-modal-title" class="text-lg font-semibold text-white"></h3>
-        <button id="json-modal-close" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors">
-          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="json-modal-copy" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors" title="Copy JSON to clipboard">
+            <svg id="json-modal-copy-icon" class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <svg id="json-modal-copy-check" class="w-5 h-5 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </button>
+          <button id="json-modal-close" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors">
+            <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="px-4 pt-3 pb-2 border-b border-surface-700 flex-shrink-0">
+        <input id="json-modal-filter" type="text" placeholder="Filter by property name…"
+               class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-800 border border-surface-600 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono">
       </div>
       <pre id="json-modal-content" class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
     </div>
@@ -383,7 +401,7 @@ Shows{% endblock %} {% block body %}
   }
   
   // Track expanded state for each category (must be declared before search controller)
-  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false };
+  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false, tmdb_movie: false, tmdb_tv: false };
 
   // ---- Search Controller (imported from /static/js/search-controller.js) ----
   // Handles two-tier debounce: autocomplete (300ms) + full search (750ms).
@@ -457,6 +475,37 @@ Shows{% endblock %} {% block body %}
   function searchFor(query) {
     searchController.searchFor(query);
   }
+
+  async function searchTmdb() {
+    const query = searchInput.value.trim();
+    if (!query || query.length < 2) {
+      return;
+    }
+
+    searchController.cancelAll();
+    loadingSpinner.classList.remove("hidden");
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        limit: "10",
+      });
+      const response = await fetch(getApiUrl(`/api/search/tmdb?${params.toString()}`));
+      const payload = await response.json();
+      if (!response.ok) {
+        const err = payload?.error || `TMDB search failed (${response.status})`;
+        openJsonModal("TMDB Search Error", JSON.stringify({ error: err }, null, 2));
+        return;
+      }
+      renderResults(payload, query);
+      resultsContainer.classList.remove("hidden");
+    } catch (error) {
+      openJsonModal("TMDB Search Error", JSON.stringify({ error: String(error) }, null, 2));
+    } finally {
+      loadingSpinner.classList.add("hidden");
+    }
+  }
+
+  window.searchTmdb = searchTmdb;
 
   function formatYear(item) {
     // Use the normalized year field directly
@@ -563,25 +612,49 @@ Shows{% endblock %} {% block body %}
     const categories = [];
 
     if (results && typeof results === "object" && !Array.isArray(results)) {
-      // Exact match: render at very top (tier -1) when present
-      if (results.exact_match && typeof results.exact_match === "object") {
-        const em = results.exact_match;
-        const label = em.mc_type === "movie" ? "🎬 Movie (Exact Match)" : em.mc_type === "tv" ? "📺 TV Show (Exact Match)" : em.mc_type === "person" ? "👤 Person (Exact Match)" : em.mc_type === "podcast" ? "🎙️ Podcast (Exact Match)" : em.mc_type === "book" ? "📚 Book (Exact Match)" : em.mc_type === "author" ? "✍️ Author (Exact Match)" : "✨ Exact Match";
-        categories.push({
-          key: "exact_match",
-          label: label,
-          items: [em],
-          topPopularity: 999999,
-          color: "brand",
-          tier: -1,  // Always at top
-        });
-      }
+      const isTmdbMode = results.tmdb_mode === true;
 
-      // Build category objects with items, popularity, and tier
-      // Helper: filter out exact match from a list to avoid duplicate display
-      const exactMatchId = results.exact_match?.mc_id || null;
-      const withoutExactMatch = (arr) =>
-        exactMatchId && Array.isArray(arr) ? arr.filter((it) => it.mc_id !== exactMatchId) : arr || [];
+      if (isTmdbMode) {
+        if (Array.isArray(results.tmdb_movie) && results.tmdb_movie.length > 0) {
+          categories.push({
+            key: "tmdb_movie",
+            label: "🎬 TMDB Movies",
+            items: results.tmdb_movie,
+            topPopularity: parseFloat(results.tmdb_movie[0]?.popularity) || 0,
+            color: "orange",
+            tier: 1,
+          });
+        }
+        if (Array.isArray(results.tmdb_tv) && results.tmdb_tv.length > 0) {
+          categories.push({
+            key: "tmdb_tv",
+            label: "📺 TMDB TV",
+            items: results.tmdb_tv,
+            topPopularity: parseFloat(results.tmdb_tv[0]?.popularity) || 0,
+            color: "orange",
+            tier: 2,
+          });
+        }
+      } else {
+        // Exact match: render at very top (tier -1) when present
+        if (results.exact_match && typeof results.exact_match === "object") {
+          const em = results.exact_match;
+          const label = em.mc_type === "movie" ? "🎬 Movie (Exact Match)" : em.mc_type === "tv" ? "📺 TV Show (Exact Match)" : em.mc_type === "person" ? "👤 Person (Exact Match)" : em.mc_type === "podcast" ? "🎙️ Podcast (Exact Match)" : em.mc_type === "book" ? "📚 Book (Exact Match)" : em.mc_type === "author" ? "✍️ Author (Exact Match)" : "✨ Exact Match";
+          categories.push({
+            key: "exact_match",
+            label: label,
+            items: [em],
+            topPopularity: 999999,
+            color: "brand",
+            tier: -1,  // Always at top
+          });
+        }
+
+        // Build category objects with items, popularity, and tier
+        // Helper: filter out exact match from a list to avoid duplicate display
+        const exactMatchId = results.exact_match?.mc_id || null;
+        const withoutExactMatch = (arr) =>
+          exactMatchId && Array.isArray(arr) ? arr.filter((it) => it.mc_id !== exactMatchId) : arr || [];
 
       // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
       // Tier 2: People (Person, Author) - sorted by popularity within tier
@@ -719,22 +792,23 @@ Shows{% endblock %} {% block body %}
         });
       }
 
-      // Check for exact name matches in person-type categories (artist, author, person)
-      // If found, promote that category to tier 0 (top)
-      const personCategories = ["artist", "author", "person"];
-      const normalizedQuery = normalizeForMatch(query);
-      
-      for (const cat of categories) {
-        if (personCategories.includes(cat.key) && cat.items.length > 0) {
-          // Check if first item is an exact match
-          const firstItem = cat.items[0];
-          const itemName = firstItem.name || firstItem.search_title || firstItem.title || "";
-          const normalizedName = normalizeForMatch(itemName);
-          
-          if (normalizedQuery && normalizedName && normalizedQuery === normalizedName) {
-            // Exact match found - promote to tier 0
-            cat.tier = 0;
-            cat.exactMatch = true;
+        // Check for exact name matches in person-type categories (artist, author, person)
+        // If found, promote that category to tier 0 (top)
+        const personCategories = ["artist", "author", "person"];
+        const normalizedQuery = normalizeForMatch(query);
+
+        for (const cat of categories) {
+          if (personCategories.includes(cat.key) && cat.items.length > 0) {
+            // Check if first item is an exact match
+            const firstItem = cat.items[0];
+            const itemName = firstItem.name || firstItem.search_title || firstItem.title || "";
+            const normalizedName = normalizeForMatch(itemName);
+
+            if (normalizedQuery && normalizedName && normalizedQuery === normalizedName) {
+              // Exact match found - promote to tier 0
+              cat.tier = 0;
+              cat.exactMatch = true;
+            }
           }
         }
       }
@@ -875,6 +949,7 @@ Shows{% endblock %} {% block body %}
     const isRating = item.source === "rottentomatoes" || item.critics_score !== undefined;
     const isMusicArtist = item.mc_subtype === "music_artist" || (item.source === "spotify" && item.mc_type === "person");
     const isMusicAlbum = item.mc_type === "music_album" || (item.source === "spotify" && item.title && item.artist);
+    const isTmdbLive = item._tmdb_live === true;
 
     // For authors (OpenLibrary), show author-specific info
     if (isAuthor) {
@@ -989,6 +1064,13 @@ Shows{% endblock %} {% block body %}
                     class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
                     View Media Details
                 </button>
+                ${isTmdbLive
+        ? `<button type="button" onclick="event.stopPropagation(); addTmdbToRedis(${sourceId || 0}, '${item.mc_type || "movie"}', this)"
+                    class="px-2 py-0.5 text-xs rounded bg-orange-600/80 hover:bg-orange-500 text-white transition-colors whitespace-nowrap">
+                    ADD TO REDIS
+                </button>`
+        : ""
+      }
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -1858,12 +1940,61 @@ Shows{% endblock %} {% block body %}
   const jsonModalContent = document.getElementById("json-modal-content");
   const jsonModalClose = document.getElementById("json-modal-close");
   const jsonModalBackdrop = document.getElementById("json-modal-backdrop");
+  const jsonModalCopy = document.getElementById("json-modal-copy");
+  const jsonModalCopyIcon = document.getElementById("json-modal-copy-icon");
+  const jsonModalCopyCheck = document.getElementById("json-modal-copy-check");
+
+  jsonModalCopy.addEventListener("click", async () => {
+    const text = jsonModalContent.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      jsonModalCopyIcon.classList.add("hidden");
+      jsonModalCopyCheck.classList.remove("hidden");
+      setTimeout(() => {
+        jsonModalCopyCheck.classList.add("hidden");
+        jsonModalCopyIcon.classList.remove("hidden");
+      }, 1500);
+    } catch (_) {
+      /* clipboard not available — silently ignore */
+    }
+  });
+
+  const jsonModalFilter = document.getElementById("json-modal-filter");
+  let _jsonModalFullText = "";
+
+  function _applyJsonFilter(query) {
+    if (!query) {
+      jsonModalContent.textContent = _jsonModalFullText;
+      return;
+    }
+    try {
+      const obj = JSON.parse(_jsonModalFullText);
+      if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+        const lower = query.toLowerCase();
+        const filtered = {};
+        for (const [k, v] of Object.entries(obj)) {
+          if (k.toLowerCase().includes(lower)) filtered[k] = v;
+        }
+        jsonModalContent.textContent = JSON.stringify(filtered, null, 2);
+      }
+    } catch (_) {
+      /* not valid JSON — keep full text visible */
+    }
+  }
+
+  jsonModalFilter.addEventListener("input", (e) => {
+    _applyJsonFilter(e.target.value.trim());
+  });
 
   function openJsonModal(title, jsonStr) {
     jsonModalTitle.textContent = title;
+    _jsonModalFullText = jsonStr;
     jsonModalContent.textContent = jsonStr;
+    jsonModalFilter.value = "";
     jsonModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    jsonModalCopyCheck.classList.add("hidden");
+    jsonModalCopyIcon.classList.remove("hidden");
   }
 
   function closeJsonModal() {
@@ -1874,10 +2005,27 @@ Shows{% endblock %} {% block body %}
   jsonModalBackdrop.addEventListener("click", closeJsonModal);
   jsonModalClose.addEventListener("click", closeJsonModal);
 
-  window.showRedisDoc = function (mcId) {
+  window.showRedisDoc = async function (mcId) {
     const item = window._itemsByMcId && mcId ? window._itemsByMcId[mcId] : null;
     if (!item) {
       openJsonModal("Redis Doc (not found)", JSON.stringify({ error: "Item not found in results" }, null, 2));
+      return;
+    }
+    if (item._tmdb_live) {
+      openJsonModal("Redis Doc", "Loading full document from TMDB...");
+      try {
+        const base = typeof getApiUrl === "function" ? getApiUrl("/api/media-details") : "/api/media-details";
+        const params = new URLSearchParams({ mc_id: mcId, allow_insert: "true", force_refresh: "true" });
+        const resp = await fetch(`${base}?${params}`);
+        const data = await resp.json();
+        jsonModalTitle.textContent = "Redis Doc";
+        _jsonModalFullText = JSON.stringify(data, null, 2);
+        _applyJsonFilter(jsonModalFilter.value.trim());
+      } catch (err) {
+        jsonModalTitle.textContent = "Redis Doc";
+        _jsonModalFullText = JSON.stringify(item, null, 2);
+        _applyJsonFilter(jsonModalFilter.value.trim());
+      }
       return;
     }
     openJsonModal("Redis Doc", JSON.stringify(item, null, 2));
@@ -1890,15 +2038,57 @@ Shows{% endblock %} {% block body %}
     }
     openJsonModal("Media Details", "Loading...");
     try {
+      const mcId = `tmdb_${mediaType}_${tmdbId}`;
       const base = typeof getApiUrl === "function" ? getApiUrl("/api/media-details") : "/api/media-details";
-      const params = new URLSearchParams({ tmdb_id: tmdbId, media_type: mediaType });
+      const params = new URLSearchParams({ mc_id: mcId, allow_insert: "true", force_refresh: "true" });
       const resp = await fetch(`${base}?${params}`);
       const data = await resp.json();
       jsonModalTitle.textContent = "Media Details";
-      jsonModalContent.textContent = JSON.stringify(data, null, 2);
+      _jsonModalFullText = JSON.stringify(data, null, 2);
+      _applyJsonFilter(jsonModalFilter.value.trim());
     } catch (err) {
       jsonModalTitle.textContent = "Media Details";
-      jsonModalContent.textContent = JSON.stringify({ error: String(err) }, null, 2);
+      _jsonModalFullText = JSON.stringify({ error: String(err) }, null, 2);
+      _applyJsonFilter(jsonModalFilter.value.trim());
+    }
+  };
+
+  window.addTmdbToRedis = async function (tmdbId, mediaType, buttonEl) {
+    if (!tmdbId || !mediaType) {
+      openJsonModal("ADD TO REDIS", JSON.stringify({ error: "Missing tmdb_id or media_type" }, null, 2));
+      return;
+    }
+
+    const button = buttonEl instanceof HTMLButtonElement ? buttonEl : null;
+    const originalText = button ? button.textContent : null;
+    if (button) {
+      button.disabled = true;
+      button.textContent = "ADDING...";
+      button.classList.add("opacity-60", "cursor-not-allowed");
+    }
+
+    try {
+      const base = getApiUrl("/api/tmdb/add-to-redis");
+      const params = new URLSearchParams({ tmdb_id: String(tmdbId), mc_type: String(mediaType) });
+      const resp = await fetch(`${base}?${params.toString()}`, { method: "POST" });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      if (button) {
+        button.textContent = "ADDED";
+        button.classList.remove("bg-orange-600/80", "hover:bg-orange-500");
+        button.classList.add("bg-emerald-600/80");
+      }
+      openJsonModal("ADD TO REDIS", JSON.stringify(data, null, 2));
+    } catch (err) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText || "ADD TO REDIS";
+        button.classList.remove("opacity-60", "cursor-not-allowed");
+      }
+      openJsonModal("ADD TO REDIS", JSON.stringify({ error: String(err) }, null, 2));
     }
   };
 
@@ -2019,6 +2209,7 @@ Shows{% endblock %} {% block body %}
     const status = data.status;
     const tagline = data.tagline;
     const director = data.director?.name || null;
+    const usRating = data.us_rating || null;
 
     // Watch providers
     const watchProviders = data.watch_providers || {};
@@ -2026,6 +2217,8 @@ Shows{% endblock %} {% block body %}
     const flatrate = watchProviders.flatrate || [];
     const rent = watchProviders.rent || [];
     const buy = watchProviders.buy || [];
+    const hasWatchAvailability =
+      flatrate.length > 0 || rent.length > 0 || buy.length > 0 || Boolean(streamingPlatform);
 
     // Trailers
     const primaryTrailer = data.primary_trailer;
@@ -2100,6 +2293,10 @@ Shows{% endblock %} {% block body %}
         ? `<span class="text-surface-500 capitalize">${status}</span>`
         : ""
       }
+              ${usRating
+        ? `<span class="px-2.5 py-1 rounded-md bg-surface-800 text-surface-200 text-xs font-semibold">US: ${usRating}</span>`
+        : ""
+      }
             </div>
             
             <!-- Rating -->
@@ -2155,11 +2352,6 @@ Shows{% endblock %} {% block body %}
         </div>
         
         <!-- Watch Providers -->
-        ${flatrate.length > 0 ||
-        rent.length > 0 ||
-        buy.length > 0 ||
-        streamingPlatform
-        ? `
           <div class="mt-8">
             <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Where to Watch</h3>
             ${streamingPlatform
@@ -2244,10 +2436,11 @@ Shows{% endblock %} {% block body %}
             `
           : ""
         }
+            ${!hasWatchAvailability
+          ? `<p class="text-surface-500">None Available</p>`
+          : ""
+        }
           </div>
-        `
-        : ""
-      }
         
         <!-- Trailer -->
         ${primaryTrailer

@@ -34,6 +34,8 @@ class JobRunResult:
     started_at: datetime | None = None
     completed_at: datetime | None = None
     duration_seconds: float | None = None
+    effective_start_date: str | None = None  # YYYY-MM-DD resolved at runtime
+    effective_end_date: str | None = None  # YYYY-MM-DD resolved at runtime
 
     # Job-specific stats
     changes_found: int = 0
@@ -55,6 +57,8 @@ class JobRunResult:
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "duration_seconds": self.duration_seconds,
+            "effective_start_date": self.effective_start_date,
+            "effective_end_date": self.effective_end_date,
             "changes_found": self.changes_found,
             "documents_upserted": self.documents_upserted,
             "documents_skipped": self.documents_skipped,
@@ -431,6 +435,8 @@ class ETLMetadataStore:
                 job_name=jr_data.get("job_name", ""),
                 media_type=jr_data.get("media_type", ""),
                 status=jr_data.get("status", "unknown"),
+                effective_start_date=jr_data.get("effective_start_date"),
+                effective_end_date=jr_data.get("effective_end_date"),
                 changes_found=jr_data.get("changes_found", 0),
                 documents_upserted=jr_data.get("documents_upserted", 0),
                 documents_skipped=jr_data.get("documents_skipped", 0),

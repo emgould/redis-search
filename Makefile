@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -82,6 +82,18 @@ help:
 	@echo "    make last-etl-date - Show last successful ETL run date per job"
 	@echo "    make etl-media startdate=YYYY-MM-DD - Run movie + TV ETL from a start date"
 	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
+	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
+	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
+	@echo ""
+	@echo "  Redis Clone (public → local):"
+	@echo "    make scratch-redis-up    - Start disposable scratch Redis on port 6382"
+	@echo "    make scratch-redis-down  - Stop and remove scratch Redis container"
+	@echo "    make scratch-redis-reset - Reset scratch Redis (destroy volume + restart)"
+	@echo "    make snapshot-to-scratch - Full snapshot/restore public → scratch"
+	@echo "    make snapshot-to-local   - Full snapshot/restore public → local (destructive)"
+	@echo "    make clone-prefix-to-scratch PREFIXES='media:' - DUMP/RESTORE prefix → scratch"
+	@echo "    make clone-prefix-to-local PREFIXES='media:'   - DUMP/RESTORE prefix → local"
+	@echo "    make validate-clone TARGET=scratch              - Validate clone integrity"
 	@echo ""
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
@@ -309,11 +321,11 @@ create-redis-vm:
 
 # Deploy to Cloud Run (dev environment)
 # Deploy Search API to Cloud Run (for autocomplete/search endpoints)
-deploy-web:
+deploy-web: secrets-setup
 	./scripts/deploy_web_cr.sh
 
 # Deploy ETL service to VM (ETL container only, Redis unchanged)
-deploy-etl:
+deploy-etl: secrets-setup
 	./scripts/deploy_etl_vm.sh
 
 # Setup scheduled ETL (2 AM UTC daily, auto-shutdown after completion)
@@ -437,3 +449,59 @@ add:
 # Run media index backfill (re-fetch all docs from TMDB API)
 backfill:
 	@. venv/bin/activate && python scripts/backfill_media_dates_and_timestamps.py $(ARGS)
+
+# Backfill missing external_ids from TMDB dedicated endpoint
+# Usage: make backfill-external-ids
+#        make backfill-external-ids MC_TYPE=movie
+#        make backfill-external-ids ARGS="--dry-run --limit 100"
+backfill-external-ids:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# ============================================================================
+# Redis Clone Operations (public → local)
+# ============================================================================
+
+# Scratch Redis lifecycle
+scratch-redis-up:
+	@echo "Starting scratch Redis on port 6382..."
+	docker compose -f docker/docker-compose.scratch.yml up -d
+	@echo "Scratch Redis ready at localhost:6382"
+
+scratch-redis-down:
+	@echo "Stopping scratch Redis..."
+	docker compose -f docker/docker-compose.scratch.yml down
+
+scratch-redis-reset:
+	@echo "Resetting scratch Redis (destroying volume)..."
+	docker compose -f docker/docker-compose.scratch.yml down -v
+	docker compose -f docker/docker-compose.scratch.yml up -d
+	@echo "Scratch Redis reset and ready at localhost:6382"
+
+# Full snapshot/restore
+snapshot-to-scratch:
+	@echo "Snapshot public Redis → scratch..."
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/snapshot_to_local.py --target scratch'
+
+snapshot-to-local:
+	@echo "Snapshot public Redis → local (DESTRUCTIVE)..."
+	@echo "This will DESTROY all data in local Redis."
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/snapshot_to_local.py --target local --confirm-replace'
+
+# Prefix bulk transfer (DUMP/RESTORE)
+# Usage: make clone-prefix-to-scratch PREFIXES="media: person:"
+clone-prefix-to-scratch:
+	@if [ -z "$(PREFIXES)" ]; then echo "ERROR: PREFIXES is required. Usage: make clone-prefix-to-scratch PREFIXES='media: person:'"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/bulk_clone_prefix.py --prefixes $(PREFIXES) --target scratch'
+
+# Usage: make clone-prefix-to-local PREFIXES="media: person:"
+clone-prefix-to-local:
+	@if [ -z "$(PREFIXES)" ]; then echo "ERROR: PREFIXES is required. Usage: make clone-prefix-to-local PREFIXES='media: person:'"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/bulk_clone_prefix.py --prefixes $(PREFIXES) --target local --confirm-replace'
+
+# Validation
+# Usage: make validate-clone TARGET=scratch
+#        make validate-clone TARGET=local
+#        make validate-clone TARGET=scratch PREFIXES="media:"
+validate-clone:
+	@if [ -z "$(TARGET)" ]; then echo "ERROR: TARGET is required. Usage: make validate-clone TARGET=scratch"; exit 1; fi
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/validate_clone.py --source public --target $(TARGET) $(if $(PREFIXES),--prefixes $(PREFIXES),)'

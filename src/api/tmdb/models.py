@@ -916,7 +916,7 @@ class MCPersonItem(MCBaseItem):
     mc_type: MCType = MCType.PERSON
     source: MCSources = MCSources.TMDB
 
-    adult: bool = False
+    adult: bool | None = None
     id: int
     name: str
     gender: int | None = None

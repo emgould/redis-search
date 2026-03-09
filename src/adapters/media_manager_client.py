@@ -61,6 +61,10 @@ class HealthResponse(TypedDict):
     media_manager_initialized: bool
 
 
+class MetadataResponse(TypedDict):
+    metadata: dict[str, object]
+
+
 class MediaManagerClient:
     """Thin async wrapper around the Media Manager /insert-docs endpoints."""
 
@@ -152,6 +156,27 @@ class MediaManagerClient:
             errors=data.get("errors", []),
             queue_depth=data["queue_depth"],
         )
+
+    async def get_metadata(
+        self,
+        media_id: str,
+    ) -> MetadataResponse | None:
+        """POST /api/metadata for a single media document lookup.
+
+        Returns `None` when the media id is not present.
+        """
+        client = await self._get_client()
+        resp = await client.post("/api/metadata", json={"media_id": media_id})
+
+        if resp.status_code == 404:
+            return None
+
+        resp.raise_for_status()
+        data: dict[str, object] = resp.json()
+        metadata = data.get("metadata")
+        if not isinstance(metadata, dict):
+            raise ValueError("Unexpected /api/metadata response: missing metadata object")
+        return MetadataResponse(metadata=metadata)
 
     async def get_status(self) -> StatusResponse:
         """GET /insert-docs/status for current processing state."""
