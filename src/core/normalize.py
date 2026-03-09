@@ -19,6 +19,7 @@ from typing import Any, cast
 
 from contracts.models import MCSources, MCSubType, MCType
 from core.iptc import expand_keywords, normalize_tag
+from core.wikidata_crossref import enrich_external_ids
 
 # Regex to strip apostrophes (straight + curly) from titles for search indexing.
 # RediSearch tokenizes apostrophes as word separators, so "It's" becomes ["it", "s"].
@@ -819,7 +820,11 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "budget": doc.budget,
         "revenue": doc.revenue,
         "spoken_languages": doc.spoken_languages,
-        "external_ids": doc.external_ids,
+        "external_ids": enrich_external_ids(
+            doc.mc_type.value, doc.source_id, doc.external_ids
+        )
+        if doc.mc_type in (MCType.MOVIE, MCType.TV_SERIES)
+        else doc.external_ids,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,
