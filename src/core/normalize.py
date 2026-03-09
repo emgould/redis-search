@@ -119,6 +119,12 @@ class SearchDocument:
     revenue: int | None = None  # Revenue for the media item
     spoken_languages: list[str] | None = None  # List of spoken languages for the media item
     external_ids: dict[str, Any] | None = None  # External IDs (imdb_id, tvdb_id, etc.)
+    # Rotten Tomatoes enrichment fields
+    rt_audience_score: int | None = None
+    rt_critics_score: int | None = None
+    rt_vanity: str | None = None
+    rt_release_year: int | None = None
+    rt_runtime: int | None = None
 
 
 class BaseNormalizer(ABC):
@@ -825,6 +831,11 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         )
         if doc.mc_type in (MCType.MOVIE, MCType.TV_SERIES)
         else doc.external_ids,
+        "rt_audience_score": doc.rt_audience_score,
+        "rt_critics_score": doc.rt_critics_score,
+        "rt_vanity": doc.rt_vanity,
+        "rt_release_year": doc.rt_release_year,
+        "rt_runtime": doc.rt_runtime,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,

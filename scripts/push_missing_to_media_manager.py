@@ -119,6 +119,7 @@ async def _send_batches(
     documents: list[dict[str, object]],
     batch_size: int,
     dry_run: bool,
+    metadata_only: bool = False,
 ) -> tuple[LoaderStats, list[str]]:
     stats: LoaderStats = {
         "prepared": len(documents),
@@ -137,6 +138,7 @@ async def _send_batches(
             response = await media_manager.insert_docs(
                 [dict(item) for item in batch],
                 dry_run=dry_run,
+                metadata_only=metadata_only,
             )
         except Exception as exc:
             stats["errors"] += 1
@@ -171,6 +173,7 @@ async def push_missing_to_media_manager(
     no_flush: bool,
     poll_interval: float,
     max_wait: float,
+    metadata_only: bool = False,
 ) -> None:
     parsed_batch_size = min(max(batch_size, 1), 100)
     if parsed_batch_size != batch_size:
@@ -216,6 +219,7 @@ async def push_missing_to_media_manager(
             documents=documents,
             batch_size=parsed_batch_size,
             dry_run=dry_run,
+            metadata_only=metadata_only,
         )
         stats["submitted"] = batch_stats["submitted"]
         stats["queued"] = batch_stats["queued"]
@@ -299,6 +303,11 @@ def _parse_args() -> argparse.Namespace:
         help="Submit with dry_run=true; validate endpoint response without insertion",
     )
     parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="Update FAISS metadata only; skip wiki/LLM/embedding pipeline",
+    )
+    parser.add_argument(
         "--no-flush",
         action="store_true",
         help="Submit batches and do not call /insert-docs/flush",
@@ -331,6 +340,7 @@ async def main() -> None:
         no_flush=args.no_flush,
         poll_interval=args.poll_interval,
         max_wait=args.max_wait,
+        metadata_only=args.metadata_only,
     )
     elapsed = time.time() - start
     print(f"  elapsed_seconds: {elapsed:.2f}\n")

@@ -43,6 +43,7 @@ from core.normalize import document_to_redis, normalize_document, resolve_timest
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from etl.documentary_filter import is_documentary, is_eligible_documentary
 from etl.media_manager_filter import passes_media_manager_filter
+from etl.rt_enrichment import enrich_redis_doc
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
 
@@ -633,6 +634,7 @@ class TMDBChangesETL(TMDBService):
                                 continue
                             key = f"{prefix}{doc.id}"
                             redis_doc = document_to_redis(doc)
+                            enrich_redis_doc(redis_doc)
                             prepared.append((key, redis_doc))
                     except Exception as e:
                         stats.load_phase.items_failed += 1
