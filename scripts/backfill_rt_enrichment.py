@@ -83,35 +83,35 @@ def _needs_rt(doc: dict[str, Any], force: bool) -> bool:
 
 async def _flush_mm_buffer(
     mm_client: MediaManagerClient,
-    buffer: list[dict[str, Any]],
+    docs: list[dict[str, Any]],
     stats: dict[str, int],
     dry_run: bool,
 ) -> None:
-    """Send a batch of enriched docs to Media Manager with metadata_only=True."""
-    if not buffer:
+    """Fire-and-forget a batch to Media Manager with metadata_only=True."""
+    if not docs:
         return
-    try:
-        response = await mm_client.insert_docs(
-            [dict(doc) for doc in buffer],
-            dry_run=dry_run,
-            metadata_only=True,
-        )
-        stats["mm_queued"] += response["queued"]
-        stats["mm_skipped"] += response["skipped"]
-        mm_errors = response.get("errors", [])
-        if mm_errors:
-            stats["mm_errors"] += len(mm_errors)
-            for err in mm_errors:
-                logger.warning("MM batch error: %s", err)
-        logger.info(
-            "MM batch sent: queued=%d skipped=%d queue_depth=%d",
-            response["queued"],
-            response["skipped"],
-            response["queue_depth"],
-        )
-    except Exception as exc:
-        stats["mm_errors"] += 1
-        logger.warning("MM batch failed: %s", exc)
+    payload = [dict(doc) for doc in docs]
+    stats["mm_submitted"] += len(payload)
+
+    async def _send() -> None:
+        try:
+            response = await mm_client.insert_docs(
+                payload,
+                dry_run=dry_run,
+                metadata_only=True,
+            )
+            stats["mm_queued"] += response["queued"]
+            stats["mm_skipped"] += response["skipped"]
+            mm_errors = response.get("errors", [])
+            if mm_errors:
+                stats["mm_errors"] += len(mm_errors)
+                for err in mm_errors:
+                    logger.warning("MM batch error: %s", err)
+        except Exception as exc:
+            stats["mm_errors"] += 1
+            logger.warning("MM batch failed: %s", exc)
+
+    asyncio.create_task(_send())
 
 
 async def backfill(
@@ -132,6 +132,7 @@ async def backfill(
         "updated": 0,
         "already_has_rt": 0,
         "no_match": 0,
+        "mm_submitted": 0,
         "mm_queued": 0,
         "mm_skipped": 0,
         "mm_errors": 0,
@@ -224,6 +225,7 @@ async def backfill(
 
             for key, doc in chunk:
                 enriched = False
+                had_rt = doc.get("rt_audience_score") is not None or doc.get("rt_critics_score") is not None
 
                 local_hit = enrich_from_local(doc, store=store)
                 if local_hit:
@@ -234,6 +236,10 @@ async def backfill(
                     if algolia_hit:
                         enriched = True
                         stats["enriched_algolia"] += 1
+
+                if not enriched and force and had_rt:
+                    enriched = True
+                    stats["enriched_local"] += 1
 
                 if not enriched:
                     stats["no_match"] += 1
@@ -278,6 +284,11 @@ async def backfill(
             await _flush_mm_buffer(mm_client, mm_buffer, stats, dry_run)
             mm_buffer.clear()
 
+        pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
+        if pending:
+            logger.info("Waiting for %d MM batches to complete...", len(pending))
+            await asyncio.gather(*pending, return_exceptions=True)
+
         logger.info(
             "RT backfill complete: scanned=%d candidates=%d updated=%d no_match=%d",
             stats["scanned"],
@@ -287,7 +298,8 @@ async def backfill(
         )
         if push_to_mm:
             logger.info(
-                "MM propagation: queued=%d skipped=%d errors=%d",
+                "MM propagation: submitted=%d queued=%d skipped=%d errors=%d",
+                stats["mm_submitted"],
                 stats["mm_queued"],
                 stats["mm_skipped"],
                 stats["mm_errors"],
@@ -314,6 +326,7 @@ def _print_stats(stats: dict[str, int], elapsed: float, dry_run: bool) -> None:
         "enriched_algolia",
         "no_match",
         "updated",
+        "mm_submitted",
         "mm_queued",
         "mm_skipped",
         "mm_errors",
