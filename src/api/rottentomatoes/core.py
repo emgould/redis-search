@@ -4,6 +4,7 @@ Handles core API communication and search operations.
 """
 
 from typing import Any, cast
+from urllib.parse import quote_plus
 
 from api.rottentomatoes.models import (
     AlgoliaMultiQueryResponse,
@@ -70,7 +71,7 @@ class RottenTomatoesService(BaseAPIClient):
 
     def _build_search_params(self, query: str, hits_per_page: int = 10) -> str:
         """Build encoded search parameters for Algolia request."""
-        encoded_query = query.replace(" ", "+")
+        encoded_query = quote_plus(query)
         # Note: RT Algolia expects spaces around the equals sign in the filter
         # isEmsSearchable = 1 (encoded as isEmsSearchable%20%3D%201)
         return (
@@ -147,7 +148,17 @@ class RottenTomatoesService(BaseAPIClient):
             )
 
             if not response or status_code != 200:
-                logger.error(f"RottenTomatoes search failed with status {status_code}")
+                if status_code == 400:
+                    logger.warning(
+                        "RottenTomatoes search returned 400 for query=%r",
+                        query,
+                    )
+                else:
+                    logger.error(
+                        "RottenTomatoes search failed with status %s for query=%r",
+                        status_code,
+                        query,
+                    )
                 return AlgoliaMultiQueryResponse(results=[])
 
             return AlgoliaMultiQueryResponse.model_validate(response)

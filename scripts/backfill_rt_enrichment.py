@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
 """Backfill Rotten Tomatoes enrichment for existing Redis media documents.
 
-Scans ``media:*`` keys, loads the full JSON document, and attempts RT
+Scans ``media:*`` keys page-by-page, loads full JSON documents, and attempts RT
 enrichment using the 3-tier strategy:
   1. Vanity lookup via ``external_ids.rt_id``
   2. Title + year match against local RT content index
   3. (Optional) Live Algolia search fallback (``--algolia-fallback``)
 
 Only documents that gain new RT data are patched (``JSON.SET`` on specific
-paths). ``modified_at`` is updated on every write.
+paths). ``modified_at`` is updated only when a Redis patch is written.
 
-With ``--push-to-mm``, enriched documents are batched and sent to
-Media Manager via ``/insert-docs`` with ``metadata_only=True`` so only
-stored FAISS metadata is updated (no wiki/LLM/embedding cost).
+With ``--push-to-mm``, eligible documents are sent to Media Manager via
+``/insert-docs`` with ``metadata_only=True`` so only stored FAISS metadata is
+updated (no wiki/LLM/embedding cost). When ``--force`` is also supplied,
+documents that already have RT enrichment are sent to Media Manager even when
+no new Redis patch is needed. When ``--force-all`` is supplied, every scanned
+document that passes filtering is sent to Media Manager regardless of RT state.
 
 Usage:
     python scripts/backfill_rt_enrichment.py --dry-run
     python scripts/backfill_rt_enrichment.py --limit 500
     python scripts/backfill_rt_enrichment.py --algolia-fallback
     python scripts/backfill_rt_enrichment.py --mc-type movie
-    python scripts/backfill_rt_enrichment.py --force
-    python scripts/backfill_rt_enrichment.py --push-to-mm
+    python scripts/backfill_rt_enrichment.py --push-to-mm --force
+    python scripts/backfill_rt_enrichment.py --push-to-mm --force-all
 """
 
 from __future__ import annotations
@@ -74,10 +77,13 @@ def _connect_redis() -> Redis:  # type: ignore[type-arg]
     )
 
 
-def _needs_rt(doc: dict[str, Any], force: bool) -> bool:
-    """Return True when the document is missing RT data (or force is on)."""
-    if force:
-        return True
+def _has_rt(doc: dict[str, Any]) -> bool:
+    """Return True when the document already has RT score data."""
+    return doc.get("rt_audience_score") is not None or doc.get("rt_critics_score") is not None
+
+
+def _needs_rt(doc: dict[str, Any]) -> bool:
+    """Return True when the document is missing RT score data."""
     return doc.get("rt_audience_score") is None and doc.get("rt_critics_score") is None
 
 
@@ -122,6 +128,7 @@ async def backfill(
     mc_type_filter: str | None,
     algolia_fallback: bool,
     force: bool,
+    force_all: bool,
     push_to_mm: bool = False,
 ) -> dict[str, int]:
     stats: dict[str, int] = {
@@ -155,13 +162,13 @@ async def backfill(
 
         logger.info(
             "RT backfill start: scan_count=%d limit=%s algolia=%s dry_run=%s "
-            "mc_type=%s force=%s push_to_mm=%s",
+            "mc_type=%s force=%s force_all=%s push_to_mm=%s",
             scan_count, limit, algolia_fallback, dry_run,
-            mc_type_filter, force, push_to_mm,
+            mc_type_filter, force, force_all, push_to_mm,
         )
 
         cursor = 0
-        candidates: list[tuple[str, dict[str, Any]]] = []
+        processed = 0
 
         while True:
             cursor, keys = await redis.scan(
@@ -182,7 +189,7 @@ async def backfill(
                 logger.info(
                     "Scan progress: scanned=%d candidates=%d already_has=%d",
                     stats["scanned"],
-                    len(candidates),
+                    stats["candidates"],
                     stats["already_has_rt"],
                 )
 
@@ -191,6 +198,7 @@ async def backfill(
                 pipe.json().get(key)
             docs_raw: list[object] = await pipe.execute()
 
+            page_candidates: list[tuple[str, dict[str, Any], bool, bool]] = []
             for key, doc_raw in zip(keys, docs_raw, strict=True):
                 if not isinstance(doc_raw, dict):
                     continue
@@ -199,86 +207,95 @@ async def backfill(
                 if mc_type_filter and mc_type_val != mc_type_filter:
                     continue
 
-                if not _needs_rt(doc_raw, force):
+                had_rt = _has_rt(doc_raw)
+                needs_rt = _needs_rt(doc_raw)
+                should_force_all_send = force_all and mm_client is not None
+                should_force_send = force and mm_client is not None and had_rt
+
+                if not needs_rt and not should_force_send and not should_force_all_send:
                     stats["already_has_rt"] += 1
                     continue
 
-                candidates.append((str(key), doc_raw))
+                page_candidates.append((str(key), doc_raw, had_rt, needs_rt))
 
-            if limit is not None and len(candidates) >= limit:
-                candidates = candidates[:limit]
+            if limit is not None:
+                remaining = limit - processed
+                if remaining <= 0:
+                    break
+                page_candidates = page_candidates[:remaining]
+
+            stats["candidates"] += len(page_candidates)
+
+            for offset in range(0, len(page_candidates), concurrency):
+                chunk = page_candidates[offset : offset + concurrency]
+
+                for key, doc, had_rt, needs_rt in chunk:
+                    enriched = False
+                    should_send_to_mm = False
+
+                    if needs_rt:
+                        local_hit = enrich_from_local(doc, store=store)
+                        if local_hit:
+                            enriched = True
+                            stats["enriched_local"] += 1
+                        elif algolia_fallback:
+                            algolia_hit = await enrich_from_algolia(doc, store=store)
+                            if algolia_hit:
+                                enriched = True
+                                stats["enriched_algolia"] += 1
+
+                    if enriched:
+                        if dry_run:
+                            stats["updated"] += 1
+                        else:
+                            now_ts = int(datetime.now(UTC).timestamp())
+                            write_pipe = redis.pipeline()
+                            for field_name in RT_PATCH_FIELDS:
+                                value = doc.get(field_name)
+                                if value is not None:
+                                    write_pipe.json().set(key, f"$.{field_name}", value)
+                            write_pipe.json().set(key, "$.modified_at", now_ts)
+                            await write_pipe.execute()
+                            stats["updated"] += 1
+                        should_send_to_mm = mm_client is not None
+                    elif force_all and mm_client is not None or force and mm_client is not None and had_rt:
+                        should_send_to_mm = True
+                    elif needs_rt:
+                        stats["no_match"] += 1
+
+                    if should_send_to_mm and mm_client is not None:
+                        mm_buffer.append(doc)
+                        if len(mm_buffer) >= MM_BATCH_SIZE:
+                            await _flush_mm_buffer(mm_client, mm_buffer, stats, dry_run)
+                            mm_buffer.clear()
+
+                processed += len(chunk)
+                if (
+                    processed % max(concurrency, PROCESS_LOG_INTERVAL) < len(chunk)
+                    or (limit is not None and processed >= limit)
+                ):
+                    logger.info(
+                        "Progress: handled=%d candidates=%d local=%d algolia=%d updated=%d no_match=%d",
+                        processed,
+                        stats["candidates"],
+                        stats["enriched_local"],
+                        stats["enriched_algolia"],
+                        stats["updated"],
+                        stats["no_match"],
+                    )
+
+            if limit is not None and processed >= limit:
                 break
 
             if cursor == 0:
                 break
 
-        stats["candidates"] = len(candidates)
         logger.info("Candidate scan complete: candidates=%d", stats["candidates"])
 
-        if not candidates:
+        if stats["candidates"] == 0:
             logger.info("No candidates found, nothing to backfill.")
             await redis.aclose()
             return stats
-
-        for offset in range(0, len(candidates), concurrency):
-            chunk = candidates[offset : offset + concurrency]
-
-            for key, doc in chunk:
-                enriched = False
-                had_rt = doc.get("rt_audience_score") is not None or doc.get("rt_critics_score") is not None
-
-                local_hit = enrich_from_local(doc, store=store)
-                if local_hit:
-                    enriched = True
-                    stats["enriched_local"] += 1
-                elif algolia_fallback:
-                    algolia_hit = await enrich_from_algolia(doc, store=store)
-                    if algolia_hit:
-                        enriched = True
-                        stats["enriched_algolia"] += 1
-
-                if not enriched and force and had_rt:
-                    enriched = True
-                    stats["enriched_local"] += 1
-
-                if not enriched:
-                    stats["no_match"] += 1
-                    continue
-
-                if dry_run:
-                    stats["updated"] += 1
-                    continue
-
-                now_ts = int(datetime.now(UTC).timestamp())
-                write_pipe = redis.pipeline()
-                for field_name in RT_PATCH_FIELDS:
-                    value = doc.get(field_name)
-                    if value is not None:
-                        write_pipe.json().set(key, f"$.{field_name}", value)
-                write_pipe.json().set(key, "$.modified_at", now_ts)
-                await write_pipe.execute()
-                stats["updated"] += 1
-
-                if mm_client is not None:
-                    mm_buffer.append(doc)
-                    if len(mm_buffer) >= MM_BATCH_SIZE:
-                        await _flush_mm_buffer(mm_client, mm_buffer, stats, dry_run)
-                        mm_buffer.clear()
-
-            processed = min(offset + len(chunk), len(candidates))
-            if (
-                processed % max(concurrency, PROCESS_LOG_INTERVAL) < concurrency
-                or processed == len(candidates)
-            ):
-                logger.info(
-                    "Progress: handled=%d/%d local=%d algolia=%d updated=%d no_match=%d",
-                    processed,
-                    len(candidates),
-                    stats["enriched_local"],
-                    stats["enriched_algolia"],
-                    stats["updated"],
-                    stats["no_match"],
-                )
 
         if mm_client is not None and mm_buffer:
             await _flush_mm_buffer(mm_client, mm_buffer, stats, dry_run)
@@ -377,7 +394,12 @@ async def main() -> None:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Re-enrich documents that already have RT data",
+        help="With --push-to-mm, also send docs that already have RT data",
+    )
+    parser.add_argument(
+        "--force-all",
+        action="store_true",
+        help="With --push-to-mm, send every filtered doc regardless of RT updates",
     )
     parser.add_argument(
         "--push-to-mm",
@@ -396,6 +418,7 @@ async def main() -> None:
         mc_type_filter=args.mc_type,
         algolia_fallback=args.algolia_fallback,
         force=args.force,
+        force_all=args.force_all,
         push_to_mm=args.push_to_mm,
     )
     elapsed = time.time() - start

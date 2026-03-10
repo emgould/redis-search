@@ -46,7 +46,7 @@ Additionally, `external_ids.rt_id` (e.g. `m/the_matrix`) and `external_ids.tms_i
 
 ## ETL Integration
 
-In `tmdb_nightly_etl.py`, `enrich_redis_doc(redis_doc)` is called synchronously after `document_to_redis(doc)` on every media item (not persons). This uses **local-only** matching (tiers 1 and 2). No Algolia calls are made during nightly ETL.
+In `tmdb_nightly_etl.py`, `enrich_redis_doc_with_fallback(redis_doc)` is awaited after `document_to_redis(doc)` on every media item (not persons). This uses the full 3-tier matching strategy: local vanity lookup (tier 1), local title+year match (tier 2), and Algolia live search fallback (tier 3). Algolia results are cached into the local index for future runs.
 
 ## Propagation to Media Manager
 

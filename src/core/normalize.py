@@ -15,11 +15,13 @@ import math
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from contracts.models import MCSources, MCSubType, MCType
 from core.iptc import expand_keywords, normalize_tag
 from core.wikidata_crossref import enrich_external_ids
+from utils.genre_mapping import get_genre_mapping_with_fallback
 
 # Regex to strip apostrophes (straight + curly) from titles for search indexing.
 # RediSearch tokenizes apostrophes as word separators, so "It's" becomes ["it", "s"].
@@ -178,7 +180,7 @@ class BaseTMDBNormalizer(BaseNormalizer):
         if isinstance(tmdb_id, str):
             for prefix in ("tmdb_movie_", "tmdb_tv_", "tmdb_person_", "tmdb_"):
                 if tmdb_id.startswith(prefix):
-                    tmdb_id = tmdb_id[len(prefix):]
+                    tmdb_id = tmdb_id[len(prefix) :]
                     break
 
         return str(tmdb_id) if tmdb_id else None
@@ -305,11 +307,15 @@ class BaseTMDBNormalizer(BaseNormalizer):
         normalized_watch_providers = dict(watch_providers)
         streaming_ids = watch_providers.get("streaming_platform_ids")
         if streaming_ids is not None:
-            normalized_watch_providers["streaming_platform_ids"] = self._normalize_id_array(streaming_ids)
+            normalized_watch_providers["streaming_platform_ids"] = self._normalize_id_array(
+                streaming_ids
+            )
 
         on_demand_ids = watch_providers.get("on_demand_platform_ids")
         if on_demand_ids is not None:
-            normalized_watch_providers["on_demand_platform_ids"] = self._normalize_id_array(on_demand_ids)
+            normalized_watch_providers["on_demand_platform_ids"] = self._normalize_id_array(
+                on_demand_ids
+            )
 
         return normalized_watch_providers
 
@@ -826,9 +832,7 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "budget": doc.budget,
         "revenue": doc.revenue,
         "spoken_languages": doc.spoken_languages,
-        "external_ids": enrich_external_ids(
-            doc.mc_type.value, doc.source_id, doc.external_ids
-        )
+        "external_ids": enrich_external_ids(doc.mc_type.value, doc.source_id, doc.external_ids)
         if doc.mc_type in (MCType.MOVIE, MCType.TV_SERIES)
         else doc.external_ids,
         "rt_audience_score": doc.rt_audience_score,
@@ -871,6 +875,61 @@ def resolve_timestamps(
     else:
         created_at = now_ts
     return int(created_at), now_ts, source_tag
+
+
+def _serialize_tmdb_payload(payload: Any) -> dict[str, Any] | None:
+    """Convert a TMDB details model (or dict) to a JSON-serializable dict."""
+    if payload is None:
+        return None
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump(mode="json")  # type: ignore[no-any-return]
+    if hasattr(payload, "to_dict"):
+        return payload.to_dict()  # type: ignore[no-any-return]
+    if isinstance(payload, dict):
+        return payload
+    return None
+
+
+async def prepare_media_redis_document(
+    tmdb_details: Any,
+    mc_type: MCType,
+    existing_doc: dict[str, Any] | None = None,
+    source_tag: str = "api",
+    genre_mapping: dict[int, str] | None = None,
+) -> tuple[str, dict[str, Any]] | None:
+    """Single pipeline: TMDB details response -> write-ready (redis_key, redis_doc).
+
+    Encapsulates serialization, ``_media_type`` injection, genre-mapping
+    resolution, ``normalize_document``, ``document_to_redis``, and timestamp
+    resolution so that every code path that inserts a media document into
+    Redis goes through the same enrichment sequence.
+
+    Returns ``(redis_key, redis_doc)`` ready for
+    ``redis.json().set(key, "$", redis_doc)``, or ``None`` when
+    normalization fails.
+    """
+    item_dict = _serialize_tmdb_payload(tmdb_details)
+    if item_dict is None:
+        return None
+
+    item_dict["_media_type"] = mc_type.value
+
+    if genre_mapping is None:
+        genre_mapping = await get_genre_mapping_with_fallback(allow_fallback=True)
+
+    doc = normalize_document(item_dict, genre_mapping=genre_mapping)
+    if doc is None:
+        return None
+
+    now_ts = int(datetime.now(UTC).timestamp())
+    ca, ma, src = resolve_timestamps(existing_doc, now_ts, source_tag=source_tag)
+    doc.created_at = ca
+    doc.modified_at = ma
+    doc._source = src
+
+    redis_doc = document_to_redis(doc)
+    key = f"media:{redis_doc['mc_id']}"
+    return key, redis_doc
 
 
 # Legacy function for backward compatibility

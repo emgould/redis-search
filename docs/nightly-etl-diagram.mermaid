@@ -1,0 +1,84 @@
+```mermaid
+flowchart TD
+    subgraph Trigger["Invocation"]
+        CLI["CLI / Makefile / Docker / ETLRunner"]
+    end
+
+    CLI --> Run["run_nightly_etl\n(movie, tv, or person)"]
+
+    Run --> P1
+    P1 --> P2
+
+    subgraph P1["PHASE 1 - Fetch and Stage"]
+        direction TD
+
+        A1["TMDB changes endpoint\nget changed IDs"] --> A2["Dedup + filter adult"]
+        A2 --> A3["Batch 20 concurrent"]
+        A3 --> A4{"Person?"}
+
+        A4 -->|yes| A5["get_person_details"]
+        A4 -->|no| A6["get_media_details"]
+
+        A6 --> A7["append_to_response:\ncredits, videos,\nwatch/providers, keywords,\nrelease_dates, external_ids"]
+
+        A7 --> A8["Watch Provider Enrichment\ncustom_watch_provider\nsets streaming_platform"]
+
+        A7 --> A9["Content Rating\nus_rating, release_date"]
+
+        A8 --> F1
+        A9 --> F1
+
+        F1{"Existing in Redis?"} -->|yes| F2["Always pass"]
+        F1 -->|no| F3{"Documentary?"}
+
+        F3 -->|yes| F4["poster + major provider\n+ within 10 years"]
+        F3 -->|no| F5{"Movie or TV?"}
+
+        F5 -->|movie| F6["poster + popularity >= 1\nvotes >= 5 + runtime >= 40\n+ provider or theatrical"]
+        F5 -->|tv| F7["Returning Series OR\nrecent activity OR\nmajor provider"]
+
+        A5 --> F8["profile_path\n+ popularity >= 0.5"]
+
+        F2 --> STG
+        F4 --> STG
+        F6 --> STG
+        F7 --> STG
+        F8 --> STG
+
+        STG["Stage to .json.gz"]
+    end
+
+    subgraph P2["PHASE 2 - Load to Redis"]
+        direction TD
+
+        B1["Read staging file\n+ load genre mapping"]
+
+        B1 --> B2["normalize_document\nto SearchDocument"]
+
+        B2 --> B3["document_to_redis\nto Redis dict"]
+
+        B3 --> B4["Wikidata Crossref\nenrich_external_ids\nadds rt_id, metacritic_id,\nletterboxd_id, justwatch_id, tcm_id"]
+
+        B4 --> B5["RT Enrichment\nenrich_redis_doc_with_fallback"]
+
+        B5 --> RT1["Tier 1: vanity lookup\nvia external_ids.rt_id"]
+        RT1 -->|miss| RT2["Tier 2: title + year\nlocal RT index"]
+        RT2 -->|miss| RT3["Tier 3: Algolia search\ncached for future"]
+
+        RT1 -->|hit| B6
+        RT2 -->|hit| B6
+        RT3 -->|hit| B6
+
+        B6["Stamps rt_audience_score,\nrt_critics_score, rt_vanity"]
+
+        B6 --> B7["resolve_timestamps\ncreated_at / modified_at"]
+
+        B7 --> B8["redis.json.set\nbatched 100"]
+
+        B8 --> B9{"Media Manager\nfilter passed?"}
+        B9 -->|yes| B10["insert_docs to FAISS"]
+    end
+
+    B8 --> OUT1[("Redis\nmedia and person keys")]
+    B10 --> OUT2[("FAISS Index")]
+```

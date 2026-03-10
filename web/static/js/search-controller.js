@@ -45,6 +45,7 @@ const SEARCH_DEBOUNCE_MS = 750;
  * @param {Object}            cfg.expandedCategories          — mutable object tracking expand/collapse state
  * @param {function():boolean} cfg.isStreamingEnabled         — returns current stream toggle state
  * @param {function():boolean} cfg.isNoDuplicateEnabled      — returns current no-duplicate toggle state
+ * @param {function():boolean} cfg.isFullSearchEnabled       — returns current full-search toggle state
  */
 function initSearchController(cfg) {
   const {
@@ -58,6 +59,7 @@ function initSearchController(cfg) {
     expandedCategories,
     isStreamingEnabled,
     isNoDuplicateEnabled,
+    isFullSearchEnabled,
   } = cfg;
 
   // ---- State ----
@@ -79,6 +81,7 @@ function initSearchController(cfg) {
     );
     if (sources) url += `&sources=${encodeURIComponent(sources)}`;
     if (isNoDuplicateEnabled && isNoDuplicateEnabled()) url += "&no_duplicate=true";
+    if (isFullSearchEnabled && isFullSearchEnabled()) url += "&full=true";
     if (extraParams) {
       for (const [k, v] of Object.entries(extraParams)) {
         url += `&${k}=${encodeURIComponent(v)}`;
