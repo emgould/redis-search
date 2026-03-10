@@ -64,6 +64,9 @@ currentResults = { tv: [...], movie: [...], artist: [...], news: [...], ... }
 - **Autocomplete** overwrites all keys it returns (first responder for local sources)
 - **Batch search** overwrites all keys (`{ ...currentResults, ...data }`)
 - **Stream search** overwrites one key at a time as each source arrives (`currentResults[source] = results`)
+- **Stream exact matches** may update more than once:
+  - provisional `exact_match` events can arrive while sources are still streaming
+  - `exact_match_final` replaces any provisional exact match once the stream completes
 - **Reset:** happens immediately when the query text changes in the input handler
 
 ### Cancellation

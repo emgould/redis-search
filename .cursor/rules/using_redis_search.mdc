@@ -11,6 +11,25 @@ alwaysApply: false
 Each index returns full JSON documents from the Redis JSON key.
 `media:*`, `person:*`, `podcast:*`, `author:*`, and `book:*` payloads include display fields beyond what is indexed for filtering/ranking.
 
+## Search Behavior Over `idx:media`
+
+Search consumers should treat `tv` and `movie` as separate media buckets even though both are stored in `idx:media`.
+
+- `src/services/search_service.py` now queries `idx:media` separately for `@mc_type:{tv}` and `@mc_type:{movie}` whenever those sources are requested.
+- `limit` applies per requested source bucket, not across a shared movie+tv candidate pool.
+- Bucket-local Python re-ranking still uses the shared media ranker (`score_media_result`) after Redis returns candidates for that source.
+- This avoids exact-title TV hits being pushed out by higher-popularity movie keyword / genre matches before re-ranking.
+
+### Exact match behavior
+
+- JSON search/autocomplete responses expose a single `exact_match`.
+- For media (`movie`/`tv`), the best exact match is selected by:
+  - exact-title tier
+  - newer `year`
+  - higher `popularity`
+- Non-media exact matches still fall back to the existing source-priority ordering.
+- Stream responses may emit provisional `exact_match` events during the search, and a final authoritative `exact_match_final` event at stream completion.
+
 ## `idx:media` (`media:`)
 
 ### What consumers get
