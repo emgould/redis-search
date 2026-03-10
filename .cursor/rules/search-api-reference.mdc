@@ -146,13 +146,49 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 
 ---
 
-### 4. Media Details
+### 4. Media / Person / Podcast Details
 
 ```
-POST /api/details?mc_id={id}&source_id={id}&mc_type={type}
+POST /api/details
 ```
 
-Get detailed information for a specific media item, including watch providers, full cast, trailers, and keywords.
+Get detailed information for a specific item or a batch of items.
+
+#### Scalar lookup
+
+```
+POST /api/details?mc_id={id}&mc_type={type}
+```
+
+Returns a single JSON object. `source_id` is optional — derived from `mc_id` when absent.
+
+#### Batch lookup
+
+```
+POST /api/details?mc_ids={id1},{id2},{id3}&mc_type={type}
+```
+
+Returns a JSON array (positional). Unresolved IDs appear as `null` at their index; the request itself returns HTTP 200.
+Uses `JSON.MGET` (single Redis round-trip) for index-only types (person, podcast, author, book without `force`).
+
+#### Parameters
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `mc_id` | one of `mc_id` / `mc_ids` | Single item identifier |
+| `mc_ids` | one of `mc_id` / `mc_ids` | Comma-separated identifiers for batch |
+| `mc_type` | yes | `movie`, `tv`, `person`, `podcast`, `book`, or `person` with `mc_subtype=author` |
+| `source_id` | no | Upstream numeric ID; derived from `mc_id` when absent |
+| `mc_subtype` | no | e.g. `author` for OpenLibrary authors |
+| `force` | no (default `false`) | When `true`, fetch live upstream data (e.g. TMDB credits for person) |
+| `rss_details` | no (default `false`) | When `true`, include RSS episodes for podcasts |
+
+#### Behaviour by type
+
+- **movie / tv**: Always enriches with live TMDB watch providers and cast.
+- **person** (default): Returns Redis index document only. With `force=true`, supplements with live TMDB person details and movie/TV credits.
+- **podcast**: Returns Redis index document. With `rss_details=true`, includes RSS feed episodes.
+- **author / book**: Returns Redis index document only.
 
 ---
 
