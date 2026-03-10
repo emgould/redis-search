@@ -182,6 +182,22 @@ Uses `JSON.MGET` (single Redis round-trip) for index-only types (person, podcast
 | `mc_subtype` | no | e.g. `author` for OpenLibrary authors |
 | `force` | no (default `false`) | When `true`, fetch live upstream data (e.g. TMDB credits for person) |
 | `rss_details` | no (default `false`) | When `true`, include RSS episodes for podcasts |
+| `fields` | no | Comma-separated field names to return. `id`/`mc_id` always included. When omitted, all fields are returned. |
+
+#### Field projection
+
+When `fields` is provided, each result object is reduced to only the listed keys plus `id` and `mc_id` (always present). Applies to both scalar and batch responses. `null` entries in batch results remain `null`.
+
+```
+POST /api/details?mc_ids=tmdb_person_287,tmdb_person_1461&mc_type=person&fields=popularity,search_title
+```
+
+```json
+[
+  {"id": "tmdb_person_287", "search_title": "Brad Pitt", "popularity": 10.42},
+  {"id": "tmdb_person_1461", "search_title": "George Clooney", "popularity": 5.34}
+]
+```
 
 #### Behaviour by type
 
