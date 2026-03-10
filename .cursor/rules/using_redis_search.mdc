@@ -1,6 +1,6 @@
 ---
-description: Redis index payload schema by index
-globs: ["web/app.py", "src/core/normalize.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py"]
+description: Redis index payload schema by index and details endpoint contract
+globs: ["web/app.py", "src/core/normalize.py", "src/services/search_service.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py"]
 alwaysApply: false
 ---
 
@@ -221,3 +221,35 @@ All keys are present when values are available, and absent fields are omitted by
 ### Indexed fields for books
 
 `search_title`, `title`, `author_search`, `author`, `description`, `subjects_search`, `mc_type`, `source`, `openlibrary_key`, `primary_isbn13`, `primary_isbn10`, `author_olid`, `cover_available`, `author_normalized`, `subjects`, `first_publish_year`, `ratings_average`, `ratings_count`, `readinglog_count`, `number_of_pages`, `popularity_score`, `edition_count`.
+
+## `POST /api/details` — Detail Lookup Endpoint
+
+### Scalar vs Batch
+
+The endpoint accepts either a single `mc_id` or a comma-separated `mc_ids` for batch lookup.
+
+- **Scalar** (`mc_id=`): Returns a single JSON object. Errors return appropriate HTTP status codes (e.g. 404).
+- **Batch** (`mc_ids=`): Returns a JSON array. Each position corresponds to the requested ID. Unresolved IDs appear as `null`; the HTTP response is always 200.
+
+### `source_id` derivation
+
+`source_id` is optional. When absent, it is derived from `mc_id` by taking the last `_`-delimited segment (e.g. `tmdb_person_287` → `287`).
+
+### `force` parameter
+
+- Default `false`. Index-only types (person, podcast, author, book) return the Redis document without any upstream API calls.
+- When `true`, the endpoint fetches live data from the upstream API (e.g. TMDB person details and movie/TV credits for person).
+- Movie and TV always enrich with live TMDB data regardless of `force`.
+
+### `fields` parameter (projection)
+
+When `fields` is provided (comma-separated field names), each result is projected to only the listed keys. `id` and `mc_id` are always included regardless.  Projection is applied in the endpoint layer after the service returns the full document.  `null` entries in batch results are preserved as `null`.
+
+### Batch performance
+
+Batch requests for index-only types use `JSON.MGET` — a single Redis round-trip for all requested documents. Batch requests for types that require upstream enrichment (movie/tv, or any type with `force=true`) fall back to concurrent `asyncio.gather` over individual `get_details` calls.
+
+### Implementation
+
+- `web/app.py`: `api_get_details()` dispatches scalar to `get_details()`, batch to `get_details_batch()`. Field projection is applied in the endpoint via `_project()`.
+- `src/services/search_service.py`: `DetailsRequest` model, `get_details()`, `get_details_batch()`.

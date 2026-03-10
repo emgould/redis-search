@@ -1,0 +1,61 @@
+# Rotten Tomatoes Enrichment Pipeline
+
+## Overview
+
+RT enrichment stamps five fields onto Redis media documents by matching against a local on-disk RT content index. An optional Algolia live-search fallback is available for backfill scripts only.
+
+## RT Fields on Redis Document
+
+| Field | Type | Source |
+|---|---|---|
+| `rt_audience_score` | `int \| null` | RT audience score |
+| `rt_critics_score` | `int \| null` | RT critics score |
+| `rt_vanity` | `str \| null` | RT URL slug (e.g. `the_matrix`) |
+| `rt_release_year` | `int \| null` | RT release year |
+| `rt_runtime` | `int \| null` | RT runtime in minutes |
+
+Additionally, `external_ids.rt_id` (e.g. `m/the_matrix`) and `external_ids.tms_id` are back-populated on match.
+
+## 3-Tier Matching Strategy
+
+1. **Vanity lookup** (O(1)): If `external_ids.rt_id` exists, strip the `m/` or `tv/` prefix and look up directly in the vanity index.
+2. **Title + year**: Normalize title text and look up in the local title index with optional year filter.
+3. **Algolia fallback** (backfill only): Live search RT Algolia API. Results are cached into the local index for future runs.
+
+## Key Files
+
+- `src/api/rottentomatoes/local_store.py` — Local on-disk RT content index with title and vanity lookups.
+- `src/etl/rt_enrichment.py` — Enrichment module: `enrich_redis_doc()` (sync, ETL), `enrich_from_local()`, `enrich_from_algolia()` (async).
+- `src/etl/tmdb_nightly_etl.py` — ETL integration: calls `enrich_redis_doc()` after `document_to_redis()`, local-only (no Algolia).
+- `scripts/backfill_rt_enrichment.py` — Standalone backfill with `--algolia-fallback` and `--force` flags.
+- `src/core/normalize.py` — `SearchDocument` dataclass and `document_to_redis()` carry the RT fields.
+
+## Local RT Data
+
+- `data/rt/content_index.json` — Pre-built content index (~3.5M lines). Contains `records` dict and `title_index` dict.
+- `data/rt/content_all.jsonl` — Raw consolidated JSONL crawl output.
+- `data/rt/dynamic/content_insertions.json` — JSONL log of dynamically inserted hits from Algolia fallback.
+
+## Makefile Targets
+
+- `make backfill-rt` — Run RT backfill (local-only by default).
+- `make backfill-rt ARGS="--algolia-fallback"` — With Algolia fallback.
+- `make backfill-rt ARGS="--dry-run"` — Discovery only.
+- `make backfill-rt MC_TYPE=movie` — Filter to movies only.
+- `make backfill-rt ARGS="--force"` — Re-enrich docs that already have RT data.
+
+## ETL Integration
+
+In `tmdb_nightly_etl.py`, `enrich_redis_doc_with_fallback(redis_doc)` is awaited after `document_to_redis(doc)` on every media item (not persons). This uses the full 3-tier matching strategy: local vanity lookup (tier 1), local title+year match (tier 2), and Algolia live search fallback (tier 3). Algolia results are cached into the local index for future runs.
+
+## Propagation to Media Manager
+
+Use `--push-to-mm` on the backfill script to propagate enriched docs inline:
+
+```bash
+make backfill-rt ARGS="--push-to-mm"
+```
+
+This sends each enriched doc to Media Manager's `/insert-docs` with `metadata_only=True`, which updates only the stored FAISS metadata (RT scores, external IDs, etc.) without re-running Wikipedia enrichment, LLM summarisation, or Voyage embedding generation. Documents not already in the FAISS index automatically fall through to the full pipeline.
+
+Enriched docs are batched (100 per request) and sent as the backfill progresses. The remaining buffer is flushed at the end. Stats include `mm_queued`, `mm_skipped`, and `mm_errors`.

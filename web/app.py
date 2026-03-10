@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from redis.commands.search.field import Field, NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query as SearchQuery
@@ -27,7 +28,7 @@ from adapters.redis_repository import RedisRepository
 from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import search_movies_async, search_tv_shows_async
 from contracts.models import MCType
-from core.normalize import document_to_redis, normalize_document
+from core.normalize import document_to_redis, normalize_document, prepare_media_redis_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
 from etl.etl_metadata import ETLMetadataStore
@@ -43,6 +44,7 @@ from services.search_service import (
     autocomplete_stream,
     get_cast_names,
     get_details,
+    get_details_batch,
     reset_repo,
     search,
     search_stream,
@@ -383,6 +385,10 @@ async def api_autocomplete(
         default=False,
         description="If true, the exact match item is excluded from its source results list",
     ),
+    full: bool = Query(
+        default=False,
+        description="If true, fetch 250 media candidates instead of 50 for deeper ranking",
+    ),
 ):
     """JSON API endpoint for autocomplete search."""
     if not q or len(q) < 2:
@@ -401,7 +407,7 @@ async def api_autocomplete(
             source_hint_applied = sorted(hinted)
 
     try:
-        results = await autocomplete(q, sources_set, raw=raw, no_duplicate=no_duplicate)
+        results = await autocomplete(q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full)
         if source_hint_applied is not None:
             results = dict(results)
             results["source_hint"] = source_hint_applied
@@ -426,6 +432,10 @@ async def api_autocomplete_stream(
     no_duplicate: bool = Query(
         default=False,
         description="If true, the exact match item is excluded from its source results list",
+    ),
+    full: bool = Query(
+        default=False,
+        description="If true, fetch 250 media candidates instead of 50 for deeper ranking",
     ),
 ):
     """
@@ -464,7 +474,7 @@ async def api_autocomplete_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
-        async for event in autocomplete_stream(q, sources_set, raw=raw, no_duplicate=no_duplicate):
+        async for event in autocomplete_stream(q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full):
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
@@ -510,7 +520,6 @@ async def api_search(
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
-    # Field filters (for indexed sources only: tv, movie)
     genre_ids: str | None = Query(
         default=None, description="Comma-separated TMDB genre IDs (e.g., 35,18 for Comedy,Drama)"
     ),
@@ -546,6 +555,10 @@ async def api_search(
     no_duplicate: bool = Query(
         default=False,
         description="If true, the exact match item is excluded from its source results list",
+    ),
+    full: bool = Query(
+        default=False,
+        description="If true, fetch 250 media candidates instead of 50 for deeper ranking",
     ),
 ):
     """
@@ -685,9 +698,10 @@ async def api_search(
         rating_min=rating_min,
         rating_max=rating_max,
         mc_type=mc_type,
-        ratings_sort=ratings_sort or "popularity",  # Default to popularity
+        ratings_sort=ratings_sort or "popularity",
         raw=raw,
         no_duplicate=no_duplicate,
+        full=full,
     )
     if source_hint_applied is not None:
         results = dict(results)
@@ -803,6 +817,10 @@ async def api_search_stream(
         default=False,
         description="If true, the exact match item is excluded from its source results list",
     ),
+    full: bool = Query(
+        default=False,
+        description="If true, fetch 250 media candidates instead of 50 for deeper ranking",
+    ),
 ):
     """
     Streaming search endpoint using Server-Sent Events (SSE).
@@ -876,6 +894,7 @@ async def api_search_stream(
             ratings_sort=ratings_sort or "popularity",
             raw=raw,
             no_duplicate=no_duplicate,
+            full=full,
         ):
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
@@ -2430,52 +2449,155 @@ async def get_media(media_id: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+_IMMUTABLE_MEDIA_FIELDS = frozenset({"id", "mc_id", "source", "source_id", "mc_type"})
+
+
+class MediaDocumentUpdate(BaseModel):
+    document: dict[str, Any]
+    push_to_media_manager: bool = True
+    metadata_only: bool = False
+
+
+@app.put("/api/media/{media_id}")
+async def update_media(media_id: str, body: MediaDocumentUpdate) -> JSONResponse:
+    """Update a Redis media document and optionally push to Media Manager."""
+    redis = get_redis()
+    key = media_id if media_id.startswith("media:") else f"media:{media_id}"
+
+    try:
+        existing: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"Redis read failed: {e}"})
+
+    if existing is None:
+        return JSONResponse(status_code=404, content={"error": "Media not found"})
+
+    for field in _IMMUTABLE_MEDIA_FIELDS:
+        incoming = body.document.get(field)
+        if incoming is not None and incoming != existing.get(field):
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Cannot change immutable field '{field}'"},
+            )
+
+    merged = {**existing, **body.document}
+
+    merged["created_at"] = existing.get("created_at", merged.get("created_at"))
+    merged["modified_at"] = int(datetime.now(UTC).timestamp())
+    merged["_source"] = "manual_edit"
+
+    try:
+        await redis.json().set(key, "$", merged)  # type: ignore[misc]
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"Redis write failed: {e}"})
+
+    mm_result: dict[str, Any] = {"attempted": False}
+    if body.push_to_media_manager:
+        _filter_ok, _filter_reason = passes_media_manager_filter(merged)
+        try:
+            mm_client = MediaManagerClient()
+            try:
+                insert_resp = await mm_client.insert_docs(
+                    [merged], metadata_only=body.metadata_only
+                )
+                mm_result = {
+                    "attempted": True,
+                    "sent": True,
+                    "metadata_only": body.metadata_only,
+                    "queued": insert_resp["queued"],
+                    "skipped": insert_resp["skipped"],
+                    "errors": insert_resp["errors"],
+                    "filter_warning": _filter_reason if not _filter_ok else None,
+                }
+            finally:
+                await mm_client.close()
+        except Exception as mm_exc:
+            mm_result = {
+                "attempted": True,
+                "sent": False,
+                "error": str(mm_exc),
+            }
+
+    return JSONResponse(content={
+        "status": "updated",
+        "id": key,
+        "media_manager": mm_result,
+        "document": merged,
+    })
+
+
 @app.post("/api/details")
 async def api_get_details(
-    mc_id: str = Query(...),
-    source_id: str = Query(...),
+    mc_id: str | None = Query(default=None),
+    mc_ids: str | None = Query(default=None, description="Comma-separated mc_ids for batch lookup"),
+    source_id: str | None = Query(default=None),
     mc_type: str = Query(...),
     mc_subtype: str | None = Query(default=None),
     rss_details: bool = Query(default=False),
+    force: bool = Query(default=False),
+    fields: str | None = Query(default=None, description="Comma-separated field names to return (mc_id always included)"),
 ):
     """
     Get detailed metadata for a media item or person.
 
+    Accepts a single mc_id or a comma-separated mc_ids for batch lookup.
+    Batch requests return a JSON array; scalar requests return a single object.
+
+    When ``fields`` is provided, each result is projected to only the listed
+    keys plus ``mc_id`` (always included).
+
     For tv/movie: Returns indexed data enriched with watch providers and cast.
-    For person: Returns person data with movie and TV credits.
+    For person: Returns person data from Redis index. With force=true, also
+        fetches live movie/TV credits from TMDB.
     For podcast: Returns podcast data, optionally with RSS feed episodes (rss_details=true).
     """
+    id_list: list[str] = []
+    is_batch = mc_ids is not None
+
+    if mc_ids:
+        id_list = [mid.strip() for mid in mc_ids.split(",") if mid.strip()]
+    elif mc_id:
+        id_list = [mc_id]
+
+    if not id_list:
+        return JSONResponse(status_code=400, content={"error": "mc_id or mc_ids is required"})
+
+    field_set: set[str] | None = None
+    if fields:
+        field_set = {f.strip() for f in fields.split(",") if f.strip()}
+        field_set.add("mc_id")
+        field_set.add("id")
+
+    def _project(doc: dict[str, Any] | None) -> dict[str, Any] | None:
+        if doc is None or field_set is None:
+            return doc
+        return {k: v for k, v in doc.items() if k in field_set}
+
     try:
+        if is_batch:
+            results = await get_details_batch(
+                mc_ids=id_list,
+                mc_type=mc_type,
+                mc_subtype=mc_subtype,
+                force=force,
+            )
+            return JSONResponse(content=[_project(r) for r in results])
+
         request = DetailsRequest(
-            mc_id=mc_id,
+            mc_id=id_list[0],
             source_id=source_id,
             mc_type=mc_type,
             mc_subtype=mc_subtype,
             rss_details=rss_details,
+            force=force,
         )
         result = await get_details(request)
-
-        # Check if result contains an error
         if result.get("error"):
             status_code = result.get("status_code", 500)
             return JSONResponse(status_code=status_code, content=result)
-
-        return JSONResponse(content=result)
+        return JSONResponse(content=_project(result))
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-def _media_details_to_serializable(payload: Any) -> dict[str, Any] | None:
-    """Convert TMDB media details to JSON-serializable dict."""
-    if payload is None:
-        return None
-    if hasattr(payload, "model_dump"):
-        return payload.model_dump(mode="json")  # type: ignore[no-any-return]
-    if hasattr(payload, "to_dict"):
-        return payload.to_dict()  # type: ignore[no-any-return]
-    if isinstance(payload, dict):
-        return payload
-    return {"value": str(payload)}
 
 
 @app.post("/api/tmdb/add-to-redis")
@@ -2519,35 +2641,23 @@ async def api_add_tmdb_to_redis(
                 content={"error": f"Error fetching {mc_type_normalized} {tmdb_id}: {err}"},
             )
 
-        item_dict = _media_details_to_serializable(details)
-        if item_dict is None:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Failed to serialize media details"},
-            )
-
-        item_dict["_media_type"] = mc_type_normalized
+        existing_doc: dict[str, Any] | None = await redis.json().get(  # type: ignore[assignment]
+            f"media:tmdb_{mc_type_normalized}_{tmdb_id}"
+        )
         GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
-        normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
-        if normalized is None:
+        result = await prepare_media_redis_document(
+            details,
+            tmdb_media_type,
+            existing_doc=existing_doc,
+            source_tag="manual_add_tmdb",
+            genre_mapping=GENRE_MAPPING,
+        )
+        if result is None:
             return JSONResponse(
                 status_code=500,
                 content={"error": "Normalizer returned None — item did not produce a document"},
             )
-
-        now_ts = int(datetime.now().timestamp())
-        redis_doc = document_to_redis(normalized)
-        key = f"media:{redis_doc['mc_id']}"
-
-        existing_doc: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
-        if isinstance(existing_doc, dict) and existing_doc.get("created_at"):
-            created_at = int(existing_doc["created_at"])
-        else:
-            created_at = now_ts
-
-        redis_doc["created_at"] = created_at
-        redis_doc["modified_at"] = now_ts
-        redis_doc["_source"] = "manual_add_tmdb"
+        key, redis_doc = result
 
         await redis.json().set(key, "$", redis_doc)  # type: ignore[misc]
 
@@ -2640,24 +2750,6 @@ async def api_get_media_details(
                 content={"error": f"Error fetching {mc_type.value} {tmdb_id}: {err}"},
             )
 
-        item_dict = _media_details_to_serializable(details)
-        if item_dict is None:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Failed to serialize media details"},
-            )
-
-        item_dict["_media_type"] = mc_type.value
-        GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
-        normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
-        if normalized is None:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Normalizer returned None — item did not produce a document"},
-            )
-
-        now_ts = int(datetime.now().timestamp())
-
         existing_doc: dict[str, Any] | None = None
         if force_refresh:
             try:
@@ -2665,15 +2757,22 @@ async def api_get_media_details(
             except Exception:
                 pass
 
-        if isinstance(existing_doc, dict) and existing_doc.get("created_at"):
-            normalized.created_at = int(existing_doc["created_at"])
-            normalized._source = existing_doc.get("_source")
-        else:
-            normalized.created_at = now_ts
-            normalized._source = "api"
-        normalized.modified_at = now_ts
+        source_tag = existing_doc.get("_source", "api") if isinstance(existing_doc, dict) else "api"
+        GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
+        result = await prepare_media_redis_document(
+            details,
+            mc_type,
+            existing_doc=existing_doc,
+            source_tag=source_tag,
+            genre_mapping=GENRE_MAPPING,
+        )
+        if result is None:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Normalizer returned None — item did not produce a document"},
+            )
+        _key, redis_doc = result
 
-        redis_doc = document_to_redis(normalized)
         await redis.json().set(key, "$", redis_doc)  # type: ignore[misc]
 
         return JSONResponse(content={"id": key, **redis_doc})

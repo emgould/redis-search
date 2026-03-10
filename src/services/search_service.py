@@ -486,6 +486,7 @@ async def autocomplete(
     sources: set[str] | None = None,
     raw: bool = False,
     no_duplicate: bool = False,
+    full: bool = False,
 ) -> dict[str, Any]:
     """
     Autocomplete search that returns categorized results.
@@ -564,8 +565,9 @@ async def autocomplete(
 
         # RediSearch (local) - no timeout needed
         # "media" covers both tv and movie
+        media_limit = 250 if full else 50
         if "tv" in sources or "movie" in sources:
-            timed_tasks.append(timed_task("media", repo.search(media_query, limit=50)))
+            timed_tasks.append(timed_task("media", repo.search(media_query, limit=media_limit)))
         if "person" in sources:
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
@@ -615,7 +617,7 @@ async def autocomplete(
     except Exception:
         # If concurrent search fails, try individually
         try:
-            media_res = await repo.search(media_query, limit=50)
+            media_res = await repo.search(media_query, limit=250 if full else 50)
         except Exception:
             media_res = empty_result
 
@@ -787,6 +789,7 @@ async def autocomplete_stream(
     sources: set[str] | None = None,
     raw: bool = False,
     no_duplicate: bool = False,
+    full: bool = False,
 ) -> AsyncIterator[StreamEvent]:
     """
     Streaming autocomplete that yields results as they become available.
@@ -843,8 +846,9 @@ async def autocomplete_stream(
 
     # RediSearch tasks (local) - no timeout
     # "media" covers both tv and movie
+    ac_media_limit = 250 if full else 50
     if "tv" in sources or "movie" in sources:
-        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=50)))] = (
+        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=ac_media_limit)))] = (
             "media"
         )
     if "person" in sources:
@@ -1049,6 +1053,7 @@ async def search(
     ratings_sort: str = "popularity",
     raw: bool = False,
     no_duplicate: bool = False,
+    full: bool = False,
 ) -> dict[str, Any]:
     """
     Unified search API that returns categorized results.
@@ -1154,7 +1159,9 @@ async def search(
     # Fetch limit * 5 for media to ensure exact title matches aren't pushed out
     # by higher-popularity keyword/cast matches in the union query.
     # Python re-ranking (score_media_result) handles final ordering.
-    media_fetch_limit = max(limit * 5, 50) if has_query else limit * 2
+    # full=True bumps to 250 so low-popularity exact matches aren't missed.
+    _base = 250 if full else max(limit * 5, 50)
+    media_fetch_limit = _base if has_query else limit * 2
     if "tv" in requested_sources or "movie" in requested_sources:
         timed_tasks.append(timed_task("media", repo.search(media_query, limit=media_fetch_limit)))
     if "person" in requested_sources:
@@ -1552,6 +1559,7 @@ async def search_stream(
     ratings_sort: str = "popularity",
     raw: bool = False,
     no_duplicate: bool = False,
+    full: bool = False,
 ) -> AsyncIterator[StreamEvent]:
     """
     Streaming search that yields categorized results as each source completes.
@@ -1628,7 +1636,8 @@ async def search_stream(
     # Indexed sources (RediSearch) - no timeout
     # Fetch more media results for text queries to ensure exact title matches
     # aren't pushed out by popularity-sorted keyword/cast/genre matches.
-    media_fetch_limit = max(limit * 5, 50) if has_query else limit * 2
+    _stream_base = 250 if full else max(limit * 5, 50)
+    media_fetch_limit = _stream_base if has_query else limit * 2
     if "tv" in requested_sources or "movie" in requested_sources:
         tasks_dict[
             asyncio.create_task(
@@ -1964,10 +1973,21 @@ class DetailsRequest(BaseModel):
     """Request model for get_details endpoint."""
 
     mc_id: str
-    source_id: str  # tmdb_id as string
+    source_id: str | None = None  # tmdb_id as string; derived from mc_id when absent
     mc_type: str  # "tv", "movie", or "person"
     mc_subtype: str | None = None
     rss_details: bool = False  # For podcasts: fetch and parse RSS feed episodes
+    force: bool = False  # When True, fetch live data from upstream API (e.g. TMDB credits for person)
+
+    @property
+    def resolved_source_id(self) -> str | None:
+        """Return source_id if provided, otherwise derive from mc_id (last '_'-delimited segment)."""
+        if self.source_id is not None:
+            return self.source_id
+        parts = self.mc_id.rsplit("_", maxsplit=1)
+        if len(parts) == 2:
+            return parts[1]
+        return None
 
 
 async def get_details(request: DetailsRequest) -> dict[str, Any]:
@@ -2056,10 +2076,13 @@ async def _get_media_details(request: DetailsRequest, index_data: dict | None) -
         mc_type_enum = MCType.MOVIE
 
     # source_id should be the numeric TMDB ID
+    sid = request.resolved_source_id
+    if sid is None:
+        return {"error": f"Cannot derive source_id from mc_id: {request.mc_id}", "status_code": 400}
     try:
-        tmdb_id = int(request.source_id)
+        tmdb_id = int(sid)
     except ValueError:
-        return {"error": f"Invalid source_id: {request.source_id}. Expected numeric TMDB ID."}
+        return {"error": f"Invalid source_id: {sid}. Expected numeric TMDB ID."}
 
     if index_data:
         # Data found in index - enrich with watch providers and cast details
@@ -2150,36 +2173,129 @@ async def _get_media_details(request: DetailsRequest, index_data: dict | None) -
             return {"error": str(e), "status_code": 500}
 
 
+def _key_prefix_for(mc_type: str, mc_subtype: str | None) -> str:
+    """Return the Redis key prefix for a given mc_type/mc_subtype."""
+    sub = (mc_subtype or "").lower()
+    mt = mc_type.lower()
+    if sub == "author":
+        return "author:"
+    if mt == "book":
+        return "book:"
+    if mt == "person":
+        return "person:"
+    if mt == "podcast":
+        return "podcast:"
+    return "media:"
+
+
+async def get_details_batch(
+    mc_ids: list[str],
+    mc_type: str,
+    mc_subtype: str | None = None,
+    force: bool = False,
+) -> list[dict[str, Any] | None]:
+    """Fetch multiple detail documents in a single Redis round-trip.
+
+    Uses JSON.MGET for the index lookup.  Items that require upstream
+    enrichment (force=True, or media types that always enrich) fall back
+    to individual ``get_details`` calls via asyncio.gather.
+    """
+    redis = get_redis()
+    prefix = _key_prefix_for(mc_type, mc_subtype)
+    keys = [f"{prefix}{mid}" for mid in mc_ids]
+
+    mt_lower = mc_type.lower()
+    needs_upstream = force or mt_lower in {"movie", "tv"}
+
+    if needs_upstream:
+        requests = [
+            DetailsRequest(
+                mc_id=mid,
+                mc_type=mc_type,
+                mc_subtype=mc_subtype,
+                force=force,
+            )
+            for mid in mc_ids
+        ]
+        raw_results: list[dict[str, Any]] = list(
+            await asyncio.gather(*[get_details(r) for r in requests])
+        )
+        return [r if not r.get("error") else None for r in raw_results]
+
+    # Index-only fast path: single MGET
+    try:
+        raw_docs: list[object] = await redis.json().mget(keys, "$")  # type: ignore[misc]
+    except Exception as e:
+        logger.warning("JSON.MGET failed, falling back to individual lookups: %s", e)
+        requests = [
+            DetailsRequest(mc_id=mid, mc_type=mc_type, mc_subtype=mc_subtype, force=force)
+            for mid in mc_ids
+        ]
+        raw_results = list(await asyncio.gather(*[get_details(r) for r in requests]))
+        return [r if not r.get("error") else None for r in raw_results]
+
+    out: list[dict[str, Any] | None] = []
+    for mid, raw in zip(mc_ids, raw_docs, strict=True):
+        doc: dict[str, Any] | None = None
+        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+            doc = raw[0]
+        elif isinstance(raw, dict):
+            doc = raw
+
+        if doc is None:
+            out.append(None)
+            continue
+
+        sid_parts = mid.rsplit("_", maxsplit=1)
+        sid = sid_parts[1] if len(sid_parts) == 2 else None
+
+        result: dict[str, Any] = {**doc, "id": mid, "mc_type": mt_lower}
+        if sid is not None:
+            try:
+                result["tmdb_id"] = int(sid)
+            except ValueError:
+                pass
+        out.append(result)
+
+    return out
+
+
 async def _get_person_details(request: DetailsRequest, index_data: dict | None) -> dict[str, Any]:
     """
     Get detailed metadata for a person (actor/director).
 
-    Gets person data from index and fetches movie/TV credits from TMDB.
+    Default behaviour (force=False): returns the Redis index document only.
+    With force=True: supplements index data with live TMDB person details and
+    movie/TV credits.
     """
-    # source_id should be the numeric TMDB ID
+    sid = request.resolved_source_id
+    if sid is None:
+        return {"error": f"Cannot derive source_id from mc_id: {request.mc_id}", "status_code": 400}
     try:
-        tmdb_id = int(request.source_id)
+        tmdb_id = int(sid)
     except ValueError:
-        return {"error": f"Invalid source_id: {request.source_id}. Expected numeric TMDB ID."}
+        return {"error": f"Invalid source_id: {sid}. Expected numeric TMDB ID."}
 
-    # Start with index data or empty dict
     result: dict[str, Any] = {}
     if index_data:
         result = {**index_data}
 
-    # Always set id and mc_type
     result["id"] = request.mc_id
     result["tmdb_id"] = tmdb_id
     result["mc_type"] = "person"
 
-    # Fetch credits from TMDB
+    if not request.force:
+        if not index_data:
+            return {"error": "Person not found in index", "status_code": 404}
+        return result
+
+    # force=True — fetch live TMDB credits
     try:
         credits_response = await get_person_credits_async(tmdb_id, limit=50)
 
         if credits_response.status_code == 200 and credits_response.results:
             credits_result = credits_response.results[0]
 
-            # Add person details if not in index
             if credits_result.person and not index_data:
                 person = credits_result.person
                 result["search_title"] = person.name
@@ -2192,7 +2308,6 @@ async def _get_person_details(request: DetailsRequest, index_data: dict | None) 
                 result["also_known_as"] = person.also_known_as
                 result["popularity"] = person.popularity
 
-                # Add profile image
                 if person.profile_path:
                     result["image"] = f"https://image.tmdb.org/t/p/w185{person.profile_path}"
                     result["profile_images"] = {
@@ -2202,7 +2317,6 @@ async def _get_person_details(request: DetailsRequest, index_data: dict | None) 
                         "original": f"https://image.tmdb.org/t/p/original{person.profile_path}",
                     }
             elif credits_result.person:
-                # Supplement index data with additional person info
                 person = credits_result.person
                 result["name"] = person.name
                 result["known_for_department"] = person.known_for_department
@@ -2220,21 +2334,12 @@ async def _get_person_details(request: DetailsRequest, index_data: dict | None) 
                         "original": f"https://image.tmdb.org/t/p/original{person.profile_path}",
                     }
 
-            # Add movie credits
-            movie_credits = []
-            for movie in credits_result.movies[:20]:  # Limit to top 20
-                movie_dict = movie.model_dump()
-                movie_credits.append(movie_dict)
+            movie_credits = [movie.model_dump() for movie in credits_result.movies[:20]]
             result["movie_credits"] = movie_credits
 
-            # Add TV credits
-            tv_credits = []
-            for tv_show in credits_result.tv_shows[:20]:  # Limit to top 20
-                tv_dict = tv_show.model_dump()
-                tv_credits.append(tv_dict)
+            tv_credits = [tv_show.model_dump() for tv_show in credits_result.tv_shows[:20]]
             result["tv_credits"] = tv_credits
 
-            # Add metadata
             result["credits_metadata"] = credits_result.metadata
 
         else:
@@ -2269,11 +2374,17 @@ async def _get_podcast_details(request: DetailsRequest, index_data: dict | None)
     from api.podcast.wrappers import podcast_wrapper
 
     # source_id should be the numeric PodcastIndex feed ID
+    sid = request.resolved_source_id
+    if sid is None:
+        return {
+            "error": f"Cannot derive source_id from mc_id: {request.mc_id}",
+            "status_code": 400,
+        }
     try:
-        feed_id = int(request.source_id)
+        feed_id = int(sid)
     except ValueError:
         return {
-            "error": f"Invalid source_id: {request.source_id}. Expected numeric feed ID.",
+            "error": f"Invalid source_id: {sid}. Expected numeric feed ID.",
             "status_code": 400,
         }
 

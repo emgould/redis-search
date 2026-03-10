@@ -138,15 +138,25 @@ class MediaManagerClient:
         self,
         documents: list[dict[str, Any]],
         dry_run: bool = False,
+        metadata_only: bool = False,
     ) -> InsertDocsResponse:
-        """POST a batch of documents (max 100) to /insert-docs."""
+        """POST a batch of documents (max 100) to /insert-docs.
+
+        When *metadata_only* is True the Media Manager worker updates only
+        the stored FAISS metadata, skipping wiki/LLM/embedding work.
+        Documents not already in the index fall through to the full pipeline.
+        """
         if len(documents) > 100:
             raise ValueError("Batch size must not exceed 100 documents")
+
+        body: dict[str, Any] = {"documents": documents, "dry_run": dry_run}
+        if metadata_only:
+            body["metadata_only"] = True
 
         client = await self._get_client()
         resp = await client.post(
             "/insert-docs",
-            json={"documents": documents, "dry_run": dry_run},
+            json=body,
         )
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()

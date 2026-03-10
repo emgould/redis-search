@@ -76,6 +76,19 @@ Shows{% endblock %} {% block body %}
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
+          <!-- Full Search Toggle -->
+          <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl">
+            <label for="full-search-toggle" class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
+              Full
+            </label>
+            <button type="button" id="full-search-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600"
+              onclick="toggleFullSearchMode()">
+              <span class="sr-only">Enable full search mode</span>
+              <span id="full-search-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+          </div>
           <button type="button" id="search-tmdb-btn" onclick="searchTmdb()"
             class="px-3 py-2 rounded-xl text-xs border border-orange-500/40 text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 hover:text-orange-200 transition-colors whitespace-nowrap">
             Search TMDB
@@ -257,6 +270,9 @@ Shows{% endblock %} {% block body %}
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700 flex-shrink-0">
         <h3 id="json-modal-title" class="text-lg font-semibold text-white"></h3>
         <div class="flex items-center gap-2">
+          <button id="json-modal-edit" class="hidden px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors" title="Edit document">
+            Edit
+          </button>
           <button id="json-modal-copy" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors" title="Copy JSON to clipboard">
             <svg id="json-modal-copy-icon" class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -272,11 +288,37 @@ Shows{% endblock %} {% block body %}
           </button>
         </div>
       </div>
-      <div class="px-4 pt-3 pb-2 border-b border-surface-700 flex-shrink-0">
-        <input id="json-modal-filter" type="text" placeholder="Filter by property name…"
-               class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-800 border border-surface-600 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono">
+      <!-- View mode: filter bar + JSON pre -->
+      <div id="json-modal-view-section">
+        <div class="px-4 pt-3 pb-2 border-b border-surface-700 flex-shrink-0">
+          <input id="json-modal-filter" type="text" placeholder="Filter by property name…"
+                 class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-800 border border-surface-600 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono">
+        </div>
+        <pre id="json-modal-content" class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
       </div>
-      <pre id="json-modal-content" class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
+      <!-- Edit mode: field editor + save bar -->
+      <div id="json-modal-edit-section" class="hidden flex flex-col flex-1 min-h-0">
+        <div id="json-modal-edit-fields" class="flex-1 overflow-auto p-4 space-y-3 min-h-0 max-h-[65vh]"></div>
+        <div id="json-modal-edit-status" class="hidden px-4 py-2 text-sm font-medium flex-shrink-0"></div>
+        <div class="flex items-center justify-between px-4 py-3 border-t border-surface-700 flex-shrink-0 bg-surface-800/50 rounded-b-2xl">
+          <label class="flex items-center gap-2 text-sm text-surface-300 cursor-pointer select-none">
+            <input id="json-modal-metadata-only" type="checkbox" class="w-4 h-4 rounded border-surface-600 bg-surface-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer">
+            Metadata only
+          </label>
+          <div class="flex items-center gap-2">
+            <button id="json-modal-cancel-edit" class="px-4 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-surface-300 text-sm font-medium transition-colors">
+              Cancel
+            </button>
+            <button id="json-modal-save" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
+              <svg id="json-modal-save-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -325,8 +367,9 @@ Shows{% endblock %} {% block body %}
 
   updateApiBaseControls();
 
-  let streamingEnabled = false; // Toggle state for stream mode
-  let noDuplicateEnabled = false; // Toggle state for no-duplicate mode
+  let streamingEnabled = false;
+  let noDuplicateEnabled = false;
+  let fullSearchEnabled = false;
 
   // Detect raw RediSearch mode: query contains @ (never used in normal searches)
   function isRawMode(query) {
@@ -417,6 +460,7 @@ Shows{% endblock %} {% block body %}
     expandedCategories,
     isStreamingEnabled: () => streamingEnabled,
     isNoDuplicateEnabled: () => noDuplicateEnabled,
+    isFullSearchEnabled: () => fullSearchEnabled,
   });
 
   // Stream mode toggle
@@ -466,6 +510,31 @@ Shows{% endblock %} {% block body %}
     }
 
     // If there's an active query, re-search with new mode
+    const q = searchController.getCurrentQuery();
+    if (q && q.length >= 2) {
+      searchController.triggerSearch(q);
+    }
+  }
+
+  function toggleFullSearchMode() {
+    fullSearchEnabled = !fullSearchEnabled;
+    const toggle = document.getElementById("full-search-toggle");
+    const dot = document.getElementById("full-search-toggle-dot");
+
+    if (fullSearchEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-brand-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+    } else {
+      toggle.classList.remove("bg-brand-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+
     const q = searchController.getCurrentQuery();
     if (q && q.length >= 2) {
       searchController.triggerSearch(q);
@@ -1895,7 +1964,8 @@ Shows{% endblock %} {% block body %}
     modalBody.classList.add("hidden");
     document.body.style.overflow = "hidden";
 
-    fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype);
+    const options = mcType === "person" ? { force: true } : {};
+    fetchMediaDetail(mediaId, sourceId, mcType, mcSubtype, options);
   }
 
   function closeModal() {
@@ -1943,6 +2013,22 @@ Shows{% endblock %} {% block body %}
   const jsonModalCopy = document.getElementById("json-modal-copy");
   const jsonModalCopyIcon = document.getElementById("json-modal-copy-icon");
   const jsonModalCopyCheck = document.getElementById("json-modal-copy-check");
+  const jsonModalEditBtn = document.getElementById("json-modal-edit");
+  const jsonModalViewSection = document.getElementById("json-modal-view-section");
+  const jsonModalEditSection = document.getElementById("json-modal-edit-section");
+  const jsonModalEditFields = document.getElementById("json-modal-edit-fields");
+  const jsonModalEditStatus = document.getElementById("json-modal-edit-status");
+  const jsonModalMetadataOnly = document.getElementById("json-modal-metadata-only");
+  const jsonModalCancelEdit = document.getElementById("json-modal-cancel-edit");
+  const jsonModalSave = document.getElementById("json-modal-save");
+  const jsonModalSaveSpinner = document.getElementById("json-modal-save-spinner");
+
+  const IMMUTABLE_FIELDS = new Set(["id", "mc_id", "source", "source_id", "mc_type"]);
+  const READONLY_FIELDS = new Set(["created_at", "modified_at", "_source"]);
+
+  let _jsonModalIsRedisDoc = false;
+  let _jsonModalDocObj = null;
+  let _jsonModalMediaId = null;
 
   jsonModalCopy.addEventListener("click", async () => {
     const text = jsonModalContent.textContent || "";
@@ -1955,7 +2041,7 @@ Shows{% endblock %} {% block body %}
         jsonModalCopyIcon.classList.remove("hidden");
       }, 1500);
     } catch (_) {
-      /* clipboard not available — silently ignore */
+      /* clipboard not available */
     }
   });
 
@@ -1986,7 +2072,19 @@ Shows{% endblock %} {% block body %}
     _applyJsonFilter(e.target.value.trim());
   });
 
-  function openJsonModal(title, jsonStr) {
+  function _exitEditMode() {
+    jsonModalEditSection.classList.add("hidden");
+    jsonModalViewSection.classList.remove("hidden");
+    jsonModalEditBtn.textContent = "Edit";
+    jsonModalEditBtn.classList.remove("bg-surface-700", "hover:bg-surface-600", "text-surface-300");
+    jsonModalEditBtn.classList.add("bg-blue-600", "hover:bg-blue-500", "text-white");
+    jsonModalCopy.classList.remove("hidden");
+    jsonModalEditStatus.classList.add("hidden");
+    jsonModalEditStatus.textContent = "";
+  }
+
+  function openJsonModal(title, jsonStr, isRedisDoc = false, mediaId = null) {
+    _exitEditMode();
     jsonModalTitle.textContent = title;
     _jsonModalFullText = jsonStr;
     jsonModalContent.textContent = jsonStr;
@@ -1995,15 +2093,207 @@ Shows{% endblock %} {% block body %}
     document.body.style.overflow = "hidden";
     jsonModalCopyCheck.classList.add("hidden");
     jsonModalCopyIcon.classList.remove("hidden");
+
+    _jsonModalIsRedisDoc = isRedisDoc;
+    _jsonModalMediaId = mediaId;
+    _jsonModalDocObj = null;
+    if (isRedisDoc) {
+      try { _jsonModalDocObj = JSON.parse(jsonStr); } catch (_) { /* ignore */ }
+    }
+    jsonModalEditBtn.classList.toggle("hidden", !isRedisDoc || !_jsonModalDocObj);
   }
 
   function closeJsonModal() {
+    _exitEditMode();
     jsonModal.classList.add("hidden");
     document.body.style.overflow = "";
   }
 
   jsonModalBackdrop.addEventListener("click", closeJsonModal);
   jsonModalClose.addEventListener("click", closeJsonModal);
+
+  // --- Edit mode ---
+
+  function _isComplex(val) {
+    return val !== null && typeof val === "object";
+  }
+
+  function _renderFieldEditor(key, value, isDisabled) {
+    const row = document.createElement("div");
+    row.className = "flex flex-col gap-1";
+
+    const label = document.createElement("label");
+    label.className = "text-xs font-medium font-mono " +
+      (isDisabled ? "text-surface-500" : "text-surface-400");
+    label.textContent = key;
+    row.appendChild(label);
+
+    if (_isComplex(value)) {
+      const ta = document.createElement("textarea");
+      ta.dataset.field = key;
+      ta.value = JSON.stringify(value, null, 2);
+      ta.rows = Math.min(Math.max(JSON.stringify(value, null, 2).split("\n").length, 2), 8);
+      ta.disabled = isDisabled;
+      ta.className = "w-full px-3 py-1.5 text-sm rounded-lg font-mono border resize-y " +
+        (isDisabled
+          ? "bg-surface-800/50 border-surface-700 text-surface-500 cursor-not-allowed"
+          : "bg-surface-800 border-surface-600 text-surface-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500");
+      row.appendChild(ta);
+    } else {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.dataset.field = key;
+      input.value = value === null ? "" : String(value);
+      input.placeholder = value === null ? "null" : "";
+      input.dataset.originalNull = value === null ? "1" : "0";
+      input.disabled = isDisabled;
+      input.className = "w-full px-3 py-1.5 text-sm rounded-lg font-mono border " +
+        (isDisabled
+          ? "bg-surface-800/50 border-surface-700 text-surface-500 cursor-not-allowed"
+          : "bg-surface-800 border-surface-600 text-surface-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500");
+      row.appendChild(input);
+    }
+    return row;
+  }
+
+  function _enterEditMode() {
+    if (!_jsonModalDocObj) return;
+
+    jsonModalViewSection.classList.add("hidden");
+    jsonModalEditSection.classList.remove("hidden");
+    jsonModalEditBtn.textContent = "Viewing";
+    jsonModalEditBtn.classList.remove("bg-blue-600", "hover:bg-blue-500", "text-white");
+    jsonModalEditBtn.classList.add("bg-surface-700", "hover:bg-surface-600", "text-surface-300");
+    jsonModalCopy.classList.add("hidden");
+    jsonModalMetadataOnly.checked = false;
+    jsonModalEditStatus.classList.add("hidden");
+
+    jsonModalEditFields.innerHTML = "";
+    for (const [key, value] of Object.entries(_jsonModalDocObj)) {
+      const isDisabled = IMMUTABLE_FIELDS.has(key) || READONLY_FIELDS.has(key);
+      jsonModalEditFields.appendChild(_renderFieldEditor(key, value, isDisabled));
+    }
+  }
+
+  function _collectEditedDocument() {
+    const doc = {};
+    const inputs = jsonModalEditFields.querySelectorAll("[data-field]");
+    for (const el of inputs) {
+      const key = el.dataset.field;
+      if (READONLY_FIELDS.has(key)) {
+        doc[key] = _jsonModalDocObj[key];
+        continue;
+      }
+      if (el.tagName === "TEXTAREA") {
+        try {
+          doc[key] = JSON.parse(el.value);
+        } catch (_) {
+          doc[key] = el.value;
+        }
+      } else {
+        const raw = el.value.trim();
+        if (raw === "" && el.dataset.originalNull === "1") {
+          doc[key] = null;
+        } else if (raw === "" && _jsonModalDocObj[key] === null) {
+          doc[key] = null;
+        } else if (raw === "null") {
+          doc[key] = null;
+        } else if (raw === "true") {
+          doc[key] = true;
+        } else if (raw === "false") {
+          doc[key] = false;
+        } else if (raw !== "" && !isNaN(Number(raw)) && typeof _jsonModalDocObj[key] === "number") {
+          doc[key] = Number(raw);
+        } else {
+          doc[key] = raw === "" ? null : raw;
+        }
+      }
+    }
+    return doc;
+  }
+
+  function _showEditStatus(message, isError) {
+    jsonModalEditStatus.textContent = message;
+    jsonModalEditStatus.classList.remove("hidden", "text-emerald-400", "text-red-400", "bg-emerald-900/30", "bg-red-900/30");
+    jsonModalEditStatus.classList.add(
+      isError ? "text-red-400" : "text-emerald-400",
+      isError ? "bg-red-900/30" : "bg-emerald-900/30"
+    );
+  }
+
+  async function _saveEditedDocument() {
+    const doc = _collectEditedDocument();
+    const mediaId = _jsonModalMediaId;
+    if (!mediaId) return;
+
+    jsonModalSave.disabled = true;
+    jsonModalSaveSpinner.classList.remove("hidden");
+    jsonModalEditStatus.classList.add("hidden");
+
+    try {
+      const base = typeof getApiUrl === "function" ? getApiUrl(`/api/media/${mediaId}`) : `/api/media/${mediaId}`;
+      const resp = await fetch(base, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document: doc,
+          push_to_media_manager: true,
+          metadata_only: jsonModalMetadataOnly.checked,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      const savedDoc = data.document || doc;
+      _jsonModalDocObj = savedDoc;
+      _jsonModalFullText = JSON.stringify(savedDoc, null, 2);
+      jsonModalContent.textContent = _jsonModalFullText;
+
+      let statusMsg = "Saved to Redis.";
+      const mm = data.media_manager;
+      if (mm && mm.attempted) {
+        if (mm.sent) {
+          statusMsg += mm.metadata_only
+            ? " Sent to Media Manager (metadata only)."
+            : " Sent to Media Manager.";
+          if (mm.filter_warning) {
+            statusMsg += ` (filter warning: ${mm.filter_warning})`;
+          }
+        } else if (mm.error) {
+          statusMsg += ` Media Manager error: ${mm.error}.`;
+        }
+      }
+      _showEditStatus(statusMsg, false);
+
+      setTimeout(() => {
+        _exitEditMode();
+        _applyJsonFilter(jsonModalFilter.value.trim());
+      }, 1500);
+    } catch (err) {
+      _showEditStatus(String(err), true);
+    } finally {
+      jsonModalSave.disabled = false;
+      jsonModalSaveSpinner.classList.add("hidden");
+    }
+  }
+
+  jsonModalEditBtn.addEventListener("click", () => {
+    if (!jsonModalEditSection.classList.contains("hidden")) {
+      _exitEditMode();
+      _applyJsonFilter(jsonModalFilter.value.trim());
+    } else {
+      _enterEditMode();
+    }
+  });
+  jsonModalCancelEdit.addEventListener("click", () => {
+    _exitEditMode();
+    _applyJsonFilter(jsonModalFilter.value.trim());
+  });
+  jsonModalSave.addEventListener("click", _saveEditedDocument);
+
+  // --- showRedisDoc / fetchMediaDetails ---
 
   window.showRedisDoc = async function (mcId) {
     const item = window._itemsByMcId && mcId ? window._itemsByMcId[mcId] : null;
@@ -2018,8 +2308,12 @@ Shows{% endblock %} {% block body %}
         const params = new URLSearchParams({ mc_id: mcId, allow_insert: "true", force_refresh: "true" });
         const resp = await fetch(`${base}?${params}`);
         const data = await resp.json();
-        jsonModalTitle.textContent = "Redis Doc";
         _jsonModalFullText = JSON.stringify(data, null, 2);
+        _jsonModalDocObj = data;
+        _jsonModalMediaId = data.mc_id || mcId;
+        _jsonModalIsRedisDoc = true;
+        jsonModalTitle.textContent = "Redis Doc";
+        jsonModalEditBtn.classList.remove("hidden");
         _applyJsonFilter(jsonModalFilter.value.trim());
       } catch (err) {
         jsonModalTitle.textContent = "Redis Doc";
@@ -2028,7 +2322,7 @@ Shows{% endblock %} {% block body %}
       }
       return;
     }
-    openJsonModal("Redis Doc", JSON.stringify(item, null, 2));
+    openJsonModal("Redis Doc", JSON.stringify(item, null, 2), true, item.mc_id || mcId);
   };
 
   window.fetchMediaDetails = async function (tmdbId, mediaType) {
@@ -2110,11 +2404,12 @@ Shows{% endblock %} {% block body %}
       // Use the /api/details endpoint with POST
       const params = new URLSearchParams({
         mc_id: mediaId,
-        source_id: sourceId,
         mc_type: mcType || "movie",
       });
+      if (sourceId) params.append("source_id", sourceId);
       if (mcSubtype) params.append("mc_subtype", mcSubtype);
       if (options.rss_details) params.append("rss_details", "true");
+      if (options.force) params.append("force", "true");
 
       const response = await fetch(`/api/details?${params.toString()}`, {
         method: "POST",
@@ -3668,12 +3963,13 @@ Shows{% endblock %} {% block body %}
         // Show loading state in the modal
         modalLoading.classList.remove("hidden");
         modalBody.classList.add("hidden");
-        // Fetch person details
+        // Fetch person details with live TMDB credits
         fetchMediaDetail(
           `tmdb_person_${personId}`,
           personId,
           "person",
-          "actor"
+          "actor",
+          { force: true }
         );
       }
       return;

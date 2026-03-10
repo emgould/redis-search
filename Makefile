@@ -450,6 +450,15 @@ add:
 backfill:
 	@. venv/bin/activate && python scripts/backfill_media_dates_and_timestamps.py $(ARGS)
 
+# Backfill Rotten Tomatoes enrichment from local RT index + optional Algolia fallback
+# Usage: make backfill-rt
+#        make backfill-rt MC_TYPE=movie
+#        make backfill-rt ARGS="--algolia-fallback --limit 100"
+#        make backfill-rt ARGS="--dry-run"
+#        make backfill-rt ARGS="--force"
+backfill-rt:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_rt_enrichment.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
 # Backfill missing external_ids from TMDB dedicated endpoint
 # Usage: make backfill-external-ids
 #        make backfill-external-ids MC_TYPE=movie

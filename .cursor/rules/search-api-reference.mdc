@@ -146,13 +146,65 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 
 ---
 
-### 4. Media Details
+### 4. Media / Person / Podcast Details
 
 ```
-POST /api/details?mc_id={id}&source_id={id}&mc_type={type}
+POST /api/details
 ```
 
-Get detailed information for a specific media item, including watch providers, full cast, trailers, and keywords.
+Get detailed information for a specific item or a batch of items.
+
+#### Scalar lookup
+
+```
+POST /api/details?mc_id={id}&mc_type={type}
+```
+
+Returns a single JSON object. `source_id` is optional — derived from `mc_id` when absent.
+
+#### Batch lookup
+
+```
+POST /api/details?mc_ids={id1},{id2},{id3}&mc_type={type}
+```
+
+Returns a JSON array (positional). Unresolved IDs appear as `null` at their index; the request itself returns HTTP 200.
+Uses `JSON.MGET` (single Redis round-trip) for index-only types (person, podcast, author, book without `force`).
+
+#### Parameters
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `mc_id` | one of `mc_id` / `mc_ids` | Single item identifier |
+| `mc_ids` | one of `mc_id` / `mc_ids` | Comma-separated identifiers for batch |
+| `mc_type` | yes | `movie`, `tv`, `person`, `podcast`, `book`, or `person` with `mc_subtype=author` |
+| `source_id` | no | Upstream numeric ID; derived from `mc_id` when absent |
+| `mc_subtype` | no | e.g. `author` for OpenLibrary authors |
+| `force` | no (default `false`) | When `true`, fetch live upstream data (e.g. TMDB credits for person) |
+| `rss_details` | no (default `false`) | When `true`, include RSS episodes for podcasts |
+| `fields` | no | Comma-separated field names to return. `id`/`mc_id` always included. When omitted, all fields are returned. |
+
+#### Field projection
+
+When `fields` is provided, each result object is reduced to only the listed keys plus `id` and `mc_id` (always present). Applies to both scalar and batch responses. `null` entries in batch results remain `null`.
+
+```
+POST /api/details?mc_ids=tmdb_person_287,tmdb_person_1461&mc_type=person&fields=popularity,search_title
+```
+
+```json
+[
+  {"id": "tmdb_person_287", "search_title": "Brad Pitt", "popularity": 10.42},
+  {"id": "tmdb_person_1461", "search_title": "George Clooney", "popularity": 5.34}
+]
+```
+
+#### Behaviour by type
+
+- **movie / tv**: Always enriches with live TMDB watch providers and cast.
+- **person** (default): Returns Redis index document only. With `force=true`, supplements with live TMDB person details and movie/TV credits.
+- **podcast**: Returns Redis index document. With `rss_details=true`, includes RSS feed episodes.
+- **author / book**: Returns Redis index document only.
 
 ---
 
