@@ -2535,12 +2535,16 @@ async def api_get_details(
     mc_subtype: str | None = Query(default=None),
     rss_details: bool = Query(default=False),
     force: bool = Query(default=False),
+    fields: str | None = Query(default=None, description="Comma-separated field names to return (mc_id always included)"),
 ):
     """
     Get detailed metadata for a media item or person.
 
     Accepts a single mc_id or a comma-separated mc_ids for batch lookup.
     Batch requests return a JSON array; scalar requests return a single object.
+
+    When ``fields`` is provided, each result is projected to only the listed
+    keys plus ``mc_id`` (always included).
 
     For tv/movie: Returns indexed data enriched with watch providers and cast.
     For person: Returns person data from Redis index. With force=true, also
@@ -2558,6 +2562,17 @@ async def api_get_details(
     if not id_list:
         return JSONResponse(status_code=400, content={"error": "mc_id or mc_ids is required"})
 
+    field_set: set[str] | None = None
+    if fields:
+        field_set = {f.strip() for f in fields.split(",") if f.strip()}
+        field_set.add("mc_id")
+        field_set.add("id")
+
+    def _project(doc: dict[str, Any] | None) -> dict[str, Any] | None:
+        if doc is None or field_set is None:
+            return doc
+        return {k: v for k, v in doc.items() if k in field_set}
+
     try:
         if is_batch:
             results = await get_details_batch(
@@ -2566,7 +2581,7 @@ async def api_get_details(
                 mc_subtype=mc_subtype,
                 force=force,
             )
-            return JSONResponse(content=results)
+            return JSONResponse(content=[_project(r) for r in results])
 
         request = DetailsRequest(
             mc_id=id_list[0],
@@ -2580,7 +2595,7 @@ async def api_get_details(
         if result.get("error"):
             status_code = result.get("status_code", 500)
             return JSONResponse(status_code=status_code, content=result)
-        return JSONResponse(content=result)
+        return JSONResponse(content=_project(result))
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
