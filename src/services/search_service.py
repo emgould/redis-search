@@ -2205,9 +2205,8 @@ async def get_details_batch(
     keys = [f"{prefix}{mid}" for mid in mc_ids]
 
     mt_lower = mc_type.lower()
-    needs_upstream = force or mt_lower in {"movie", "tv"}
 
-    if needs_upstream:
+    if force:
         requests = [
             DetailsRequest(
                 mc_id=mid,
