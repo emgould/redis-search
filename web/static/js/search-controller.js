@@ -28,6 +28,14 @@
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 750;
+const EXACT_MATCH_PRIORITY = {
+  movie: 0,
+  tv: 1,
+  person: 2,
+  podcast: 3,
+  book: 4,
+  author: 5,
+};
 
 // ---------------------------------------------------------------------------
 // Public init
@@ -118,6 +126,44 @@ function initSearchController(cfg) {
     for (const key of Object.keys(expandedCategories)) {
       expandedCategories[key] = false;
     }
+  }
+
+  function exactSourceKey(item) {
+    if (!item) return "";
+    if (item.mc_subtype === "author") return "author";
+    return item.mc_type || "";
+  }
+
+  function numericValue(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function pickPreferredExactMatch(current, incoming) {
+    if (!incoming) return current;
+    if (!current) return incoming;
+
+    const currentSource = exactSourceKey(current);
+    const incomingSource = exactSourceKey(incoming);
+    const currentIsMedia = currentSource === "movie" || currentSource === "tv";
+    const incomingIsMedia = incomingSource === "movie" || incomingSource === "tv";
+
+    if (currentIsMedia && incomingIsMedia) {
+      const currentYear = numericValue(current.year);
+      const incomingYear = numericValue(incoming.year);
+      if (incomingYear !== currentYear) return incomingYear > currentYear ? incoming : current;
+
+      const currentPopularity = numericValue(current.popularity);
+      const incomingPopularity = numericValue(incoming.popularity);
+      if (incomingPopularity !== currentPopularity) {
+        return incomingPopularity > currentPopularity ? incoming : current;
+      }
+      return current;
+    }
+
+    const currentPriority = EXACT_MATCH_PRIORITY[currentSource] ?? Number.MAX_SAFE_INTEGER;
+    const incomingPriority = EXACT_MATCH_PRIORITY[incomingSource] ?? Number.MAX_SAFE_INTEGER;
+    return incomingPriority < currentPriority ? incoming : current;
   }
 
   function render(query) {
@@ -212,14 +258,29 @@ function initSearchController(cfg) {
       if (query !== currentQuery) return;
       try {
         const item = JSON.parse(e.data);
-        // First exact match wins (matches batch behavior: single best by priority)
-        if (!currentResults.exact_match) {
-          currentResults.exact_match = item;
+        const preferred = pickPreferredExactMatch(currentResults.exact_match, item);
+        if (preferred !== currentResults.exact_match) {
+          currentResults.exact_match = preferred;
           render(query);
         }
         console.debug("[Search Stream] exact_match:", item.search_title || item.name || item.title);
       } catch (err) {
         console.error("[Search Stream] exact_match parse error:", err);
+      }
+    });
+
+    eventSource.addEventListener("exact_match_final", (e) => {
+      if (query !== currentQuery) return;
+      try {
+        const item = JSON.parse(e.data);
+        currentResults.exact_match = item;
+        render(query);
+        console.debug(
+          "[Search Stream] exact_match_final:",
+          item.search_title || item.name || item.title,
+        );
+      } catch (err) {
+        console.error("[Search Stream] exact_match_final parse error:", err);
       }
     });
 

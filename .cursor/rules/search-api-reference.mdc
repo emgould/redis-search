@@ -39,6 +39,11 @@ GET /api/autocomplete?q={query}&sources={sources}
 
 **Response:** JSON object with results grouped by source type. When a source hint was applied, includes `source_hint` (array of source names).
 
+**Media ranking behavior:**
+- When `tv` and/or `movie` are requested, Redis is queried per media source bucket, not as one shared mixed media pool.
+- `limit` applies per requested source (`tv`, `movie`, etc.), not across a combined movie+tv candidate set.
+- This prevents high-popularity movie keyword matches from crowding out exact-title TV hits before Python re-ranking runs.
+
 ---
 
 ### 2. Autocomplete (Streaming/SSE)
@@ -51,7 +56,8 @@ Same parameters as above, but returns **Server-Sent Events (SSE)** where results
 
 **Event Types:**
 - `result` - Contains results from one source: `{source, results, latency_ms}`
-- `exact_match` - Emitted when a source yields an exact match (e.g., query "the godfather" matches movie "The Godfather"). Data is a single MCBaseItem. May fire multiple times per stream.
+- `exact_match` - Provisional exact match emitted as a source yields an exact hit. Data is a single MCBaseItem. May fire multiple times per stream.
+- `exact_match_final` - Final authoritative exact match for the whole stream, chosen by the same backend logic used by non-stream responses.
 - `done` - Indicates all sources have completed. Payload may include `source_hint` when a source hint was applied.
 
 **Example JavaScript:**
@@ -65,7 +71,12 @@ es.addEventListener('result', (e) => {
 
 es.addEventListener('exact_match', (e) => {
   const item = JSON.parse(e.data);
-  // Surface immediately - likely what user is looking for
+  // Provisional exact match while sources are still streaming
+});
+
+es.addEventListener('exact_match_final', (e) => {
+  const item = JSON.parse(e.data);
+  // Final authoritative exact match for the completed stream
 });
 
 es.addEventListener('done', () => es.close());
@@ -110,6 +121,11 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
   - **With query**: Direct RottenTomatoes search using the query
   - **Filter-only (no query)**: Ratings are enriched from indexed tv/movie results by searching RottenTomatoes for each title
 - Ratings results are sorted according to `ratings_sort` parameter (default: popularity)
+
+**Media ranking behavior:**
+- When `tv` and/or `movie` are requested, Redis is queried per media source bucket, not as one shared mixed media pool.
+- `limit` applies per requested source (`tv`, `movie`, etc.), not across a combined movie+tv candidate set.
+- Each media bucket is then re-ranked in Python so exact title matches beat looser keyword / cast / genre matches within that source.
 
 **Example:**
 ```
@@ -331,7 +347,7 @@ Example: Searching "spielberg" will match movies directed by Spielberg via the `
 
 Top-level keys include per-source arrays (`tv`, `movie`, `person`, etc.), optionally `exact_match`, and optionally `source_hint`:
 
-- **`exact_match`** - `ExactMatchItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Single best match by source priority (movie > tv > person > podcast > book > author). Omitted or `null` when no exact match.
+- **`exact_match`** - `ExactMatchItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Media exact matches (`movie`/`tv`) are compared by exact-title tier, then newer `year`, then higher `popularity`; non-media sources fall back to source priority (`person > podcast > book > author` after media).
 - **`source_hint`** - `string[]`. Present when a source hint was parsed from the query (e.g., "godfather movie" → sources restricted to movie). Omitted when no hint was applied.
 
 ### Result Item Format

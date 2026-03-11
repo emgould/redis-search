@@ -39,10 +39,11 @@ from core.search_queries import (
 from utils.get_logger import get_logger
 from utils.soft_comparison import is_author_name_match, is_person_autocomplete_match
 
-# Stream event: either (source, results, latency_ms) or ("exact_match", item)
+# Stream event: either (source, results, latency_ms) or an exact-match item event.
 StreamEvent = Union[
     tuple[str, list[Any], float],
     tuple[Literal["exact_match"], dict[str, Any]],
+    tuple[Literal["exact_match_final"], dict[str, Any]],
 ]
 
 logger = get_logger(__name__)
@@ -125,6 +126,13 @@ def _normalize_exact_match_cast(item: dict[str, Any]) -> dict[str, Any]:
 
     normalized_cast: list[dict[str, Any]] = []
     for index, cast_name in enumerate(cast_names):
+        if isinstance(cast_name, dict):
+            name = cast_name.get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            cast_id = cast_name.get("id")
+            normalized_cast.append({"name": name, "id": str(cast_id) if cast_id else None})
+            continue
         if not isinstance(cast_name, str) or not cast_name:
             continue
 
@@ -139,15 +147,37 @@ def _pick_exact_match(
     results: dict[str, list[dict[str, Any]]], query: str | None
 ) -> dict[str, Any] | None:
     """
-    Pick the single best exact match from search results by cross-source priority.
+    Pick the single best exact match from search results.
 
-    Returns the first exact match found when scanning sources in priority order
-    (movie, tv, person, podcast, book, author). Returns None if no exact match.
+    Media exact matches are compared by the same rank/year/popularity scoring used
+    for source-local ordering so the best exact movie/TV result wins regardless of
+    source bucket. Non-media sources fall back to static cross-source priority.
     """
     if not query or len(query.strip()) < 2:
         return None
     q = query.strip()
+
+    media_exact_candidates: list[tuple[str, dict[str, Any]]] = []
+    for source in ("movie", "tv"):
+        items = results.get(source) or []
+        for item in items:
+            if is_exact_match(q, item, source):
+                media_exact_candidates.append((source, item))
+
+    if media_exact_candidates:
+        priority_index = {source: idx for idx, source in enumerate(EXACT_MATCH_SOURCE_PRIORITY)}
+        _, best_media_item = min(
+            media_exact_candidates,
+            key=lambda candidate: (
+                _rank_media_result(candidate[1], q),
+                priority_index.get(candidate[0], len(EXACT_MATCH_SOURCE_PRIORITY)),
+            ),
+        )
+        return _normalize_exact_match_cast(best_media_item)
+
     for source in EXACT_MATCH_SOURCE_PRIORITY:
+        if source in {"movie", "tv"}:
+            continue
         items = results.get(source) or []
         for item in items:
             if is_exact_match(q, item, source):
@@ -251,6 +281,22 @@ def _extract_docs(result: object) -> list[object]:
     if isinstance(docs, list):
         return docs
     return []
+
+
+def _build_media_source_query(query_str: str, media_source: str) -> str:
+    """Restrict a media query to a specific source bucket."""
+    type_filter = f"@mc_type:{{{media_source}}}"
+    if query_str == "*":
+        return type_filter
+    return f"({query_str}) {type_filter}"
+
+
+def _parse_media_results(result: object, query: str | None) -> list[dict[str, Any]]:
+    """Parse and rank media results for a single source bucket."""
+    parsed_results = [parse_doc(doc) for doc in _extract_docs(result)]
+    if query:
+        return sorted(parsed_results, key=lambda item: _rank_media_result(item, query))
+    return parsed_results
 
 
 def build_people_autocomplete_query(q: str) -> str:
@@ -564,10 +610,21 @@ async def autocomplete(
         timed_tasks = []
 
         # RediSearch (local) - no timeout needed
-        # "media" covers both tv and movie
         media_limit = 250 if full else 50
-        if "tv" in sources or "movie" in sources:
-            timed_tasks.append(timed_task("media", repo.search(media_query, limit=media_limit)))
+        if "tv" in sources:
+            timed_tasks.append(
+                timed_task(
+                    "tv_media",
+                    repo.search(_build_media_source_query(media_query, "tv"), limit=media_limit),
+                )
+            )
+        if "movie" in sources:
+            timed_tasks.append(
+                timed_task(
+                    "movie_media",
+                    repo.search(_build_media_source_query(media_query, "movie"), limit=media_limit),
+                )
+            )
         if "person" in sources:
             # Fetch more results for post-query filtering (handles 1-char prefix case)
             timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
@@ -604,7 +661,8 @@ async def autocomplete(
         )
 
         # Map to original variable names
-        media_res = results_by_name.get("media", empty_result)
+        tv_media_res = results_by_name.get("tv_media", empty_result)
+        movie_media_res = results_by_name.get("movie_media", empty_result)
         people_res = results_by_name.get("person", empty_result)
         podcasts_res = results_by_name.get("podcast", empty_result)
         authors_res = results_by_name.get("author", empty_result)
@@ -617,9 +675,24 @@ async def autocomplete(
     except Exception:
         # If concurrent search fails, try individually
         try:
-            media_res = await repo.search(media_query, limit=250 if full else 50)
+            tv_media_res = (
+                await repo.search(_build_media_source_query(media_query, "tv"), limit=250 if full else 50)
+                if "tv" in sources
+                else empty_result
+            )
         except Exception:
-            media_res = empty_result
+            tv_media_res = empty_result
+
+        try:
+            movie_media_res = (
+                await repo.search(
+                    _build_media_source_query(media_query, "movie"), limit=250 if full else 50
+                )
+                if "movie" in sources
+                else empty_result
+            )
+        except Exception:
+            movie_media_res = empty_result
 
         try:
             people_res = await repo.search_people(people_query, limit=20)
@@ -649,8 +722,10 @@ async def autocomplete(
         album_res = None
 
     # Handle exceptions from gather
-    if isinstance(media_res, BaseException):
-        media_res = empty_result
+    if isinstance(tv_media_res, BaseException):
+        tv_media_res = empty_result
+    if isinstance(movie_media_res, BaseException):
+        movie_media_res = empty_result
     if isinstance(people_res, BaseException):
         people_res = empty_result
     if isinstance(podcasts_res, BaseException):
@@ -670,21 +745,9 @@ async def autocomplete(
     if isinstance(album_res, BaseException):
         album_res = None
 
-    # Parse and categorize media results (respecting source filters)
-    tv_results: list[dict] = []
-    movie_results: list[dict] = []
-
-    for doc in media_res.docs:  # type: ignore[union-attr]
-        parsed = parse_doc(doc)
-        mc_type = parsed.get("mc_type", "")
-        if mc_type == "tv" and "tv" in sources:
-            tv_results.append(parsed)
-        elif mc_type == "movie" and "movie" in sources:
-            movie_results.append(parsed)
-
-    # Re-rank movie and TV results: exact title matches first, then by popularity
-    movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
-    tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
+    # Parse and rank media results for each requested source independently.
+    tv_results = _parse_media_results(tv_media_res, q) if "tv" in sources else []
+    movie_results = _parse_media_results(movie_media_res, q) if "movie" in sources else []
 
     # Parse person results and filter using autocomplete prefix matching
     # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
@@ -845,12 +908,25 @@ async def autocomplete_stream(
     tasks_dict: dict[asyncio.Task, str] = {}  # type: ignore[type-arg]
 
     # RediSearch tasks (local) - no timeout
-    # "media" covers both tv and movie
     ac_media_limit = 250 if full else 50
-    if "tv" in sources or "movie" in sources:
-        tasks_dict[asyncio.create_task(timed_task("media", repo.search(media_query, limit=ac_media_limit)))] = (
-            "media"
-        )
+    if "tv" in sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task(
+                    "tv_media",
+                    repo.search(_build_media_source_query(media_query, "tv"), limit=ac_media_limit),
+                )
+            )
+        ] = "tv_media"
+    if "movie" in sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task(
+                    "movie_media",
+                    repo.search(_build_media_source_query(media_query, "movie"), limit=ac_media_limit),
+                )
+            )
+        ] = "movie_media"
     if "person" in sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         tasks_dict[
@@ -881,6 +957,7 @@ async def autocomplete_stream(
 
     total_start = time.perf_counter()
     timing_parts: list[str] = []
+    streamed_results: dict[str, list[dict[str, Any]]] = {}
 
     # Yield results as they complete (fastest first)
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
@@ -895,40 +972,19 @@ async def autocomplete_stream(
             # Parse results based on source type
             parsed_results: list[dict] = []
 
-            if name == "media":
+            if name in {"tv_media", "movie_media"}:
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
-                    tv_results = []
-                    movie_results = []
-                    for doc in data.docs:
-                        parsed = parse_doc(doc)
-                        mc_type = parsed.get("mc_type", "")
-                        if mc_type == "tv" and "tv" in sources:
-                            tv_results.append(parsed)
-                        elif mc_type == "movie" and "movie" in sources:
-                            movie_results.append(parsed)
-                    # Re-rank: exact title matches first, then by popularity
-                    tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
-                    movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
-                    # Yield TV and movie separately (only if requested)
-                    if tv_results and "tv" in sources:
-                        tv_top = tv_results[:10]
-                        tv_exact = _iter_exact_matches("tv", tv_top, q)
-                        if no_duplicate and tv_exact:
-                            tv_top = _filter_exact_items(tv_top, tv_exact)
-                        if tv_top:
-                            yield ("tv", tv_top, elapsed)
-                        for item in tv_exact:
-                            yield ("exact_match", item)
-                    if movie_results and "movie" in sources:
-                        movie_top = movie_results[:10]
-                        movie_exact = _iter_exact_matches("movie", movie_top, q)
-                        if no_duplicate and movie_exact:
-                            movie_top = _filter_exact_items(movie_top, movie_exact)
-                        if movie_top:
-                            yield ("movie", movie_top, elapsed)
-                        for item in movie_exact:
-                            yield ("exact_match", item)
-                continue  # Already yielded tv/movie
+                    source_name = "tv" if name == "tv_media" else "movie"
+                    media_results = _parse_media_results(data, q)[:10]
+                    streamed_results[source_name] = media_results
+                    media_exact = _iter_exact_matches(source_name, media_results, q)
+                    if no_duplicate and media_exact:
+                        media_results = _filter_exact_items(media_results, media_exact)
+                    if media_results:
+                        yield (source_name, media_results, elapsed)
+                    for item in media_exact:
+                        yield ("exact_match", item)
+                continue
 
             elif name == "person":
                 # Person results need autocomplete prefix filtering and re-ranking
@@ -979,6 +1035,7 @@ async def autocomplete_stream(
                     parsed_results = [item.model_dump() for item in data.results[:10]]
 
             if parsed_results:
+                streamed_results[name] = parsed_results
                 exact_items = _iter_exact_matches(name, parsed_results, q)
                 if no_duplicate and exact_items:
                     parsed_results = _filter_exact_items(parsed_results, exact_items)
@@ -993,6 +1050,9 @@ async def autocomplete_stream(
 
     # Log total timing
     total_elapsed = (time.perf_counter() - total_start) * 1000
+    final_exact = _pick_exact_match(streamed_results, q)
+    if final_exact is not None:
+        yield ("exact_match_final", final_exact)
     logger.info(
         f"Autocomplete stream '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
     )
@@ -1162,8 +1222,22 @@ async def search(
     # full=True bumps to 250 so low-popularity exact matches aren't missed.
     _base = 250 if full else max(limit * 5, 50)
     media_fetch_limit = _base if has_query else limit * 2
-    if "tv" in requested_sources or "movie" in requested_sources:
-        timed_tasks.append(timed_task("media", repo.search(media_query, limit=media_fetch_limit)))
+    if "tv" in requested_sources:
+        timed_tasks.append(
+            timed_task(
+                "tv_media",
+                repo.search(_build_media_source_query(media_query, "tv"), limit=media_fetch_limit),
+            )
+        )
+    if "movie" in requested_sources:
+        timed_tasks.append(
+            timed_task(
+                "movie_media",
+                repo.search(
+                    _build_media_source_query(media_query, "movie"), limit=media_fetch_limit
+                ),
+            )
+        )
     if "person" in requested_sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=limit * 2)))
@@ -1252,31 +1326,16 @@ async def search(
     final_results: dict[str, Any] = {}
 
     # Process media (tv/movie) results
-    if "media" in results_map:
-        media_res = results_map["media"]
-        if isinstance(media_res, BaseException):
-            media_res = empty_result
-
-        tv_results: list[dict] = []
-        movie_results: list[dict] = []
-
-        for doc in _extract_docs(media_res):
-            parsed = parse_doc(doc)
-            mc_type = parsed.get("mc_type", "")
-            if mc_type == "tv" and "tv" in requested_sources:
-                tv_results.append(parsed)
-            elif mc_type == "movie" and "movie" in requested_sources:
-                movie_results.append(parsed)
-
-        # Re-rank: exact title matches first, then by popularity
-        if q:
-            tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
-            movie_results = sorted(movie_results, key=lambda m: _rank_media_result(m, q))
-
-        if "tv" in requested_sources:
-            final_results["tv"] = tv_results[:limit]
-        if "movie" in requested_sources:
-            final_results["movie"] = movie_results[:limit]
+    if "tv" in requested_sources:
+        tv_media_res = results_map.get("tv_media", empty_result)
+        if isinstance(tv_media_res, BaseException):
+            tv_media_res = empty_result
+        final_results["tv"] = _parse_media_results(tv_media_res, q)[:limit]
+    if "movie" in requested_sources:
+        movie_media_res = results_map.get("movie_media", empty_result)
+        if isinstance(movie_media_res, BaseException):
+            movie_media_res = empty_result
+        final_results["movie"] = _parse_media_results(movie_media_res, q)[:limit]
 
     # Process person results with autocomplete prefix filtering and re-ranking
     if "person" in results_map:
@@ -1638,12 +1697,26 @@ async def search_stream(
     # aren't pushed out by popularity-sorted keyword/cast/genre matches.
     _stream_base = 250 if full else max(limit * 5, 50)
     media_fetch_limit = _stream_base if has_query else limit * 2
-    if "tv" in requested_sources or "movie" in requested_sources:
+    if "tv" in requested_sources:
         tasks_dict[
             asyncio.create_task(
-                timed_task("media", repo.search(media_query, limit=media_fetch_limit))
+                timed_task(
+                    "tv_media",
+                    repo.search(_build_media_source_query(media_query, "tv"), limit=media_fetch_limit),
+                )
             )
-        ] = "media"
+        ] = "tv_media"
+    if "movie" in requested_sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task(
+                    "movie_media",
+                    repo.search(
+                        _build_media_source_query(media_query, "movie"), limit=media_fetch_limit
+                    ),
+                )
+            )
+        ] = "movie_media"
     if "person" in requested_sources:
         tasks_dict[
             asyncio.create_task(
@@ -1725,6 +1798,7 @@ async def search_stream(
 
     total_start = time.perf_counter()
     timing_parts: list[str] = []
+    streamed_results: dict[str, list[dict[str, Any]]] = {}
 
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
         try:
@@ -1735,40 +1809,18 @@ async def search_stream(
             name, data, elapsed = result
             timing_parts.append(f"{name}={elapsed:.0f}ms")
 
-            if name == "media":
+            if name in {"tv_media", "movie_media"}:
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
-                    tv_results: list[dict] = []
-                    movie_results: list[dict] = []
-                    for doc in data.docs:
-                        parsed = parse_doc(doc)
-                        parsed_mc_type = parsed.get("mc_type", "")
-                        if parsed_mc_type == "tv" and "tv" in requested_sources:
-                            tv_results.append(parsed)
-                        elif parsed_mc_type == "movie" and "movie" in requested_sources:
-                            movie_results.append(parsed)
-                    if q:
-                        tv_results = sorted(tv_results, key=lambda t: _rank_media_result(t, q))
-                        movie_results = sorted(
-                            movie_results, key=lambda m: _rank_media_result(m, q)
-                        )
-                    if tv_results and "tv" in requested_sources:
-                        tv_top = tv_results[:limit]
-                        tv_exact = _iter_exact_matches("tv", tv_top, q)
-                        if no_duplicate and tv_exact:
-                            tv_top = _filter_exact_items(tv_top, tv_exact)
-                        if tv_top:
-                            yield ("tv", tv_top, elapsed)
-                        for item in tv_exact:
-                            yield ("exact_match", item)
-                    if movie_results and "movie" in requested_sources:
-                        movie_top = movie_results[:limit]
-                        movie_exact = _iter_exact_matches("movie", movie_top, q)
-                        if no_duplicate and movie_exact:
-                            movie_top = _filter_exact_items(movie_top, movie_exact)
-                        if movie_top:
-                            yield ("movie", movie_top, elapsed)
-                        for item in movie_exact:
-                            yield ("exact_match", item)
+                    source_name = "tv" if name == "tv_media" else "movie"
+                    media_results = _parse_media_results(data, q)[:limit]
+                    streamed_results[source_name] = media_results
+                    media_exact = _iter_exact_matches(source_name, media_results, q)
+                    if no_duplicate and media_exact:
+                        media_results = _filter_exact_items(media_results, media_exact)
+                    if media_results:
+                        yield (source_name, media_results, elapsed)
+                    for item in media_exact:
+                        yield ("exact_match", item)
                 continue
 
             elif name == "person":
@@ -1868,6 +1920,7 @@ async def search_stream(
                 parsed_results = []
 
             if parsed_results:
+                streamed_results[name] = parsed_results
                 exact_items = _iter_exact_matches(name, parsed_results, q)
                 if no_duplicate and exact_items:
                     parsed_results = _filter_exact_items(parsed_results, exact_items)
@@ -1881,6 +1934,9 @@ async def search_stream(
             continue
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
+    final_exact = _pick_exact_match(streamed_results, q if has_query else None)
+    if final_exact is not None:
+        yield ("exact_match_final", final_exact)
     query_desc = f"'{q}'" if q else "[filters only]"
     logger.info(
         f"Search stream {query_desc} latency: total={total_elapsed:.0f}ms | "
@@ -2205,9 +2261,8 @@ async def get_details_batch(
     keys = [f"{prefix}{mid}" for mid in mc_ids]
 
     mt_lower = mc_type.lower()
-    needs_upstream = force or mt_lower in {"movie", "tv"}
 
-    if needs_upstream:
+    if force:
         requests = [
             DetailsRequest(
                 mc_id=mid,

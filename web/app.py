@@ -478,6 +478,9 @@ async def api_autocomplete_stream(
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
+            elif len(event) == 2 and event[0] == "exact_match_final":
+                _, item = event
+                yield f"event: exact_match_final\ndata: {json.dumps(item)}\n\n"
             else:
                 source, results, latency_ms = event
                 event_data = json.dumps(
@@ -899,6 +902,9 @@ async def api_search_stream(
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
+            elif len(event) == 2 and event[0] == "exact_match_final":
+                _, item = event
+                yield f"event: exact_match_final\ndata: {json.dumps(item)}\n\n"
             else:
                 source, results, latency_ms = event
                 event_data = json.dumps(
