@@ -1,12 +1,172 @@
 ---
-description: Redis index payload schema by index and details endpoint contract
-globs: ["web/app.py", "src/core/normalize.py", "src/services/search_service.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py"]
+description: Client-facing API endpoint contracts, Redis index payload schemas, and response shapes
+globs: ["web/app.py", "src/core/normalize.py", "src/services/search_service.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py", "web/templates/home.html", "web/static/js/search-controller.js"]
 alwaysApply: false
 ---
 
 # using_redis_search
 
-## Summary
+## Client-Facing API Endpoints
+
+### Search & Autocomplete
+
+#### `GET /api/autocomplete`
+
+JSON autocomplete for the search input. Returns categorized results from all or selected sources.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `q` | string | yes | — | Search query (min 2 chars) |
+| `sources` | string | no | all | Comma-separated: tv, movie, person, podcast, author, book, news, video, ratings, artist, album |
+| `raw` | bool | no | false | Treat `q` as raw RediSearch syntax for indexed sources |
+| `no_duplicate` | bool | no | false | Exclude exact match item from its source results list |
+| `full` | bool | no | false | Fetch 250 media candidates instead of 50 for deeper ranking |
+
+Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }` keyed by source.
+
+Supports source hints in the query (e.g. `movie: matrix`). Returns `source_hint` in response when detected.
+
+#### `GET /api/autocomplete/stream`
+
+SSE streaming version of autocomplete. Same parameters as above. Results stream as each source completes.
+
+SSE events:
+- `event: result` → `{ source, results, latency_ms }`
+- `event: exact_match` → provisional exact match
+- `event: exact_match_final` → authoritative exact match
+- `event: done` → all sources complete
+
+#### `GET /api/search`
+
+Unified multi-source search with filtering. Supports both text queries and field-only browse.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `q` | string | no | — | Search query (optional if filters provided) |
+| `sources` | string | no | all | Comma-separated source list |
+| `limit` | int | no | 10 | Max results per source (1–50) |
+| `genre_ids` | string | no | — | Comma-separated TMDB genre IDs |
+| `genre_match` | string | no | `any` | `any` (OR) or `all` (AND) |
+| `cast_ids` | string | no | — | Comma-separated TMDB person IDs |
+| `cast_match` | string | no | `any` | `any` (OR) or `all` (AND) |
+| `year_min` | int | no | — | Minimum release year |
+| `year_max` | int | no | — | Maximum release year |
+| `rating_min` | float | no | — | Minimum rating (0–10) |
+| `rating_max` | float | no | — | Maximum rating (0–10) |
+| `mc_type` | string | no | — | Filter by: `movie` or `tv` |
+| `ratings_sort` | string | no | `popularity` | Sort for ratings source: `popularity`, `audience_score`, `critics_score` |
+| `raw` | bool | no | false | Treat `q` as raw RediSearch syntax |
+| `no_duplicate` | bool | no | false | Exclude exact match from source list |
+| `full` | bool | no | false | Deep ranking mode (250 candidates) |
+
+Sources: Indexed (tv, movie, person, podcast, author, book) support field-only filtering. Brokered (artist, album, video, news, ratings) require a text query. Ratings can be enriched from indexed tv/movie results when requested together.
+
+Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }` keyed by source.
+
+#### `GET /api/search/stream`
+
+SSE streaming version of `/api/search`. Same parameters. Same SSE event format as autocomplete/stream.
+
+### Detail Lookups
+
+#### `POST /api/details`
+
+Multi-type detail lookup by `mc_id`. Documented in detail below under "Detail Lookup Endpoint".
+
+#### `GET /api/media/{media_id}`
+
+Get a single media document from Redis by ID. Returns the full Redis JSON doc.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `media_id` | path | yes | Media ID (e.g. `tmdb_movie_550` or `media:tmdb_movie_550`) |
+
+Response: `{ id, mc_id, title, ... }` (full Redis document). 404 if not found.
+
+#### `PUT /api/media/{media_id}`
+
+Update a Redis media document. Merges provided fields into existing doc. Immutable fields (`id`, `mc_id`, `source`, `source_id`, `mc_type`) cannot be changed.
+
+Request body:
+
+```json
+{
+  "document": { "field": "new_value" },
+  "push_to_media_manager": true,
+  "metadata_only": false
+}
+```
+
+Response: `{ status: "updated", id, media_manager: {...}, document: {...} }`
+
+#### `GET /api/media-details`
+
+Return the Redis document for a media item. On cache miss with `allow_insert=true` or `force_refresh=true`, fetches from TMDB, normalizes, writes to Redis, and returns the document.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `mc_id` | string | yes | — | MediaCircle ID (e.g. `tmdb_movie_550`) |
+| `allow_insert` | bool | no | false | Allow TMDB fetch + Redis write on cache miss |
+| `force_refresh` | bool | no | false | Skip Redis cache, always fetch from TMDB |
+
+Response: Redis document shape. Note: `allow_insert` and `force_refresh` cause a write side effect.
+
+#### `GET /api/cast-names`
+
+Get cast names for a movie/TV show with names split into first/last parts. Search by title or provide a direct TMDB ID.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | no | Title to search for |
+| `tmdb_id` | int | no | Direct TMDB ID (bypasses search) |
+| `media_type` | string | no | `movie` or `tv` (default: search both) |
+
+One of `query` or `tmdb_id` is required.
+
+Response: `{ title, description, cast_names: [{ first, last, character_first, character_last }] }`
+
+#### `GET /api/news/reviews`
+
+Get recent news/reviews for a movie or TV show via NewsAI.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `title` | string | yes | — | Title of the movie/TV show |
+| `media_type` | string | no | `tv` | `movie` or `tv` |
+| `page_size` | int | no | 10 | Number of articles (1–50) |
+
+#### `GET /api/changes`
+
+Return documents modified in a time range across one or more indexes. Used for sync/replication.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `since` | int | yes | — | Inclusive start (Unix timestamp) |
+| `until` | int | no | +inf | Inclusive end (Unix timestamp) |
+| `sources` | string | no | all | Comma-separated: media, people, podcast, book, author |
+| `start` | int | no | 0 | Pagination offset per source |
+| `take` | int | no | 100 | Page size per source (1–1000) |
+| `change_source` | string | no | — | Filter by `_source` field value (e.g. `backfill`) |
+
+Response:
+
+```json
+{
+  "since": 1710000000,
+  "until": null,
+  "start": 0,
+  "take": 100,
+  "sources": ["media", "people"],
+  "results": {
+    "media": { "count": 50, "total": 1200, "next_start": 100, "items": [...] },
+    "people": { "count": 30, "total": 30, "items": [...] }
+  }
+}
+```
+
+---
+
+## Redis Index Schemas
 
 Each index returns full JSON documents from the Redis JSON key.
 `media:*`, `person:*`, `podcast:*`, `author:*`, and `book:*` payloads include display fields beyond what is indexed for filtering/ranking.
@@ -49,7 +209,7 @@ All keys are present when values are available, and absent fields are omitted by
 - `source_id`: raw TMDB ID
 - `year`
 - `popularity`, `rating`
-- `image`, `overview`
+- `image`, `poster_path`, `backdrop_path`, `primary_trailer`, `overview`
 - `genre_ids`, `genres`
 - `cast_ids`, `cast_names`, `cast`
 - `director`
@@ -272,3 +432,175 @@ Batch requests for index-only types use `JSON.MGET` — a single Redis round-tri
 
 - `web/app.py`: `api_get_details()` dispatches scalar to `get_details()`, batch to `get_details_batch()`. Field projection is applied in the endpoint via `_project()`.
 - `src/services/search_service.py`: `DetailsRequest` model, `get_details()`, `get_details_batch()`.
+
+---
+
+## TMDB API Endpoints
+
+All TMDB endpoints live under `/api/tmdb/`. Two read endpoints share a `mode` parameter controlling response shape. One write endpoint handles Redis insertion.
+
+### Shared `mode` parameter
+
+Both `/api/tmdb/search` and `/api/tmdb/details` accept a `mode` query parameter:
+
+| Mode | Description | Transformation pipeline |
+|------|-------------|------------------------|
+| `redis` (default) | Normalized Redis document | `get_media_details` → `model_dump` → `normalize_document` → `document_to_redis` → wikidata crossref enrichment |
+| `mc_item` | MC model payload (MCMovieItem / MCTvItem) | `get_media_details` → `model_dump` |
+| `tmdb` | Raw TMDB API JSON | `_make_request` against TMDB detail endpoint with `append_to_response` — no Pydantic modeling, no normalization |
+
+All modes fetch full TMDB details with `append_to_response=credits,videos,watch/providers,keywords,release_dates,content_ratings,external_ids`.
+
+Items in `mode=redis` and `mode=mc_item` include `_tmdb_live: true` to indicate live TMDB origin (not from Redis cache).
+
+### `GET /api/tmdb/search`
+
+Search TMDB by query string. Hits TMDB `/search/movie` and `/search/tv` for discovery, then enriches each result per `mode`.
+
+**Parameters:**
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `q` | string | yes | — | Search query (min length 2) |
+| `limit` | int | no | 10 | Max results per type (1–50) |
+| `mode` | string | no | `redis` | Response shape: `redis`, `mc_item`, or `tmdb` |
+
+**Response:**
+
+```json
+{
+  "mode": "redis",
+  "movie": [ ... ],
+  "tv": [ ... ],
+  "exact_match": null
+}
+```
+
+- `movie`: array of items matching the query as movies
+- `tv`: array of items matching the query as TV series
+- `exact_match`: reserved, currently `null`
+
+When `mode=redis`, each item includes:
+
+- `_tmdb_live: true` — indicates live TMDB origin
+- `_exists_in_redis: true|false` — whether `media:{mc_id}` already exists in Redis (batch checked via pipeline)
+
+**Errors:** 400 (invalid mode), 503 (TMDB_READ_TOKEN not set)
+
+### `GET /api/tmdb/details`
+
+Fetch TMDB details for one or more items by TMDB ID. All IDs in a single request must share the same `mc_type`.
+
+**Parameters:**
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `tmdb_ids` | string | yes | — | Comma-separated TMDB numeric IDs (e.g. `"550"` or `"550,1396,238"`) |
+| `mc_type` | string | yes | — | `movie` or `tv` |
+| `mode` | string | no | `redis` | Response shape: `redis`, `mc_item`, or `tmdb` |
+
+**Response:**
+
+```json
+{
+  "mode": "mc_item",
+  "mc_type": "movie",
+  "items": [ ... ]
+}
+```
+
+- `items`: array of result objects in the shape determined by `mode`
+- Items that fail to fetch or normalize are silently omitted
+
+Scalar: `?tmdb_ids=550&mc_type=movie` → `items` has one element.
+Batch: `?tmdb_ids=550,1396,238&mc_type=movie` → concurrent `asyncio.gather`.
+
+**Errors:** 400 (invalid mode, invalid mc_type, non-integer IDs, empty tmdb_ids), 503 (TMDB_READ_TOKEN not set)
+
+### `POST /api/tmdb/add-to-redis`
+
+Write endpoint. Fetches a single TMDB title, normalizes it, and inserts or updates the Redis media index. Also attempts Media Manager propagation.
+
+**Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tmdb_id` | int | yes | TMDB numeric ID (> 0) |
+| `mc_type` | string | yes | `movie` or `tv` |
+
+**Behavior:**
+
+1. Fetches full details via `TMDBService.get_media_details` with `no_cache=True`
+2. Checks for existing Redis doc at `media:tmdb_{mc_type}_{tmdb_id}`
+3. Normalizes via `prepare_media_redis_document` (normalize + document_to_redis + timestamp resolution)
+4. Writes to Redis via `redis.json().set(key, "$", doc)`
+5. If `passes_media_manager_filter` passes, enqueues to Media Manager
+6. Preserves `created_at` when updating an existing document
+7. Tags `_source` as `manual_add_tmdb`
+
+**Response:**
+
+```json
+{
+  "status": "inserted",
+  "id": "media:tmdb_movie_550",
+  "media_manager": {
+    "attempted": true,
+    "sent": true,
+    "queued": 1,
+    "skipped": 0,
+    "errors": []
+  },
+  "mc_id": "tmdb_movie_550",
+  "title": "Fight Club",
+  "mc_type": "movie",
+  "...": "(full Redis document fields)"
+}
+```
+
+- `status`: `"inserted"` or `"updated"`
+- `id`: Redis key
+- `media_manager.attempted`: whether the filter passed
+- `media_manager.sent`: whether the HTTP call succeeded
+- `media_manager.filter_reason`: reason string if filter rejected
+- Remaining keys: the full Redis document that was written
+
+**Errors:** 400 (invalid mc_type), 404 (TMDB returned no result), 500 (normalization failure), 503 (TMDB_READ_TOKEN not set)
+
+### Response shape by mode — quick reference
+
+**`mode=redis`** — Same schema as `idx:media` documents (see above). Additional flags: `_tmdb_live`, `_exists_in_redis` (search only).
+
+**`mode=mc_item`** — Pydantic `MCMovieItem`/`MCTvItem` via `model_dump(mode="json")`. Key fields: `tmdb_id`, `title`, `original_title`, `overview`, `release_date`/`first_air_date`, `poster_path`, `genre_ids`, `vote_average`, `vote_count`, `popularity`, `runtime`, `credits`, `videos`, `watch_providers`, `keywords`, `external_ids`, `_tmdb_live`.
+
+**`mode=tmdb`** — Unmodified TMDB API JSON from `GET /movie/{id}` or `GET /tv/{id}` with `append_to_response`. No `_tmdb_live` flag, no normalization. Structure matches TMDB API documentation.
+
+---
+
+## TMDB Web UI Behavior
+
+### Toggle
+
+The TMDB toggle switch in the search bar controls TMDB mode:
+
+- **ON**: Autocomplete and regular index search are suppressed. Enter triggers `searchTmdb()` → `GET /api/tmdb/search?mode=redis`.
+- **OFF**: Normal autocomplete and multi-source search resume.
+
+Toggle state is checked by `search-controller.js` via the `isTmdbModeEnabled` callback.
+
+### Buttons — TMDB search results
+
+| Button | Action | Endpoint |
+|--------|--------|----------|
+| **Redis Doc** | Display in-memory normalized Redis document (no API call) | — |
+| **MC Item** | Fetch MC model payload on-demand | `GET /api/tmdb/details?mode=mc_item` |
+| **TMDB** | Fetch raw TMDB data on-demand | `GET /api/tmdb/details?mode=tmdb` |
+| **ADD TO REDIS** (orange) | Write to Redis — shown when `_exists_in_redis` is false | `POST /api/tmdb/add-to-redis` |
+| **UPDATE REDIS DOC** (green) | Write to Redis — shown when `_exists_in_redis` is true | `POST /api/tmdb/add-to-redis` |
+
+### Buttons — regular index results
+
+| Button | Action |
+|--------|--------|
+| **Redis Doc** | Display the in-memory search result |
+| **View Media Details** | Read-only fetch from `/api/media-details` (no write) |

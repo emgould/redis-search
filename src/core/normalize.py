@@ -83,6 +83,11 @@ class SearchDocument:
     cast: list[str]  # Cast member names for display (NOT normalized)
     # Director object (indexed via JSONPath into $.director.id, $.director.name_normalized)
     director: dict[str, str] | None = None
+    # Raw TMDB image paths (stored, not indexed)
+    poster_path: str | None = None
+    backdrop_path: str | None = None
+    # Primary trailer (stored, not indexed)
+    primary_trailer: dict[str, Any] | None = None
     # Keywords (indexed as TagFields - IPTC expanded and normalized)
     keywords: list[str] = field(default_factory=list)
     # Origin country (indexed as TagFields - normalized ISO codes)
@@ -519,6 +524,9 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
+            poster_path=raw.get("poster_path"),
+            backdrop_path=raw.get("backdrop_path"),
+            primary_trailer=raw.get("primary_trailer") or None,
             overview=self._extract_overview(raw),
             genre_ids=self._extract_genre_ids(raw),
             genres=self._extract_genres(raw, genre_mapping),
@@ -583,6 +591,9 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             popularity_tmdb=raw.get("popularity"),
             rating=self._extract_rating(raw),
             image=self._extract_image(raw),
+            poster_path=raw.get("poster_path"),
+            backdrop_path=raw.get("backdrop_path"),
+            primary_trailer=raw.get("primary_trailer") or None,
             overview=self._extract_overview(raw),
             genre_ids=self._extract_genre_ids(raw),
             genres=self._extract_genres(raw, genre_mapping),
@@ -798,6 +809,9 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "popularity": doc.popularity,
         "rating": doc.rating,
         "image": doc.image,
+        "poster_path": doc.poster_path,
+        "backdrop_path": doc.backdrop_path,
+        "primary_trailer": doc.primary_trailer,
         "overview": doc.overview,
         "genre_ids": doc.genre_ids,
         "genres": doc.genres,

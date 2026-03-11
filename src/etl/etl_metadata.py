@@ -131,7 +131,7 @@ class ETLRunMetadata:
 
 @dataclass
 class JobState:
-    """Persistent state for an ETL job (tracks last run time)."""
+    """Persistent state for an ETL job (tracks last run time and coverage)."""
 
     job_name: str
     last_run_date: str | None = None  # YYYY-MM-DD
@@ -139,6 +139,10 @@ class JobState:
     last_status: str | None = None  # "success", "failed"
     last_changes_found: int = 0
     last_documents_upserted: int = 0
+    effective_start_date: str | None = None  # YYYY-MM-DD date range start
+    effective_end_date: str | None = None  # YYYY-MM-DD date range end
+    duration_seconds: float | None = None
+    errors_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -148,6 +152,10 @@ class JobState:
             "last_status": self.last_status,
             "last_changes_found": self.last_changes_found,
             "last_documents_upserted": self.last_documents_upserted,
+            "effective_start_date": self.effective_start_date,
+            "effective_end_date": self.effective_end_date,
+            "duration_seconds": self.duration_seconds,
+            "errors_count": self.errors_count,
         }
 
     @classmethod
@@ -159,7 +167,17 @@ class JobState:
             last_status=data.get("last_status"),
             last_changes_found=data.get("last_changes_found", 0),
             last_documents_upserted=data.get("last_documents_upserted", 0),
+            effective_start_date=data.get("effective_start_date"),
+            effective_end_date=data.get("effective_end_date"),
+            duration_seconds=data.get("duration_seconds"),
+            errors_count=data.get("errors_count", 0),
         )
+
+
+GCS_ETL_PREFIXES: dict[str, str] = {
+    "local": "redis-search/etl/local",
+    "public": "redis-search/etl/dev",
+}
 
 
 @dataclass
@@ -176,6 +194,16 @@ class ETLStateConfig:
         return cls(
             gcs_bucket=os.getenv("GCS_BUCKET"),
             gcs_prefix=os.getenv("GCS_ETL_PREFIX", "redis-search/etl"),
+        )
+
+    @classmethod
+    def for_environment(cls, env_name: str) -> "ETLStateConfig":
+        """Create config for a specific environment (local or public)."""
+        load_env()
+        prefix = GCS_ETL_PREFIXES.get(env_name, os.getenv("GCS_ETL_PREFIX", "redis-search/etl"))
+        return cls(
+            gcs_bucket=os.getenv("GCS_BUCKET"),
+            gcs_prefix=prefix,
         )
 
 
@@ -363,6 +391,10 @@ class ETLMetadataStore:
         state.last_status = result.status
         state.last_changes_found = result.changes_found
         state.last_documents_upserted = result.documents_upserted
+        state.effective_start_date = result.effective_start_date
+        state.effective_end_date = result.effective_end_date
+        state.duration_seconds = result.duration_seconds
+        state.errors_count = result.errors_count
 
         return self.save_job_states(states)
 
