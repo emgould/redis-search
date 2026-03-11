@@ -27,12 +27,11 @@ Shows{% endblock %} {% block body %}
       </p>
     </div>
 
-    <div class="w-full max-w-2xl">
+    <div class="w-full max-w-6xl">
       <!-- Search Container -->
       <div class="relative" id="search-container">
-        <!-- Search Input with Stream Toggle -->
-        <div class="flex items-center gap-3">
-          <div class="relative flex-1">
+        <!-- Search Input -->
+        <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -49,9 +48,13 @@ Shows{% endblock %} {% block body %}
                 </path>
               </svg>
             </div>
-          </div>
+        </div>
+
+        <!-- Toggle Controls -->
+        <div class="mt-2 flex flex-wrap gap-3 justify-center">
           <!-- Stream Toggle -->
-          <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl">
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Stream results via SSE as each source responds, instead of waiting for all sources to complete">
             <label for="stream-toggle" class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
               Stream
             </label>
@@ -64,7 +67,8 @@ Shows{% endblock %} {% block body %}
             </button>
           </div>
           <!-- No Dupes Toggle -->
-          <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl">
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Deduplicate results that appear in multiple source categories">
             <label for="no-dupe-toggle" class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
               No Dupes
             </label>
@@ -77,8 +81,10 @@ Shows{% endblock %} {% block body %}
             </button>
           </div>
           <!-- Full Search Toggle -->
-          <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 border border-surface-700 rounded-xl">
-            <label for="full-search-toggle" class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Return the complete Redis document for each result instead of the default projected fields">
+            <label for="full-search-toggle"
+              class="text-xs text-surface-400 cursor-pointer select-none whitespace-nowrap">
               Full
             </label>
             <button type="button" id="full-search-toggle" role="switch" aria-checked="false"
@@ -89,77 +95,77 @@ Shows{% endblock %} {% block body %}
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
-          <button type="button" id="search-tmdb-btn" onclick="searchTmdb()"
-            class="px-3 py-2 rounded-xl text-xs border border-orange-500/40 text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 hover:text-orange-200 transition-colors whitespace-nowrap">
-            Search TMDB
-          </button>
+          <!-- TMDB Mode Toggle -->
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Search TMDB directly instead of the Redis index. Disables autocomplete; press Enter to search.">
+            <label for="tmdb-mode-toggle" class="text-xs text-orange-400 cursor-pointer select-none whitespace-nowrap">
+              TMDB
+            </label>
+            <button type="button" id="tmdb-mode-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600">
+              <span class="sr-only">Enable TMDB search mode</span>
+              <span id="tmdb-mode-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Filter Buttons -->
         <div id="filter-buttons" class="mt-3 flex flex-wrap gap-2 justify-center">
-          <button data-filter="tv" onclick="toggleFilter('tv')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="tv" onclick="toggleFilter('tv')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-blue-500 hover:text-blue-400">
             📺 TV
           </button>
-          <button data-filter="movie" onclick="toggleFilter('movie')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="movie" onclick="toggleFilter('movie')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-purple-500 hover:text-purple-400">
             🎬 Movies
           </button>
-          <button data-filter="person" onclick="toggleFilter('person')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="person" onclick="toggleFilter('person')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-green-500 hover:text-green-400">
             👤 People
           </button>
-          <button data-filter="artist" onclick="toggleFilter('artist')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="artist" onclick="toggleFilter('artist')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-lime-500 hover:text-lime-400">
             🎤 Artists
           </button>
-          <button data-filter="album" onclick="toggleFilter('album')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="album" onclick="toggleFilter('album')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-violet-500 hover:text-violet-400">
             💿 Albums
           </button>
-          <button data-filter="video" onclick="toggleFilter('video')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="video" onclick="toggleFilter('video')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-red-500 hover:text-red-400">
             ▶️ Videos
           </button>
-          <button data-filter="podcast" onclick="toggleFilter('podcast')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="podcast" onclick="toggleFilter('podcast')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-pink-500 hover:text-pink-400">
             🎙️ Podcasts
           </button>
-          <button data-filter="book" onclick="toggleFilter('book')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="book" onclick="toggleFilter('book')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-emerald-500 hover:text-emerald-400">
             📚 Books
           </button>
-          <button data-filter="author" onclick="toggleFilter('author')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="author" onclick="toggleFilter('author')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-amber-500 hover:text-amber-400">
             ✍️ Authors
           </button>
-          <button data-filter="news" onclick="toggleFilter('news')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="news" onclick="toggleFilter('news')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-cyan-500 hover:text-cyan-400">
             📰 News
           </button>
-          <button data-filter="ratings" onclick="toggleFilter('ratings')"
-            class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+          <button data-filter="ratings" onclick="toggleFilter('ratings')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
                    border-surface-600 text-surface-400 hover:border-rose-500 hover:text-rose-400">
             🍅 Ratings
           </button>
         </div>
 
         <p id="filter-hint" class="text-center text-xs text-surface-500 mt-2">
-          Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search all sources, or select filters above
+          Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search all sources, or
+          select filters above
         </p>
 
         <!-- Results Dropdown -->
-        <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden" style="top: calc(100% + 80px);">
+        <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden"
+          style="top: calc(100% + 80px);">
           <div
             class="bg-surface-900 border border-surface-700 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden search-results-enter">
             <div id="results-list" class="max-h-[70vh] overflow-y-auto">
@@ -270,20 +276,26 @@ Shows{% endblock %} {% block body %}
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700 flex-shrink-0">
         <h3 id="json-modal-title" class="text-lg font-semibold text-white"></h3>
         <div class="flex items-center gap-2">
-          <button id="json-modal-edit" class="hidden px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors" title="Edit document">
+          <button id="json-modal-edit"
+            class="hidden px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+            title="Edit document">
             Edit
           </button>
-          <button id="json-modal-copy" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors" title="Copy JSON to clipboard">
-            <svg id="json-modal-copy-icon" class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          <button id="json-modal-copy" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors"
+            title="Copy JSON to clipboard">
+            <svg id="json-modal-copy-icon" class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <svg id="json-modal-copy-check" class="w-5 h-5 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            <svg id="json-modal-copy-check" class="w-5 h-5 text-emerald-400 hidden" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           </button>
           <button id="json-modal-close" class="p-2 rounded-full bg-surface-800 hover:bg-surface-700 transition-colors">
             <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -292,24 +304,29 @@ Shows{% endblock %} {% block body %}
       <div id="json-modal-view-section">
         <div class="px-4 pt-3 pb-2 border-b border-surface-700 flex-shrink-0">
           <input id="json-modal-filter" type="text" placeholder="Filter by property name…"
-                 class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-800 border border-surface-600 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono">
+            class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-800 border border-surface-600 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono">
         </div>
-        <pre id="json-modal-content" class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
+        <pre id="json-modal-content"
+          class="flex-1 overflow-auto p-4 text-sm text-surface-300 font-mono whitespace-pre-wrap break-words min-h-0 max-h-[75vh]"></pre>
       </div>
       <!-- Edit mode: field editor + save bar -->
       <div id="json-modal-edit-section" class="hidden flex flex-col flex-1 min-h-0">
         <div id="json-modal-edit-fields" class="flex-1 overflow-auto p-4 space-y-3 min-h-0 max-h-[65vh]"></div>
         <div id="json-modal-edit-status" class="hidden px-4 py-2 text-sm font-medium flex-shrink-0"></div>
-        <div class="flex items-center justify-between px-4 py-3 border-t border-surface-700 flex-shrink-0 bg-surface-800/50 rounded-b-2xl">
+        <div
+          class="flex items-center justify-between px-4 py-3 border-t border-surface-700 flex-shrink-0 bg-surface-800/50 rounded-b-2xl">
           <label class="flex items-center gap-2 text-sm text-surface-300 cursor-pointer select-none">
-            <input id="json-modal-metadata-only" type="checkbox" class="w-4 h-4 rounded border-surface-600 bg-surface-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer">
+            <input id="json-modal-metadata-only" type="checkbox"
+              class="w-4 h-4 rounded border-surface-600 bg-surface-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer">
             Metadata only
           </label>
           <div class="flex items-center gap-2">
-            <button id="json-modal-cancel-edit" class="px-4 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-surface-300 text-sm font-medium transition-colors">
+            <button id="json-modal-cancel-edit"
+              class="px-4 py-1.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-surface-300 text-sm font-medium transition-colors">
               Cancel
             </button>
-            <button id="json-modal-save" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
+            <button id="json-modal-save"
+              class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
               <svg id="json-modal-save-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -375,10 +392,10 @@ Shows{% endblock %} {% block body %}
   function isRawMode(query) {
     return query.includes("@");
   }
-  
+
   // Filter state - tracks which source filters are active
   const activeFilters = new Set();
-  
+
   // Filter color mappings for visual feedback
   const filterColors = {
     tv: { border: 'border-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/20' },
@@ -393,11 +410,11 @@ Shows{% endblock %} {% block body %}
     news: { border: 'border-cyan-500', text: 'text-cyan-400', bg: 'bg-cyan-500/20' },
     ratings: { border: 'border-rose-500', text: 'text-rose-400', bg: 'bg-rose-500/20' },
   };
-  
+
   function toggleFilter(filter) {
     const btn = document.querySelector(`[data-filter="${filter}"]`);
     const colors = filterColors[filter];
-    
+
     if (activeFilters.has(filter)) {
       // Deactivate filter
       activeFilters.delete(filter);
@@ -409,10 +426,10 @@ Shows{% endblock %} {% block body %}
       btn.classList.remove('border-surface-600', 'text-surface-400');
       btn.classList.add(colors.border, colors.text, colors.bg);
     }
-    
+
     updateFilterHint();
   }
-  
+
   function updateFilterHint() {
     const hint = document.getElementById('filter-hint');
     if (activeFilters.size === 0) {
@@ -422,7 +439,7 @@ Shows{% endblock %} {% block body %}
       hint.innerHTML = `Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search: <span class="text-brand-400">${filterList}</span> <button onclick="clearAllFilters()" class="ml-2 text-xs text-surface-500 hover:text-surface-300 underline">(clear)</button>`;
     }
   }
-  
+
   function clearAllFilters() {
     activeFilters.forEach(filter => {
       const btn = document.querySelector(`[data-filter="${filter}"]`);
@@ -433,18 +450,21 @@ Shows{% endblock %} {% block body %}
     activeFilters.clear();
     updateFilterHint();
   }
-  
+
   // Make filter functions globally accessible
   window.toggleFilter = toggleFilter;
   window.clearAllFilters = clearAllFilters;
-  
+
   function getActiveFiltersParam() {
     if (activeFilters.size === 0) return null;
     return Array.from(activeFilters).join(',');
   }
-  
+
   // Track expanded state for each category (must be declared before search controller)
-  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false, tmdb_movie: false, tmdb_tv: false };
+  const expandedCategories = { tv: false, movie: false, person: false, podcast: false, author: false, book: false };
+
+  // TMDB mode: when active, autocomplete/search are suppressed; only explicit TMDB search fires
+  let tmdbModeEnabled = false;
 
   // ---- Search Controller (imported from /static/js/search-controller.js) ----
   // Handles two-tier debounce: autocomplete (300ms) + full search (750ms).
@@ -461,6 +481,7 @@ Shows{% endblock %} {% block body %}
     isStreamingEnabled: () => streamingEnabled,
     isNoDuplicateEnabled: () => noDuplicateEnabled,
     isFullSearchEnabled: () => fullSearchEnabled,
+    isTmdbModeEnabled: () => tmdbModeEnabled,
   });
 
   // Stream mode toggle
@@ -558,7 +579,7 @@ Shows{% endblock %} {% block body %}
         q: query,
         limit: "10",
       });
-      const response = await fetch(getApiUrl(`/api/search/tmdb?${params.toString()}`));
+      const response = await fetch(getApiUrl(`/api/tmdb/search?${params.toString()}`));
       const payload = await response.json();
       if (!response.ok) {
         const err = payload?.error || `TMDB search failed (${response.status})`;
@@ -575,6 +596,30 @@ Shows{% endblock %} {% block body %}
   }
 
   window.searchTmdb = searchTmdb;
+
+  // TMDB mode toggle
+  function toggleTmdbMode() {
+    tmdbModeEnabled = !tmdbModeEnabled;
+    const toggle = document.getElementById("tmdb-mode-toggle");
+    const dot = document.getElementById("tmdb-mode-toggle-dot");
+
+    if (tmdbModeEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-orange-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+      searchController.cancelAll();
+    } else {
+      toggle.classList.remove("bg-orange-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+  }
+
+  document.getElementById("tmdb-mode-toggle").addEventListener("click", toggleTmdbMode);
 
   function formatYear(item) {
     // Use the normalized year field directly
@@ -681,25 +726,25 @@ Shows{% endblock %} {% block body %}
     const categories = [];
 
     if (results && typeof results === "object" && !Array.isArray(results)) {
-      const isTmdbMode = results.tmdb_mode === true;
+      const isTmdbSearch = results.mode === "redis" || results.mode === "tmdb";
 
-      if (isTmdbMode) {
-        if (Array.isArray(results.tmdb_movie) && results.tmdb_movie.length > 0) {
+      if (isTmdbSearch) {
+        if (Array.isArray(results.movie) && results.movie.length > 0) {
           categories.push({
-            key: "tmdb_movie",
+            key: "movie",
             label: "🎬 TMDB Movies",
-            items: results.tmdb_movie,
-            topPopularity: parseFloat(results.tmdb_movie[0]?.popularity) || 0,
+            items: results.movie,
+            topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
             color: "orange",
             tier: 1,
           });
         }
-        if (Array.isArray(results.tmdb_tv) && results.tmdb_tv.length > 0) {
+        if (Array.isArray(results.tv) && results.tv.length > 0) {
           categories.push({
-            key: "tmdb_tv",
+            key: "tv",
             label: "📺 TMDB TV",
-            items: results.tmdb_tv,
-            topPopularity: parseFloat(results.tmdb_tv[0]?.popularity) || 0,
+            items: results.tv,
+            topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
             color: "orange",
             tier: 2,
           });
@@ -725,141 +770,141 @@ Shows{% endblock %} {% block body %}
         const withoutExactMatch = (arr) =>
           exactMatchId && Array.isArray(arr) ? arr.filter((it) => it.mc_id !== exactMatchId) : arr || [];
 
-      // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
-      // Tier 2: People (Person, Author) - sorted by popularity within tier
-      // Tier 3: News - fixed position
-      // Tier 4: Video - fixed position (last)
-      if (results.tv && results.tv.length > 0) {
-        const tvItems = withoutExactMatch(results.tv);
-        if (tvItems.length > 0) {
-        categories.push({
-          key: "tv",
-          label: "📺 TV Shows",
-          items: tvItems,
-          topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
-          color: "blue",
-          tier: 1,  // Media tier
-        });
+        // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
+        // Tier 2: People (Person, Author) - sorted by popularity within tier
+        // Tier 3: News - fixed position
+        // Tier 4: Video - fixed position (last)
+        if (results.tv && results.tv.length > 0) {
+          const tvItems = withoutExactMatch(results.tv);
+          if (tvItems.length > 0) {
+            categories.push({
+              key: "tv",
+              label: "📺 TV Shows",
+              items: tvItems,
+              topPopularity: parseFloat(results.tv[0]?.popularity) || 0,
+              color: "blue",
+              tier: 1,  // Media tier
+            });
+          }
         }
-      }
-      if (results.movie && results.movie.length > 0) {
-        const movieItems = withoutExactMatch(results.movie);
-        if (movieItems.length > 0) {
-        categories.push({
-          key: "movie",
-          label: "🎬 Movies",
-          items: movieItems,
-          topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
-          color: "purple",
-          tier: 1,  // Media tier
-        });
+        if (results.movie && results.movie.length > 0) {
+          const movieItems = withoutExactMatch(results.movie);
+          if (movieItems.length > 0) {
+            categories.push({
+              key: "movie",
+              label: "🎬 Movies",
+              items: movieItems,
+              topPopularity: parseFloat(results.movie[0]?.popularity) || 0,
+              color: "purple",
+              tier: 1,  // Media tier
+            });
+          }
         }
-      }
-      if (results.person && results.person.length > 0) {
-        const personItems = withoutExactMatch(results.person);
-        if (personItems.length > 0) {
-        categories.push({
-          key: "person",
-          label: "👤 People",
-          items: personItems,
-          topPopularity: parseFloat(results.person[0]?.popularity) || 0,
-          color: "green",
-          tier: 0,  // People always render first
-        });
+        if (results.person && results.person.length > 0) {
+          const personItems = withoutExactMatch(results.person);
+          if (personItems.length > 0) {
+            categories.push({
+              key: "person",
+              label: "👤 People",
+              items: personItems,
+              topPopularity: parseFloat(results.person[0]?.popularity) || 0,
+              color: "green",
+              tier: 0,  // People always render first
+            });
+          }
         }
-      }
-      if (results.podcast && results.podcast.length > 0) {
-        const podcastItems = withoutExactMatch(results.podcast);
-        if (podcastItems.length > 0) {
-        categories.push({
-          key: "podcast",
-          label: "🎙️ Podcasts",
-          items: podcastItems,
-          topPopularity: parseFloat(results.podcast[0]?.popularity) || 0,
-          color: "pink",
-          tier: 1,  // Media tier
-        });
+        if (results.podcast && results.podcast.length > 0) {
+          const podcastItems = withoutExactMatch(results.podcast);
+          if (podcastItems.length > 0) {
+            categories.push({
+              key: "podcast",
+              label: "🎙️ Podcasts",
+              items: podcastItems,
+              topPopularity: parseFloat(results.podcast[0]?.popularity) || 0,
+              color: "pink",
+              tier: 1,  // Media tier
+            });
+          }
         }
-      }
-      if (results.author && results.author.length > 0) {
-        const authorItems = withoutExactMatch(results.author);
-        if (authorItems.length > 0) {
-        categories.push({
-          key: "author",
-          label: "✍️ Authors",
-          items: authorItems,
-          topPopularity: parseFloat(results.author[0]?.work_count) || 0,
-          color: "amber",
-          tier: 0,  // Authors always render first
-        });
+        if (results.author && results.author.length > 0) {
+          const authorItems = withoutExactMatch(results.author);
+          if (authorItems.length > 0) {
+            categories.push({
+              key: "author",
+              label: "✍️ Authors",
+              items: authorItems,
+              topPopularity: parseFloat(results.author[0]?.work_count) || 0,
+              color: "amber",
+              tier: 0,  // Authors always render first
+            });
+          }
         }
-      }
-      if (results.book && results.book.length > 0) {
-        const bookItems = withoutExactMatch(results.book);
-        if (bookItems.length > 0) {
-        categories.push({
-          key: "book",
-          label: "📚 Books",
-          items: bookItems,
-          topPopularity: parseFloat(results.book[0]?.ratings_count) || 0,
-          color: "emerald",
-          tier: 1,  // Media tier
-        });
+        if (results.book && results.book.length > 0) {
+          const bookItems = withoutExactMatch(results.book);
+          if (bookItems.length > 0) {
+            categories.push({
+              key: "book",
+              label: "📚 Books",
+              items: bookItems,
+              topPopularity: parseFloat(results.book[0]?.ratings_count) || 0,
+              color: "emerald",
+              tier: 1,  // Media tier
+            });
+          }
         }
-      }
-      if (results.news && results.news.length > 0) {
-        categories.push({
-          key: "news",
-          label: "📰 News",
-          items: results.news,
-          topPopularity: parseFloat(results.news[0]?.relevance) || 0,
-          color: "cyan",
-          tier: 3,  // News tier
-        });
-      }
-      if (results.video && results.video.length > 0) {
-        categories.push({
-          key: "video",
-          label: "▶️ Videos",
-          items: results.video,
-          topPopularity: parseFloat(results.video[0]?.view_count) || 0,
-          color: "red",
-          tier: 4,  // Video tier (last)
-        });
-      }
-      if (results.ratings && results.ratings.length > 0) {
-        categories.push({
-          key: "ratings",
-          label: "🍅 Ratings",
-          items: results.ratings,
-          // Use critics_score for sorting priority
-          topPopularity: parseFloat(results.ratings[0]?.critics_score) || 0,
-          color: "rose",
-          tier: 5,  // Ratings tier (after video)
-        });
-      }
-      if (results.artist && results.artist.length > 0) {
-        categories.push({
-          key: "artist",
-          label: "🎤 Artists",
-          items: results.artist,
-          // Use popularity for sorting (Spotify popularity 0-100)
-          topPopularity: parseFloat(results.artist[0]?.popularity) || 0,
-          color: "lime",
-          tier: 0,  // Artists always render first
-        });
-      }
-      if (results.album && results.album.length > 0) {
-        categories.push({
-          key: "album",
-          label: "💿 Albums",
-          items: results.album,
-          // Albums don't have popularity, use 0
-          topPopularity: 0,
-          color: "violet",
-          tier: 1,  // Media tier (with TV, Movie, Podcast, Book)
-        });
-      }
+        if (results.news && results.news.length > 0) {
+          categories.push({
+            key: "news",
+            label: "📰 News",
+            items: results.news,
+            topPopularity: parseFloat(results.news[0]?.relevance) || 0,
+            color: "cyan",
+            tier: 3,  // News tier
+          });
+        }
+        if (results.video && results.video.length > 0) {
+          categories.push({
+            key: "video",
+            label: "▶️ Videos",
+            items: results.video,
+            topPopularity: parseFloat(results.video[0]?.view_count) || 0,
+            color: "red",
+            tier: 4,  // Video tier (last)
+          });
+        }
+        if (results.ratings && results.ratings.length > 0) {
+          categories.push({
+            key: "ratings",
+            label: "🍅 Ratings",
+            items: results.ratings,
+            // Use critics_score for sorting priority
+            topPopularity: parseFloat(results.ratings[0]?.critics_score) || 0,
+            color: "rose",
+            tier: 5,  // Ratings tier (after video)
+          });
+        }
+        if (results.artist && results.artist.length > 0) {
+          categories.push({
+            key: "artist",
+            label: "🎤 Artists",
+            items: results.artist,
+            // Use popularity for sorting (Spotify popularity 0-100)
+            topPopularity: parseFloat(results.artist[0]?.popularity) || 0,
+            color: "lime",
+            tier: 0,  // Artists always render first
+          });
+        }
+        if (results.album && results.album.length > 0) {
+          categories.push({
+            key: "album",
+            label: "💿 Albums",
+            items: results.album,
+            // Albums don't have popularity, use 0
+            topPopularity: 0,
+            color: "violet",
+            tier: 1,  // Media tier (with TV, Movie, Podcast, Book)
+          });
+        }
 
         // Check for exact name matches in person-type categories (artist, author, person)
         // If found, promote that category to tier 0 (top)
@@ -1129,16 +1174,23 @@ Shows{% endblock %} {% block body %}
                     class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
                     View Redis Doc
                 </button>
-                <button type="button" onclick="event.stopPropagation(); fetchMediaDetails(${sourceId || 0}, '${item.mc_type || "movie"}')"
+                ${isTmdbLive
+        ? `<button type="button" onclick="event.stopPropagation(); fetchMcItem(${sourceId || 0}, '${item.mc_type || "movie"}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    MC Item
+                </button>
+                <button type="button" onclick="event.stopPropagation(); fetchRawTmdb(${sourceId || 0}, '${item.mc_type || "movie"}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    TMDB
+                </button>
+                <button type="button" onclick="event.stopPropagation(); addTmdbToRedis(${sourceId || 0}, '${item.mc_type || "movie"}', this)"
+                    class="px-2 py-0.5 text-xs rounded ${item._exists_in_redis ? 'bg-green-600/80 hover:bg-green-500' : 'bg-orange-600/80 hover:bg-orange-500'} text-white transition-colors whitespace-nowrap">
+                    ${item._exists_in_redis ? "UPDATE REDIS DOC" : "ADD TO REDIS"}
+                </button>`
+        : `<button type="button" onclick="event.stopPropagation(); fetchMediaDetails(${sourceId || 0}, '${item.mc_type || "movie"}')"
                     class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
                     View Media Details
-                </button>
-                ${isTmdbLive
-        ? `<button type="button" onclick="event.stopPropagation(); addTmdbToRedis(${sourceId || 0}, '${item.mc_type || "movie"}', this)"
-                    class="px-2 py-0.5 text-xs rounded bg-orange-600/80 hover:bg-orange-500 text-white transition-colors whitespace-nowrap">
-                    ADD TO REDIS
                 </button>`
-        : ""
       }
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -2295,34 +2347,53 @@ Shows{% endblock %} {% block body %}
 
   // --- showRedisDoc / fetchMediaDetails ---
 
-  window.showRedisDoc = async function (mcId) {
+  window.showRedisDoc = function (mcId) {
     const item = window._itemsByMcId && mcId ? window._itemsByMcId[mcId] : null;
     if (!item) {
       openJsonModal("Redis Doc (not found)", JSON.stringify({ error: "Item not found in results" }, null, 2));
       return;
     }
-    if (item._tmdb_live) {
-      openJsonModal("Redis Doc", "Loading full document from TMDB...");
-      try {
-        const base = typeof getApiUrl === "function" ? getApiUrl("/api/media-details") : "/api/media-details";
-        const params = new URLSearchParams({ mc_id: mcId, allow_insert: "true", force_refresh: "true" });
-        const resp = await fetch(`${base}?${params}`);
-        const data = await resp.json();
-        _jsonModalFullText = JSON.stringify(data, null, 2);
-        _jsonModalDocObj = data;
-        _jsonModalMediaId = data.mc_id || mcId;
-        _jsonModalIsRedisDoc = true;
-        jsonModalTitle.textContent = "Redis Doc";
-        jsonModalEditBtn.classList.remove("hidden");
-        _applyJsonFilter(jsonModalFilter.value.trim());
-      } catch (err) {
-        jsonModalTitle.textContent = "Redis Doc";
-        _jsonModalFullText = JSON.stringify(item, null, 2);
-        _applyJsonFilter(jsonModalFilter.value.trim());
-      }
+    openJsonModal("Redis Doc", JSON.stringify(item, null, 2), !item._tmdb_live, item.mc_id || mcId);
+  };
+
+  window.fetchMcItem = async function (tmdbId, mediaType) {
+    if (!tmdbId || !mediaType) {
+      openJsonModal("MC Item", JSON.stringify({ error: "Missing tmdb_id or media_type" }, null, 2));
       return;
     }
-    openJsonModal("Redis Doc", JSON.stringify(item, null, 2), true, item.mc_id || mcId);
+    openJsonModal("MC Item", "Loading...");
+    try {
+      const params = new URLSearchParams({ tmdb_ids: String(tmdbId), mc_type: String(mediaType), mode: "mc_item" });
+      const resp = await fetch(getApiUrl(`/api/tmdb/details?${params.toString()}`));
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+      const item = Array.isArray(data.items) && data.items.length > 0 ? data.items[0] : data;
+      openJsonModal("MC Item", JSON.stringify(item, null, 2));
+    } catch (err) {
+      openJsonModal("MC Item Error", JSON.stringify({ error: String(err) }, null, 2));
+    }
+  };
+
+  window.fetchRawTmdb = async function (tmdbId, mediaType) {
+    if (!tmdbId || !mediaType) {
+      openJsonModal("TMDB Raw", JSON.stringify({ error: "Missing tmdb_id or media_type" }, null, 2));
+      return;
+    }
+    openJsonModal("TMDB Raw", "Loading...");
+    try {
+      const params = new URLSearchParams({ tmdb_ids: String(tmdbId), mc_type: String(mediaType), mode: "tmdb" });
+      const resp = await fetch(getApiUrl(`/api/tmdb/details?${params.toString()}`));
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+      const item = Array.isArray(data.items) && data.items.length > 0 ? data.items[0] : data;
+      openJsonModal("TMDB Raw", JSON.stringify(item, null, 2));
+    } catch (err) {
+      openJsonModal("TMDB Raw Error", JSON.stringify({ error: String(err) }, null, 2));
+    }
   };
 
   window.fetchMediaDetails = async function (tmdbId, mediaType) {
@@ -2334,7 +2405,7 @@ Shows{% endblock %} {% block body %}
     try {
       const mcId = `tmdb_${mediaType}_${tmdbId}`;
       const base = typeof getApiUrl === "function" ? getApiUrl("/api/media-details") : "/api/media-details";
-      const params = new URLSearchParams({ mc_id: mcId, allow_insert: "true", force_refresh: "true" });
+      const params = new URLSearchParams({ mc_id: mcId });
       const resp = await fetch(`${base}?${params}`);
       const data = await resp.json();
       jsonModalTitle.textContent = "Media Details";
@@ -2354,10 +2425,11 @@ Shows{% endblock %} {% block body %}
     }
 
     const button = buttonEl instanceof HTMLButtonElement ? buttonEl : null;
-    const originalText = button ? button.textContent : null;
+    const originalText = button ? button.textContent?.trim() : null;
+    const isUpdate = originalText === "UPDATE REDIS DOC";
     if (button) {
       button.disabled = true;
-      button.textContent = "ADDING...";
+      button.textContent = isUpdate ? "UPDATING..." : "ADDING...";
       button.classList.add("opacity-60", "cursor-not-allowed");
     }
 
@@ -2371,18 +2443,23 @@ Shows{% endblock %} {% block body %}
       }
 
       if (button) {
-        button.textContent = "ADDED";
-        button.classList.remove("bg-orange-600/80", "hover:bg-orange-500");
+        button.textContent = isUpdate ? "UPDATED" : "ADDED";
+        button.classList.remove("bg-orange-600/80", "hover:bg-orange-500", "bg-green-600/80", "hover:bg-green-500");
         button.classList.add("bg-emerald-600/80");
       }
-      openJsonModal("ADD TO REDIS", JSON.stringify(data, null, 2));
+      openJsonModal(isUpdate ? "Updated Redis Doc" : "Added to Redis", JSON.stringify(data, null, 2));
     } catch (err) {
       if (button) {
         button.disabled = false;
         button.textContent = originalText || "ADD TO REDIS";
         button.classList.remove("opacity-60", "cursor-not-allowed");
+        if (isUpdate) {
+          button.classList.add("bg-green-600/80", "hover:bg-green-500");
+        } else {
+          button.classList.add("bg-orange-600/80", "hover:bg-orange-500");
+        }
       }
-      openJsonModal("ADD TO REDIS", JSON.stringify({ error: String(err) }, null, 2));
+      openJsonModal("Error", JSON.stringify({ error: String(err) }, null, 2));
     }
   };
 
@@ -2650,91 +2727,91 @@ Shows{% endblock %} {% block body %}
           <div class="mt-8">
             <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-4">Where to Watch</h3>
             ${streamingPlatform
-          ? `<p class="text-brand-400 mb-3 font-medium">📺 ${streamingPlatform}</p>`
-          : ""
-        }
+        ? `<p class="text-brand-400 mb-3 font-medium">📺 ${streamingPlatform}</p>`
+        : ""
+      }
             ${flatrate.length > 0
-          ? `
+        ? `
               <div class="mb-4">
                 <p class="text-xs text-surface-500 mb-2">Stream</p>
                 <div class="flex flex-wrap gap-2">
                   ${flatrate
-            .slice(0, 6)
-            .map(
-              (p) => `
+          .slice(0, 6)
+          .map(
+            (p) => `
                     <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${p.provider_name
-                }">
+              }">
                       ${p.logo_path
-                  ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
-                  : ""
-                }
+                ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                : ""
+              }
                       <span class="text-sm text-surface-300">${p.provider_name
-                }</span>
+              }</span>
                     </div>
                   `
-            )
-            .join("")}
+          )
+          .join("")}
                 </div>
               </div>
             `
-          : ""
-        }
+        : ""
+      }
             ${rent.length > 0
-          ? `
+        ? `
               <div class="mb-4">
                 <p class="text-xs text-surface-500 mb-2">Rent</p>
                 <div class="flex flex-wrap gap-2">
                   ${rent
-            .slice(0, 4)
-            .map(
-              (p) => `
+          .slice(0, 4)
+          .map(
+            (p) => `
                     <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${p.provider_name
-                }">
+              }">
                       ${p.logo_path
-                  ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
-                  : ""
-                }
+                ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                : ""
+              }
                       <span class="text-sm text-surface-300">${p.provider_name
-                }</span>
+              }</span>
                     </div>
                   `
-            )
-            .join("")}
+          )
+          .join("")}
                 </div>
               </div>
             `
-          : ""
-        }
+        : ""
+      }
             ${buy.length > 0
-          ? `
+        ? `
               <div>
                 <p class="text-xs text-surface-500 mb-2">Buy</p>
                 <div class="flex flex-wrap gap-2">
                   ${buy
-            .slice(0, 4)
-            .map(
-              (p) => `
+          .slice(0, 4)
+          .map(
+            (p) => `
                     <div class="flex items-center gap-2 px-3 py-2 bg-surface-800 rounded-lg" title="${p.provider_name
-                }">
+              }">
                       ${p.logo_path
-                  ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
-                  : ""
-                }
+                ? `<img src="https://image.tmdb.org/t/p/w45${p.logo_path}" alt="${p.provider_name}" class="w-6 h-6 rounded">`
+                : ""
+              }
                       <span class="text-sm text-surface-300">${p.provider_name
-                }</span>
+              }</span>
                     </div>
                   `
-            )
-            .join("")}
+          )
+          .join("")}
                 </div>
               </div>
             `
-          : ""
-        }
+        : ""
+      }
             ${!hasWatchAvailability
-          ? `<p class="text-surface-500">None Available</p>`
-          : ""
-        }
+        ? `<p class="text-surface-500">None Available</p>`
+        : ""
+      }
           </div>
         
         <!-- Trailer -->
@@ -2890,7 +2967,7 @@ Shows{% endblock %} {% block body %}
         return;
       }
 
-      container.innerHTML = data.results.map(function(article) {
+      container.innerHTML = data.results.map(function (article) {
         const aTitle = article.title || '';
         const aUrl = article.url || '#';
         const sourceName = (article.news_source && article.news_source.name) ? article.news_source.name : 'Unknown';
@@ -2923,19 +3000,19 @@ Shows{% endblock %} {% block body %}
           'class="group flex gap-3 p-3 rounded-xl hover:bg-surface-800/70 transition-colors">' +
           '<div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden bg-surface-800">' + imgHtml + '</div>' +
           '<div class="flex-1 min-w-0">' +
-            '<h4 class="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors line-clamp-2">' + aTitle + '</h4>' +
-            '<div class="flex items-center gap-2 mt-0.5 text-xs">' +
-              '<span class="text-cyan-400 font-medium truncate max-w-[120px]">' + sourceName + '</span>' +
-              (dateDisplay ? '<span class="text-surface-500">' + dateDisplay + '</span>' : '') +
-            '</div>' +
-            (desc ? '<p class="mt-1 text-xs text-surface-400 line-clamp-2">' + desc + '</p>' : '') +
+          '<h4 class="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors line-clamp-2">' + aTitle + '</h4>' +
+          '<div class="flex items-center gap-2 mt-0.5 text-xs">' +
+          '<span class="text-cyan-400 font-medium truncate max-w-[120px]">' + sourceName + '</span>' +
+          (dateDisplay ? '<span class="text-surface-500">' + dateDisplay + '</span>' : '') +
+          '</div>' +
+          (desc ? '<p class="mt-1 text-xs text-surface-400 line-clamp-2">' + desc + '</p>' : '') +
           '</div>' +
           '<div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">' +
-            '<svg class="w-3.5 h-3.5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-              '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>' +
-            '</svg>' +
+          '<svg class="w-3.5 h-3.5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>' +
+          '</svg>' +
           '</div>' +
-        '</a>';
+          '</a>';
       }).join('');
 
     } catch (error) {
@@ -3379,8 +3456,8 @@ Shows{% endblock %} {% block body %}
       }
         
         <!-- Episodes Section -->
-        ${data.rss_episodes && data.rss_episodes.length > 0 
-          ? `
+        ${data.rss_episodes && data.rss_episodes.length > 0
+        ? `
             <div class="mb-8" id="podcast-episodes-section">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider">Recent Episodes</h3>
@@ -3480,15 +3557,15 @@ Shows{% endblock %} {% block body %}
               ${data.rss_error ? `<p class="mt-2 text-xs text-amber-500">Note: ${data.rss_error}</p>` : ""}
             </div>
           `
-          : data.rss_error 
-            ? `
+        : data.rss_error
+          ? `
               <div class="mb-8">
                 <h3 class="text-sm font-semibold text-surface-400 uppercase tracking-wider mb-3">Episodes</h3>
                 <p class="text-sm text-surface-500">Could not load episodes from RSS feed</p>
               </div>
             `
-            : ""
-        }
+          : ""
+      }
         
         <!-- Technical Details -->
         <div class="pt-6 border-t border-surface-800">

@@ -403,11 +403,8 @@ class TMDBService(Auth, BaseAPIClient):
             release_dates_result = details_data.get("release_dates", {})
             if isinstance(release_dates_result, dict) and isinstance(details, MCMovieItem):
                 details.release_dates = release_dates_result
-                result = await self.get_content_rating(
-                    tmdb_id=tmdb_id,
-                    region=region,
-                    media_type=media_type,
-                    data=release_dates_result,
+                result = self._extract_content_rating(
+                    release_dates_result, media_type, region
                 )
                 details.us_rating = result.get("rating", None) if result else None
                 rated_release_date = result.get("release_date") if result else None
@@ -415,13 +412,11 @@ class TMDBService(Auth, BaseAPIClient):
                     details.release_date = rated_release_date
 
         if include_content_ratings and media_type == MCType.TV_SERIES:
-            rating = await self.get_content_rating(
-                tmdb_id=tmdb_id,
-                region=region,
-                media_type=media_type,
-                data=details_data.get("content_ratings", {}),
+            content_ratings_data = details_data.get("content_ratings", {})
+            result = self._extract_content_rating(
+                content_ratings_data, media_type, region
             )
-            details.us_rating = rating.get("rating", None) if rating else None
+            details.us_rating = result.get("rating", None) if result else None
 
         if include_external_ids:
             raw_ext = details_data.get("external_ids")
@@ -911,6 +906,66 @@ class TMDBService(Auth, BaseAPIClient):
             response_data["streaming_platform"] = primary.get("provider_name")
 
         return response_data
+
+    @staticmethod
+    def _extract_content_rating(
+        data: dict[str, Any],
+        media_type: str | MCType,
+        region: str = "US",
+    ) -> dict[str, str | None] | None:
+        """Extract content rating from already-fetched append_to_response data.
+
+        Pure parsing — no API calls, no caching. Used when the data is already
+        available from the details request's append_to_response payload.
+        """
+        normalized_region = region.strip().upper() if region else "US"
+        normalized_media_type = (
+            media_type.value if isinstance(media_type, MCType) else media_type.strip().lower()
+        )
+
+        if not isinstance(data, dict):
+            return None
+
+        results = data.get("results")
+        if not isinstance(results, list):
+            return None
+
+        if normalized_media_type == "movie":
+            for item in results:
+                if not isinstance(item, dict):
+                    continue
+                if str(item.get("iso_3166_1", "")).upper() != normalized_region:
+                    continue
+                release_dates = item.get("release_dates")
+                if not isinstance(release_dates, list):
+                    continue
+                for release_date_entry in release_dates:
+                    if not isinstance(release_date_entry, dict):
+                        continue
+                    rating = release_date_entry.get("certification")
+                    if isinstance(rating, str) and rating.strip():
+                        release_date = release_date_entry.get("release_date")
+                        return {
+                            "rating": rating.strip(),
+                            "release_date": release_date.strip()
+                            if isinstance(release_date, str) and release_date.strip()
+                            else None,
+                        }
+                return None
+
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("iso_3166_1", "")).upper() != normalized_region:
+                continue
+            rating = item.get("rating")
+            if isinstance(rating, str):
+                cleaned_rating = rating.strip()
+                if cleaned_rating:
+                    return {"rating": cleaned_rating, "release_date": None}
+            return None
+
+        return None
 
     @RedisCache.use_cache(TMDBContentRatingCache, prefix="content_ratings")
     async def get_content_rating(

@@ -31,7 +31,7 @@ from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, prepare_media_redis_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
-from etl.etl_metadata import ETLMetadataStore
+from etl.etl_metadata import ETLMetadataStore, ETLStateConfig
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.tmdb_nightly_etl import ChangesETLStats
@@ -712,27 +712,42 @@ async def api_search(
     return JSONResponse(content=results)
 
 
-def _normalize_tmdb_search_item(
-    item_data: dict[str, Any],
-    *,
-    genre_mapping: dict[int, str] | None = None,
-) -> dict[str, Any] | None:
-    """Normalize a TMDB search item to Redis document shape for UI rendering."""
-    normalized = normalize_document(item_data, genre_mapping=genre_mapping)
-    if normalized is None:
-        return None
-    redis_doc: dict[str, Any] = document_to_redis(normalized)
-    redis_doc["_tmdb_live"] = True
-    return redis_doc
+_TMDB_APPEND_TO_RESPONSE = (
+    "credits,videos,watch/providers,keywords,release_dates,content_ratings,external_ids"
+)
 
 
-@app.get("/api/search/tmdb")
-async def api_search_tmdb(
+@app.get("/api/tmdb/search")
+async def api_tmdb_search(
     q: str = Query(..., min_length=2, description="TMDB search query string"),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per TMDB type"),
+    mode: str = Query(
+        default="redis",
+        description="Response shape: 'redis' returns normalized Redis documents, "
+        "'mc_item' returns MC model payloads (MCMovieItem/MCTvItem), "
+        "'tmdb' returns raw TMDB API JSON with no transformation",
+    ),
 ) -> JSONResponse:
-    """Search TMDB directly and return TMDB-only movie/tv result groups."""
+    """Search TMDB directly and return movie/tv result groups.
+
+    The ``mode`` parameter controls the response shape:
+
+    - ``redis`` (default): fully enriched, normalized Redis document dicts
+    - ``mc_item``: fully enriched MC model payloads (MCMovieItem / MCTvItem)
+    - ``tmdb``: raw TMDB API JSON — no Pydantic modeling, no normalization
+
+    All modes perform a TMDB search first, then fetch full details for each
+    result via ``append_to_response`` (credits, watch/providers, keywords,
+    release_dates, content_ratings, external_ids).
+    """
     global GENRE_MAPPING
+
+    valid_modes = {"redis", "mc_item", "tmdb"}
+    if mode not in valid_modes:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"mode must be one of: {', '.join(sorted(valid_modes))}"},
+        )
 
     if not os.getenv("TMDB_READ_TOKEN"):
         return JSONResponse(
@@ -740,40 +755,241 @@ async def api_search_tmdb(
             content={"error": "TMDB_READ_TOKEN is not set. Cannot search TMDB."},
         )
 
-    GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
-
     movie_res, tv_res = await asyncio.gather(
         search_movies_async(query=q, limit=limit),
         search_tv_shows_async(query=q, limit=limit),
     )
 
-    tmdb_movies: list[dict[str, Any]] = []
-    tmdb_tv: list[dict[str, Any]] = []
+    movie_items = (movie_res.results or [])[:limit] if movie_res else []
+    tv_items = (tv_res.results or [])[:limit] if tv_res else []
 
-    movie_items = movie_res.results if movie_res and movie_res.results else []
-    for item in movie_items[:limit]:
-        item_data = item.model_dump(mode="json")
-        item_data["mc_type"] = MCType.MOVIE.value
-        normalized_item = _normalize_tmdb_search_item(item_data, genre_mapping=GENRE_MAPPING)
-        if normalized_item is not None:
-            tmdb_movies.append(normalized_item)
+    service = TMDBService()
 
-    tv_items = tv_res.results if tv_res and tv_res.results else []
-    for item in tv_items[:limit]:
-        item_data = item.model_dump(mode="json")
-        item_data["mc_type"] = MCType.TV_SERIES.value
-        normalized_item = _normalize_tmdb_search_item(item_data, genre_mapping=GENRE_MAPPING)
-        if normalized_item is not None:
-            tmdb_tv.append(normalized_item)
+    # --- mode=tmdb: raw TMDB API JSON, completely separate path ---
+    if mode == "tmdb":
+        raw_coros = [
+            *(
+                service._make_request(  # noqa: SLF001
+                    f"movie/{item.tmdb_id}",
+                    {"language": "en-US", "append_to_response": _TMDB_APPEND_TO_RESPONSE},
+                )
+                for item in movie_items
+            ),
+            *(
+                service._make_request(  # noqa: SLF001
+                    f"tv/{item.tmdb_id}",
+                    {"language": "en-US", "append_to_response": _TMDB_APPEND_TO_RESPONSE},
+                )
+                for item in tv_items
+            ),
+        ]
+        raw_results = await asyncio.gather(*raw_coros, return_exceptions=True)
+
+        movies_raw = [
+            r for r in raw_results[: len(movie_items)]
+            if isinstance(r, dict)
+        ]
+        tv_raw = [
+            r for r in raw_results[len(movie_items) :]
+            if isinstance(r, dict)
+        ]
+
+        return JSONResponse(
+            content={
+                "mode": "tmdb",
+                "movie": movies_raw,
+                "tv": tv_raw,
+                "exact_match": None,
+            }
+        )
+
+    # --- mode=redis / mode=mc_item: enriched via get_media_details ---
+    GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
+
+    detail_coros = [
+        *(
+            service.get_media_details(tmdb_id=item.tmdb_id, media_type=MCType.MOVIE)
+            for item in movie_items
+        ),
+        *(
+            service.get_media_details(tmdb_id=item.tmdb_id, media_type=MCType.TV_SERIES)
+            for item in tv_items
+        ),
+    ]
+    detail_results = await asyncio.gather(*detail_coros, return_exceptions=True)
+
+    movie_details = detail_results[: len(movie_items)]
+    tv_details = detail_results[len(movie_items) :]
+
+    def _build_item(details: Any, mc_type: MCType) -> dict[str, Any] | None:
+        if isinstance(details, BaseException) or details is None:
+            return None
+        if hasattr(details, "error") and details.error:
+            return None
+
+        mc_data: dict[str, Any] = (
+            details.model_dump(mode="json") if hasattr(details, "model_dump") else details
+        )
+
+        if mode == "mc_item":
+            mc_data["_tmdb_live"] = True
+            return mc_data
+
+        item_dict = dict(mc_data)
+        item_dict["_media_type"] = mc_type.value
+        normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
+        if normalized is None:
+            return None
+        redis_doc: dict[str, Any] = document_to_redis(normalized)
+        redis_doc["_tmdb_live"] = True
+        return redis_doc
+
+    movies = [
+        doc
+        for details in movie_details
+        if (doc := _build_item(details, MCType.MOVIE)) is not None
+    ]
+    tv = [
+        doc
+        for details in tv_details
+        if (doc := _build_item(details, MCType.TV_SERIES)) is not None
+    ]
+
+    # Check which items already exist in Redis so the UI can label insert vs update
+    redis = get_redis()
+    all_items = movies + tv
+    mc_ids = [item.get("mc_id") or item.get("id", "") for item in all_items]
+    redis_keys = [f"media:{mc_id}" if not mc_id.startswith("media:") else mc_id for mc_id in mc_ids]
+
+    if redis_keys:
+        pipe = redis.pipeline()
+        for rk in redis_keys:
+            pipe.exists(rk)
+        per_key: list[int] = await pipe.execute()  # type: ignore[assignment]
+        for item, exists_flag in zip(all_items, per_key, strict=True):
+            item["_exists_in_redis"] = bool(exists_flag)
 
     return JSONResponse(
         content={
-            "tmdb_mode": True,
-            "tmdb_movie": tmdb_movies,
-            "tmdb_tv": tmdb_tv,
+            "mode": mode,
+            "movie": movies,
+            "tv": tv,
             "exact_match": None,
         }
     )
+
+
+@app.get("/api/tmdb/details")
+async def api_tmdb_details(
+    tmdb_ids: str = Query(
+        ...,
+        description="Comma-separated TMDB numeric IDs (e.g. '123' or '123,456,789')",
+    ),
+    mc_type: str = Query(..., description="Media type: 'movie' or 'tv'"),
+    mode: str = Query(
+        default="redis",
+        description="Response shape: 'redis' returns normalized Redis documents, "
+        "'mc_item' returns MC model payloads (MCMovieItem/MCTvItem), "
+        "'tmdb' returns raw TMDB API JSON with no transformation",
+    ),
+) -> JSONResponse:
+    """Fetch TMDB details for one or more items by ID.
+
+    The ``mode`` parameter controls the response shape, identical to
+    ``/api/tmdb/search``:
+
+    - ``redis`` (default): normalized Redis document dicts
+    - ``mc_item``: MC model payloads (MCMovieItem / MCTvItem)
+    - ``tmdb``: raw TMDB API JSON with ``append_to_response`` enrichment
+    """
+    global GENRE_MAPPING
+
+    valid_modes = {"redis", "mc_item", "tmdb"}
+    if mode not in valid_modes:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"mode must be one of: {', '.join(sorted(valid_modes))}"},
+        )
+
+    if mc_type not in {"movie", "tv"}:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "mc_type must be 'movie' or 'tv'"},
+        )
+
+    try:
+        id_list = [int(x.strip()) for x in tmdb_ids.split(",") if x.strip()]
+    except ValueError:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "tmdb_ids must be comma-separated integers"},
+        )
+
+    if not id_list:
+        return JSONResponse(status_code=400, content={"error": "tmdb_ids is empty"})
+
+    if not os.getenv("TMDB_READ_TOKEN"):
+        return JSONResponse(
+            status_code=503,
+            content={"error": "TMDB_READ_TOKEN is not set."},
+        )
+
+    service = TMDBService()
+    prefix = "tv" if mc_type == "tv" else "movie"
+    media_type_enum = MCType.TV_SERIES if mc_type == "tv" else MCType.MOVIE
+
+    if mode == "tmdb":
+        raw_coros = [
+            service._make_request(  # noqa: SLF001
+                f"{prefix}/{tid}",
+                {"language": "en-US", "append_to_response": _TMDB_APPEND_TO_RESPONSE},
+            )
+            for tid in id_list
+        ]
+        raw_results = await asyncio.gather(*raw_coros, return_exceptions=True)
+        items = [r for r in raw_results if isinstance(r, dict)]
+        return JSONResponse(content={"mode": "tmdb", "mc_type": mc_type, "items": items})
+
+    detail_coros = [
+        service.get_media_details(tmdb_id=tid, media_type=media_type_enum)
+        for tid in id_list
+    ]
+    detail_results = await asyncio.gather(*detail_coros, return_exceptions=True)
+
+    if mode == "mc_item":
+        mc_items: list[dict[str, Any]] = []
+        for details in detail_results:
+            if isinstance(details, BaseException) or details is None:
+                continue
+            if hasattr(details, "error") and details.error:
+                continue
+            mc_data: dict[str, Any] = (
+                details.model_dump(mode="json") if hasattr(details, "model_dump") else details
+            )
+            mc_data["_tmdb_live"] = True
+            mc_items.append(mc_data)
+        return JSONResponse(content={"mode": "mc_item", "mc_type": mc_type, "items": mc_items})
+
+    GENRE_MAPPING = GENRE_MAPPING or await get_genre_mapping_with_fallback(allow_fallback=True)
+    redis_items: list[dict[str, Any]] = []
+    for details in detail_results:
+        if isinstance(details, BaseException) or details is None:
+            continue
+        if hasattr(details, "error") and details.error:
+            continue
+        mc_data = (
+            details.model_dump(mode="json") if hasattr(details, "model_dump") else details
+        )
+        item_dict = dict(mc_data)
+        item_dict["_media_type"] = media_type_enum.value
+        normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
+        if normalized is None:
+            continue
+        redis_doc: dict[str, Any] = document_to_redis(normalized)
+        redis_doc["_tmdb_live"] = True
+        redis_items.append(redis_doc)
+
+    return JSONResponse(content={"mode": "redis", "mc_type": mc_type, "items": redis_items})
 
 
 @app.get("/api/search/stream")
@@ -2871,6 +3087,13 @@ async def api_news_reviews(
 # ============================================================
 
 
+def _get_etl_metadata_store() -> ETLMetadataStore:
+    """Create an ETLMetadataStore backed by the currently active Redis environment's GCS prefix."""
+    env_name = RedisManager.get_current_env().value
+    config = ETLStateConfig.for_environment(env_name)
+    return ETLMetadataStore(config=config)
+
+
 async def run_nightly_etl_task(
     start_date: str | None = None,
     end_date: str | None = None,
@@ -3302,13 +3525,14 @@ async def list_etl_runs(
     limit: int = Query(10, description="Maximum runs to return"),
     _: None = Depends(require_api_key),
 ):
-    """List recent ETL runs from GCS metadata."""
+    """List recent ETL runs from GCS metadata (environment-aware)."""
     try:
-        store = ETLMetadataStore()
+        store = _get_etl_metadata_store()
         runs = store.list_runs(run_date=run_date, limit=limit)
         return JSONResponse(
             content={
                 "success": True,
+                "environment": RedisManager.get_current_env().value,
                 "runs": runs,
             }
         )
@@ -3321,9 +3545,9 @@ async def list_etl_runs(
 
 @app.get("/api/etl/runs/{run_date}/{run_id}")
 async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_key)):
-    """Get details of a specific ETL run."""
+    """Get details of a specific ETL run (environment-aware)."""
     try:
-        store = ETLMetadataStore()
+        store = _get_etl_metadata_store()
         metadata = store.get_run_metadata(run_date, run_id)
 
         if not metadata:
@@ -3335,6 +3559,38 @@ async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_
         return JSONResponse(
             content={
                 "success": True,
+                "environment": RedisManager.get_current_env().value,
+                "run": metadata.to_dict(),
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+@app.get("/api/etl/latest")
+async def get_latest_etl_run(_: None = Depends(require_api_key)):
+    """Get the most recent ETL run with full metadata (environment-aware)."""
+    env_name = RedisManager.get_current_env().value
+    try:
+        store = _get_etl_metadata_store()
+        metadata = store.get_latest_run()
+
+        if not metadata:
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "environment": env_name,
+                    "run": None,
+                }
+            )
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "environment": env_name,
                 "run": metadata.to_dict(),
             }
         )
@@ -3347,13 +3603,15 @@ async def get_etl_run(run_date: str, run_id: str, _: None = Depends(require_api_
 
 @app.get("/api/etl/job/state")
 async def get_etl_job_states(_: None = Depends(require_api_key)):
-    """Get the persistent state of all jobs (last run times, etc.)."""
+    """Get the persistent state of all jobs (environment-aware)."""
+    env_name = RedisManager.get_current_env().value
     try:
-        store = ETLMetadataStore()
+        store = _get_etl_metadata_store()
         states = store.get_all_job_states()
         return JSONResponse(
             content={
                 "success": True,
+                "environment": env_name,
                 "states": {name: state.to_dict() for name, state in states.items()},
             }
         )

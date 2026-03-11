@@ -15,17 +15,42 @@
           </p>
         </div>
       </div>
-      <div id="redis-status" class="flex items-center gap-2">
-        <span
-          class="w-2 h-2 rounded-full {% if redis_connected %}bg-green-400{% else %}bg-red-400{% endif %}"
-        ></span>
-        <span
-          class="text-sm {% if redis_connected %}text-green-400{% else %}text-red-400{% endif %}"
-        >
-          {% if redis_connected %}Connected{% else %}Disconnected{% endif %}
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-surface-500 bg-surface-800 px-2 py-1 rounded">
+          ETL metadata: <span id="etl-env-label" class="text-surface-300">{{ current_env }}</span>
         </span>
+        <div id="redis-status" class="flex items-center gap-2">
+          <span
+            class="w-2 h-2 rounded-full {% if redis_connected %}bg-green-400{% else %}bg-red-400{% endif %}"
+          ></span>
+          <span
+            class="text-sm {% if redis_connected %}text-green-400{% else %}text-red-400{% endif %}"
+          >
+            {% if redis_connected %}Connected{% else %}Disconnected{% endif %}
+          </span>
+        </div>
       </div>
     </div>
+
+    <!-- ETL Status Per Job (hero card) -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <span class="text-2xl">📊</span> ETL Status by Job
+        </h2>
+        <button
+          onclick="refreshJobStates()"
+          id="btn-refresh-states"
+          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+        >
+          <span id="refresh-states-icon">🔄</span> Refresh
+        </button>
+      </div>
+
+      <div id="job-states-container" class="space-y-3">
+        <div class="text-surface-500 text-center py-4">Loading...</div>
+      </div>
+    </section>
 
     <!-- Run Full ETL Section -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
@@ -221,33 +246,6 @@
             </button>
           </div>
           <div id="job-status-person" class="mt-3 hidden"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Job States -->
-    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold flex items-center gap-2">
-          <span class="text-2xl">📋</span> Job States
-        </h2>
-        <button
-          onclick="refreshJobStates()"
-          id="btn-refresh-states"
-          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <span id="refresh-states-icon">🔄</span> Refresh
-        </button>
-      </div>
-
-      <p class="text-surface-400 mb-6">
-        Last run information for each job. The start_date for the next run is
-        calculated from the last successful run.
-      </p>
-
-      <div id="job-states-container" class="space-y-3">
-        <div class="text-surface-500 text-center py-4">
-          Loading job states...
         </div>
       </div>
     </section>
@@ -827,8 +825,28 @@ Loading configuration...</pre
   }
 
   // ============================================================
-  // Job States
+  // ETL Status Per Job (hero card)
   // ============================================================
+
+  function friendlyJobName(raw) {
+    const map = {
+      "tmdb_movie_changes_movie": "Movie Changes",
+      "tmdb_tv_changes_tv": "TV Changes",
+      "tmdb_person_changes_person": "Person Changes",
+      "podcastindex_changes_podcast": "Podcast Changes",
+      "bestseller_authors_book": "Bestseller Authors",
+    };
+    return map[raw] || raw;
+  }
+
+  function jobIcon(raw) {
+    if (raw.includes("movie")) return "🎥";
+    if (raw.includes("tv")) return "📺";
+    if (raw.includes("person")) return "👤";
+    if (raw.includes("podcast")) return "🎙️";
+    if (raw.includes("author") || raw.includes("book")) return "📚";
+    return "📋";
+  }
 
   async function refreshJobStates() {
     const container = document.getElementById("job-states-container");
@@ -840,50 +858,75 @@ Loading configuration...</pre
       const res = await fetch("/api/etl/job/state");
       const data = await res.json();
 
-      if (!data.success) {
-        throw new Error(data.error);
-      }
+      if (!data.success) throw new Error(data.error);
+
+      // Update env label from response
+      const envLabel = document.getElementById("etl-env-label");
+      if (envLabel && data.environment) envLabel.textContent = data.environment;
 
       const states = data.states || {};
       const stateNames = Object.keys(states);
 
       if (stateNames.length === 0) {
-        container.innerHTML =
-          '<div class="text-surface-500 text-center py-4">No job states recorded yet</div>';
+        container.innerHTML = '<div class="text-surface-500 text-center py-4">No job states recorded for this environment</div>';
       } else {
         container.innerHTML = stateNames
           .map((name) => {
-            const state = states[name];
-            const statusColor =
-              state.last_status === "success" ? "green" : "red";
+            const s = states[name];
+            const sc = s.last_status === "success" ? "green" : s.last_status === "failed" ? "red" : "surface";
+            const se = s.last_status === "success" ? "✅" : s.last_status === "failed" ? "❌" : "❓";
+            const dateRange = s.effective_start_date && s.effective_end_date
+              ? `${s.effective_start_date} → ${s.effective_end_date}`
+              : null;
+            const runTime = s.last_run_time
+              ? new Date(s.last_run_time).toLocaleString("en-US", {
+                  weekday: "short", month: "short", day: "numeric",
+                  hour: "2-digit", minute: "2-digit"
+                })
+              : null;
+
             return `
-          <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-surface-200">${name}</p>
-                <p class="text-xs text-surface-500">
-                  Last run: ${state.last_run_date || "Never"}
-                  ${
-                    state.last_run_time
-                      ? ` at ${
-                          state.last_run_time.split("T")[1]?.substring(0, 5) ||
-                          ""
-                        }`
-                      : ""
-                  }
-                </p>
+          <div class="bg-surface-800/50 rounded-lg border border-surface-700 overflow-hidden">
+            <!-- Job header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700/50">
+              <div class="flex items-center gap-3">
+                <span class="text-lg">${jobIcon(name)}</span>
+                <div>
+                  <p class="font-semibold text-surface-100">${friendlyJobName(name)}</p>
+                  <p class="text-xs text-surface-500">${name}</p>
+                </div>
               </div>
-              <div class="text-right">
-                <span class="px-2 py-1 rounded text-xs font-medium bg-${statusColor}-500/20 text-${statusColor}-400">
-                  ${state.last_status || "unknown"}
+              <div class="flex items-center gap-2">
+                <span>${se}</span>
+                <span class="px-2 py-0.5 rounded text-xs font-medium bg-${sc}-500/20 text-${sc}-400">
+                  ${s.last_status || "never run"}
                 </span>
-                <p class="text-xs text-surface-500 mt-1">
-                  ${formatNumber(state.last_documents_upserted)} upserted
-                </p>
               </div>
             </div>
-          </div>
-        `;
+            <!-- Job details -->
+            <div class="px-4 py-3 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">Last Run</p>
+                <p class="text-surface-200 font-medium">${runTime || "Never"}</p>
+              </div>
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">Date Range</p>
+                <p class="text-surface-200 font-medium">${dateRange || "N/A"}</p>
+              </div>
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">Changes</p>
+                <p class="text-surface-200 font-medium">${formatNumber(s.last_changes_found)}</p>
+              </div>
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">Upserted</p>
+                <p class="text-blue-400 font-medium">${formatNumber(s.last_documents_upserted)}</p>
+              </div>
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">Duration</p>
+                <p class="text-surface-200 font-medium">${s.duration_seconds ? formatDuration(s.duration_seconds) : "N/A"}${s.errors_count > 0 ? ` · <span class="text-red-400">${s.errors_count} errors</span>` : ""}</p>
+              </div>
+            </div>
+          </div>`;
           })
           .join("");
       }
@@ -895,7 +938,7 @@ Loading configuration...</pre
   }
 
   // ============================================================
-  // Recent Runs
+  // Recent Runs (with detail fetch)
   // ============================================================
 
   async function refreshRecentRuns() {
@@ -905,39 +948,66 @@ Loading configuration...</pre
     icon.classList.add("animate-spin");
 
     try {
-      const res = await fetch("/api/etl/runs?limit=10");
-      const data = await res.json();
+      const listRes = await fetch("/api/etl/runs?limit=10");
+      const listData = await listRes.json();
 
-      if (!data.success) {
-        throw new Error(data.error);
-      }
+      if (!listData.success) throw new Error(listData.error);
 
-      const runs = data.runs || [];
+      const runs = listData.runs || [];
 
       if (runs.length === 0) {
-        container.innerHTML =
-          '<div class="text-surface-500 text-center py-4">No runs recorded yet</div>';
-      } else {
-        container.innerHTML = runs
-          .map(
-            (run) => `
-        <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="font-medium text-surface-200">${run.run_id}</p>
-              <p class="text-xs text-surface-500">${run.run_date}</p>
-            </div>
-            <div class="text-xs text-surface-500">
-              ${
-                run.size_bytes ? `${(run.size_bytes / 1024).toFixed(1)} KB` : ""
-              }
-            </div>
-          </div>
-        </div>
-      `
-          )
-          .join("");
+        container.innerHTML = '<div class="text-surface-500 text-center py-4">No runs recorded yet</div>';
+        icon.classList.remove("animate-spin");
+        return;
       }
+
+      // Fetch detail for each run in parallel (capped at 10)
+      const details = await Promise.all(
+        runs.map(async (run) => {
+          try {
+            const r = await fetch(`/api/etl/runs/${run.run_date}/${run.run_id}`);
+            const d = await r.json();
+            return d.success ? d.run : null;
+          } catch { return null; }
+        })
+      );
+
+      container.innerHTML = details.map((run, i) => {
+        if (!run) {
+          const stub = runs[i];
+          return `
+            <div class="bg-surface-800/50 rounded-lg p-3 border border-surface-700">
+              <div class="flex items-center justify-between">
+                <p class="font-medium text-surface-200">${stub.run_id}</p>
+                <p class="text-xs text-surface-500">${stub.run_date}</p>
+              </div>
+            </div>`;
+        }
+
+        const sc = run.status === "completed" ? "green" : run.status === "failed" ? "red" : "amber";
+        const se = { completed: "✅", partial: "⚠️", failed: "❌", running: "🔄" }[run.status] || "❓";
+        const startedAt = run.started_at ? new Date(run.started_at) : null;
+        const timeStr = startedAt
+          ? startedAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+          : run.run_date;
+
+        return `
+          <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span>${se}</span>
+                <span class="font-medium text-${sc}-400">${run.status}</span>
+                <span class="text-sm text-surface-400">${timeStr}</span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-surface-400">
+                <span>${run.jobs_completed}/${run.total_jobs} jobs</span>
+                <span class="text-surface-300 font-medium">${formatNumber(run.total_documents_upserted)} upserted</span>
+                ${run.total_errors > 0 ? `<span class="text-red-400">${run.total_errors} errors</span>` : ""}
+                <span>${formatDuration(run.duration_seconds)}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
     } catch (e) {
       container.innerHTML = `<div class="text-red-400 text-center py-4">Error: ${e.message}</div>`;
     } finally {

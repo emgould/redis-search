@@ -68,6 +68,7 @@ function initSearchController(cfg) {
     isStreamingEnabled,
     isNoDuplicateEnabled,
     isFullSearchEnabled,
+    isTmdbModeEnabled,
   } = cfg;
 
   // ---- State ----
@@ -331,6 +332,11 @@ function initSearchController(cfg) {
       return;
     }
 
+    // In TMDB mode, suppress autocomplete and search — only Enter triggers
+    if (isTmdbModeEnabled && isTmdbModeEnabled()) {
+      return;
+    }
+
     // Tier 1: autocomplete after short pause
     autocompleteTimer = setTimeout(() => runAutocomplete(query), AUTOCOMPLETE_DEBOUNCE_MS);
 
@@ -352,11 +358,17 @@ function initSearchController(cfg) {
       currentQuery = query;
       currentResults = {};
       resetExpandedState();
+      // In TMDB mode, route Enter to searchTmdb instead of regular search
+      if (isTmdbModeEnabled && isTmdbModeEnabled()) {
+        if (typeof window.searchTmdb === "function") window.searchTmdb();
+        return;
+      }
       triggerSearch(query);
     }
   });
 
   searchInput.addEventListener("focus", () => {
+    if (isTmdbModeEnabled && isTmdbModeEnabled()) return;
     const query = searchInput.value.trim();
     if (query.length < 2) return;
     if (Object.keys(currentResults).length > 0 && currentQuery === query) {
