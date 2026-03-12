@@ -18,18 +18,8 @@ from redis.asyncio import ConnectionPool as AsyncConnectionPool
 from redis.asyncio import Redis as AsyncRedis
 from redis.exceptions import RedisError
 
-# Try to import get_logger, fallback to standard logging
-try:
-    from utils.get_logger import get_logger
-except ImportError:
-
-    def get_logger(name: str, level=None, filename=None, app_name=None) -> logging.Logger:
-        logger = logging.getLogger(name)
-        if level is None:
-            level = logging.INFO
-        logger.setLevel(level)
-        return logger
-
+from utils.alerts import send_alert
+from utils.get_logger import get_logger
 
 # Define version constant
 RELEASE_VERSION = "1.3.4"
@@ -212,8 +202,6 @@ def _send_version_fallback_alert(prefix: str, error: Exception, attempts: int = 
         attempts: Number of attempts made before giving up.
     """
     try:
-        from utils.alerts import send_alert
-
         function_target = os.getenv("FUNCTION_TARGET", "unknown")
         k_service = os.getenv("K_SERVICE", "unknown")
         k_revision = os.getenv("K_REVISION", "unknown")
