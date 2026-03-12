@@ -36,16 +36,21 @@ from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
+    MINIMAL_AUTOCOMPLETE_SOURCES,
+    MINIMAL_DEFAULT_FIELDS,
+    MINIMAL_FIELD_ALLOWLIST,
     VALID_SOURCES,
     CastNameSearchRequest,
     CastNameSearchResponse,
     DetailsRequest,
     autocomplete,
+    autocomplete_minimal,
     autocomplete_stream,
     get_cast_names,
     get_details,
     get_details_batch,
     reset_repo,
+    resolve,
     search,
     search_stream,
 )
@@ -474,7 +479,9 @@ async def api_autocomplete_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
-        async for event in autocomplete_stream(q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full):
+        async for event in autocomplete_stream(
+            q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full
+        ):
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
@@ -505,6 +512,133 @@ async def api_autocomplete_stream(
             "X-Accel-Buffering": "no",  # Disable nginx buffering
         },
     )
+
+
+@app.get("/api/autocomplete/minimal")
+async def api_autocomplete_minimal(
+    q: str = Query(..., min_length=2, description="Search query (min 2 chars)"),
+    sources: str = Query(
+        default="tv,movie",
+        description="Comma-separated indexed sources to search. "
+        "Valid: tv, movie, person, podcast, author, book. "
+        "Defaults to tv,movie when omitted.",
+    ),
+    limit: int = Query(default=10, ge=1, le=50, description="Max results per source"),
+    fields: str | None = Query(
+        default=None,
+        description="Comma-separated field names to return per result. "
+        "mc_id and mc_type are always included. "
+        "If omitted, returns a default lightweight set.",
+    ),
+):
+    """
+    Lightweight autocomplete endpoint optimised for speed.
+
+    Only searches indexed sources (no brokered APIs).  Uses Redis field
+    projection so only the requested properties are transferred from the
+    index, minimising payload size and parse overhead.
+    """
+    sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+    invalid = sources_set - MINIMAL_AUTOCOMPLETE_SOURCES
+    if invalid:
+        return JSONResponse(
+            content={
+                "error": (
+                    f"Invalid sources for minimal autocomplete: {', '.join(sorted(invalid))}. "
+                    f"Valid: {', '.join(sorted(MINIMAL_AUTOCOMPLETE_SOURCES))}"
+                )
+            },
+            status_code=400,
+        )
+
+    if fields:
+        field_list = [f.strip() for f in fields.split(",") if f.strip()]
+        invalid_fields = set(field_list) - MINIMAL_FIELD_ALLOWLIST
+        if invalid_fields:
+            return JSONResponse(
+                content={
+                    "error": (
+                        f"Invalid fields: {', '.join(sorted(invalid_fields))}. "
+                        f"Allowed: {', '.join(sorted(MINIMAL_FIELD_ALLOWLIST))}"
+                    )
+                },
+                status_code=400,
+            )
+    else:
+        field_list = sorted(MINIMAL_DEFAULT_FIELDS)
+
+    results = await autocomplete_minimal(q=q, sources=sources_set, fields=field_list, limit=limit)
+    return JSONResponse(content=results)
+
+
+@app.get("/api/resolve")
+async def api_resolve(
+    q: str = Query(..., min_length=2, description="Fully-formed title to resolve"),
+    sources: str = Query(
+        default="tv,movie",
+        description="Comma-separated indexed sources to search. "
+        "Valid: tv, movie, person, podcast, author, book.",
+    ),
+    fields: str | None = Query(
+        default=None,
+        description="Comma-separated extra field names to include per match. "
+        "Default set always includes: mc_id, mc_type, title, search_title, "
+        "release_date, first_air_date, last_aired_date. "
+        "Ignored when full=true.",
+    ),
+    full: bool = Query(
+        default=False,
+        description="When true, return the complete Redis document for each match.",
+    ),
+):
+    """
+    Resolve a fully-formed title to all exact-match entities.
+
+    Returns every indexed document whose title is a tier 0-1 exact match for
+    the query, ranked by the standard scoring (popularity / recency).  Use
+    this when the caller needs to confirm an exact title or disambiguate
+    between multiple entities sharing the same name (e.g. "The Godfather"
+    1972 vs 1990).
+
+    Response shape::
+
+        {
+            "query": "The Godfather",
+            "matches": [ { ... }, { ... } ],
+            "total": 2,
+            "latency_ms": 12.3
+        }
+    """
+    sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
+    invalid = sources_set - MINIMAL_AUTOCOMPLETE_SOURCES
+    if invalid:
+        return JSONResponse(
+            content={
+                "error": (
+                    f"Invalid sources for resolve: {', '.join(sorted(invalid))}. "
+                    f"Valid: {', '.join(sorted(MINIMAL_AUTOCOMPLETE_SOURCES))}"
+                )
+            },
+            status_code=400,
+        )
+
+    field_list: list[str] | None = None
+    if fields and not full:
+        field_list = [f.strip() for f in fields.split(",") if f.strip()]
+        invalid_fields = set(field_list) - MINIMAL_FIELD_ALLOWLIST
+        if invalid_fields:
+            return JSONResponse(
+                content={
+                    "error": (
+                        f"Invalid fields: {', '.join(sorted(invalid_fields))}. "
+                        f"Allowed: {', '.join(sorted(MINIMAL_FIELD_ALLOWLIST))}"
+                    )
+                },
+                status_code=400,
+            )
+
+    result = await resolve(q=q, sources=sources_set, fields=field_list, full=full)
+    return JSONResponse(content=result)
 
 
 # Sources that support field-only filtering (indexed in RediSearch)
@@ -785,14 +919,8 @@ async def api_tmdb_search(
         ]
         raw_results = await asyncio.gather(*raw_coros, return_exceptions=True)
 
-        movies_raw = [
-            r for r in raw_results[: len(movie_items)]
-            if isinstance(r, dict)
-        ]
-        tv_raw = [
-            r for r in raw_results[len(movie_items) :]
-            if isinstance(r, dict)
-        ]
+        movies_raw = [r for r in raw_results[: len(movie_items)] if isinstance(r, dict)]
+        tv_raw = [r for r in raw_results[len(movie_items) :] if isinstance(r, dict)]
 
         return JSONResponse(
             content={
@@ -845,14 +973,10 @@ async def api_tmdb_search(
         return redis_doc
 
     movies = [
-        doc
-        for details in movie_details
-        if (doc := _build_item(details, MCType.MOVIE)) is not None
+        doc for details in movie_details if (doc := _build_item(details, MCType.MOVIE)) is not None
     ]
     tv = [
-        doc
-        for details in tv_details
-        if (doc := _build_item(details, MCType.TV_SERIES)) is not None
+        doc for details in tv_details if (doc := _build_item(details, MCType.TV_SERIES)) is not None
     ]
 
     # Check which items already exist in Redis so the UI can label insert vs update
@@ -951,8 +1075,7 @@ async def api_tmdb_details(
         return JSONResponse(content={"mode": "tmdb", "mc_type": mc_type, "items": items})
 
     detail_coros = [
-        service.get_media_details(tmdb_id=tid, media_type=media_type_enum)
-        for tid in id_list
+        service.get_media_details(tmdb_id=tid, media_type=media_type_enum) for tid in id_list
     ]
     detail_results = await asyncio.gather(*detail_coros, return_exceptions=True)
 
@@ -977,9 +1100,7 @@ async def api_tmdb_details(
             continue
         if hasattr(details, "error") and details.error:
             continue
-        mc_data = (
-            details.model_dump(mode="json") if hasattr(details, "model_dump") else details
-        )
+        mc_data = details.model_dump(mode="json") if hasattr(details, "model_dump") else details
         item_dict = dict(mc_data)
         item_dict["_media_type"] = media_type_enum.value
         normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
@@ -2740,12 +2861,14 @@ async def update_media(media_id: str, body: MediaDocumentUpdate) -> JSONResponse
                 "error": str(mm_exc),
             }
 
-    return JSONResponse(content={
-        "status": "updated",
-        "id": key,
-        "media_manager": mm_result,
-        "document": merged,
-    })
+    return JSONResponse(
+        content={
+            "status": "updated",
+            "id": key,
+            "media_manager": mm_result,
+            "document": merged,
+        }
+    )
 
 
 @app.post("/api/details")
@@ -2757,7 +2880,9 @@ async def api_get_details(
     mc_subtype: str | None = Query(default=None),
     rss_details: bool = Query(default=False),
     force: bool = Query(default=False),
-    fields: str | None = Query(default=None, description="Comma-separated field names to return (mc_id always included)"),
+    fields: str | None = Query(
+        default=None, description="Comma-separated field names to return (mc_id always included)"
+    ),
 ):
     """
     Get detailed metadata for a media item or person.
@@ -2922,7 +3047,9 @@ async def api_add_tmdb_to_redis(
 async def api_get_media_details(
     mc_id: str = Query(..., description="MediaCircle ID"),
     allow_insert: bool = Query(default=False, description="Allow insert of new media"),
-    force_refresh: bool = Query(default=False, description="Skip Redis lookup, always fetch from TMDB"),
+    force_refresh: bool = Query(
+        default=False, description="Skip Redis lookup, always fetch from TMDB"
+    ),
 ) -> JSONResponse:
     """
     Return the Redis index document for a media item.
@@ -3744,7 +3871,7 @@ INDEX_CONFIGS = {
         "prefix": "media:",
         "schema": (
             # Primary search field with high weight
-            TextField("$.search_title", as_name="search_title", weight=5.0),
+            TextField("$.search_title", as_name="search_title", weight=5.0, no_stem=True),
             # Content type filters (MCType and MCSubType)
             TagField("$.mc_type", as_name="mc_type"),
             TagField("$.mc_subtype", as_name="mc_subtype"),
@@ -3823,7 +3950,7 @@ INDEX_CONFIGS = {
         "prefix": "podcast:",
         "schema": (
             # Primary search field with high weight
-            TextField("$.search_title", as_name="search_title", weight=5.0),
+            TextField("$.search_title", as_name="search_title", weight=5.0, no_stem=True),
             # Author/creator name - searchable (full-text)
             TextField("$.author", as_name="author", weight=3.0),
             # Author normalized for exact TAG matching
@@ -3874,7 +4001,7 @@ INDEX_CONFIGS = {
         "prefix": "book:",
         "schema": (
             # Primary search field (title) with high weight
-            TextField("$.search_title", as_name="search_title", weight=5.0),
+            TextField("$.search_title", as_name="search_title", weight=5.0, no_stem=True),
             TextField("$.title", as_name="title", weight=4.0),
             # Author search (TEXT fields)
             TextField("$.author_search", as_name="author_search", weight=3.0),
@@ -3961,7 +4088,11 @@ async def create_index(index_name: str):
     definition = IndexDefinition(prefix=[prefix], index_type=IndexType.JSON)
 
     try:
-        await redis.ft(redis_index_name).create_index(schema, definition=definition)
+        await redis.ft(redis_index_name).create_index(
+            schema,
+            definition=definition,
+            stopwords=[],
+        )
         return JSONResponse(
             content={
                 "success": True,

@@ -46,6 +46,90 @@ GET /api/autocomplete?q={query}&sources={sources}
 
 ---
 
+### 1b. Autocomplete Minimal (Lightweight / Projected)
+
+```
+GET /api/autocomplete/minimal?q={query}&sources={sources}&limit={limit}&fields={fields}
+```
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `q` | string | Yes | — | Search query (min 2 characters) |
+| `sources` | string | No | `tv,movie` | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
+| `limit` | int | No | 10 | Max results per source (1–50) |
+| `fields` | string | No | default set | Comma-separated field names to return per result. `mc_id` and `mc_type` are always included. |
+
+**Default fields** (when `fields` omitted): `mc_id`, `mc_type`, `search_title`, `year`, `poster_path`, `popularity`, `image`
+
+**Allowed fields:** `mc_id`, `mc_type`, `mc_subtype`, `search_title`, `title`, `name`, `year`, `poster_path`, `image`, `backdrop_path`, `popularity`, `rating`, `overview`, `author`, `first_publish_year`, `source_id`, `source`, `genre_ids`, `genres`, `release_date`, `first_air_date`, `known_for_department`, `episode_count`, `known_for_titles`, `origin_country`, `original_language`, `us_rating`, `also_known_as`, `author_name`
+
+**Example:**
+```
+/api/autocomplete/minimal?q=matrix&sources=movie,tv&limit=12&fields=mc_id,mc_type,search_title,year,poster_path
+/api/autocomplete/minimal?q=brad&sources=person&fields=mc_id,search_title,image
+/api/autocomplete/minimal?q=serial&sources=podcast&limit=5
+```
+
+**Performance characteristics:**
+- Uses Redis `RETURN` field projection — only requested fields are transferred from the index.
+- No full JSON document parsing or Python re-ranking. Redis handles sorting (popularity desc).
+- No brokered API calls — only indexed sources supported.
+- Response is grouped by source: `{ "tv": [...], "movie": [...] }`.
+
+---
+
+### 1c. Resolve (Exact-Match Disambiguation)
+
+```
+GET /api/resolve?q={title}&sources={sources}&fields={fields}&full={full}
+```
+
+Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked by the standard scoring (popularity / recency). Use this when the caller needs to confirm an exact title or disambiguate between multiple entities sharing the same name (e.g. "The Godfather" 1972 vs 1990).
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `q` | string | Yes | — | Fully-formed title to resolve (min 2 characters) |
+| `sources` | string | No | `tv,movie` | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
+| `fields` | string | No | default set | Comma-separated extra field names to include per match. Ignored when `full=true`. |
+| `full` | bool | No | `false` | When true, return the complete Redis document for each match. |
+
+**Default fields** (always included): `mc_id`, `mc_type`, `title`, `search_title`, `release_date`, `first_air_date`, `last_aired_date`
+
+**Allowed extra fields:** Same allowlist as `/api/autocomplete/minimal` — `poster_path`, `year`, `popularity`, `rating`, `overview`, `genre_ids`, `genres`, `source_id`, `source`, etc.
+
+**Response shape:**
+```json
+{
+    "query": "The Godfather",
+    "matches": [
+        { "mc_id": "tmdb_238", "mc_type": "movie", "title": "The Godfather", "release_date": "1972-03-14", ... },
+        { "mc_id": "tmdb_240", "mc_type": "movie", "title": "The Godfather Part II", ... }
+    ],
+    "total": 2,
+    "latency_ms": 12.3
+}
+```
+
+**Key differences from `/api/autocomplete`:**
+- Returns a flat `matches` array, not grouped by source.
+- Returns **all** exact matches, not just one `exact_match` winner.
+- Only searches indexed sources (no brokered APIs).
+- Supports `full=true` to return complete Redis documents.
+
+**Example:**
+```
+/api/resolve?q=the+godfather&sources=movie
+/api/resolve?q=breaking+bad&sources=tv,movie
+/api/resolve?q=brad+pitt&sources=person&fields=popularity,image
+/api/resolve?q=the+godfather&sources=movie&full=true
+```
+
+**Web UI:** The **Direct Match** toggle in the search bar activates resolve mode. When ON, autocomplete and search are suppressed; Enter calls `/api/resolve` with the active source filters. Results are grouped by `mc_type` and rendered using the standard card layout.
+
+---
+
 ### 2. Autocomplete (Streaming/SSE)
 
 ```

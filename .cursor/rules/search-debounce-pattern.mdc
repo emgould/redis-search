@@ -22,9 +22,10 @@ The search UI uses a componentized controller (`web/static/js/search-controller.
 
 ### Tier 1 — Autocomplete (300ms)
 
-- **Endpoint:** `GET /api/autocomplete?q=...`
+- **Endpoint:** `GET /api/autocomplete?q=...` (default) or `GET /api/autocomplete/minimal?q=...` (when **Lite** toggle is ON)
 - **Sources:** Local RediSearch only — tv, movie, person, podcast, author, book
 - **No brokered APIs** — no news, video, ratings, artist, album
+- **Lite mode:** When the Lite toggle is active, Tier 1 uses `/api/autocomplete/minimal` with Redis field projection. Only the requested fields are transferred from the index. When no source filters are selected, defaults to `tv,movie`.
 - **Purpose:** Instant type-ahead results while the user is still typing
 
 ### Tier 2 — Full Search (750ms or Enter)
@@ -86,6 +87,25 @@ Individual functions (`runAutocomplete`, `runSearchBatch`, `runSearchStream`) ca
 
 Every async callback checks `query === currentQuery` before updating `currentResults`. This prevents results from a previous query from rendering after a new query has started.
 
+## Exclusive Modes
+
+### TMDB Mode
+
+When the **TMDB** toggle is active:
+- Autocomplete (Tier 1) and search (Tier 2) are suppressed on typing.
+- Enter routes to `searchTmdb()` → `GET /api/tmdb/search?mode=redis`.
+- Focus auto-search is suppressed.
+
+### Direct Match Mode
+
+When the **Direct Match** toggle is active:
+- Autocomplete (Tier 1) and search (Tier 2) are suppressed on typing.
+- Enter routes to `searchDirectMatch()` → `GET /api/resolve`.
+- Focus auto-search is suppressed.
+- Requests extra fields (`poster_path`, `year`, `popularity`, `rating`, `source_id`) so results render with images.
+- Source filter buttons are respected — e.g. toggling only "TV" restricts resolve to `sources=tv`.
+- The flat `matches` array from `/api/resolve` is grouped by `mc_type` and fed to the standard `renderResults()`.
+
 ## Controller API
 
 ```javascript
@@ -99,6 +119,7 @@ const controller = initSearchController({
   renderResults,         // (results, query) => void
   expandedCategories,    // mutable {tv: false, movie: false, ...}
   isStreamingEnabled,    // () => bool
+  isDirectMatchEnabled,  // () => bool
 });
 
 controller.searchFor("The Office");     // programmatic search
@@ -113,8 +134,10 @@ controller.triggerSearch(query);        // fire Tier 2 immediately
 | Endpoint | Tier | Method | Sources |
 |---|---|---|---|
 | `/api/autocomplete` | 1 | GET (fetch) | Local RediSearch only |
+| `/api/autocomplete/minimal` | 1 (Lite) | GET (fetch) | Projected indexed sources (default tv,movie) |
 | `/api/search` | 2 (batch) | GET (fetch) | All sources |
 | `/api/search/stream` | 2 (stream) | GET (EventSource SSE) | All sources, streamed per-source |
+| `/api/resolve` | — (Enter) | GET (fetch) | Indexed sources only (Direct Match mode) |
 | `/api/media-details` | — | GET | TMDB (tv/movie inspection) |
 
 ## Result Item JSON Inspection (TV/Movie)

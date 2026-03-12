@@ -250,6 +250,37 @@ def escape_redis_search_term(term: str) -> str:
     return result
 
 
+def build_minimal_autocomplete_query(q: str) -> str:
+    """
+    Build a title-only prefix query for lightweight autocomplete.
+
+    Always uses prefix matching on the last word (≥2 chars) so results
+    narrow progressively as the user types.  Single-char trailing words
+    are dropped (user is between words).  No TAG field union.
+    No stopword filtering — titles contain stopwords and users type them.
+    """
+    q = strip_query_apostrophes(q)
+    parts = q.replace(":", " : ").split()
+    words = [w.lower() for w in parts if w and w != ":"]
+
+    if not words:
+        return "*"
+
+    escaped = [escape_redis_search_term(w) for w in words]
+
+    if escaped[-1] and len(escaped[-1]) < 2:
+        escaped = escaped[:-1]
+    if not escaped:
+        return "*"
+
+    if len(escaped) == 1:
+        return f"@search_title:{escaped[0]}*"
+
+    exact = " ".join(escaped[:-1])
+    last = escaped[-1]
+    return f"@search_title:({exact} {last}*)"
+
+
 def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     """
     Build a prefix search query for autocomplete.

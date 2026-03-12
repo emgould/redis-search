@@ -1,6 +1,17 @@
+from typing import Any
+
 from redis.commands.search.query import Query
 
 from .redis_client import get_redis
+
+_SOURCE_INDEX_ATTR: dict[str, str] = {
+    "tv": "idx",
+    "movie": "idx",
+    "person": "people_idx",
+    "podcast": "podcasts_idx",
+    "author": "author_idx",
+    "book": "book_idx",
+}
 
 
 class RedisRepository:
@@ -166,6 +177,44 @@ class RedisRepository:
             query = query.sort_by(sort_by, asc=sort_asc)
 
         return await self.book_idx.search(query)
+
+    async def search_projected(
+        self,
+        source: str,
+        query_str: str,
+        fields: list[str],
+        limit: int = 10,
+        sort_by: str | None = "popularity",
+        sort_asc: bool = False,
+    ) -> Any:
+        """
+        Search an index returning only the requested JSON fields.
+
+        Uses FT.SEARCH RETURN with ``$.field AS field`` aliases so Redis
+        transfers only the projected payload instead of full documents.
+
+        Args:
+            source: Logical source name (tv, movie, person, podcast, author, book).
+            query_str: Redis Search query string.
+            fields: JSON field names to return (e.g. ["mc_id", "search_title"]).
+            limit: Maximum results to return.
+            sort_by: Field to sort by, or None for relevance scoring.
+            sort_asc: Sort ascending if True, descending if False.
+        """
+        attr = _SOURCE_INDEX_ATTR.get(source)
+        if attr is None:
+            raise ValueError(f"Unknown source for projected search: {source}")
+
+        idx = getattr(self, attr)
+        query = Query(query_str).paging(0, limit)
+
+        for field in fields:
+            query.return_field(f"$.{field}", as_field=field)
+
+        if sort_by:
+            query = query.sort_by(sort_by, asc=sort_asc)
+
+        return await idx.search(query)
 
     async def set_document(self, key: str, value: dict) -> None:
         await self.redis.json().set(key, "$", value)  # type: ignore[misc]

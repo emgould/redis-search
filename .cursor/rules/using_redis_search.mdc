@@ -26,6 +26,21 @@ Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }`
 
 Supports source hints in the query (e.g. `movie: matrix`). Returns `source_hint` in response when detected.
 
+#### `GET /api/autocomplete/minimal`
+
+Lightweight projected autocomplete optimised for speed.  Uses Redis `RETURN` field projection so only the requested properties are transferred from the index.  No brokered API calls, no full-document parsing, no Python re-ranking.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `q` | string | yes | — | Search query (min 2 chars) |
+| `sources` | string | no | tv,movie | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
+| `limit` | int | no | 10 | Max results per source (1–50) |
+| `fields` | string | no | default set | Comma-separated field names to return. `mc_id`, `mc_type` always included. |
+
+Default fields: `mc_id`, `mc_type`, `search_title`, `year`, `poster_path`, `popularity`, `image`.
+
+Response: `{ "tv": [...], "movie": [...], ... }` keyed by source.  Each item contains only the projected fields.
+
 #### `GET /api/autocomplete/stream`
 
 SSE streaming version of autocomplete. Same parameters as above. Results stream as each source completes.
@@ -66,6 +81,41 @@ Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }`
 #### `GET /api/search/stream`
 
 SSE streaming version of `/api/search`. Same parameters. Same SSE event format as autocomplete/stream.
+
+#### `GET /api/resolve`
+
+Resolve a fully-formed title to all exact-match (tier 0-1) entities. Unlike `/api/autocomplete` which returns a single `exact_match` winner, this returns every qualifying match ranked by popularity/recency.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `q` | string | yes | — | Fully-formed title (min 2 chars) |
+| `sources` | string | no | tv,movie | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
+| `fields` | string | no | default set | Extra field names to include per match. Ignored when `full=true`. |
+| `full` | bool | no | false | Return the complete Redis document for each match |
+
+Default fields (always included): `mc_id`, `mc_type`, `title`, `search_title`, `release_date`, `first_air_date`, `last_aired_date`.
+
+Allowed extra fields: same allowlist as `/api/autocomplete/minimal`.
+
+Response:
+
+```json
+{
+  "query": "The Godfather",
+  "matches": [
+    { "mc_id": "tmdb_238", "mc_type": "movie", "title": "The Godfather", ... },
+    { "mc_id": "tmdb_240", "mc_type": "movie", "title": "The Godfather Part II", ... }
+  ],
+  "total": 2,
+  "latency_ms": 12.3
+}
+```
+
+Key differences from autocomplete/search:
+- Returns a flat `matches` array, not grouped by source.
+- Returns **all** exact matches, not just one `exact_match` winner.
+- Only indexed sources (no brokered APIs).
+- Supports `full=true` for complete Redis documents.
 
 ### Detail Lookups
 

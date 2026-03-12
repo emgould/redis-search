@@ -32,6 +32,7 @@ from core.search_queries import (
     build_filter_query,
     build_fuzzy_fulltext_query,
     build_media_query_from_user_input,
+    build_minimal_autocomplete_query,
     escape_redis_search_term,
     normalize_for_tag,
     strip_query_apostrophes,
@@ -845,6 +846,361 @@ async def autocomplete(
     if no_duplicate and exact is not None:
         _remove_exact_from_results(result, exact)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Lightweight / projected autocomplete
+# ---------------------------------------------------------------------------
+
+MINIMAL_AUTOCOMPLETE_SOURCES: frozenset[str] = frozenset(
+    {"tv", "movie", "person", "podcast", "author", "book"}
+)
+
+MINIMAL_FIELD_ALLOWLIST: frozenset[str] = frozenset(
+    {
+        "mc_id",
+        "mc_type",
+        "mc_subtype",
+        "search_title",
+        "title",
+        "name",
+        "year",
+        "poster_path",
+        "image",
+        "backdrop_path",
+        "popularity",
+        "rating",
+        "overview",
+        "author",
+        "first_publish_year",
+        "source_id",
+        "source",
+        "genre_ids",
+        "genres",
+        "release_date",
+        "last_aired_date",
+        "first_air_date",
+        "known_for_department",
+        "episode_count",
+        "known_for_titles",
+        "origin_country",
+        "original_language",
+        "us_rating",
+        "also_known_as",
+        "author_name",
+    }
+)
+
+MINIMAL_DEFAULT_FIELDS: frozenset[str] = frozenset(
+    {
+        "mc_id",
+        "mc_type",
+        "search_title",
+        "year",
+        "poster_path",
+        "popularity",
+        "image",
+        "release_date",
+        "last_aired_date",
+    }
+)
+
+_MINIMAL_ALWAYS_FIELDS: frozenset[str] = frozenset(
+    {"mc_id", "mc_type", "release_date", "last_aired_date"}
+)
+
+_MINIMAL_SORT_DEFAULTS: dict[str, str | None] = {
+    "tv": "popularity",
+    "movie": "popularity",
+    "person": "popularity",
+    "podcast": "popularity",
+    "author": None,
+    "book": None,
+}
+
+
+def _parse_projected_doc(doc: object) -> dict[str, Any]:
+    """Parse a projected RediSearch document into a lightweight dict."""
+    result: dict[str, Any] = {"id": doc.id}  # type: ignore[attr-defined]
+    for key, value in doc.__dict__.items():
+        if key in ("id", "payload"):
+            continue
+        if value is None:
+            continue
+        if isinstance(value, str):
+            try:
+                result[key] = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                result[key] = value
+        else:
+            result[key] = value
+
+    if "mc_id" not in result:
+        result["mc_id"] = result.get("id", "")
+    else:
+        result["id"] = result["mc_id"]
+
+    return result
+
+
+def _item_date_key(item: dict[str, Any]) -> str:
+    """Return the best available date string for recency sorting (descending)."""
+    return str(item.get("release_date") or item.get("last_aired_date") or "")
+
+
+def _rerank_results(
+    results: list[dict[str, Any]], query_words: list[str], limit: int
+) -> list[dict[str, Any]]:
+    """Sort results: titles starting with the typed text first, then by recency."""
+    prefix = " ".join(query_words)
+
+    results.sort(key=_item_date_key, reverse=True)
+    results.sort(
+        key=lambda item: 0
+        if str(item.get("search_title") or item.get("title") or "").lower().strip().startswith(prefix)
+        else 1
+    )
+    return results[:limit]
+
+
+RESOLVE_DEFAULT_FIELDS: frozenset[str] = frozenset(
+    {
+        "mc_id",
+        "mc_type",
+        "title",
+        "search_title",
+        "release_date",
+        "first_air_date",
+        "last_aired_date",
+    }
+)
+
+_RESOLVE_RANKERS: dict[
+    str,
+    Any,
+] = {
+    "movie": _rank_media_result,
+    "tv": _rank_media_result,
+    "person": _rank_person_result,
+    "podcast": _rank_podcast_result,
+    "book": _rank_book_result,
+}
+
+
+async def resolve(
+    q: str,
+    sources: set[str],
+    fields: list[str] | None = None,
+    full: bool = False,
+) -> dict[str, Any]:
+    """
+    Return all exact-match (tier 0-1) documents for a fully-formed title.
+
+    When *full* is True the complete Redis document is returned for every
+    match.  Otherwise only the fields listed in *fields* (defaulting to
+    ``RESOLVE_DEFAULT_FIELDS``) are projected from the index.
+
+    Args:
+        q: Fully-formed title string (min 2 chars).
+        sources: Set of indexed source names to search.
+        fields: Extra field names to project (merged with the default set).
+                Ignored when *full* is True.
+        full: When True, return the entire Redis JSON document per match.
+
+    Returns:
+        ``{"query": ..., "matches": [...], "total": int, "latency_ms": float}``
+    """
+    repo = get_repo()
+    total_start = time.perf_counter()
+
+    projected_fields: list[str] | None = None
+    if not full:
+        merged = set(RESOLVE_DEFAULT_FIELDS)
+        if fields:
+            merged |= set(fields)
+        merged.add("search_title")
+        projected_fields = sorted(merged)
+
+    fetch_limit = 50
+    query_str = build_minimal_autocomplete_query(q)
+
+    tasks: list[Any] = []
+    for source in sources:
+        if source in ("tv", "movie"):
+            src_query = _build_media_source_query(query_str, source)
+        elif source in MINIMAL_AUTOCOMPLETE_SOURCES:
+            src_query = query_str
+        else:
+            continue
+
+        if full:
+            if source in ("tv", "movie"):
+                tasks.append(
+                    timed_task(source, repo.search(src_query, limit=fetch_limit, sort_by="popularity"))
+                )
+            else:
+                coro = repo.search_projected(
+                    source=source,
+                    query_str=src_query,
+                    fields=[],
+                    limit=fetch_limit,
+                    sort_by="popularity",
+                )
+                tasks.append(timed_task(source, coro))
+        else:
+            assert projected_fields is not None
+            tasks.append(
+                timed_task(
+                    source,
+                    repo.search_projected(
+                        source=source,
+                        query_str=src_query,
+                        fields=projected_fields,
+                        limit=fetch_limit,
+                        sort_by="popularity",
+                    ),
+                )
+            )
+
+    timed_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    matches: list[dict[str, Any]] = []
+    timing_parts: list[str] = []
+
+    for item in timed_results:
+        if isinstance(item, BaseException):
+            continue
+        if not (isinstance(item, tuple) and len(item) == 3):
+            continue
+
+        name, data, elapsed = item
+        timing_parts.append(f"{name}={elapsed:.0f}ms")
+
+        if not data or isinstance(data, BaseException) or not hasattr(data, "docs"):
+            continue
+
+        if full:
+            parsed = [parse_doc(doc) for doc in data.docs]
+        else:
+            parsed = [_parse_projected_doc(doc) for doc in data.docs]
+
+        ranker = _RESOLVE_RANKERS.get(name)
+        for doc in parsed:
+            if is_exact_match(q, doc, name):
+                doc["source"] = name
+                if ranker is not None:
+                    doc["_rank"] = ranker(doc, q)
+                matches.append(doc)
+
+    matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
+
+    total_elapsed = (time.perf_counter() - total_start) * 1000
+    logger.info(
+        f"Resolve '{q}' sources={sorted(sources)} matches={len(matches)} "
+        f"total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
+    )
+
+    return {
+        "query": q,
+        "matches": matches,
+        "total": len(matches),
+        "latency_ms": round(total_elapsed, 1),
+    }
+
+
+async def autocomplete_minimal(
+    q: str,
+    sources: set[str],
+    fields: list[str],
+    limit: int = 10,
+) -> dict[str, list[dict[str, Any]]]:
+    """
+    Lightweight autocomplete that returns only projected fields from Redis indexes.
+
+    The index is built with ``stopwords=[]`` and ``no_stem=True`` so Redis
+    performs exact progressive prefix matching directly.  Results are
+    sorted by recency (``release_date`` / ``last_aired_date``) with exact
+    title matches promoted to the top.
+
+    Args:
+        q: Search query string (min 2 chars).
+        sources: Set of source names (tv, movie, person, podcast, author, book).
+        fields: Validated field names to project from each document.
+        limit: Max results per source.
+
+    Returns:
+        Dict keyed by source name with lists of projected documents.
+    """
+    repo = get_repo()
+
+    title_field_needed = "search_title" not in fields and "title" not in fields
+    request_fields = sorted(_MINIMAL_ALWAYS_FIELDS | set(fields))
+    if title_field_needed and "search_title" not in request_fields:
+        request_fields = sorted(set(request_fields) | {"search_title"})
+
+    q_stripped = q.replace(":", " ").strip()
+    query_words = [w.lower() for w in q_stripped.split() if w]
+
+    tasks: list[Any] = []
+
+    base_query = build_minimal_autocomplete_query(q)
+
+    for source in sources:
+        if source in ("tv", "movie"):
+            query_str = _build_media_source_query(base_query, source)
+        elif source in ("person", "podcast", "author", "book"):
+            query_str = base_query
+        else:
+            continue
+
+        sort_by = _MINIMAL_SORT_DEFAULTS.get(source, "popularity")
+
+        tasks.append(
+            timed_task(
+                source,
+                repo.search_projected(
+                    source=source,
+                    query_str=query_str,
+                    fields=request_fields,
+                    limit=limit,
+                    sort_by=sort_by,
+                ),
+            )
+        )
+
+    total_start = time.perf_counter()
+    timed_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    response: dict[str, list[dict[str, Any]]] = {}
+    timing_parts: list[str] = []
+
+    for item in timed_results:
+        if isinstance(item, BaseException):
+            continue
+        if isinstance(item, tuple) and len(item) == 3:
+            name, data, elapsed = item
+            timing_parts.append(f"{name}={elapsed:.0f}ms")
+            if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+                parsed = [_parse_projected_doc(doc) for doc in data.docs]
+                ranked = _rerank_results(parsed, query_words, limit)
+                if title_field_needed:
+                    for doc in ranked:
+                        doc.pop("search_title", None)
+                response[name] = ranked
+            else:
+                response[name] = []
+
+    total_elapsed = (time.perf_counter() - total_start) * 1000
+    logger.info(
+        f"Autocomplete/minimal '{q}' fields={len(request_fields)} "
+        f"total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
+    )
+
+    for source in sources:
+        if source not in response:
+            response[source] = []
+
+    return response
 
 
 async def autocomplete_stream(
