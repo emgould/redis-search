@@ -14,20 +14,12 @@ from hashlib import md5
 from typing import Any, cast
 
 from redis import Redis
+from redis.asyncio import ConnectionPool as AsyncConnectionPool
+from redis.asyncio import Redis as AsyncRedis
 from redis.exceptions import RedisError
 
-# Try to import get_logger, fallback to standard logging
-try:
-    from utils.get_logger import get_logger
-except ImportError:
-
-    def get_logger(name: str, level=None, filename=None, app_name=None) -> logging.Logger:
-        logger = logging.getLogger(name)
-        if level is None:
-            level = logging.INFO
-        logger.setLevel(level)
-        return logger
-
+from utils.alerts import send_alert
+from utils.get_logger import get_logger
 
 # Define version constant
 RELEASE_VERSION = "1.3.4"
@@ -47,7 +39,7 @@ _MODULE_LOAD_TIME = time.monotonic()
 
 # Advisory lock for thundering-herd prevention (cache coalescing)
 _LOCK_TTL_SECONDS = 120  # Long enough for slow fetches (SchedulesDirect ~60s)
-_LOCK_MAX_WAIT = 12  # Seconds waiters poll before re-attempting lock
+_LOCK_MAX_WAIT = 2  # Seconds waiters poll before re-attempting lock
 _LOCK_POLL_INITIAL = 0.05
 _LOCK_POLL_MAX = 0.3
 _LOCK_POLL_JITTER = 0.03
@@ -195,9 +187,7 @@ def _probe_redis_status() -> dict[str, str]:
     return status
 
 
-def _send_version_fallback_alert(
-    prefix: str, error: Exception, attempts: int = 1
-) -> None:
+def _send_version_fallback_alert(prefix: str, error: Exception, attempts: int = 1) -> None:
     """Send an alert when cache version falls back to RELEASE_VERSION.
 
     This indicates Redis was unreachable when a cache prefix version was
@@ -212,8 +202,6 @@ def _send_version_fallback_alert(
         attempts: Number of attempts made before giving up.
     """
     try:
-        from utils.alerts import send_alert
-
         function_target = os.getenv("FUNCTION_TARGET", "unknown")
         k_service = os.getenv("K_SERVICE", "unknown")
         k_revision = os.getenv("K_REVISION", "unknown")
@@ -380,13 +368,60 @@ def reset_redis_client() -> None:
         _redis_client = None
 
 
-class RedisCache:
-    """
-    Redis-backed cache implementation using SYNCHRONOUS Redis client.
+# ---------------------------------------------------------------------------
+# Async Redis client singleton — used by RedisCache for non-blocking I/O
+# ---------------------------------------------------------------------------
+_ASYNC_POOL_MAX_CONNECTIONS = 50
 
-    This eliminates all asyncio event loop issues while maintaining
-    compatibility with async decorated functions. Redis operations
-    are fast enough (~1ms) that blocking is acceptable.
+_async_redis_client: AsyncRedis | None = None
+
+
+def get_async_redis_client() -> AsyncRedis:
+    """Singleton accessor for the async Redis client used by RedisCache."""
+    global _async_redis_client
+    if _async_redis_client is None:
+        host = os.getenv("REDIS_HOST", "localhost")
+        port_str = os.getenv("REDIS_PORT", "6379")
+        password = os.getenv("REDIS_PASSWORD")
+
+        try:
+            port = int(port_str)
+        except ValueError:
+            raise RuntimeError(f"Invalid REDIS_PORT value: {port_str!r}")
+
+        pool = AsyncConnectionPool(
+            host=host,
+            port=port,
+            password=password,
+            decode_responses=False,
+            max_connections=_ASYNC_POOL_MAX_CONNECTIONS,
+            socket_timeout=5.0,
+            socket_connect_timeout=5.0,
+            retry_on_timeout=True,
+            health_check_interval=30,
+        )
+        _async_redis_client = AsyncRedis(connection_pool=pool)
+    return _async_redis_client
+
+
+async def reset_async_redis_client() -> None:
+    """Close and discard the async Redis client singleton."""
+    global _async_redis_client
+    if _async_redis_client is not None:
+        try:
+            await _async_redis_client.aclose()
+        except Exception:
+            pass
+        _async_redis_client = None
+
+
+class RedisCache:
+    """Redis-backed cache using an async ``redis.asyncio`` client.
+
+    All cache I/O (read, add, remove, clear, lock) is non-blocking so the
+    Uvicorn event loop can multiplex concurrent requests.  The version
+    registry (``get_cache_version``) stays synchronous because it fires
+    once per instance lifetime and is a cold-path operation.
     """
 
     def __init__(
@@ -406,7 +441,7 @@ class RedisCache:
         # Redis client and version are lazy-loaded on first cache operation.
         # This avoids network calls during module import, which would block
         # Firebase CLI's function discovery (runs locally without VPC access).
-        self._redis_instance: Redis | None = None
+        self._redis_instance: AsyncRedis | None = None
         self._version: str | None = None
 
         self.defaultTTL = defaultTTL
@@ -426,10 +461,10 @@ class RedisCache:
         self.logging.info(f"RedisCache initialized (lazy): prefix={prefix}, ttl={defaultTTL}")
 
     @property
-    def _redis(self) -> Redis:
-        """Lazy accessor for the Redis client — connects on first use, not at import time."""
+    def _redis(self) -> AsyncRedis:
+        """Lazy accessor for the async Redis client — connects on first use, not at import time."""
         if self._redis_instance is None:
-            self._redis_instance = get_redis_client()
+            self._redis_instance = get_async_redis_client()
         return self._redis_instance
 
     @property
@@ -506,12 +541,11 @@ class RedisCache:
             return f"{self.prefix}:{key}"
         return key
 
-    def add(
+    async def add(
         self, data: Any, cache_key: str, funcName: str, args: list, expiry: int, kwargs: dict
     ) -> CacheEntry:
-        """Add data to Redis cache (SYNCHRONOUS)."""
+        """Add data to Redis cache (async)."""
         try:
-            # Use full key for Redis storage
             storage_key = self._full_key(cache_key)
 
             entry = CacheEntry()
@@ -525,7 +559,6 @@ class RedisCache:
             else:
                 ttl_seconds = int(expiry - now)
 
-            # Sanity check
             if ttl_seconds < 0:
                 ttl_seconds = 1
 
@@ -533,7 +566,6 @@ class RedisCache:
             entry.data_type = str(type(data))
             entry.function = funcName
 
-            # Filter args (copied from v2)
             filtered_args = []
             for arg in args:
                 if callable(arg) and hasattr(arg, "__self__"):
@@ -552,21 +584,18 @@ class RedisCache:
             entry.data = data
             entry.source = "redis"
 
-            # Skip empty data if configured
             if not self.allow_empty and self.filter_empty(entry) is None:
                 return entry
 
             if hasattr(data, "error") and data.error:
                 return entry
 
-            # Serialize
             payload = pickle.dumps(entry, protocol=pickle.HIGHEST_PROTOCOL)
 
-            # Set in Redis (SYNCHRONOUS - no await!)
             if ttl_seconds > 0:
-                self._redis.set(storage_key, payload, ex=ttl_seconds)
+                await self._redis.set(storage_key, payload, ex=ttl_seconds)
             else:
-                self._redis.set(storage_key, payload)
+                await self._redis.set(storage_key, payload)
 
             self.logging.debug(f"Added to Redis: {storage_key} (ttl={ttl_seconds})")
 
@@ -581,16 +610,18 @@ class RedisCache:
                 )
             else:
                 self.logging.warning(f"Redis add error for {cache_key}: {e}")
-            return CacheEntry()  # Return empty entry on failure to allow flow to continue
+            return CacheEntry()
         except Exception as e:
             self.logging.warning(f"Redis add error for {cache_key}: {e}")
-            return CacheEntry()  # Return empty entry on failure to allow flow to continue
+            return CacheEntry()
 
-    def read(self, key: str, noExpiration: bool = False, mutable: bool = True) -> CacheEntry | None:
-        """Read from Redis cache (SYNCHRONOUS)."""
+    async def read(
+        self, key: str, noExpiration: bool = False, mutable: bool = True
+    ) -> CacheEntry | None:
+        """Read from Redis cache (async)."""
         try:
             storage_key = self._full_key(key)
-            raw = self._redis.get(storage_key)  # SYNCHRONOUS - no await!
+            raw = await self._redis.get(storage_key)
             if raw is None:
                 self.logging.debug(f"Redis miss: {storage_key}")
                 return None
@@ -600,19 +631,16 @@ class RedisCache:
                 self.logging.warning(f"Invalid cache entry format for {key}")
                 return None
 
-            # Version check
             if not noExpiration and self.version and entry.version != self.version:
                 self.logging.info(f"Version mismatch for {key}: {entry.version} != {self.version}")
-                self.remove(key)
+                await self.remove(key)
                 return None
 
-            # Check expiration
             if not noExpiration and entry.expiry != -1 and entry.expiry < time.time():
                 self.logging.info(f"Cache logically expired: {key}")
-                self.remove(key)
+                await self.remove(key)
                 return None
 
-            # Empty check
             if not self.allow_empty and self.filter_empty(entry) is None:
                 return None
 
@@ -632,20 +660,18 @@ class RedisCache:
                 self.logging.warning(f"Redis read failed for {key}: {e}")
             return None
         except ModuleNotFoundError as e:
-            # Stale pickled cache entry from an old module (e.g., media_manager).
-            # Delete it so it won't warn again, and treat as a cache miss.
             self.logging.debug(f"Stale cache entry for {key} (old module): {e}")
-            self.remove(key)
+            await self.remove(key)
             return None
         except Exception as e:
             self.logging.warning(f"Redis read error for {key}: {e}")
             return None
 
-    def remove(self, key: str):
-        """Remove a key from Redis cache (SYNCHRONOUS)."""
+    async def remove(self, key: str) -> None:
+        """Remove a key from Redis cache (async)."""
         try:
             storage_key = self._full_key(key)
-            self._redis.delete(storage_key)  # SYNCHRONOUS - no await!
+            await self._redis.delete(storage_key)
         except RedisError as e:
             self.logging.warning(f"Redis delete failed for {key}: {e}")
 
@@ -664,8 +690,8 @@ class RedisCache:
             return None
         return entry
 
-    def clear(self, include_locks: bool = False) -> None:
-        """Clear the cache for this prefix (SYNCHRONOUS).
+    async def clear(self, include_locks: bool = False) -> None:
+        """Clear the cache for this prefix (async).
 
         Args:
             include_locks: If True, also remove advisory lock keys
@@ -681,15 +707,12 @@ class RedisCache:
 
         for pattern in patterns:
             try:
-                cursor = 0
+                cur = 0
                 while True:
-                    cursor, keys = cast(
-                        tuple[int, list[bytes]],
-                        self._redis.scan(cursor=cursor, match=pattern, count=100),
-                    )
+                    cur, keys = await self._redis.scan(cursor=cur, match=pattern, count=100)
                     if keys:
-                        self._redis.delete(*keys)
-                    if cursor == 0:
+                        await self._redis.delete(*keys)
+                    if not cur:
                         break
             except RedisError as e:
                 self.logging.warning(f"Redis clear failed for pattern {pattern}: {e}")
@@ -778,17 +801,16 @@ class RedisCache:
                 "error": str(e),
             }
 
-    def close(self):
+    async def close(self) -> None:
         """Close the Redis connection if one was established."""
         if self._redis_instance is not None:
-            self._redis_instance.close()
+            await self._redis_instance.aclose()
 
     @classmethod
     def use_cache(cls, instance, prefix="", expiry_override=None):
         """Decorator to cache async function results.
 
-        Uses SYNCHRONOUS Redis operations — no event loop issues.
-        The decorated function remains async; cache read/write is sync.
+        All Redis I/O is async so the event loop stays unblocked.
 
         Advisory-lock coalescing: on cache miss only one caller fetches;
         concurrent callers wait and reuse the result.  Function errors
@@ -797,20 +819,15 @@ class RedisCache:
 
         def decorator(func):
             async def inner1(*args, **kwargs):
-                # no_cache: skip cache READ but still WRITE the result.
-                # Use this for warmup / forced refresh scenarios.
                 skipCacheRead = kwargs.pop("no_cache", False)
 
-                # Global kill-switch — skip everything (read AND write)
                 if DISABLE_CACHE or instance.disableCache:
                     return await func(*args, **kwargs)
 
-                # Generate cache key
                 cache_key = instance.get_cache_key(
                     fn=func.__name__, prefix=prefix, args=args, kwargs=kwargs
                 )
 
-                # Handle expiry
                 if "expiry" in kwargs and kwargs["expiry"] is None:
                     del kwargs["expiry"]
 
@@ -827,7 +844,6 @@ class RedisCache:
 
                 noExpiration = expiry == -1
 
-                # ---- Helper: fetch, cache result, release lock on failure ----
                 async def _fetch_and_cache(
                     lock_key: str | None = None, lock_token: str | None = None
                 ) -> Any:
@@ -842,7 +858,7 @@ class RedisCache:
                     try:
                         data = await func(*args, **kwargs)
                         if not cacheUpdateDisabled:
-                            instance.add(
+                            await instance.add(
                                 data,
                                 cache_key,
                                 funcName=func.__name__,
@@ -854,7 +870,7 @@ class RedisCache:
                     except Exception:
                         if lock_key and lock_token:
                             try:
-                                instance._redis.eval(
+                                await instance._redis.eval(
                                     _RELEASE_LOCK_SCRIPT, 1, lock_key, lock_token
                                 )
                             except RedisError:
@@ -863,7 +879,7 @@ class RedisCache:
 
                 # ---- Phase 1: Cache read ----
                 if not skipCacheRead:
-                    cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                    cachedEntry = await instance.read(cache_key, noExpiration, mutable)
                     if cachedEntry is not None:
                         instance.logging.debug(f"Cache hit: {cache_key}")
                         return cachedEntry.data
@@ -874,15 +890,14 @@ class RedisCache:
                 lock_token = os.urandom(16).hex()
 
                 try:
-                    acquired = instance._redis.set(
+                    acquired = await instance._redis.set(
                         lock_key, lock_token, nx=True, ex=_LOCK_TTL_SECONDS
                     )
                 except RedisError as e:
                     instance.logging.warning(
-                        f"Lock acquire failed for {cache_key}, "
-                        f"proceeding without coalescing: {e}"
+                        f"Lock acquire failed for {cache_key}, proceeding without coalescing: {e}"
                     )
-                    acquired = True  # Degrade: proceed as creator
+                    acquired = True
 
                 if acquired:
                     instance.logging.debug(f"Cache miss (creator): {cache_key}")
@@ -891,16 +906,14 @@ class RedisCache:
                             f"Creator has cache update disabled for {cache_key}; "
                             f"concurrent waiters will not benefit from coalescing"
                         )
-                    return await _fetch_and_cache(
-                        lock_key=lock_key, lock_token=lock_token
-                    )
+                    return await _fetch_and_cache(lock_key=lock_key, lock_token=lock_token)
 
                 # ---- Waiter: poll with jittered backoff ----
                 instance.logging.debug(f"Cache miss (waiter): {cache_key}")
                 waited = 0.0
                 poll_attempt = 0
                 while waited < _LOCK_MAX_WAIT:
-                    cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                    cachedEntry = await instance.read(cache_key, noExpiration, mutable)
                     if cachedEntry is not None:
                         return cachedEntry.data
                     interval = _poll_sleep(poll_attempt)
@@ -911,7 +924,7 @@ class RedisCache:
                 # max_wait reached — re-attempt lock before fallback
                 lock_token = os.urandom(16).hex()
                 try:
-                    acquired = instance._redis.set(
+                    acquired = await instance._redis.set(
                         lock_key, lock_token, nx=True, ex=_LOCK_TTL_SECONDS
                     )
                 except RedisError:
@@ -921,12 +934,9 @@ class RedisCache:
                     instance.logging.debug(
                         f"Lock re-acquired for {cache_key} after max_wait, fetching"
                     )
-                    return await _fetch_and_cache(
-                        lock_key=lock_key, lock_token=lock_token
-                    )
+                    return await _fetch_and_cache(lock_key=lock_key, lock_token=lock_token)
 
-                # Reacquire failed — race: creator may have just finished
-                cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                cachedEntry = await instance.read(cache_key, noExpiration, mutable)
                 if cachedEntry is not None:
                     return cachedEntry.data
 
@@ -934,15 +944,14 @@ class RedisCache:
                 brief_wait = min(2.0, _LOCK_MAX_WAIT)
                 waited = 0.0
                 while waited < brief_wait:
-                    cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                    cachedEntry = await instance.read(cache_key, noExpiration, mutable)
                     if cachedEntry is not None:
                         return cachedEntry.data
                     interval = _poll_sleep(0)
                     await asyncio.sleep(interval)
                     waited += interval
 
-                # Last resort — direct fetch without lock
-                cachedEntry = instance.read(cache_key, noExpiration, mutable)
+                cachedEntry = await instance.read(cache_key, noExpiration, mutable)
                 if cachedEntry is not None:
                     return cachedEntry.data
 

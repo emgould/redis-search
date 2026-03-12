@@ -1,0 +1,41 @@
+# Async Redis Cache Architecture
+
+## Dual-Client Pattern
+
+`redis_cache.py` exposes two Redis client singletons:
+
+| Client | Type | Used by | Purpose |
+|--------|------|---------|---------|
+| `get_redis_client()` | `redis.Redis` (sync) | Scripts, Makefile, version registry, `flush_all_caches`, `get_cache_stats` | Admin/cold-path operations that run outside the async event loop |
+| `get_async_redis_client()` | `redis.asyncio.Redis` | `RedisCache` (all hot-path I/O) | Non-blocking cache read/write/lock inside the Uvicorn event loop |
+
+Both clients connect to the same Redis instance using the same `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` env vars.
+
+## Why Two Clients
+
+- The async client is required so that cache operations (`add`, `read`, `remove`, `clear`, advisory locks) do not block the event loop under concurrent web requests.
+- The sync client is retained because:
+  - `get_cache_version()` / `set_cache_version()` are cold-path calls (fire once per `RedisCache` instance lifetime).
+  - Scripts like `seed_cache_versions.py` and `test_redis_connectivity.py` run outside an event loop.
+  - `flush_all_caches()` / `get_cache_stats()` are admin-only static methods not called from web endpoints.
+
+## Connection Pool Bounds
+
+Both the cache async client and the search async client (`RedisManager`) use explicit `max_connections=50` connection pools. This prevents unbounded connection growth under burst load while comfortably supporting 20+ concurrent web requests.
+
+## Consumer Impact
+
+All `@RedisCache.use_cache`-decorated functions are `async def`. The decorator's inner wrapper is `async def`. Consumers call decorated functions with `await`. No consumer files needed changes for this migration.
+
+## Cache Compatibility
+
+- Pickle serialization format: unchanged.
+- Cache key format: unchanged.
+- TTL behavior: unchanged.
+- Version registry: unchanged (sync, cold-path).
+- Advisory lock semantics: unchanged (same Lua script, same NX/EX pattern).
+- No cache bust required.
+
+## Cloud Run Concurrency
+
+`deploy_web_cr.sh` explicitly sets `--concurrency 80` (Cloud Run's default, now stated). A single instance with 2 CPU / 4Gi can handle 20+ concurrent requests with the async cache path.
