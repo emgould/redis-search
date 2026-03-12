@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 
-from redis.asyncio import Redis
+from redis.asyncio import ConnectionPool, Redis
 
 
 class RedisEnvironment(str, Enum):
@@ -22,6 +22,9 @@ class RedisConfig:
     port: int
     password: str | None
     name: str
+
+
+_SEARCH_POOL_MAX_CONNECTIONS = 50
 
 
 class RedisManager:
@@ -78,14 +81,16 @@ class RedisManager:
 
         if env not in cls._connections:
             config = cls.get_config(env)
-            cls._connections[env] = Redis(
+            pool = ConnectionPool(
                 host=config.host,
                 port=config.port,
                 password=config.password,
                 decode_responses=True,
+                max_connections=_SEARCH_POOL_MAX_CONNECTIONS,
                 socket_timeout=10.0,
                 socket_connect_timeout=5.0,
             )
+            cls._connections[env] = Redis(connection_pool=pool)
 
         return cls._connections[env]
 
