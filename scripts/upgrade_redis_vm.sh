@@ -28,16 +28,36 @@ REGION="us-central1"
 ZONE="${REGION}-a"
 VM_NAME="redis-stack-vm"
 
-NEW_MACHINE_TYPE="${1:-e2-highmem-2}"
-NEW_MAXMEMORY="${2:-12gb}"
-
 REDIS_PASSWORD="rCrwd3xMFhfoKhUF9by9"
 CONTAINER_NAME="redis-stack"
+
+to_bytes() {
+    local value
+    value=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+    case "$value" in
+        *gb) echo $(( ${value%gb} * 1024 * 1024 * 1024 )) ;;
+        *mb) echo $(( ${value%mb} * 1024 * 1024 )) ;;
+        *kb) echo $(( ${value%kb} * 1024 )) ;;
+        *b) echo "${value%b}" ;;
+        *) echo "$value" ;;
+    esac
+}
 
 DRY_RUN=false
 if [ "$1" = "--dry-run" ]; then
     DRY_RUN=true
 fi
+
+if [ "$DRY_RUN" = true ]; then
+    NEW_MACHINE_TYPE="e2-highmem-2"
+    NEW_MAXMEMORY="12gb"
+else
+    NEW_MACHINE_TYPE="${1:-e2-highmem-2}"
+    NEW_MAXMEMORY="${2:-12gb}"
+fi
+
+DESIRED_MAXMEMORY_BYTES=$(to_bytes "$NEW_MAXMEMORY")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 0. Gather current state
@@ -55,6 +75,11 @@ CURRENT_STATUS=$(gcloud compute instances describe "$VM_NAME" \
 CURRENT_DISK_SIZE=$(gcloud compute disks describe "$VM_NAME" \
     --zone="$ZONE" --format="value(sizeGb)")
 
+NEEDS_MACHINE_CHANGE=true
+if [ "$CURRENT_MACHINE" = "$NEW_MACHINE_TYPE" ]; then
+    NEEDS_MACHINE_CHANGE=false
+fi
+
 echo ""
 echo " Current state:"
 echo "   Machine type:  ${CURRENT_MACHINE}"
@@ -66,9 +91,31 @@ echo "   Machine type:  ${NEW_MACHINE_TYPE}"
 echo "   Max memory:    ${NEW_MAXMEMORY}"
 echo ""
 
-if [ "$CURRENT_MACHINE" = "$NEW_MACHINE_TYPE" ]; then
-    echo "⚠️  VM is already ${NEW_MACHINE_TYPE}."
-    echo "   If you only need to update maxmemory, SSH in and recreate the container."
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Get pre-upgrade key count (if VM is running)
+# ─────────────────────────────────────────────────────────────────────────────
+PRE_KEY_COUNT="unknown"
+CURRENT_MAXMEMORY_BYTES="unknown"
+if [ "$CURRENT_STATUS" = "RUNNING" ]; then
+    echo "📊 Getting pre-upgrade key count..."
+    PRE_KEY_COUNT=$(gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
+        docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning DBSIZE 2>/dev/null | awk '{print \$NF}'
+    " 2>/dev/null || echo "unknown")
+    echo "   Keys before upgrade: ${PRE_KEY_COUNT}"
+
+    CURRENT_MAXMEMORY_BYTES=$(gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
+        docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning CONFIG GET maxmemory 2>/dev/null | awk 'NR == 2 {print \$1}'
+    " 2>/dev/null || echo "unknown")
+fi
+
+NEEDS_CONTAINER_REFRESH=true
+if [ "$CURRENT_MAXMEMORY_BYTES" = "$DESIRED_MAXMEMORY_BYTES" ]; then
+    NEEDS_CONTAINER_REFRESH=false
+fi
+
+if [ "$NEEDS_MACHINE_CHANGE" = false ] && [ "$NEEDS_CONTAINER_REFRESH" = false ]; then
+    echo "✅ Redis VM is already at the desired machine type and maxmemory."
+    echo "   No changes required."
     exit 0
 fi
 
@@ -77,26 +124,23 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
     echo " Would perform:"
     echo "   1. Snapshot disk '${VM_NAME}'"
-    echo "   2. Stop VM"
-    echo "   3. Change machine type: ${CURRENT_MACHINE} → ${NEW_MACHINE_TYPE}"
-    echo "   4. Update startup-script maxmemory → ${NEW_MAXMEMORY}"
-    echo "   5. Start VM"
-    echo "   6. Recreate Redis container with --maxmemory ${NEW_MAXMEMORY}"
+    if [ "$NEEDS_MACHINE_CHANGE" = true ]; then
+        echo "   2. Stop VM"
+        echo "   3. Change machine type: ${CURRENT_MACHINE} → ${NEW_MACHINE_TYPE}"
+        echo "   4. Start VM"
+    else
+        echo "   2. Keep machine type unchanged (${CURRENT_MACHINE})"
+        echo "   3. Ensure VM is running"
+    fi
+    echo "   5. Update startup-script maxmemory → ${NEW_MAXMEMORY}"
+    if [ "$NEEDS_CONTAINER_REFRESH" = true ]; then
+        echo "   6. Recreate Redis container with --maxmemory ${NEW_MAXMEMORY}"
+    else
+        echo "   6. Keep existing Redis container config (already at desired maxmemory)"
+    fi
     echo "   7. Verify Redis health + key count"
     echo ""
     exit 0
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. Get pre-upgrade key count (if VM is running)
-# ─────────────────────────────────────────────────────────────────────────────
-PRE_KEY_COUNT="unknown"
-if [ "$CURRENT_STATUS" = "RUNNING" ]; then
-    echo "📊 Getting pre-upgrade key count..."
-    PRE_KEY_COUNT=$(gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
-        docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning DBSIZE 2>/dev/null | awk '{print \$NF}'
-    " 2>/dev/null || echo "unknown")
-    echo "   Keys before upgrade: ${PRE_KEY_COUNT}"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -119,9 +163,11 @@ echo "   ✅ Snapshot created"
 echo ""
 echo "🛑 Stopping VM..."
 
-if [ "$CURRENT_STATUS" = "RUNNING" ]; then
+if [ "$NEEDS_MACHINE_CHANGE" = true ] && [ "$CURRENT_STATUS" = "RUNNING" ]; then
     gcloud compute instances stop "$VM_NAME" --zone="$ZONE" --quiet
     echo "   ✅ VM stopped"
+elif [ "$NEEDS_MACHINE_CHANGE" = false ]; then
+    echo "   Machine type already matches, no stop required"
 else
     echo "   VM is already ${CURRENT_STATUS}"
 fi
@@ -132,11 +178,14 @@ fi
 echo ""
 echo "🔧 Changing machine type: ${CURRENT_MACHINE} → ${NEW_MACHINE_TYPE}..."
 
-gcloud compute instances set-machine-type "$VM_NAME" \
-    --zone="$ZONE" \
-    --machine-type="$NEW_MACHINE_TYPE"
-
-echo "   ✅ Machine type updated"
+if [ "$NEEDS_MACHINE_CHANGE" = true ]; then
+    gcloud compute instances set-machine-type "$VM_NAME" \
+        --zone="$ZONE" \
+        --machine-type="$NEW_MACHINE_TYPE"
+    echo "   ✅ Machine type updated"
+else
+    echo "   Machine type already correct, skipping"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Update startup-script metadata with new maxmemory
@@ -178,9 +227,13 @@ echo "   ✅ Startup script updated"
 # 6. Start the VM
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "🚀 Starting VM..."
+echo "🚀 Ensuring VM is running..."
 
-gcloud compute instances start "$VM_NAME" --zone="$ZONE" --quiet
+if [ "$CURRENT_STATUS" != "RUNNING" ] || [ "$NEEDS_MACHINE_CHANGE" = true ]; then
+    gcloud compute instances start "$VM_NAME" --zone="$ZONE" --quiet
+else
+    echo "   VM already running"
+fi
 
 # Wait for VM to be RUNNING
 for i in {1..18}; do
@@ -211,42 +264,70 @@ echo "   ✅ VM is running"
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. Recreate the Redis container with new REDIS_ARGS
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔄 Recreating Redis container with maxmemory=${NEW_MAXMEMORY}..."
+if [ "$NEEDS_CONTAINER_REFRESH" = true ]; then
+    echo ""
+    echo "🔄 Recreating Redis container with maxmemory=${NEW_MAXMEMORY}..."
 
-gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
-    echo 'Waiting for Docker daemon...'
-    for i in \$(seq 1 12); do
-        docker info >/dev/null 2>&1 && break
-        sleep 5
-    done
+    gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
+        set -e
 
-    echo 'Stopping old container...'
-    docker stop ${CONTAINER_NAME} 2>/dev/null || true
+        echo 'Waiting for Docker daemon...'
+        docker_ready=false
+        for i in \$(seq 1 12); do
+            if docker info >/dev/null 2>&1; then
+                docker_ready=true
+                break
+            fi
+            sleep 5
+        done
 
-    echo 'Removing old container (data volume preserved)...'
-    docker rm ${CONTAINER_NAME} 2>/dev/null || true
-
-    echo 'Starting new container with maxmemory=${NEW_MAXMEMORY}...'
-    docker run -d \
-        --name ${CONTAINER_NAME} \
-        --restart always \
-        -p 6379:6379 \
-        -v /var/lib/redis-data:/data \
-        -e REDIS_ARGS='--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory ${NEW_MAXMEMORY} --maxmemory-policy volatile-lru' \
-        redis/redis-stack-server:7.4.0-v8
-
-    echo 'Waiting for Redis to load data...'
-    for i in \$(seq 1 30); do
-        if docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping 2>/dev/null | grep -q PONG; then
-            echo 'Redis is responding'
-            break
+        if [ \"\$docker_ready\" != true ]; then
+            echo 'ERROR: Docker daemon never became ready'
+            exit 1
         fi
-        sleep 5
-    done
-"
 
-echo "   ✅ Container recreated"
+        echo 'Stopping old container...'
+        docker stop ${CONTAINER_NAME} 2>/dev/null || true
+
+        echo 'Removing old container (data volume preserved)...'
+        docker rm ${CONTAINER_NAME} 2>/dev/null || true
+
+        echo 'Starting new container with maxmemory=${NEW_MAXMEMORY}...'
+        docker run -d \
+            --name ${CONTAINER_NAME} \
+            --restart always \
+            -p 6379:6379 \
+            -v /var/lib/redis-data:/data \
+            -e REDIS_ARGS='--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory ${NEW_MAXMEMORY} --maxmemory-policy volatile-lru' \
+            redis/redis-stack-server:7.4.0-v8
+
+        echo 'Waiting for Redis to load data...'
+        redis_ready=false
+        for i in \$(seq 1 30); do
+            if docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+                redis_ready=true
+                echo 'Redis is responding'
+                break
+            fi
+            sleep 5
+        done
+
+        if [ \"\$redis_ready\" != true ]; then
+            echo 'ERROR: Redis did not become ready within timeout'
+            echo 'Container status:'
+            docker ps -a --filter 'name=^/${CONTAINER_NAME}$'
+            echo ''
+            echo 'Recent Redis logs:'
+            docker logs --tail 50 ${CONTAINER_NAME} 2>&1 || true
+            exit 1
+        fi
+    "
+
+    echo "   ✅ Container recreated"
+else
+    echo ""
+    echo "ℹ️  Redis container already has maxmemory=${NEW_MAXMEMORY}; skipping recreate."
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. Verify
@@ -257,12 +338,12 @@ echo "🔍 Verifying upgrade..."
 VERIFY_OUTPUT=$(gcloud compute ssh "$VM_NAME" --zone="$ZONE" --tunnel-through-iap --command="
     docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning INFO memory 2>/dev/null | grep -E 'used_memory_human|maxmemory_human|total_system_memory_human'
     echo '---'
-    docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning DBSIZE 2>/dev/null
+    echo post_key_count=\$(docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning DBSIZE 2>/dev/null)
 " 2>/dev/null)
 
 echo "$VERIFY_OUTPUT"
 
-POST_KEY_COUNT=$(echo "$VERIFY_OUTPUT" | grep -oP '\d+' | tail -1)
+POST_KEY_COUNT=$(echo "$VERIFY_OUTPUT" | awk -F= '/^post_key_count=/{print $2}')
 
 VERIFIED_MACHINE=$(gcloud compute instances describe "$VM_NAME" \
     --zone="$ZONE" --format="value(machineType)" | awk -F/ '{print $NF}')
