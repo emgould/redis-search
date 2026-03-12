@@ -31,7 +31,7 @@ from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, prepare_media_redis_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
-from etl.etl_metadata import ETLMetadataStore, ETLStateConfig
+from etl.etl_metadata import ETLMetadataStore, ETLStateConfig, JobRunResult
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.tmdb_nightly_etl import ChangesETLStats
@@ -3281,23 +3281,51 @@ async def run_changes_job_task(
     # Create stats object upfront for progress tracking
     stats = ChangesETLStats()
     _changes_job_live_stats[task_id] = stats
+    started_at = datetime.now()
 
     try:
         # Get Redis config from current environment
         current_env = RedisManager.get_current_env()
         redis_config = RedisManager.get_config(current_env)
+        config = ETLConfig.from_env()
+        runner = ETLRunner(config, metadata_store=_get_etl_metadata_store())
+        resolved_job_name = f"tmdb_{media_type}_changes_{media_type}"
+        resolved_start_date = runner.get_job_start_date(resolved_job_name, start_date)
+        resolved_end_date = end_date or datetime.now().date().isoformat()
 
         # Pass stats object so we can track progress during execution
         final_stats = await run_single_etl(
             media_type=media_type,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=resolved_start_date,
+            end_date=resolved_end_date,
             redis_host=redis_config.host,
             redis_port=redis_config.port,
             redis_password=redis_config.password,
             verbose=verbose,
             stats=stats,
         )
+
+        completed_at = datetime.now()
+        load_errors = final_stats.load_phase.items_failed
+        all_errors = final_stats.fetch_phase.errors + final_stats.load_phase.errors
+        job_result = JobRunResult(
+            job_name=resolved_job_name,
+            media_type=media_type,
+            status="success" if load_errors == 0 else "partial",
+            started_at=started_at,
+            completed_at=completed_at,
+            duration_seconds=(completed_at - started_at).total_seconds(),
+            effective_start_date=resolved_start_date,
+            effective_end_date=resolved_end_date,
+            changes_found=final_stats.total_changes_found,
+            documents_upserted=final_stats.load_phase.items_success,
+            documents_skipped=final_stats.failed_filter,
+            errors_count=len(all_errors),
+            mm_docs_sent=final_stats.mm_docs_sent,
+            error_message=all_errors[0] if all_errors else None,
+            errors=all_errors,
+        )
+        runner.metadata_store.update_job_state(job_result.job_name, job_result)
 
         _changes_job_status[task_id]["result"] = final_stats.to_dict()
 

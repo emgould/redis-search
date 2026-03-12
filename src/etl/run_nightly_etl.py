@@ -100,12 +100,40 @@ async def main() -> int:
     logger.info(f"Redis: {os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}")
     logger.info(f"Config: {os.getenv('ETL_CONFIG_PATH', 'config/etl_jobs.yaml')}")
 
+    # Build job filter if specific job requested
+    job_filter = None
+    if args.job:
+        if args.job == "podcast":
+            job_filter = ["podcastindex_changes"]
+        else:
+            job_filter = [f"tmdb_{args.job}_changes"]
+
     if args.dry_run:
-        logger.info("DRY RUN - showing configuration only")
+        logger.info("DRY RUN - showing resolved job windows")
         config = ETLConfig.from_env()
-        for job in config.jobs:
-            if job.enabled:
-                logger.info(f"  Would run: {job.name} ({len(job.runs)} runs)")
+        runner = ETLRunner(config)
+        enabled_jobs = [job for job in config.jobs if job.enabled]
+        if job_filter:
+            enabled_jobs = [job for job in enabled_jobs if job.name in job_filter]
+
+        for job in enabled_jobs:
+            logger.info(f"  Would run: {job.name} ({len(job.runs)} runs)")
+            for params in job.runs:
+                resolved_job_name = f"{job.name}_{params.media_type}"
+                resolved_start_date = (
+                    args.start_date
+                    or params.start_date
+                    or runner.get_job_start_date(resolved_job_name)
+                )
+                resolved_end_date = (
+                    args.end_date or params.end_date or datetime.now().date().isoformat()
+                )
+                logger.info(
+                    "    %s: %s -> %s",
+                    resolved_job_name,
+                    resolved_start_date,
+                    resolved_end_date,
+                )
         return 0
 
     try:
@@ -120,14 +148,6 @@ async def main() -> int:
                     params.max_batches = args.max_batches
 
         runner = ETLRunner(config)
-
-        # Build job filter if specific job requested
-        job_filter = None
-        if args.job:
-            if args.job == "podcast":
-                job_filter = ["podcastindex_changes"]
-            else:
-                job_filter = [f"tmdb_{args.job}_changes"]
 
         # Run ETL
         result = await runner.run_all(

@@ -168,6 +168,10 @@ gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap --command=
         -e SENDGRID_USERNAME=\${SENDGRID_USERNAME} \\
         -e SENDGRID_PASSWORD=\${SENDGRID_PASSWORD} \\
         -e SENDGRID_FROM_EMAIL=\${SENDGRID_FROM_EMAIL} \\
+        -e MEDIA_MANAGER_API_URL=\${MEDIA_MANAGER_API_URL} \\
+        -e MEDIA_MANAGER_INTERNAL_TOKEN=\${MEDIA_MANAGER_INTERNAL_TOKEN} \\
+        -e PODCASTINDEX_API_KEY=\${PODCASTINDEX_API_KEY} \\
+        -e PODCASTINDEX_API_SECRET=\${PODCASTINDEX_API_SECRET} \\
         ${IMAGE_NAME}:${IMAGE_TAG} \\
         cron
     

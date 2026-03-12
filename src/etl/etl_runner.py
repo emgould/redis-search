@@ -8,6 +8,7 @@ This module provides:
 - HTTP trigger support for Cloud Run scheduling
 """
 
+import asyncio
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ from etl.tmdb_nightly_etl import ChangesETLStats, run_nightly_etl
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
+
+DEFAULT_JOB_TIMEOUT_SECONDS = 5400  # 90 minutes
 
 
 @dataclass
@@ -409,6 +412,10 @@ class ETLRunner:
         print(f"  Media Manager: {'enabled' if mm_client else 'disabled'}")
         print()
 
+        job_timeout = int(
+            os.getenv("ETL_JOB_TIMEOUT_SECONDS", str(DEFAULT_JOB_TIMEOUT_SECONDS))
+        )
+
         # Run each job sequentially
         for job in enabled_jobs:
             print(f"\n📋 Job: {job.name}")
@@ -417,13 +424,46 @@ class ETLRunner:
             for params in job.runs:
                 print(f"\n   Running: {params.media_type}")
 
-                result = await self.run_job(
-                    job,
-                    params,
-                    start_date_override=start_date_override,
-                    end_date_override=end_date_override,
-                    media_manager_client=mm_client,
+                job_name = f"{job.name}_{params.media_type}"
+                resolved_start_date = (
+                    start_date_override or params.start_date or self.get_job_start_date(job_name)
                 )
+                resolved_end_date = end_date_override or params.end_date or date.today().isoformat()
+                started_at = datetime.now()
+
+                try:
+                    result = await asyncio.wait_for(
+                        self.run_job(
+                            job,
+                            params,
+                            start_date_override=start_date_override,
+                            end_date_override=end_date_override,
+                            media_manager_client=mm_client,
+                        ),
+                        timeout=job_timeout,
+                    )
+                except TimeoutError:
+                    completed_at = datetime.now()
+                    logger.error(
+                        "Job %s timed out after %d seconds", job_name, job_timeout
+                    )
+                    result = JobRunResult(
+                        job_name=job_name,
+                        media_type=params.media_type,
+                        status="failed",
+                        started_at=started_at,
+                        completed_at=completed_at,
+                        duration_seconds=(completed_at - started_at).total_seconds(),
+                        effective_start_date=resolved_start_date,
+                        effective_end_date=resolved_end_date,
+                        errors_count=1,
+                        error_message=f"Timed out after {job_timeout}s",
+                        errors=[f"Timed out after {job_timeout}s"],
+                    )
+                    if self._run_metadata:
+                        self._run_metadata.add_log(
+                            f"TIMEOUT {job_name} after {job_timeout}s"
+                        )
 
                 # Track result
                 self._run_metadata.job_results.append(result)
@@ -497,7 +537,10 @@ class ETLRunner:
                 self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
 
         if mm_client:
-            await mm_client.close()
+            try:
+                await mm_client.close()
+            except Exception as e:
+                logger.warning("Failed to close Media Manager client: %s", e)
 
         # Finalize run metadata
         self._run_metadata.completed_at = datetime.now()

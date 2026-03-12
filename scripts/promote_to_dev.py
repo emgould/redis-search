@@ -54,7 +54,7 @@ class IndexInfo:
     prefix: str
     num_docs: int
     index_memory_bytes: int
-    schema_fields: list[dict]
+    schema_fields: list[dict[str, str | bool]]
 
 
 async def get_redis_connection(
@@ -104,13 +104,26 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
 
         # Parse schema fields from attributes
         # attributes is a list of lists: [['identifier', '$.search_title', 'attribute', 'search_title', 'type', 'TEXT', ...], ...]
+        # Standalone flags (NOSTEM, SORTABLE, UNF, NOINDEX, CASESENSITIVE) appear
+        # without a following value, so we can't blindly step by 2.
+        _STANDALONE_FLAGS = {"SORTABLE", "UNF", "NOSTEM", "NOINDEX", "CASESENSITIVE"}
         schema_fields = []
         if "attributes" in info:
             attrs = info["attributes"]
             for attr in attrs:
-                field_info = {}
-                for k in range(0, len(attr), 2):
-                    field_info[attr[k]] = attr[k + 1]
+                field_info: dict[str, str | bool] = {}
+                k = 0
+                while k < len(attr):
+                    token = attr[k]
+                    if token in _STANDALONE_FLAGS:
+                        field_info[token] = True
+                        k += 1
+                    elif k + 1 < len(attr):
+                        field_info[token] = attr[k + 1]
+                        k += 2
+                    else:
+                        field_info[token] = True
+                        k += 1
                 schema_fields.append(field_info)
 
         # Derive friendly name from redis index name (e.g., idx:media -> media)
@@ -166,22 +179,21 @@ def build_schema_from_fields(fields: list[dict]) -> list[Field]:
     """Reconstruct Redis schema from field definitions."""
     schema: list[Field] = []
     for field in fields:
-        field_type = field.get("type", "").upper()
-        identifier = field.get("identifier", "")
-        attribute = field.get("attribute", identifier)
+        field_type = str(field.get("type", "")).upper()
+        identifier = str(field.get("identifier", ""))
+        attribute = str(field.get("attribute", identifier))
 
-        # Determine if sortable
-        sortable = "SORTABLE" in field.get("flags", []) if "flags" in field else False
-
-        # Get weight for text fields
-        weight = float(field.get("weight", 1.0)) if "weight" in field else 1.0
+        sortable = bool(field.get("SORTABLE", False))
+        no_stem = bool(field.get("NOSTEM", False))
+        weight = float(field.get("WEIGHT", 1.0)) if "WEIGHT" in field else 1.0
 
         if field_type == "TEXT":
             schema.append(
-                TextField(identifier, as_name=attribute, weight=weight)
+                TextField(identifier, as_name=attribute, weight=weight, no_stem=no_stem)
             )
         elif field_type == "TAG":
-            schema.append(TagField(identifier, as_name=attribute))
+            separator = str(field["SEPARATOR"]) if "SEPARATOR" in field else ","
+            schema.append(TagField(identifier, as_name=attribute, separator=separator))
         elif field_type == "NUMERIC":
             schema.append(NumericField(identifier, as_name=attribute, sortable=sortable))
 
@@ -209,7 +221,7 @@ async def create_index_from_schema(
     redis: Redis,
     index_name: str,
     prefix: str,
-    schema_fields: list[dict],
+    schema_fields: list[dict[str, str | bool]],
 ) -> None:
     """Create an index with the given schema."""
     schema = build_schema_from_fields(schema_fields)
