@@ -23,7 +23,7 @@ Specifically:
 2. If you promote local to dev, does dev inherit that same “resume from here” point?
 3. If you ask dev what it would run next, does it start from the right date?
 4. Can the ETL VM run now without the old disk-space problem?
-5. Can movie and TV ETL talk to Media Manager and finish the queue/flush/rebuild flow?
+5. Can movie and TV ETL talk to Media Manager and finish the queue/finalize-publish/rebuild flow?
 6. If one ETL job fails, do the later jobs still run?
 
 ## Before You Start
@@ -174,7 +174,7 @@ You want to see log lines showing:
 
 - Media Manager health check passed
 - queue drain / status polling
-- flush
+- finalize-publish
 - rebuild
 
 If everything is wired correctly, movie and TV ETL should now go through the full Media Manager flow.
@@ -207,7 +207,7 @@ If you want the shortest path that gives confidence:
 5. Run VM dry-run for movie and TV
 6. Confirm the next start date is correct
 7. Run one manual VM ETL job
-8. Watch for Media Manager health check, flush, and rebuild
+8. Watch for Media Manager health check, finalize-publish, and rebuild
 
 ## Things That Mean It Is Still Broken
 

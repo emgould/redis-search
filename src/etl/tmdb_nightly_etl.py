@@ -1026,16 +1026,14 @@ if __name__ == "__main__":
                 media_manager_client=mm_client,
             )
 
-            # Flush and rebuild the relevant FAISS index if docs were sent
+            # For single-job/manual runs, do not finalize publish here.
+            # Finalize is intended to happen once at the aggregate run boundary.
             if mm_client and result_stats.mm_docs_sent > 0:
                 try:
-                    logger.info("Polling Media Manager queue before flush...")
+                    logger.info("Polling Media Manager queue before index rebuild...")
                     await mm_client.poll_until_drained()
-                    logger.info("Flushing Media Manager session...")
-                    flush_resp = await mm_client.flush()
-                    logger.info("Media Manager flush: %s", flush_resp)
                 except Exception as e:
-                    logger.error("Media Manager flush failed: %s", e)
+                    logger.error("Media Manager queue drain wait failed: %s", e)
 
                 index_name = MEDIA_INDEX_NAMES.get(args.media_type)
                 if index_name:

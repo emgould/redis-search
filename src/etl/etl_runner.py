@@ -504,26 +504,15 @@ class ETLRunner:
                         }
                     )
 
-        # Flush Media Manager if any docs were sent across all jobs
+        # Drain queue and rebuild FAISS indexes first
         if mm_client and self._run_metadata.total_mm_docs_sent > 0:
             try:
-                logger.info("Polling Media Manager queue before flush...")
+                logger.info("Polling Media Manager queue before index rebuild...")
                 await mm_client.poll_until_drained()
-                logger.info("Flushing Media Manager session...")
-                flush_resp = await mm_client.flush()
-                logger.info("Media Manager flush: %s", flush_resp)
-                self._run_metadata.add_log(
-                    f"Media Manager flush: movies_added={flush_resp['movies_added']}, "
-                    f"tv_added={flush_resp['tv_added']}, "
-                    f"movies_updated={flush_resp['movies_updated']}, "
-                    f"tv_updated={flush_resp['tv_updated']}"
-                )
             except Exception as e:
-                logger.error("Media Manager flush failed: %s", e)
-                self._run_metadata.add_log(f"Media Manager flush error: {e}")
+                logger.error("Media Manager queue drain failed: %s", e)
+                self._run_metadata.add_log(f"Media Manager queue drain error: {e}")
 
-        # Rebuild FAISS indexes after flush
-        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
             try:
                 logger.info("Rebuilding Media Manager FAISS indexes...")
                 rebuild_results = await mm_client.rebuild_all_indexes()
@@ -535,6 +524,25 @@ class ETLRunner:
             except Exception as e:
                 logger.error("Media Manager index rebuild failed: %s", e)
                 self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
+
+        # Finalize publish as the very last Media Manager step
+        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
+            try:
+                logger.info("Finalizing Media Manager publish...")
+                finalize_resp = await mm_client.finalize_publish()
+                logger.info("Media Manager finalize-publish: %s", finalize_resp)
+                self._run_metadata.add_log(
+                    "Media Manager finalize-publish: "
+                    f"status={finalize_resp['status']}, "
+                    f"movies_added={finalize_resp['movies_added']}, "
+                    f"tv_added={finalize_resp['tv_added']}, "
+                    f"movies_updated={finalize_resp['movies_updated']}, "
+                    f"tv_updated={finalize_resp['tv_updated']}, "
+                    f"readers_recycled={finalize_resp['readers_recycled']}"
+                )
+            except Exception as e:
+                logger.error("Media Manager finalize-publish failed: %s", e)
+                self._run_metadata.add_log(f"Media Manager finalize-publish error: {e}")
 
         if mm_client:
             try:
@@ -761,16 +769,14 @@ async def run_single_etl(
             media_manager_client=mm_client,
         )
 
-        # Flush and rebuild the relevant FAISS index if docs were sent
+        # For single-job/manual runs, do not finalize publish here.
+        # Finalize is intended to happen once at the aggregate run boundary.
         if mm_client and result_stats.mm_docs_sent > 0:
             try:
-                logger.info("Polling Media Manager queue before flush...")
+                logger.info("Polling Media Manager queue before index rebuild...")
                 await mm_client.poll_until_drained()
-                logger.info("Flushing Media Manager session...")
-                flush_resp = await mm_client.flush()
-                logger.info("Media Manager flush: %s", flush_resp)
             except Exception as e:
-                logger.error("Media Manager flush failed: %s", e)
+                logger.error("Media Manager queue drain wait failed: %s", e)
 
             index_name = MEDIA_INDEX_NAMES.get(media_type)
             if index_name:
