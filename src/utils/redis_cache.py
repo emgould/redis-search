@@ -49,7 +49,7 @@ _MODULE_LOAD_TIME = time.monotonic()
 
 # Advisory lock for thundering-herd prevention (cache coalescing)
 _LOCK_TTL_SECONDS = 120  # Long enough for slow fetches (SchedulesDirect ~60s)
-_LOCK_MAX_WAIT = 12  # Seconds waiters poll before re-attempting lock
+_LOCK_MAX_WAIT = 2  # Seconds waiters poll before re-attempting lock
 _LOCK_POLL_INITIAL = 0.05
 _LOCK_POLL_MAX = 0.3
 _LOCK_POLL_JITTER = 0.03
