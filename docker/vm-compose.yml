@@ -20,7 +20,7 @@ services:
       - redis-data:/data
     environment:
       # CRITICAL: volatile-lru only evicts cache (keys with TTL), NEVER indices/documents
-      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 6gb --maxmemory-policy volatile-lru
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 12gb --maxmemory-policy volatile-lru
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s

@@ -2,7 +2,7 @@
 # Create Redis Stack VM on GCE
 #
 # Creates:
-#   - e2-standard-2 VM (2 vCPU, 8GB RAM)
+#   - e2-highmem-2 VM (2 vCPU, 16GB RAM)
 #   - 50GB persistent SSD
 #   - Auto snapshot policy (daily, 7 day retention)
 #   - Internal-only access (no external IP)
@@ -20,7 +20,7 @@ ZONE="${REGION}-a"
 NETWORK="default"
 
 VM_NAME="redis-stack-vm"
-MACHINE_TYPE="e2-standard-2"
+MACHINE_TYPE="e2-highmem-2"
 DISK_SIZE="50GB"
 DISK_TYPE="pd-ssd"
 
@@ -126,7 +126,7 @@ else
         --restart always \
         -p 6379:6379 \
         -v /var/lib/redis-data:/data \
-        -e REDIS_ARGS="--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 6gb --maxmemory-policy volatile-lru" \
+        -e REDIS_ARGS="--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory 12gb --maxmemory-policy volatile-lru" \
         redis/redis-stack-server:7.4.0-v8
 fi
 EOF
