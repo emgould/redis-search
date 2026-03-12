@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -34,7 +34,8 @@ help:
 	@echo "    make install       - Create venv + install dependencies"
 	@echo "    make local-setup   - Start Redis, build index, seed data (one-time local setup)"
 	@echo "    make local-dev     - Print instructions to load local env secrets"
-	@echo "    make secrets-setup - Upload secrets to GCP Secret Manager (requires GCP_PROJECT_ID)"
+	@echo "    make secrets-setup    - Upload local env files to GCP Secret Manager"
+	@echo "    make secrets-download - Download env files from GCP Secret Manager to config/"
 	@echo ""
 	@echo "  Local Development:"
 	@echo "    make local         - Start Redis, API & Web (if not running), then load all GCS metadata"
@@ -136,8 +137,18 @@ local-etl:
 	@bash -c 'source venv/bin/activate && source scripts/load_secrets.sh local etl && python -m src.etl.bulk_loader'
 
 # GCP Secret Manager setup (one-time per environment)
-secrets-setup:	
+secrets-setup:
 	GCP_PROJECT_ID=$(GCP_PROJECT_ID) bash scripts/setup_gcp_secrets.sh $(ENV)
+
+# Download secrets from GCP Secret Manager to local config/ files
+# Usage: make secrets-download              (defaults to ENV=dev)
+#        make secrets-download ENV=prod
+secrets-download:
+	@echo "🔐 Downloading secrets from GCP Secret Manager ($(or $(ENV),dev))..."
+	@bash -c 'source scripts/load_secrets.sh $(or $(ENV),dev) etl'
+	@bash -c 'source scripts/load_secrets.sh $(or $(ENV),dev) api'
+	@echo ""
+	@echo "✅ Secrets downloaded to config/"
 
 etl:
 	. venv/bin/activate && python -m src.etl.bulk_loader

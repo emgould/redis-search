@@ -39,13 +39,21 @@ class StatusResponse(TypedDict):
     session: dict[str, Any]
 
 
-class FlushResponse(TypedDict):
+class FinalizePublishResponse(TypedDict):
     email_sent: bool
+    gcs_backed_up: bool
+    reader_refresh_requested: bool
+    readers_recycled: bool
+    serving_service_name: str | None
+    previous_serving_revision: str | None
+    new_serving_revision: str | None
+    reader_refresh_detail: str | None
     status: str
     movies_added: int
     tv_added: int
     movies_updated: int
     tv_updated: int
+    metadata_only_updated: int
     total_errors: int
 
 
@@ -204,21 +212,33 @@ class MediaManagerClient:
             session=data.get("session", {}),
         )
 
-    async def flush(self) -> FlushResponse:
-        """POST /insert-docs/flush — blocks until queue is drained."""
+    async def finalize_publish(self) -> FinalizePublishResponse:
+        """POST /api/etl/finalize-publish — blocks until publish completes."""
         client = await self._get_client()
-        resp = await client.post("/insert-docs/flush")
+        resp = await client.post("/api/etl/finalize-publish")
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()
-        return FlushResponse(
+        return FinalizePublishResponse(
             email_sent=data.get("email_sent", False),
+            gcs_backed_up=data.get("gcs_backed_up", False),
+            reader_refresh_requested=data.get("reader_refresh_requested", False),
+            readers_recycled=data.get("readers_recycled", False),
+            serving_service_name=data.get("serving_service_name"),
+            previous_serving_revision=data.get("previous_serving_revision"),
+            new_serving_revision=data.get("new_serving_revision"),
+            reader_refresh_detail=data.get("reader_refresh_detail"),
             status=data["status"],
             movies_added=data.get("movies_added", 0),
             tv_added=data.get("tv_added", 0),
             movies_updated=data.get("movies_updated", 0),
             tv_updated=data.get("tv_updated", 0),
+            metadata_only_updated=data.get("metadata_only_updated", 0),
             total_errors=data.get("total_errors", 0),
         )
+
+    async def flush(self) -> FinalizePublishResponse:
+        """Legacy alias for finalize publish."""
+        return await self.finalize_publish()
 
     async def rebuild_index(
         self,

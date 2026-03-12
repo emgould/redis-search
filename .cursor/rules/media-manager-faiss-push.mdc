@@ -36,7 +36,8 @@ Async `httpx` client at `src/adapters/media_manager_client.py`.
 - `insert_docs(documents, dry_run)` — `POST /insert-docs` with batch of up to 100 docs.
 - `get_metadata(media_id)` — `POST /api/metadata` to check whether a `mc_id` exists.
 - `get_status()` — `GET /insert-docs/status` for queue depth and session stats.
-- `flush()` — `POST /insert-docs/flush`, blocks until queue drains.
+- `finalize_publish()` — `POST /api/etl/finalize-publish`, blocks until queue drain, backup, and reader refresh complete.
+- `flush()` — legacy alias that delegates to `finalize_publish()`.
 - `poll_until_drained(poll_interval, max_wait)` — Polls status until `queue_depth == 0`.
 - `close()` — Closes the underlying httpx client.
 
@@ -104,7 +105,7 @@ python scripts/push_missing_to_media_manager.py --skip 200 --take 100
 # Dry-run + custom batch
 python scripts/push_missing_to_media_manager.py --dry-run --batch-size 25
 
-# Submit without final flush
+# Submit batches only
 python scripts/push_missing_to_media_manager.py --no-flush
 ```
 
@@ -131,8 +132,8 @@ Input file is expected to be the audit format:
 - `--take` limits how many rows are sent (or all rows when omitted).
 - `--batch-size` is capped at `100`.
 - `--dry-run` sets `dry_run=true` on `/insert-docs`.
-- Without `--dry-run` and `--no-flush`, the script polls
-  `/insert-docs/status` and then calls `/insert-docs/flush`.
+- Without `--dry-run`, the script polls `/insert-docs/status` until the queue is
+  empty. It does **not** call `/api/etl/finalize-publish`.
 
 ## Nightly ETL Integration
 
@@ -148,8 +149,8 @@ Input file is expected to be the audit format:
    submitted to `/insert-docs` in batches of 100.
 4. **Person**, **podcast**, and **bestseller** jobs do not push to Media Manager.
 5. After all jobs complete, `ETLRunner` polls until the queue drains, then calls
-   `/insert-docs/flush` once to finalize the session. Flush errors are logged but
-   do not fail the ETL run.
+   `/api/etl/finalize-publish` once to finalize the publish session. Finalize
+   errors are logged but do not fail the ETL run.
 
 ### Stats
 
@@ -167,7 +168,7 @@ These propagate into `JobRunResult.mm_docs_sent` and
 All Media Manager operations are **non-fatal** to the core ETL:
 - Health check failure at startup → MM push disabled, ETL continues.
 - Individual `insert_docs` failure → logged, error count incremented, next batch proceeds.
-- Flush failure → logged, does not affect ETL status.
+- Finalize-publish failure → logged, does not affect ETL status.
 
 ## Backfill Script Usage
 
@@ -178,10 +179,10 @@ python scripts/backfill_media_manager_faiss.py --dry-run
 # Dry-run with limit (scan only 20 docs)
 python scripts/backfill_media_manager_faiss.py --dry-run --limit 20
 
-# Limited live test (submit 20 docs, skip flush)
+# Limited live test (submit 20 docs)
 python scripts/backfill_media_manager_faiss.py --limit 20 --no-flush
 
-# Full backfill with poll-before-flush finalization
+# Full backfill with queue-drain wait only
 python scripts/backfill_media_manager_faiss.py
 ```
 
@@ -193,10 +194,13 @@ python scripts/backfill_media_manager_faiss.py
 | `--limit` | None | Max documents to submit |
 | `--batch-size` | 100 | Docs per POST (max 100) |
 | `--dry-run` | off | Scan + validate only, no endpoint submissions |
-| `--no-flush` | off | Skip `/insert-docs/flush` after all batches |
+| `--no-flush` | off | Deprecated no-op retained for CLI compatibility |
 
 ### Finalization Strategy
 
-Both the backfill script and the ETL runner use **poll-before-flush**: after
-submitting all batches, poll `/insert-docs/status` every 5 seconds until the
-queue is empty, then call flush. The 1-hour client timeout serves as a fail-safe.
+Only the aggregate ETL flow uses **poll-before-finalize**: `ETLRunner.run_all()`
+submits movie/tv batches across the run, polls `/insert-docs/status` until the
+queue is empty, then calls `/api/etl/finalize-publish` exactly once.
+
+Helper/backfill scripts do **not** call finalize-publish. They may wait for queue
+drain, but publish finalization is reserved for the single aggregate boundary.
