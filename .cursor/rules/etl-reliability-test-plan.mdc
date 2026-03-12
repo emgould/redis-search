@@ -1,0 +1,219 @@
+---
+description: Plain-English checklist for validating ETL resume behavior, promote-to-dev behavior, VM execution, and Media Manager propagation
+globs:
+  - "src/etl/*.py"
+  - "scripts/deploy_etl_vm.sh"
+  - "scripts/promote_to_dev.py"
+  - "Makefile"
+  - "web/app.py"
+alwaysApply: false
+---
+
+# ETL Reliability Test Checklist
+
+## What We Are Testing
+
+We changed ETL behavior in a few important ways. This checklist is just here to answer one question:
+
+**Did the ETL now behave the way a human would expect?**
+
+Specifically:
+
+1. If you run ETL locally, does it remember where it got to?
+2. If you promote local to dev, does dev inherit that same “resume from here” point?
+3. If you ask dev what it would run next, does it start from the right date?
+4. Can the ETL VM run now without the old disk-space problem?
+5. Can movie and TV ETL talk to Media Manager and finish the queue/flush/rebuild flow?
+6. If one ETL job fails, do the later jobs still run?
+
+## Before You Start
+
+These are already done:
+
+- the ETL VM disk was resized from 20GB to 40GB
+- the ETL container code has local changes for env vars, timeout handling, dry-run output, and metadata updates
+
+These still need to happen when you are ready:
+
+- run local ETL
+- redeploy ETL so the VM gets the new code
+- verify the VM behavior
+
+## Test 1: Local ETL remembers where it got to
+
+### What you are testing
+
+If you run `make etl-media`, local ETL should not only update local Redis data. It should also record where it finished, so the next run can resume from the right date.
+
+### What to do
+
+Run either:
+
+```bash
+make etl-media
+```
+
+or, if you want to force a backfill window:
+
+```bash
+make etl-media startdate=2026-03-11
+```
+
+### What success looks like
+
+After it finishes, the bookkeeping should show the new run date for movie and TV instead of staying stuck on March 8.
+
+Use:
+
+```bash
+gcloud storage cat gs://mc-redis-etl/redis-search/etl/local/state/job_states.json.gz | gunzip
+```
+
+You want to see movie and TV showing the new last successful run date.
+
+## Test 2: Promote to dev carries over that same resume point
+
+### What you are testing
+
+If local ETL got caught up, and then you promote local to dev, dev should start from the same point. It should not fall back to an old date.
+
+### What to do
+
+Run your normal promote-to-dev flow after local ETL completes.
+
+### What success looks like
+
+Local and dev should now show the same “last successful run” date for movie and TV.
+
+Use:
+
+```bash
+gcloud storage cat gs://mc-redis-etl/redis-search/etl/local/state/job_states.json.gz | gunzip
+gcloud storage cat gs://mc-redis-etl/redis-search/etl/dev/state/job_states.json.gz | gunzip
+```
+
+You want those movie and TV dates to match.
+
+## Test 3: Ask dev what it would run next, without actually running it
+
+### What you are testing
+
+You want a safe way to check the next ETL window without actually mutating dev.
+
+### What to do
+
+After redeploy, run on the ETL VM:
+
+```bash
+docker exec etl-runner python -m etl.run_nightly_etl --dry-run --job movie
+docker exec etl-runner python -m etl.run_nightly_etl --dry-run --job tv
+```
+
+### What success looks like
+
+The output should clearly tell you the next window it would process.
+
+For example, if dev says movie was last successfully run on March 11, the next dry-run should show March 12 as the next start date.
+
+If it still says March 8, the resume logic is still wrong.
+
+## Test 4: The ETL VM can actually run now
+
+### What you are testing
+
+We do not want to wait until overnight to see whether the VM ETL works.
+
+### What to do
+
+Redeploy:
+
+```bash
+make deploy-etl
+```
+
+Then manually run ETL on the VM:
+
+```bash
+gcloud compute ssh etl-runner-vm --zone=us-central1-a --tunnel-through-iap
+docker exec etl-runner python -m etl.run_nightly_etl --job movie --start-date 2026-03-11
+docker exec etl-runner python -m etl.run_nightly_etl --job tv --start-date 2026-03-11
+```
+
+Or run the whole nightly flow manually:
+
+```bash
+docker exec etl-runner python -m etl.run_nightly_etl
+```
+
+### What success looks like
+
+- the ETL starts
+- it does not immediately die from missing env vars
+- it does not die from disk-space errors
+- it updates ETL bookkeeping when jobs finish
+
+## Test 5: Media Manager actually gets the movie and TV docs
+
+### What you are testing
+
+Movie and TV ETL should no longer silently skip Media Manager because the container was missing env vars.
+
+### What to do
+
+Watch the ETL logs while a movie or TV ETL job runs.
+
+Use:
+
+```bash
+gcloud compute ssh etl-runner-vm --zone=us-central1-a --tunnel-through-iap -- docker logs -f etl-runner
+```
+
+### What success looks like
+
+You want to see log lines showing:
+
+- Media Manager health check passed
+- queue drain / status polling
+- flush
+- rebuild
+
+If everything is wired correctly, movie and TV ETL should now go through the full Media Manager flow.
+
+## Test 6: One failure does not stop the rest of the run
+
+### What you are testing
+
+If one job fails, the run should continue instead of hanging or aborting everything after it.
+
+### What to do
+
+Run a multi-job ETL where one job is likely to fail, or inspect the result the next time that happens naturally.
+
+### What success looks like
+
+- the failing job is marked failed
+- later jobs still run
+- the overall run ends as a partial success instead of hanging forever
+- metadata and email still happen at the end
+
+## Quickest Useful Validation Order
+
+If you want the shortest path that gives confidence:
+
+1. Run `make etl-media`
+2. Confirm local movie and TV “last successful run” dates changed
+3. Promote to dev
+4. Redeploy ETL
+5. Run VM dry-run for movie and TV
+6. Confirm the next start date is correct
+7. Run one manual VM ETL job
+8. Watch for Media Manager health check, flush, and rebuild
+
+## Things That Mean It Is Still Broken
+
+- local ETL runs, but movie/tv “last successful run” still does not change
+- promote happens, but dev still resumes from an older date
+- dry-run says the next start date is wrong
+- VM ETL still fails for disk space
+- movie/tv ETL still never reaches Media Manager
+- one failed job still prevents the rest of the run from finishing

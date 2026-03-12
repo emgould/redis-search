@@ -404,17 +404,19 @@ last-etl-date:
 	print(); \
 	"
 
-# Run media ETL (movie + TV) with a start date override
-# Usage: make etl-media startdate=2025-02-20
+# Run media ETL (movie + TV)
+# Routes through ETLRunner so GCS job state is updated after each run.
+# Without `startdate`, ETL resolves from stored metadata just like the nightly runner.
+# Usage: make etl-media
+#        make etl-media startdate=2025-02-20
 etl-media:
-	@if [ -z "$(startdate)" ]; then echo "ERROR: startdate is required. Usage: make etl-media startdate=YYYY-MM-DD"; exit 1; fi
-	@echo "Running media ETL from $(startdate)..."
+	@if [ -n "$(startdate)" ]; then echo "Running media ETL from $(startdate)..."; else echo "Running media ETL from stored metadata..."; fi
 	@echo ""
 	@echo "=== Movie ETL ==="
-	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python src/etl/tmdb_nightly_etl.py -m movie --start-date $(startdate)'
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && if [ -n "$(startdate)" ]; then python -m etl.run_nightly_etl --job movie --start-date $(startdate); else python -m etl.run_nightly_etl --job movie; fi'
 	@echo ""
 	@echo "=== TV ETL ==="
-	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python src/etl/tmdb_nightly_etl.py -m tv --start-date $(startdate)'
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && if [ -n "$(startdate)" ]; then python -m etl.run_nightly_etl --job tv --start-date $(startdate); else python -m etl.run_nightly_etl --job tv; fi'
 
 # Fetch TMDB media details for a single title
 # Usage: make get-media-details-tv ID=12345
