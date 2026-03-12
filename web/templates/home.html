@@ -95,6 +95,20 @@ Shows{% endblock %} {% block body %}
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
+          <!-- Lite Autocomplete Toggle -->
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Lightweight autocomplete: projected fields only, no re-ranking, defaults to TV &amp; Movies when no filters selected">
+            <label for="lite-ac-toggle" class="text-xs text-teal-400 cursor-pointer select-none whitespace-nowrap">
+              Lite
+            </label>
+            <button type="button" id="lite-ac-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600"
+              onclick="toggleLiteAutocomplete()">
+              <span class="sr-only">Enable lightweight autocomplete</span>
+              <span id="lite-ac-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+          </div>
           <!-- TMDB Mode Toggle -->
           <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
             title="Search TMDB directly instead of the Redis index. Disables autocomplete; press Enter to search.">
@@ -105,6 +119,19 @@ Shows{% endblock %} {% block body %}
               class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600">
               <span class="sr-only">Enable TMDB search mode</span>
               <span id="tmdb-mode-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+          </div>
+          <!-- Direct Match Toggle -->
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Resolve exact title matches only. Disables autocomplete; press Enter to search. Returns all tier 0-1 matches.">
+            <label for="direct-match-toggle" class="text-xs text-sky-400 cursor-pointer select-none whitespace-nowrap">
+              Direct Match
+            </label>
+            <button type="button" id="direct-match-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600">
+              <span class="sr-only">Enable direct match mode</span>
+              <span id="direct-match-toggle-dot" aria-hidden="true"
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
@@ -387,6 +414,8 @@ Shows{% endblock %} {% block body %}
   let streamingEnabled = false;
   let noDuplicateEnabled = false;
   let fullSearchEnabled = false;
+  let liteAutocompleteEnabled = false;
+  let directMatchEnabled = false;
 
   // Detect raw RediSearch mode: query contains @ (never used in normal searches)
   function isRawMode(query) {
@@ -482,6 +511,8 @@ Shows{% endblock %} {% block body %}
     isNoDuplicateEnabled: () => noDuplicateEnabled,
     isFullSearchEnabled: () => fullSearchEnabled,
     isTmdbModeEnabled: () => tmdbModeEnabled,
+    isMinimalAutocompleteEnabled: () => liteAutocompleteEnabled,
+    isDirectMatchEnabled: () => directMatchEnabled,
   });
 
   // Stream mode toggle
@@ -562,6 +593,26 @@ Shows{% endblock %} {% block body %}
     }
   }
 
+  function toggleLiteAutocomplete() {
+    liteAutocompleteEnabled = !liteAutocompleteEnabled;
+    const toggle = document.getElementById("lite-ac-toggle");
+    const dot = document.getElementById("lite-ac-toggle-dot");
+
+    if (liteAutocompleteEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-teal-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+    } else {
+      toggle.classList.remove("bg-teal-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+  }
+
   function searchFor(query) {
     searchController.searchFor(query);
   }
@@ -620,6 +671,71 @@ Shows{% endblock %} {% block body %}
   }
 
   document.getElementById("tmdb-mode-toggle").addEventListener("click", toggleTmdbMode);
+
+  function toggleDirectMatchMode() {
+    directMatchEnabled = !directMatchEnabled;
+    const toggle = document.getElementById("direct-match-toggle");
+    const dot = document.getElementById("direct-match-toggle-dot");
+
+    if (directMatchEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-sky-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+      searchController.cancelAll();
+    } else {
+      toggle.classList.remove("bg-sky-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+  }
+
+  document.getElementById("direct-match-toggle").addEventListener("click", toggleDirectMatchMode);
+
+  async function searchDirectMatch() {
+    const query = searchInput.value.trim();
+    if (!query || query.length < 2) return;
+
+    searchController.cancelAll();
+    loadingSpinner.classList.remove("hidden");
+    try {
+      const sources = getActiveFiltersParam() || "tv,movie";
+      const params = new URLSearchParams({
+        q: query,
+        sources: sources,
+        fields: "poster_path,year,popularity,rating,source_id",
+      });
+      const response = await fetch(getApiUrl(`/api/resolve?${params.toString()}`));
+      const payload = await response.json();
+      if (!response.ok) {
+        const err = payload?.error || `Resolve failed (${response.status})`;
+        openJsonModal("Direct Match Error", JSON.stringify({ error: err }, null, 2));
+        return;
+      }
+      const results = {};
+      for (const match of payload.matches || []) {
+        const src = match.mc_type || match.source || "unknown";
+        if (!results[src]) results[src] = [];
+        results[src].push(match);
+      }
+      results._resolve_meta = {
+        query: payload.query,
+        total: payload.total,
+        latency_ms: payload.latency_ms,
+      };
+      renderResults(results, query);
+      resultsContainer.classList.remove("hidden");
+    } catch (error) {
+      openJsonModal("Direct Match Error", JSON.stringify({ error: String(error) }, null, 2));
+    } finally {
+      loadingSpinner.classList.add("hidden");
+    }
+  }
+
+  window.searchDirectMatch = searchDirectMatch;
 
   function formatYear(item) {
     // Use the normalized year field directly

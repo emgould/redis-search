@@ -54,6 +54,8 @@ const EXACT_MATCH_PRIORITY = {
  * @param {function():boolean} cfg.isStreamingEnabled         — returns current stream toggle state
  * @param {function():boolean} cfg.isNoDuplicateEnabled      — returns current no-duplicate toggle state
  * @param {function():boolean} cfg.isFullSearchEnabled       — returns current full-search toggle state
+ * @param {function():boolean} cfg.isMinimalAutocompleteEnabled — returns current lite autocomplete toggle state
+ * @param {function():boolean} cfg.isDirectMatchEnabled        — returns current direct match toggle state
  */
 function initSearchController(cfg) {
   const {
@@ -69,6 +71,8 @@ function initSearchController(cfg) {
     isNoDuplicateEnabled,
     isFullSearchEnabled,
     isTmdbModeEnabled,
+    isMinimalAutocompleteEnabled,
+    isDirectMatchEnabled,
   } = cfg;
 
   // ---- State ----
@@ -180,7 +184,15 @@ function initSearchController(cfg) {
     showSpinner();
 
     try {
-      const url = buildUrl("/api/autocomplete", query);
+      let url;
+      if (isMinimalAutocompleteEnabled && isMinimalAutocompleteEnabled()) {
+        const sources = getActiveFiltersParam() || "tv,movie";
+        url = getApiUrl(
+          `/api/autocomplete/minimal?q=${encodeURIComponent(query)}&sources=${encodeURIComponent(sources)}`
+        );
+      } else {
+        url = buildUrl("/api/autocomplete", query);
+      }
       const resp = await fetch(url, { signal: autocompleteCtrl.signal });
       const data = await resp.json();
 
@@ -332,16 +344,19 @@ function initSearchController(cfg) {
       return;
     }
 
-    // In TMDB mode, suppress autocomplete and search — only Enter triggers
-    if (isTmdbModeEnabled && isTmdbModeEnabled()) {
+    // In TMDB or Direct Match mode, suppress autocomplete and search — only Enter triggers
+    if ((isTmdbModeEnabled && isTmdbModeEnabled()) ||
+        (isDirectMatchEnabled && isDirectMatchEnabled())) {
       return;
     }
 
     // Tier 1: autocomplete after short pause
     autocompleteTimer = setTimeout(() => runAutocomplete(query), AUTOCOMPLETE_DEBOUNCE_MS);
 
-    // Tier 2: full search after longer pause
-    searchTimer = setTimeout(() => triggerSearch(query), SEARCH_DEBOUNCE_MS);
+    // Tier 2: full search after longer pause (suppressed in Lite mode — Enter only)
+    if (!(isMinimalAutocompleteEnabled && isMinimalAutocompleteEnabled())) {
+      searchTimer = setTimeout(() => triggerSearch(query), SEARCH_DEBOUNCE_MS);
+    }
   });
 
   searchInput.addEventListener("keydown", (e) => {
@@ -363,12 +378,18 @@ function initSearchController(cfg) {
         if (typeof window.searchTmdb === "function") window.searchTmdb();
         return;
       }
+      // In Direct Match mode, route Enter to searchDirectMatch
+      if (isDirectMatchEnabled && isDirectMatchEnabled()) {
+        if (typeof window.searchDirectMatch === "function") window.searchDirectMatch();
+        return;
+      }
       triggerSearch(query);
     }
   });
 
   searchInput.addEventListener("focus", () => {
     if (isTmdbModeEnabled && isTmdbModeEnabled()) return;
+    if (isDirectMatchEnabled && isDirectMatchEnabled()) return;
     const query = searchInput.value.trim();
     if (query.length < 2) return;
     if (Object.keys(currentResults).length > 0 && currentQuery === query) {
