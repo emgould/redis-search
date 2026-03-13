@@ -301,9 +301,9 @@ if [ "$NEEDS_CONTAINER_REFRESH" = true ]; then
             -e REDIS_ARGS='--requirepass ${REDIS_PASSWORD} --appendonly yes --save 60 1 --maxmemory ${NEW_MAXMEMORY} --maxmemory-policy volatile-lru' \
             redis/redis-stack-server:7.4.0-v8
 
-        echo 'Waiting for Redis to load data...'
+        echo 'Waiting for Redis to load data (up to 5 min for large AOF)...'
         redis_ready=false
-        for i in \$(seq 1 30); do
+        for i in \$(seq 1 60); do
             if docker exec ${CONTAINER_NAME} redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping 2>/dev/null | grep -q PONG; then
                 redis_ready=true
                 echo 'Redis is responding'
