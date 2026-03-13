@@ -395,9 +395,11 @@ class ETLRunner:
             try:
                 mm_client = MediaManagerClient()
                 await mm_client.health_check()
+                self._run_metadata.mm_health_check = "ok"
                 self._run_metadata.add_log("Media Manager health check passed")
             except Exception as e:
                 logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                self._run_metadata.mm_health_check = "unavailable"
                 if mm_client:
                     await mm_client.close()
                 mm_client = None
@@ -509,20 +511,30 @@ class ETLRunner:
             try:
                 logger.info("Polling Media Manager queue before index rebuild...")
                 await mm_client.poll_until_drained()
+                self._run_metadata.mm_queue_drained = True
+                self._run_metadata.add_log("Media Manager queue drained")
             except Exception as e:
                 logger.error("Media Manager queue drain failed: %s", e)
+                self._run_metadata.mm_queue_drained = False
+                self._run_metadata.mm_queue_drain_error = str(e)
                 self._run_metadata.add_log(f"Media Manager queue drain error: {e}")
 
             try:
                 logger.info("Rebuilding Media Manager FAISS indexes...")
                 rebuild_results = await mm_client.rebuild_all_indexes()
                 for r in rebuild_results:
+                    self._run_metadata.mm_indexes_rebuilt.append({
+                        "index_name": r["index_name"],
+                        "total_documents": r["total_documents"],
+                        "duration_seconds": r["duration_seconds"],
+                    })
                     self._run_metadata.add_log(
                         f"Index '{r['index_name']}' rebuilt: "
                         f"{r['total_documents']} docs in {r['duration_seconds']:.1f}s"
                     )
             except Exception as e:
                 logger.error("Media Manager index rebuild failed: %s", e)
+                self._run_metadata.mm_rebuild_errors.append(str(e))
                 self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
 
         # Finalize publish as the very last Media Manager step
@@ -531,6 +543,14 @@ class ETLRunner:
                 logger.info("Finalizing Media Manager publish...")
                 finalize_resp = await mm_client.finalize_publish()
                 logger.info("Media Manager finalize-publish: %s", finalize_resp)
+                self._run_metadata.mm_finalize_publish = {
+                    "status": finalize_resp["status"],
+                    "movies_added": finalize_resp["movies_added"],
+                    "tv_added": finalize_resp["tv_added"],
+                    "movies_updated": finalize_resp["movies_updated"],
+                    "tv_updated": finalize_resp["tv_updated"],
+                    "readers_recycled": finalize_resp["readers_recycled"],
+                }
                 self._run_metadata.add_log(
                     "Media Manager finalize-publish: "
                     f"status={finalize_resp['status']}, "
@@ -542,6 +562,7 @@ class ETLRunner:
                 )
             except Exception as e:
                 logger.error("Media Manager finalize-publish failed: %s", e)
+                self._run_metadata.mm_finalize_error = str(e)
                 self._run_metadata.add_log(f"Media Manager finalize-publish error: {e}")
 
         if mm_client:
@@ -572,6 +593,12 @@ class ETLRunner:
             self.metadata_store.save_run_metadata(self._run_metadata)
         except Exception as e:
             logger.warning(f"Failed to save run metadata to GCS: {e}")
+
+        # Persist run summary into job_states file so the web UI has it
+        try:
+            self.metadata_store.save_run_summary(self._run_metadata)
+        except Exception as e:
+            logger.warning(f"Failed to save run summary: {e}")
 
         # Send email notification
         from etl.notifications import send_etl_summary_email

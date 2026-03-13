@@ -32,6 +32,9 @@
       </div>
     </div>
 
+    <!-- Last Run Summary (MM pipeline visibility) -->
+    <div id="last-run-summary-container"></div>
+
     <!-- ETL Status Per Job (hero card) -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <div class="flex items-center justify-between mb-4">
@@ -127,7 +130,7 @@
 
           <!-- Result Summary -->
           <div id="full-etl-result" class="hidden mt-4">
-            <div class="grid grid-cols-4 gap-3 text-center">
+            <div class="grid grid-cols-5 gap-3 text-center">
               <div class="bg-surface-900/50 rounded-lg p-3">
                 <p
                   class="text-2xl font-bold text-green-400"
@@ -154,6 +157,15 @@
               </div>
               <div class="bg-surface-900/50 rounded-lg p-3">
                 <p
+                  class="text-2xl font-bold text-purple-400"
+                  id="result-mm-sent"
+                >
+                  0
+                </p>
+                <p class="text-xs text-surface-500">MM Sent</p>
+              </div>
+              <div class="bg-surface-900/50 rounded-lg p-3">
+                <p
                   class="text-2xl font-bold text-surface-400"
                   id="result-duration"
                 >
@@ -162,6 +174,7 @@
                 <p class="text-xs text-surface-500">Duration</p>
               </div>
             </div>
+            <div id="result-mm-pipeline" class="mt-3"></div>
           </div>
         </div>
       </div>
@@ -256,13 +269,54 @@
         <h2 class="text-xl font-semibold flex items-center gap-2">
           <span class="text-2xl">📜</span> Recent Runs
         </h2>
-        <button
-          onclick="refreshRecentRuns()"
-          id="btn-refresh-runs"
-          class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <span id="refresh-runs-icon">🔄</span> Refresh
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            onclick="toggleVmLogs()"
+            id="btn-vm-logs"
+            class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <span>🖥️</span> VM Logs
+          </button>
+          <button
+            onclick="refreshRecentRuns()"
+            id="btn-refresh-runs"
+            class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <span id="refresh-runs-icon">🔄</span> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- VM Logs Panel (hidden by default) -->
+      <div id="vm-logs-panel" class="hidden mb-6">
+        <div class="bg-surface-800 rounded-lg border border-surface-700 overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700">
+            <p class="text-sm font-medium text-surface-300">ETL VM Docker Logs</p>
+            <div class="flex items-center gap-3">
+              <select
+                id="vm-logs-since"
+                class="px-2 py-1 bg-surface-900 border border-surface-600 rounded text-sm text-white focus:border-brand-500"
+              >
+                <option value="1h">Last 1 hour</option>
+                <option value="6h">Last 6 hours</option>
+                <option value="12h">Last 12 hours</option>
+                <option value="24h" selected>Last 24 hours</option>
+                <option value="48h">Last 48 hours</option>
+                <option value="72h">Last 3 days</option>
+              </select>
+              <button
+                onclick="fetchVmLogs()"
+                id="btn-fetch-vm-logs"
+                class="px-3 py-1 bg-brand-600 hover:bg-brand-500 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                <span id="vm-logs-fetch-icon">↻</span> Fetch
+              </button>
+            </div>
+          </div>
+          <div id="vm-logs-output" class="p-0">
+            <p class="text-surface-500 text-sm text-center py-6">Select a time range and click Fetch to load VM logs.</p>
+          </div>
+        </div>
       </div>
 
       <div id="recent-runs-container" class="space-y-3">
@@ -479,6 +533,62 @@ Loading configuration...</pre
   }
 
   // ============================================================
+  // Media Manager Pipeline Renderer
+  // ============================================================
+
+  function mmStepBadge(ok, label, detail) {
+    if (ok === true) return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400" title="${detail || ''}">${label} ✓</span>`;
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400" title="${detail || ''}">${label} ✗</span>`;
+  }
+
+  function renderMMPipeline(mm, totalSent) {
+    // If MM was never configured for this run, nothing to show
+    if (!mm || mm.health_check === null || mm.health_check === undefined) return "";
+
+    const healthOk = mm.health_check === "ok";
+    const sentOk = totalSent > 0;
+    const drainOk = mm.queue_drained === true;
+    const rebuildOk = (mm.indexes_rebuilt || []).length > 0 && (mm.rebuild_errors || []).length === 0;
+    const finalizeOk = !!(mm.finalize_publish && mm.finalize_publish.status);
+
+    let rebuildDetail = "";
+    if (mm.indexes_rebuilt && mm.indexes_rebuilt.length > 0) {
+      rebuildDetail = mm.indexes_rebuilt
+        .map(r => `${r.index_name}: ${formatNumber(r.total_documents)} docs (${r.duration_seconds.toFixed(1)}s)`)
+        .join(", ");
+    }
+    if ((mm.rebuild_errors || []).length > 0) rebuildDetail = mm.rebuild_errors.join("; ");
+    if (!rebuildOk && !rebuildDetail) rebuildDetail = "not executed";
+
+    let finalizeDetail = "";
+    if (mm.finalize_publish) {
+      const fp = mm.finalize_publish;
+      finalizeDetail = `movies +${fp.movies_added}/~${fp.movies_updated}, tv +${fp.tv_added}/~${fp.tv_updated}, recycled=${fp.readers_recycled}`;
+    }
+    if (mm.finalize_error) finalizeDetail = mm.finalize_error;
+    if (!finalizeOk && !finalizeDetail) finalizeDetail = "not executed";
+
+    let drainDetail = "";
+    if (mm.queue_drain_error) drainDetail = mm.queue_drain_error;
+    if (!drainOk && !drainDetail) drainDetail = "not executed";
+
+    return `
+      <div class="px-4 pb-3 pt-0 border-t border-surface-700/50">
+        <p class="text-xs text-surface-500 mb-2 mt-2">Media Manager Pipeline</p>
+        <div class="flex flex-wrap items-center gap-2">
+          ${mmStepBadge(healthOk, "Health", healthOk ? "ok" : mm.health_check || "not configured")}
+          ${mmStepBadge(sentOk, `Sent ${formatNumber(totalSent || 0)}`, sentOk ? "" : "no docs sent")}
+          ${mmStepBadge(drainOk, "Queue Drain", drainDetail)}
+          ${mmStepBadge(rebuildOk, "Rebuild", rebuildDetail)}
+          ${mmStepBadge(finalizeOk, "Finalize", finalizeDetail)}
+        </div>
+        ${finalizeOk ? `<p class="text-xs text-surface-500 mt-2">${finalizeDetail}</p>` : ""}
+        ${mm.finalize_error ? `<p class="text-xs text-red-400 mt-2">${mm.finalize_error}</p>` : ""}
+        ${!finalizeOk && !mm.finalize_error ? `<p class="text-xs text-red-400 mt-2">Finalize publish did not execute</p>` : ""}
+      </div>`;
+  }
+
+  // ============================================================
   // Full ETL Target Modal
   // ============================================================
 
@@ -606,8 +716,15 @@ Loading configuration...</pre
           document.getElementById("result-upserted").textContent = formatNumber(
             data.result.total_documents_upserted
           );
+          document.getElementById("result-mm-sent").textContent = formatNumber(
+            data.result.total_mm_docs_sent
+          );
           document.getElementById("result-duration").textContent =
             formatDuration(data.result.duration_seconds);
+
+          const mmPipelineEl = document.getElementById("result-mm-pipeline");
+          const mm = data.result.media_manager_pipeline || {};
+          mmPipelineEl.innerHTML = renderMMPipeline(mm, data.result.total_mm_docs_sent);
 
           progressBar.style.width = "100%";
 
@@ -848,6 +965,45 @@ Loading configuration...</pre
     return "📋";
   }
 
+  function renderLastRunSummary(summary) {
+    const container = document.getElementById("last-run-summary-container");
+    if (!summary) { container.innerHTML = ""; return; }
+
+    const sc = summary.status === "completed" ? "green" : summary.status === "failed" ? "red" : "amber";
+    const se = { completed: "✅", partial: "⚠️", failed: "❌", running: "🔄" }[summary.status] || "❓";
+    const startedAt = summary.started_at ? new Date(summary.started_at) : null;
+    const timeStr = startedAt
+      ? startedAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : summary.run_date;
+
+    const mm = summary.media_manager_pipeline || {};
+    const mmHtml = renderMMPipeline(mm, summary.total_mm_docs_sent);
+
+    container.innerHTML = `
+      <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+          <span class="text-2xl">🔄</span> Last Nightly Run
+        </h2>
+        <div class="bg-surface-800/50 rounded-lg border border-surface-700">
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center gap-3">
+              <span>${se}</span>
+              <span class="font-semibold text-${sc}-400 text-lg">${summary.status}</span>
+              <span class="text-surface-400">${timeStr}</span>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-surface-400">
+              <span>${summary.jobs_completed}/${summary.total_jobs} jobs</span>
+              <span class="text-blue-400 font-medium">${formatNumber(summary.total_documents_upserted)} upserted</span>
+              ${summary.total_mm_docs_sent > 0 ? `<span class="text-purple-400 font-medium">${formatNumber(summary.total_mm_docs_sent)} MM sent</span>` : ""}
+              ${summary.total_errors > 0 ? `<span class="text-red-400">${summary.total_errors} errors</span>` : ""}
+              <span>${formatDuration(summary.duration_seconds)}</span>
+            </div>
+          </div>
+          ${mmHtml}
+        </div>
+      </section>`;
+  }
+
   async function refreshJobStates() {
     const container = document.getElementById("job-states-container");
     const icon = document.getElementById("refresh-states-icon");
@@ -859,6 +1015,9 @@ Loading configuration...</pre
       const data = await res.json();
 
       if (!data.success) throw new Error(data.error);
+
+      // Render last run summary (MM pipeline + aggregate stats)
+      renderLastRunSummary(data.last_run_summary);
 
       // Update env label from response
       const envLabel = document.getElementById("etl-env-label");
@@ -904,7 +1063,7 @@ Loading configuration...</pre
               </div>
             </div>
             <!-- Job details -->
-            <div class="px-4 py-3 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+            <div class="px-4 py-3 grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
               <div>
                 <p class="text-xs text-surface-500 mb-0.5">Last Run</p>
                 <p class="text-surface-200 font-medium">${runTime || "Never"}</p>
@@ -920,6 +1079,10 @@ Loading configuration...</pre
               <div>
                 <p class="text-xs text-surface-500 mb-0.5">Upserted</p>
                 <p class="text-blue-400 font-medium">${formatNumber(s.last_documents_upserted)}</p>
+              </div>
+              <div>
+                <p class="text-xs text-surface-500 mb-0.5">MM Sent</p>
+                <p class="${s.mm_docs_sent > 0 ? 'text-purple-400' : 'text-surface-500'} font-medium">${s.mm_docs_sent > 0 ? formatNumber(s.mm_docs_sent) : '—'}</p>
               </div>
               <div>
                 <p class="text-xs text-surface-500 mb-0.5">Duration</p>
@@ -991,9 +1154,12 @@ Loading configuration...</pre
           ? startedAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
           : run.run_date;
 
+        const mm = run.media_manager_pipeline || {};
+        const mmHtml = renderMMPipeline(mm, run.total_mm_docs_sent);
+
         return `
-          <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700">
-            <div class="flex items-center justify-between">
+          <div class="bg-surface-800/50 rounded-lg border border-surface-700">
+            <div class="flex items-center justify-between p-4">
               <div class="flex items-center gap-2">
                 <span>${se}</span>
                 <span class="font-medium text-${sc}-400">${run.status}</span>
@@ -1002,10 +1168,12 @@ Loading configuration...</pre
               <div class="flex items-center gap-4 text-xs text-surface-400">
                 <span>${run.jobs_completed}/${run.total_jobs} jobs</span>
                 <span class="text-surface-300 font-medium">${formatNumber(run.total_documents_upserted)} upserted</span>
+                ${run.total_mm_docs_sent > 0 ? `<span class="text-purple-400 font-medium">${formatNumber(run.total_mm_docs_sent)} MM sent</span>` : ""}
                 ${run.total_errors > 0 ? `<span class="text-red-400">${run.total_errors} errors</span>` : ""}
                 <span>${formatDuration(run.duration_seconds)}</span>
               </div>
             </div>
+            ${mmHtml}
           </div>`;
       }).join("");
     } catch (e) {
@@ -1013,6 +1181,70 @@ Loading configuration...</pre
     } finally {
       icon.classList.remove("animate-spin");
     }
+  }
+
+  // ============================================================
+  // VM Logs
+  // ============================================================
+
+  function toggleVmLogs() {
+    const panel = document.getElementById("vm-logs-panel");
+    panel.classList.toggle("hidden");
+  }
+
+  async function fetchVmLogs() {
+    const btn = document.getElementById("btn-fetch-vm-logs");
+    const icon = document.getElementById("vm-logs-fetch-icon");
+    const output = document.getElementById("vm-logs-output");
+    const since = document.getElementById("vm-logs-since").value;
+
+    btn.disabled = true;
+    icon.classList.add("animate-spin");
+    output.innerHTML = '<p class="text-surface-400 text-sm text-center py-6 animate-pulse">Connecting to ETL VM via IAP tunnel...</p>';
+
+    try {
+      const params = new URLSearchParams({ since });
+      const res = await fetch(`/api/etl/vm/logs?${params}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        output.innerHTML = `<div class="p-4 text-red-400 text-sm"><p class="font-medium mb-1">Failed to fetch logs</p><p>${data.error || "Unknown error"}</p>${data.logs ? `<pre class="mt-2 text-xs text-surface-500 whitespace-pre-wrap">${escapeHtml(data.logs)}</pre>` : ""}</div>`;
+        return;
+      }
+
+      const logs = data.logs || "";
+      if (!logs.trim()) {
+        output.innerHTML = '<p class="text-surface-500 text-sm text-center py-6">No log output for this time range.</p>';
+        return;
+      }
+
+      const lineCount = logs.split("\n").filter(l => l.trim()).length;
+      output.innerHTML = `
+        <div class="flex items-center justify-between px-4 py-2 bg-surface-900/50 border-b border-surface-700/50">
+          <span class="text-xs text-surface-500">${lineCount} lines · ${data.vm} / ${data.container} · since ${data.since}</span>
+          <button onclick="copyVmLogs()" class="text-xs text-surface-400 hover:text-white transition-colors">Copy</button>
+        </div>
+        <pre id="vm-logs-text" class="p-4 text-xs text-surface-300 font-mono whitespace-pre-wrap break-words overflow-y-auto max-h-[32rem] leading-relaxed">${escapeHtml(logs)}</pre>`;
+
+      const pre = document.getElementById("vm-logs-text");
+      pre.scrollTop = pre.scrollHeight;
+    } catch (e) {
+      output.innerHTML = `<div class="p-4 text-red-400 text-sm">Network error: ${e.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      icon.classList.remove("animate-spin");
+    }
+  }
+
+  function copyVmLogs() {
+    const pre = document.getElementById("vm-logs-text");
+    if (pre) navigator.clipboard.writeText(pre.textContent || "");
+  }
+
+  function escapeHtml(text) {
+    const el = document.createElement("div");
+    el.textContent = text;
+    return el.innerHTML;
   }
 
   // ============================================================

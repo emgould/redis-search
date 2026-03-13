@@ -92,6 +92,15 @@ class ETLRunMetadata:
     total_errors: int = 0
     total_mm_docs_sent: int = 0
 
+    # Media Manager pipeline events (structured, not just log strings)
+    mm_health_check: str | None = None  # "ok", "unavailable", or None (not configured)
+    mm_queue_drained: bool | None = None  # True/False/None (not attempted)
+    mm_queue_drain_error: str | None = None
+    mm_indexes_rebuilt: list[dict[str, Any]] = field(default_factory=list)
+    mm_rebuild_errors: list[str] = field(default_factory=list)
+    mm_finalize_publish: dict[str, Any] | None = None
+    mm_finalize_error: str | None = None
+
     # Job results
     job_results: list[JobRunResult] = field(default_factory=list)
 
@@ -123,6 +132,15 @@ class ETLRunMetadata:
             "total_documents_upserted": self.total_documents_upserted,
             "total_errors": self.total_errors,
             "total_mm_docs_sent": self.total_mm_docs_sent,
+            "media_manager_pipeline": {
+                "health_check": self.mm_health_check,
+                "queue_drained": self.mm_queue_drained,
+                "queue_drain_error": self.mm_queue_drain_error,
+                "indexes_rebuilt": self.mm_indexes_rebuilt,
+                "rebuild_errors": self.mm_rebuild_errors,
+                "finalize_publish": self.mm_finalize_publish,
+                "finalize_error": self.mm_finalize_error,
+            },
             "job_results": [jr.to_dict() for jr in self.job_results],
             "config_snapshot": self.config_snapshot,
             "logs": self.logs[-500] if len(self.logs) > 500 else self.logs,  # Keep last 500 logs
@@ -139,6 +157,7 @@ class JobState:
     last_status: str | None = None  # "success", "failed"
     last_changes_found: int = 0
     last_documents_upserted: int = 0
+    mm_docs_sent: int = 0
     effective_start_date: str | None = None  # YYYY-MM-DD date range start
     effective_end_date: str | None = None  # YYYY-MM-DD date range end
     duration_seconds: float | None = None
@@ -152,6 +171,7 @@ class JobState:
             "last_status": self.last_status,
             "last_changes_found": self.last_changes_found,
             "last_documents_upserted": self.last_documents_upserted,
+            "mm_docs_sent": self.mm_docs_sent,
             "effective_start_date": self.effective_start_date,
             "effective_end_date": self.effective_end_date,
             "duration_seconds": self.duration_seconds,
@@ -167,6 +187,7 @@ class JobState:
             last_status=data.get("last_status"),
             last_changes_found=data.get("last_changes_found", 0),
             last_documents_upserted=data.get("last_documents_upserted", 0),
+            mm_docs_sent=data.get("mm_docs_sent", 0),
             effective_start_date=data.get("effective_start_date"),
             effective_end_date=data.get("effective_end_date"),
             duration_seconds=data.get("duration_seconds"),
@@ -347,18 +368,23 @@ class ETLMetadataStore:
     # Job State Management
     # =========================================================================
 
+    def _load_state_file(self) -> dict[str, Any]:
+        """Load the full state file (jobs + last_run_summary) from GCS."""
+        gcs_path = self._gcs_path("state", "job_states.json")
+        return self._download_json(gcs_path) or {}
+
+    def _save_state_file(self, data: dict[str, Any]) -> bool:
+        """Write the full state file back to GCS."""
+        data["updated_at"] = datetime.now().isoformat()
+        gcs_path = self._gcs_path("state", "job_states.json")
+        return self._upload_json(data, gcs_path)
+
     def get_all_job_states(self) -> dict[str, JobState]:
         """Load all job states from GCS."""
-        gcs_path = self._gcs_path("state", "job_states.json")
-        data = self._download_json(gcs_path)
-
-        if not data:
-            return {}
-
-        states = {}
+        data = self._load_state_file()
+        states: dict[str, JobState] = {}
         for job_name, state_data in data.get("jobs", {}).items():
             states[job_name] = JobState.from_dict(state_data)
-
         return states
 
     def get_job_state(self, job_name: str) -> JobState | None:
@@ -367,14 +393,10 @@ class ETLMetadataStore:
         return states.get(job_name)
 
     def save_job_states(self, states: dict[str, JobState]) -> bool:
-        """Save all job states to GCS."""
-        data = {
-            "updated_at": datetime.now().isoformat(),
-            "jobs": {name: state.to_dict() for name, state in states.items()},
-        }
-
-        gcs_path = self._gcs_path("state", "job_states.json")
-        return self._upload_json(data, gcs_path)
+        """Save all job states to GCS, preserving other keys in the file."""
+        data = self._load_state_file()
+        data["jobs"] = {name: state.to_dict() for name, state in states.items()}
+        return self._save_state_file(data)
 
     def update_job_state(self, job_name: str, result: JobRunResult) -> bool:
         """Update state for a single job after a run."""
@@ -391,12 +413,48 @@ class ETLMetadataStore:
         state.last_status = result.status
         state.last_changes_found = result.changes_found
         state.last_documents_upserted = result.documents_upserted
+        state.mm_docs_sent = result.mm_docs_sent
         state.effective_start_date = result.effective_start_date
         state.effective_end_date = result.effective_end_date
         state.duration_seconds = result.duration_seconds
         state.errors_count = result.errors_count
 
         return self.save_job_states(states)
+
+    def save_run_summary(self, metadata: ETLRunMetadata) -> bool:
+        """Persist the latest run summary into the state file alongside job states."""
+        data = self._load_state_file()
+        data["last_run_summary"] = {
+            "run_id": metadata.run_id,
+            "run_date": metadata.run_date,
+            "status": metadata.status,
+            "started_at": metadata.started_at.isoformat() if metadata.started_at else None,
+            "completed_at": metadata.completed_at.isoformat() if metadata.completed_at else None,
+            "duration_seconds": metadata.duration_seconds,
+            "total_jobs": metadata.total_jobs,
+            "jobs_completed": metadata.jobs_completed,
+            "jobs_failed": metadata.jobs_failed,
+            "total_changes_found": metadata.total_changes_found,
+            "total_documents_upserted": metadata.total_documents_upserted,
+            "total_errors": metadata.total_errors,
+            "total_mm_docs_sent": metadata.total_mm_docs_sent,
+            "media_manager_pipeline": {
+                "health_check": metadata.mm_health_check,
+                "queue_drained": metadata.mm_queue_drained,
+                "queue_drain_error": metadata.mm_queue_drain_error,
+                "indexes_rebuilt": metadata.mm_indexes_rebuilt,
+                "rebuild_errors": metadata.mm_rebuild_errors,
+                "finalize_publish": metadata.mm_finalize_publish,
+                "finalize_error": metadata.mm_finalize_error,
+            },
+        }
+        return self._save_state_file(data)
+
+    def get_last_run_summary(self) -> dict[str, Any] | None:
+        """Load the last run summary from the state file."""
+        data = self._load_state_file()
+        summary: dict[str, Any] | None = data.get("last_run_summary")
+        return summary
 
     def get_last_run_date(self, job_name: str) -> str | None:
         """
@@ -438,6 +496,7 @@ class ETLMetadataStore:
             return None
 
         # Reconstruct metadata from dict
+        mm_pipeline = data.get("media_manager_pipeline", {})
         metadata = ETLRunMetadata(
             run_id=data.get("run_id", run_id),
             run_date=data.get("run_date", run_date),
@@ -450,6 +509,13 @@ class ETLMetadataStore:
             total_documents_upserted=data.get("total_documents_upserted", 0),
             total_errors=data.get("total_errors", 0),
             total_mm_docs_sent=data.get("total_mm_docs_sent", 0),
+            mm_health_check=mm_pipeline.get("health_check"),
+            mm_queue_drained=mm_pipeline.get("queue_drained"),
+            mm_queue_drain_error=mm_pipeline.get("queue_drain_error"),
+            mm_indexes_rebuilt=mm_pipeline.get("indexes_rebuilt", []),
+            mm_rebuild_errors=mm_pipeline.get("rebuild_errors", []),
+            mm_finalize_publish=mm_pipeline.get("finalize_publish"),
+            mm_finalize_error=mm_pipeline.get("finalize_error"),
             config_snapshot=data.get("config_snapshot", {}),
             logs=data.get("logs", []),
         )

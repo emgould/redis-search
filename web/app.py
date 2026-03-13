@@ -3763,12 +3763,98 @@ async def get_etl_job_states(_: None = Depends(require_api_key)):
     try:
         store = _get_etl_metadata_store()
         states = store.get_all_job_states()
+        last_run_summary = store.get_last_run_summary()
         return JSONResponse(
             content={
                 "success": True,
                 "environment": env_name,
                 "states": {name: state.to_dict() for name, state in states.items()},
+                "last_run_summary": last_run_summary,
             }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)},
+        )
+
+
+# ---------------------------------------------------------------------------
+# ETL VM log viewer – fetch docker logs from the ETL VM over gcloud SSH
+# ---------------------------------------------------------------------------
+
+_ETL_VM_NAME = os.getenv("ETL_VM_NAME", "etl-runner-vm")
+_ETL_VM_ZONE = os.getenv("ETL_VM_ZONE", "us-central1-a")
+_ETL_VM_CONTAINER = os.getenv("ETL_VM_CONTAINER", "etl-runner")
+
+
+@app.get("/api/etl/vm/logs")
+async def get_etl_vm_logs(
+    since: str = Query("24h", description="Docker logs --since value, e.g. 24h, 12h, 2026-03-12"),
+    tail: int | None = Query(None, description="Max lines to return", ge=1, le=10000),
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Fetch docker logs from the ETL VM via gcloud SSH + IAP tunnel."""
+
+    def _fetch_logs() -> tuple[str, int]:
+        cmd: list[str] = [
+            "gcloud", "compute", "ssh", _ETL_VM_NAME,
+            f"--zone={_ETL_VM_ZONE}",
+            "--tunnel-through-iap",
+            "--",
+            "docker", "logs", "--since", since,
+        ]
+        if tail is not None:
+            cmd.extend(["--tail", str(tail)])
+        cmd.append(_ETL_VM_CONTAINER)
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=45,
+        )
+        combined = (result.stdout or "") + (result.stderr or "")
+        return combined, result.returncode
+
+    try:
+        output, returncode = await asyncio.to_thread(_fetch_logs)
+
+        if returncode != 0:
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "success": False,
+                    "error": f"gcloud SSH exited {returncode}",
+                    "logs": output[-4000:] if output else "",
+                },
+            )
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "logs": output,
+                "since": since,
+                "tail": tail,
+                "vm": _ETL_VM_NAME,
+                "container": _ETL_VM_CONTAINER,
+            }
+        )
+    except subprocess.TimeoutExpired:
+        return JSONResponse(
+            status_code=504,
+            content={
+                "success": False,
+                "error": "Timed out connecting to ETL VM (45s). Is the VM running?",
+            },
+        )
+    except FileNotFoundError:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": "gcloud CLI not found. This endpoint requires a local environment with gcloud installed.",
+            },
         )
     except Exception as e:
         return JSONResponse(
