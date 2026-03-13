@@ -46,12 +46,26 @@ EOF
 # Setup cron job to run at 3 AM UTC
 setup_cron() {
     echo "Setting up cron job for 3 AM UTC..."
-    
-    # Create the cron job that sources env vars before running
-    # Output goes to stdout/stderr (Docker logs) via /proc/1/fd
+
+    mkdir -p /var/log/etl
+
+    # Wrapper script: tees output to both a dated log file and docker logs
+    cat > /app/run-etl-cron.sh << 'SCRIPT'
+#!/bin/bash
+. /app/.env
+cd /app
+LOG_DIR="/var/log/etl"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/etl-$(date +%Y-%m-%d).log"
+echo "=== ETL Run Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+python -m etl.run_nightly_etl 2>&1 | tee -a "$LOG_FILE" > /proc/1/fd/1
+echo "=== ETL Run Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+SCRIPT
+    chmod +x /app/run-etl-cron.sh
+
     cat > /etc/cron.d/etl-cron << EOF
-# Run ETL at 3 AM UTC daily
-0 3 * * * root . /app/.env && cd /app && python -m etl.run_nightly_etl >> /proc/1/fd/1 2>> /proc/1/fd/2
+# Run ETL at 3 AM UTC daily (logs persisted to /var/log/etl/)
+0 3 * * * root /app/run-etl-cron.sh
 
 # Empty line required by cron
 EOF

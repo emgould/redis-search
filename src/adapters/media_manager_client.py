@@ -7,6 +7,8 @@ import os
 from typing import Any, TypedDict
 from urllib.parse import urlparse
 
+import google.auth.transport.requests
+import google.oauth2.id_token
 import httpx
 
 from utils.get_logger import get_logger
@@ -101,7 +103,28 @@ class MediaManagerClient:
             parsed = urlparse(self._base_url)
             port = parsed.port or (443 if parsed.scheme == "https" else 80)
             headers["Host"] = f"localhost:{port}"
+
+        id_token = self._fetch_id_token()
+        if id_token:
+            headers["Authorization"] = f"Bearer {id_token}"
+
         return headers
+
+    def _fetch_id_token(self) -> str | None:
+        """Fetch a GCP identity token for Cloud Run authentication.
+
+        Returns None when not running on GCE/Cloud Run or when the
+        target is a local URL (localhost / host.docker.internal).
+        """
+        if any(h in self._base_url for h in ("localhost", "127.0.0.1", "host.docker.internal")):
+            return None
+        try:
+            request = google.auth.transport.requests.Request()
+            token: str = google.oauth2.id_token.fetch_id_token(request, self._base_url)
+            return token
+        except Exception as exc:
+            logger.debug("Could not fetch GCP identity token (expected in local dev): %s", exc)
+            return None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:

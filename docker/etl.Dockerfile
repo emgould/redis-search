@@ -27,6 +27,11 @@ COPY src/ ./src/
 COPY web/ ./web/
 COPY config/etl_jobs.yaml ./config/
 
+# Copy data files needed at runtime
+COPY data/wikidata_tmdb_tms_crossref.json ./data/
+COPY data/itpc/ ./data/itpc/
+COPY data/aliases/ ./data/aliases/
+
 # Copy entrypoint script
 COPY docker/etl-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

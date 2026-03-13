@@ -10,7 +10,7 @@
         <span class="text-2xl">🔌</span>
         <div>
           <p class="text-surface-400 text-sm">Connected to</p>
-          <p class="font-semibold text-white">
+          <p class="font-semibold text-white" id="redis-env-label">
             {{ current_env | capitalize }} Redis
           </p>
         </div>
@@ -21,13 +21,57 @@
         </span>
         <div id="redis-status" class="flex items-center gap-2">
           <span
+            id="redis-status-dot"
             class="w-2 h-2 rounded-full {% if redis_connected %}bg-green-400{% else %}bg-red-400{% endif %}"
           ></span>
           <span
+            id="redis-status-text"
             class="text-sm {% if redis_connected %}text-green-400{% else %}text-red-400{% endif %}"
           >
             {% if redis_connected %}Connected{% else %}Disconnected{% endif %}
           </span>
+        </div>
+        <button
+          id="redis-switch-btn"
+          onclick="switchRedisEnv()"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+            {% if current_env == 'local' %}bg-blue-600 hover:bg-blue-500 text-white{% else %}bg-amber-600 hover:bg-amber-500 text-white{% endif %}"
+        >
+          Switch to {% if current_env == 'local' %}Public{% else %}Local{% endif %}
+        </button>
+      </div>
+    </div>
+
+    <!-- ETL VM Status Card -->
+    <div class="bg-surface-900 rounded-xl border border-surface-800 p-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🖥️</span>
+          <div>
+            <p class="font-semibold text-white" id="vm-card-name">etl-runner-vm</p>
+            <p class="text-surface-500 text-xs">
+              <span id="vm-card-zone">us-central1-a</span>
+              <span class="mx-1">·</span>
+              <span id="vm-card-machine-type">—</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="text-center">
+            <span id="vm-status-badge"
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-surface-700 text-surface-400">
+              <span id="vm-status-dot" class="w-2 h-2 rounded-full bg-surface-500"></span>
+              <span id="vm-status-text">Loading…</span>
+            </span>
+            <p class="text-surface-600 text-[10px] mt-1" id="vm-last-start"></p>
+          </div>
+
+          <button id="vm-action-btn" onclick="vmAction()"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-surface-700 text-surface-400"
+            disabled>
+            —
+          </button>
         </div>
       </div>
     </div>
@@ -180,6 +224,61 @@
       </div>
     </section>
 
+    <!-- Finalize Publish -->
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-semibold flex items-center gap-2">
+            <span class="text-2xl">📡</span> Finalize Publish
+          </h2>
+          <p class="text-surface-400 text-sm mt-1">
+            Triggers Media Manager live redeployment. Promotes staged data to serving instances.
+          </p>
+        </div>
+        <button
+          onclick="triggerFinalizePublish()"
+          id="btn-finalize-publish"
+          class="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Finalize Publish
+        </button>
+      </div>
+      <div id="finalize-publish-result" class="mt-4 hidden">
+        <div class="bg-surface-800 rounded-lg p-4 border border-surface-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span id="finalize-indicator">⏳</span>
+            <span id="finalize-label" class="font-medium text-sm text-surface-300">Running...</span>
+          </div>
+          <div id="finalize-stats" class="hidden grid grid-cols-3 sm:grid-cols-6 gap-3 text-center">
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-green-400" id="fp-movies-added">0</p>
+              <p class="text-[10px] text-surface-500">Movies Added</p>
+            </div>
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-blue-400" id="fp-movies-updated">0</p>
+              <p class="text-[10px] text-surface-500">Movies Updated</p>
+            </div>
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-green-400" id="fp-tv-added">0</p>
+              <p class="text-[10px] text-surface-500">TV Added</p>
+            </div>
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-blue-400" id="fp-tv-updated">0</p>
+              <p class="text-[10px] text-surface-500">TV Updated</p>
+            </div>
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-purple-400" id="fp-readers-recycled">—</p>
+              <p class="text-[10px] text-surface-500">Readers Recycled</p>
+            </div>
+            <div class="bg-surface-900/50 rounded-lg p-2">
+              <p class="text-lg font-bold text-red-400" id="fp-errors">0</p>
+              <p class="text-[10px] text-surface-500">Errors</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Individual Job Triggers -->
     <section class="bg-surface-900 rounded-xl border border-surface-800 p-6">
       <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -271,7 +370,7 @@
         </h2>
         <div class="flex items-center gap-2">
           <button
-            onclick="toggleVmLogs()"
+            onclick="openVmLogsModal()"
             id="btn-vm-logs"
             class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
@@ -284,38 +383,6 @@
           >
             <span id="refresh-runs-icon">🔄</span> Refresh
           </button>
-        </div>
-      </div>
-
-      <!-- VM Logs Panel (hidden by default) -->
-      <div id="vm-logs-panel" class="hidden mb-6">
-        <div class="bg-surface-800 rounded-lg border border-surface-700 overflow-hidden">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-surface-700">
-            <p class="text-sm font-medium text-surface-300">ETL VM Docker Logs</p>
-            <div class="flex items-center gap-3">
-              <select
-                id="vm-logs-since"
-                class="px-2 py-1 bg-surface-900 border border-surface-600 rounded text-sm text-white focus:border-brand-500"
-              >
-                <option value="1h">Last 1 hour</option>
-                <option value="6h">Last 6 hours</option>
-                <option value="12h">Last 12 hours</option>
-                <option value="24h" selected>Last 24 hours</option>
-                <option value="48h">Last 48 hours</option>
-                <option value="72h">Last 3 days</option>
-              </select>
-              <button
-                onclick="fetchVmLogs()"
-                id="btn-fetch-vm-logs"
-                class="px-3 py-1 bg-brand-600 hover:bg-brand-500 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <span id="vm-logs-fetch-icon">↻</span> Fetch
-              </button>
-            </div>
-          </div>
-          <div id="vm-logs-output" class="p-0">
-            <p class="text-surface-500 text-sm text-center py-6">Select a time range and click Fetch to load VM logs.</p>
-          </div>
         </div>
       </div>
 
@@ -410,6 +477,18 @@ Loading configuration...</pre
           </div>
         </div>
         {% endif %}
+        <button
+          id="target-modal-vm-btn"
+          onclick="closeTargetModal(); executeFullEtl('vm');"
+          class="w-full flex items-center gap-3 p-4 bg-surface-800 hover:bg-surface-700 border border-surface-600 hover:border-green-500/50 rounded-lg transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface-800 disabled:hover:border-surface-600"
+          disabled
+        >
+          <span class="text-2xl">🖥️</span>
+          <div>
+            <p class="font-medium text-white">ETL VM Instance</p>
+            <p class="text-sm text-surface-400" id="target-modal-vm-subtitle">Checking VM status...</p>
+          </div>
+        </button>
       </div>
     </div>
     <div class="flex justify-end p-4 border-t border-surface-700">
@@ -485,7 +564,7 @@ Loading configuration...</pre
       </div>
 
       <!-- Verbose -->
-      <div class="flex items-center gap-3">
+      <div id="job-verbose-row" class="flex items-center gap-3">
         <label class="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -495,6 +574,30 @@ Loading configuration...</pre
           />
           <span class="text-sm text-surface-300">Verbose logging</span>
         </label>
+      </div>
+
+      <!-- Execution Target -->
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-2">Run on</label>
+        <div class="flex rounded-lg overflow-hidden border border-surface-600">
+          <button
+            type="button"
+            id="job-target-local"
+            onclick="selectJobTarget('local')"
+            class="flex-1 px-3 py-2 text-sm font-medium bg-brand-600 text-white transition-colors"
+          >
+            Local
+          </button>
+          <button
+            type="button"
+            id="job-target-vm"
+            onclick="selectJobTarget('vm')"
+            class="flex-1 px-3 py-2 text-sm font-medium bg-surface-800 text-surface-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled
+          >
+            ETL VM
+          </button>
+        </div>
       </div>
     </div>
 
@@ -514,6 +617,86 @@ Loading configuration...</pre
         🚀 Run ETL
       </button>
     </div>
+  </div>
+</div>
+
+<!-- VM Logs Modal (full-screen) -->
+<div
+  id="vm-logs-modal"
+  class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col"
+  style="display: none"
+>
+  <!-- Header -->
+  <div class="flex-none flex items-center justify-between px-6 py-4 bg-surface-900 border-b border-surface-700">
+    <h3 class="text-lg font-semibold flex items-center gap-2">
+      <span>🖥️</span> ETL VM Logs
+    </h3>
+    <div class="flex items-center gap-4">
+      <!-- Date selector -->
+      <select
+        id="vm-logs-date"
+        onchange="fetchVmLogs()"
+        class="px-2 py-1.5 bg-surface-800 border border-surface-600 rounded text-sm text-white focus:border-brand-500"
+      >
+        <option value="">Loading dates...</option>
+      </select>
+      <!-- Fetch button -->
+      <button
+        onclick="fetchVmLogs()"
+        id="btn-fetch-vm-logs"
+        class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+      >
+        <span id="vm-logs-fetch-icon">↻</span> Fetch
+      </button>
+      <!-- Tail toggle -->
+      <button
+        onclick="toggleLogTail()"
+        id="btn-tail-vm-logs"
+        class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded text-sm font-medium transition-colors flex items-center gap-1.5"
+      >
+        <span id="tail-indicator" class="inline-block w-2 h-2 rounded-full bg-surface-600"></span>
+        Tail
+      </button>
+      <!-- Copy -->
+      <button
+        onclick="copyVmLogs()"
+        class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 rounded text-sm font-medium transition-colors"
+      >
+        Copy
+      </button>
+      <!-- Close -->
+      <button
+        onclick="closeVmLogsModal()"
+        class="text-surface-400 hover:text-white p-1 rounded text-xl leading-none"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="flex-none flex items-center gap-4 px-6 py-3 bg-surface-900/80 border-b border-surface-700/50">
+    <input
+      type="text"
+      id="vm-logs-filter"
+      placeholder="Filter logs... (case-insensitive)"
+      oninput="applyLogFilter()"
+      class="flex-1 px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-white placeholder-surface-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 font-mono"
+    />
+    <span id="vm-logs-match-count" class="text-xs text-surface-500 whitespace-nowrap"></span>
+  </div>
+
+  <!-- Log content -->
+  <div class="flex-1 overflow-hidden">
+    <div id="vm-logs-output" class="h-full overflow-y-auto bg-surface-950 p-0">
+      <p class="text-surface-500 text-sm text-center py-12">Select a date and click Fetch, or change the date dropdown to load logs.</p>
+    </div>
+  </div>
+
+  <!-- Footer status bar -->
+  <div class="flex-none flex items-center justify-between px-6 py-2 bg-surface-900 border-t border-surface-700 text-xs text-surface-500">
+    <span id="vm-logs-status">Ready</span>
+    <span id="vm-logs-line-count"></span>
   </div>
 </div>
 
@@ -601,6 +784,54 @@ Loading configuration...</pre
   }
 
   // ============================================================
+  // Finalize Publish
+  // ============================================================
+
+  async function triggerFinalizePublish() {
+    if (!confirm("This will trigger a LIVE redeployment on Media Manager.\n\nAll staged data will be promoted to serving instances.\n\nContinue?")) return;
+
+    const btn = document.getElementById("btn-finalize-publish");
+    const resultEl = document.getElementById("finalize-publish-result");
+    const statsEl = document.getElementById("finalize-stats");
+    const indicator = document.getElementById("finalize-indicator");
+    const label = document.getElementById("finalize-label");
+
+    btn.disabled = true;
+    resultEl.classList.remove("hidden");
+    statsEl.classList.add("hidden");
+    indicator.textContent = "⏳";
+    label.textContent = "Running finalize-publish...";
+    label.className = "font-medium text-sm text-amber-400";
+
+    try {
+      const res = await fetch("/api/etl/finalize-publish", { method: "POST" });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Unknown error");
+      }
+
+      indicator.textContent = "✅";
+      label.textContent = `Finalize publish completed — ${data.status}`;
+      label.className = "font-medium text-sm text-green-400";
+
+      document.getElementById("fp-movies-added").textContent = data.movies_added;
+      document.getElementById("fp-movies-updated").textContent = data.movies_updated;
+      document.getElementById("fp-tv-added").textContent = data.tv_added;
+      document.getElementById("fp-tv-updated").textContent = data.tv_updated;
+      document.getElementById("fp-readers-recycled").textContent = data.readers_recycled ? "Yes" : "No";
+      document.getElementById("fp-errors").textContent = data.total_errors;
+      statsEl.classList.remove("hidden");
+    } catch (e) {
+      indicator.textContent = "❌";
+      label.textContent = "Error: " + e.message;
+      label.className = "font-medium text-sm text-red-400";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ============================================================
   // Full ETL Functions
   // ============================================================
 
@@ -621,8 +852,8 @@ Loading configuration...</pre
     resultEl.classList.add("hidden");
     indicatorEl.textContent = "⏳";
     indicatorEl.className = "animate-spin";
-    const targetLabel = etlTarget === "cloud" ? "Cloud Run" : "Local Docker";
-    labelEl.textContent = `Starting ETL on ${targetLabel}...`;
+    const targetLabels = { cloud: "Cloud Run", vm: "ETL VM", local: "Local Docker" };
+    labelEl.textContent = `Starting ETL on ${targetLabels[etlTarget] || "Local Docker"}...`;
     labelEl.className = "font-medium text-brand-400";
 
     // Reset progress
@@ -633,6 +864,36 @@ Loading configuration...</pre
     const startDate =
       document.getElementById("full-etl-start-date").value || null;
     const endDate = document.getElementById("full-etl-end-date").value || null;
+
+    if (etlTarget === "vm") {
+      try {
+        const body = {};
+        if (startDate) body.start_date = startDate;
+        if (endDate) body.end_date = endDate;
+
+        const res = await fetch("/api/etl/vm/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.error);
+
+        indicatorEl.textContent = "✅";
+        indicatorEl.className = "";
+        labelEl.textContent = data.message || "ETL dispatched to VM. Monitor progress in VM Logs.";
+        labelEl.className = "font-medium text-green-400";
+        btn.disabled = false;
+      } catch (e) {
+        indicatorEl.textContent = "❌";
+        indicatorEl.className = "";
+        labelEl.textContent = "Error: " + e.message;
+        labelEl.className = "font-medium text-red-400";
+        btn.disabled = false;
+      }
+      return;
+    }
 
     const triggerUrl = etlTarget === "cloud"
       ? "/api/etl/cloud/trigger"
@@ -748,6 +1009,26 @@ Loading configuration...</pre
   // Individual Job Functions
   // ============================================================
 
+  let _jobTarget = "local";
+
+  function selectJobTarget(target) {
+    _jobTarget = target;
+    const localBtn = document.getElementById("job-target-local");
+    const vmBtn = document.getElementById("job-target-vm");
+    const verboseRow = document.getElementById("job-verbose-row");
+
+    if (target === "vm") {
+      vmBtn.className = "flex-1 px-3 py-2 text-sm font-medium bg-green-600 text-white transition-colors";
+      localBtn.className = "flex-1 px-3 py-2 text-sm font-medium bg-surface-800 text-surface-400 transition-colors";
+      verboseRow.classList.add("hidden");
+    } else {
+      localBtn.className = "flex-1 px-3 py-2 text-sm font-medium bg-brand-600 text-white transition-colors";
+      vmBtn.className = "flex-1 px-3 py-2 text-sm font-medium bg-surface-800 text-surface-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+      vmBtn.disabled = _vmCurrentStatus !== "RUNNING";
+      verboseRow.classList.remove("hidden");
+    }
+  }
+
   function openJobModal(mediaType) {
     const modal = document.getElementById("job-modal");
     const typeLabel = document.getElementById("job-modal-type-label");
@@ -771,6 +1052,7 @@ Loading configuration...</pre
     document.getElementById("job-start-date").value = "";
     document.getElementById("job-end-date").value = "";
     document.getElementById("job-verbose").checked = true;
+    selectJobTarget("local");
 
     modal.style.display = "flex";
   }
@@ -786,7 +1068,60 @@ Loading configuration...</pre
     const verbose = document.getElementById("job-verbose").checked;
 
     closeJobModal();
-    await triggerSingleJob(mediaType, startDate, endDate, verbose);
+
+    if (_jobTarget === "vm") {
+      await triggerVmJob(mediaType, startDate, endDate);
+    } else {
+      await triggerSingleJob(mediaType, startDate, endDate, verbose);
+    }
+  }
+
+  async function triggerVmJob(mediaType, startDate, endDate) {
+    const btn = document.getElementById(`btn-job-${mediaType}`);
+    const statusEl = document.getElementById(`job-status-${mediaType}`);
+
+    btn.disabled = true;
+    statusEl.classList.remove("hidden");
+    statusEl.innerHTML = `
+    <div class="bg-surface-800 rounded-lg p-3 border border-green-500/30">
+      <div class="flex items-center gap-2">
+        <span class="animate-spin">⏳</span>
+        <span class="font-medium text-green-400">Dispatching to ETL VM...</span>
+      </div>
+    </div>`;
+
+    try {
+      const body = { job: mediaType };
+      if (startDate) body.start_date = startDate;
+      if (endDate) body.end_date = endDate;
+
+      const res = await fetch("/api/etl/vm/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error);
+
+      statusEl.innerHTML = `
+      <div class="bg-surface-800 rounded-lg p-3 border border-green-500/30">
+        <div class="flex items-center gap-2">
+          <span>✅</span>
+          <span class="font-medium text-green-400">${data.message || "Dispatched to VM"}</span>
+        </div>
+      </div>`;
+    } catch (e) {
+      statusEl.innerHTML = `
+      <div class="bg-surface-800 rounded-lg p-3 border border-red-500/30">
+        <div class="flex items-center gap-2">
+          <span>❌</span>
+          <span class="font-medium text-red-400">Error: ${e.message}</span>
+        </div>
+      </div>`;
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   async function triggerSingleJob(mediaType, startDate, endDate, verbose) {
@@ -1184,67 +1519,268 @@ Loading configuration...</pre
   }
 
   // ============================================================
-  // VM Logs
+  // VM Logs Modal
   // ============================================================
 
-  function toggleVmLogs() {
-    const panel = document.getElementById("vm-logs-panel");
-    panel.classList.toggle("hidden");
+  let vmLogsDatesLoaded = false;
+  let vmLogsRawLines = [];
+  let _tailActive = false;
+  let _tailTimer = null;
+  const _TAIL_INTERVAL_MS = 4000;
+
+  async function openVmLogsModal() {
+    const modal = document.getElementById("vm-logs-modal");
+    modal.style.display = "flex";
+    document.getElementById("vm-logs-filter").value = "";
+    document.getElementById("vm-logs-match-count").textContent = "";
+    document.body.style.overflow = "hidden";
+    if (!vmLogsDatesLoaded) {
+      await loadVmLogDates();
+    }
+  }
+
+  function closeVmLogsModal() {
+    stopLogTail();
+    document.getElementById("vm-logs-modal").style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  async function loadVmLogDates() {
+    const select = document.getElementById("vm-logs-date");
+    select.innerHTML = '<option value="">Loading dates...</option>';
+
+    try {
+      const res = await fetch("/api/etl/vm/logs/dates");
+      const data = await res.json();
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (!data.success || !data.dates || data.dates.length === 0) {
+        select.innerHTML = `<option value="${today}">${today} (today)</option>`;
+        vmLogsDatesLoaded = true;
+        return;
+      }
+
+      select.innerHTML = data.dates.map((d, i) => {
+        const label = d === today ? `${d} (today)` : d;
+        return `<option value="${d}" ${i === 0 ? "selected" : ""}>${label}</option>`;
+      }).join("");
+      vmLogsDatesLoaded = true;
+    } catch (e) {
+      const today = new Date().toISOString().slice(0, 10);
+      select.innerHTML = `<option value="${today}">${today} (today)</option>`;
+      vmLogsDatesLoaded = true;
+    }
   }
 
   async function fetchVmLogs() {
+    stopLogTail();
     const btn = document.getElementById("btn-fetch-vm-logs");
     const icon = document.getElementById("vm-logs-fetch-icon");
     const output = document.getElementById("vm-logs-output");
-    const since = document.getElementById("vm-logs-since").value;
+    const status = document.getElementById("vm-logs-status");
+    const lineCountEl = document.getElementById("vm-logs-line-count");
+    const date = document.getElementById("vm-logs-date").value;
 
     btn.disabled = true;
     icon.classList.add("animate-spin");
-    output.innerHTML = '<p class="text-surface-400 text-sm text-center py-6 animate-pulse">Connecting to ETL VM via IAP tunnel...</p>';
+    status.textContent = "Connecting to ETL VM via IAP tunnel...";
+    output.innerHTML = '<p class="text-surface-400 text-sm text-center py-12 animate-pulse">Connecting to ETL VM via IAP tunnel...</p>';
 
     try {
-      const params = new URLSearchParams({ since });
+      const params = new URLSearchParams();
+      if (date) params.set("date", date);
       const res = await fetch(`/api/etl/vm/logs?${params}`);
       const data = await res.json();
 
       if (!data.success) {
-        output.innerHTML = `<div class="p-4 text-red-400 text-sm"><p class="font-medium mb-1">Failed to fetch logs</p><p>${data.error || "Unknown error"}</p>${data.logs ? `<pre class="mt-2 text-xs text-surface-500 whitespace-pre-wrap">${escapeHtml(data.logs)}</pre>` : ""}</div>`;
+        output.innerHTML = `<div class="p-6 text-red-400 text-sm"><p class="font-medium mb-1">Failed to fetch logs</p><p>${data.error || "Unknown error"}</p></div>`;
+        status.textContent = "Error";
+        lineCountEl.textContent = "";
+        vmLogsRawLines = [];
         return;
       }
 
       const logs = data.logs || "";
       if (!logs.trim()) {
-        output.innerHTML = '<p class="text-surface-500 text-sm text-center py-6">No log output for this time range.</p>';
+        const msg = data.error || `No log file for ${data.date}. ETL may not have run yet.`;
+        output.innerHTML = `<p class="text-surface-500 text-sm text-center py-12">${msg}</p>`;
+        status.textContent = msg;
+        lineCountEl.textContent = "";
+        vmLogsRawLines = [];
         return;
       }
 
-      const lineCount = logs.split("\n").filter(l => l.trim()).length;
-      output.innerHTML = `
-        <div class="flex items-center justify-between px-4 py-2 bg-surface-900/50 border-b border-surface-700/50">
-          <span class="text-xs text-surface-500">${lineCount} lines · ${data.vm} / ${data.container} · since ${data.since}</span>
-          <button onclick="copyVmLogs()" class="text-xs text-surface-400 hover:text-white transition-colors">Copy</button>
-        </div>
-        <pre id="vm-logs-text" class="p-4 text-xs text-surface-300 font-mono whitespace-pre-wrap break-words overflow-y-auto max-h-[32rem] leading-relaxed">${escapeHtml(logs)}</pre>`;
+      vmLogsRawLines = logs.split("\n");
+      const total = vmLogsRawLines.length;
+      status.textContent = `${data.vm} · ${data.date}`;
+      lineCountEl.textContent = `${total} lines`;
 
-      const pre = document.getElementById("vm-logs-text");
-      pre.scrollTop = pre.scrollHeight;
+      document.getElementById("vm-logs-filter").value = "";
+      document.getElementById("vm-logs-match-count").textContent = "";
+      renderLogLines(vmLogsRawLines, "");
     } catch (e) {
-      output.innerHTML = `<div class="p-4 text-red-400 text-sm">Network error: ${e.message}</div>`;
+      output.innerHTML = `<div class="p-6 text-red-400 text-sm">Network error: ${e.message}</div>`;
+      status.textContent = "Error";
+      vmLogsRawLines = [];
     } finally {
       btn.disabled = false;
       icon.classList.remove("animate-spin");
     }
   }
 
+  // ---- Tail (simulated tail -f) ----
+
+  function toggleLogTail() {
+    if (_tailActive) {
+      stopLogTail();
+    } else {
+      startLogTail();
+    }
+  }
+
+  function startLogTail() {
+    if (_tailActive) return;
+
+    if (vmLogsRawLines.length === 0) {
+      fetchVmLogs().then(() => {
+        _tailActive = true;
+        updateTailUI();
+        scrollLogsToBottom();
+        scheduleTailPoll();
+      });
+      return;
+    }
+
+    _tailActive = true;
+    updateTailUI();
+    scrollLogsToBottom();
+    scheduleTailPoll();
+  }
+
+  function stopLogTail() {
+    _tailActive = false;
+    clearTimeout(_tailTimer);
+    _tailTimer = null;
+    updateTailUI();
+  }
+
+  function updateTailUI() {
+    const indicator = document.getElementById("tail-indicator");
+    const btn = document.getElementById("btn-tail-vm-logs");
+    if (_tailActive) {
+      indicator.className = "inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse";
+      btn.classList.remove("bg-surface-800", "hover:bg-surface-700");
+      btn.classList.add("bg-green-900/40", "hover:bg-green-900/60", "text-green-400");
+    } else {
+      indicator.className = "inline-block w-2 h-2 rounded-full bg-surface-600";
+      btn.classList.remove("bg-green-900/40", "hover:bg-green-900/60", "text-green-400");
+      btn.classList.add("bg-surface-800", "hover:bg-surface-700");
+    }
+  }
+
+  function scheduleTailPoll() {
+    if (!_tailActive) return;
+    _tailTimer = setTimeout(pollTail, _TAIL_INTERVAL_MS);
+  }
+
+  async function pollTail() {
+    if (!_tailActive) return;
+
+    const date = document.getElementById("vm-logs-date").value;
+    const sinceLine = vmLogsRawLines.length;
+
+    try {
+      const params = new URLSearchParams();
+      if (date) params.set("date", date);
+      params.set("since_line", sinceLine);
+      const res = await fetch(`/api/etl/vm/logs?${params}`);
+      const data = await res.json();
+
+      if (data.success && data.logs && data.logs.trim()) {
+        const newLines = data.logs.split("\n");
+        vmLogsRawLines.push(...newLines);
+
+        const lineCountEl = document.getElementById("vm-logs-line-count");
+        lineCountEl.textContent = `${vmLogsRawLines.length} lines`;
+
+        const filter = document.getElementById("vm-logs-filter").value;
+        renderLogLines(vmLogsRawLines, filter);
+        scrollLogsToBottom();
+      }
+    } catch {
+      // Swallow network errors during tail; retry on next poll
+    }
+
+    scheduleTailPoll();
+  }
+
+  function scrollLogsToBottom() {
+    const container = document.getElementById("vm-logs-output");
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+
+  function renderLogLines(lines, filter) {
+    const output = document.getElementById("vm-logs-output");
+    const matchCountEl = document.getElementById("vm-logs-match-count");
+
+    const needle = filter.toLowerCase();
+    let filtered = lines;
+    if (needle) {
+      filtered = lines.filter(l => l.toLowerCase().includes(needle));
+      matchCountEl.textContent = `${filtered.length} / ${lines.length} lines`;
+    } else {
+      matchCountEl.textContent = "";
+    }
+
+    if (filtered.length === 0 && needle) {
+      output.innerHTML = `<p class="text-surface-500 text-sm text-center py-12">No lines match "${escapeHtml(filter)}"</p>`;
+      return;
+    }
+
+    const html = filtered.map((line, i) => {
+      let escaped = escapeHtml(line);
+      if (needle && escaped) {
+        const re = new RegExp(`(${escapeRegex(needle)})`, "gi");
+        escaped = escaped.replace(re, '<mark class="bg-amber-500/40 text-white rounded-sm px-0.5">$1</mark>');
+      }
+      const num = String(i + 1).padStart(4, " ");
+      const isError = /\b(error|exception|traceback|failed|critical)\b/i.test(line);
+      const lineClass = isError ? "text-red-400" : "text-surface-300";
+      return `<span class="select-none text-surface-600 mr-3">${num}</span><span class="${lineClass}">${escaped || " "}</span>`;
+    }).join("\n");
+
+    output.innerHTML = `<pre class="px-4 py-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words h-full">${html}</pre>`;
+  }
+
+  let _filterTimeout = null;
+  function applyLogFilter() {
+    clearTimeout(_filterTimeout);
+    _filterTimeout = setTimeout(() => {
+      const filter = document.getElementById("vm-logs-filter").value;
+      if (vmLogsRawLines.length > 0) {
+        renderLogLines(vmLogsRawLines, filter);
+      }
+    }, 150);
+  }
+
   function copyVmLogs() {
-    const pre = document.getElementById("vm-logs-text");
-    if (pre) navigator.clipboard.writeText(pre.textContent || "");
+    const filter = document.getElementById("vm-logs-filter").value.toLowerCase();
+    let lines = vmLogsRawLines;
+    if (filter) lines = lines.filter(l => l.toLowerCase().includes(filter));
+    navigator.clipboard.writeText(lines.join("\n"));
   }
 
   function escapeHtml(text) {
     const el = document.createElement("div");
     el.textContent = text;
     return el.innerHTML;
+  }
+
+  function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   // ============================================================
@@ -1281,5 +1817,200 @@ Loading configuration...</pre
     refreshRecentRuns();
     loadConfig();
   });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modal = document.getElementById("vm-logs-modal");
+      if (modal && modal.style.display !== "none") {
+        closeVmLogsModal();
+      }
+    }
+  });
+
+  // -----------------------------------------------------------------------
+  // ETL VM lifecycle card
+  // -----------------------------------------------------------------------
+  let _vmPollTimer = null;
+  let _vmCurrentStatus = null;
+
+  const VM_STATUS_STYLES = {
+    RUNNING:     { dot: "bg-green-400",  badge: "bg-green-900/40 text-green-400" },
+    TERMINATED:  { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
+    STOPPED:     { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
+    STAGING:     { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    STOPPING:    { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    PROVISIONING:{ dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    SUSPENDING:  { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    SUSPENDED:   { dot: "bg-surface-400",badge: "bg-surface-700 text-surface-400" },
+  };
+  const VM_TRANSITION_STATES = new Set(["STAGING", "STOPPING", "PROVISIONING", "SUSPENDING"]);
+
+  function renderVmStatus(data) {
+    _vmCurrentStatus = data.status;
+    const style = VM_STATUS_STYLES[data.status] || VM_STATUS_STYLES.SUSPENDED;
+
+    document.getElementById("vm-card-name").textContent = data.name || "etl-runner-vm";
+    document.getElementById("vm-card-zone").textContent = data.zone || "us-central1-a";
+    document.getElementById("vm-card-machine-type").textContent = data.machine_type || "—";
+
+    const dot = document.getElementById("vm-status-dot");
+    dot.className = `w-2 h-2 rounded-full ${style.dot}`;
+    if (VM_TRANSITION_STATES.has(data.status)) {
+      dot.classList.add("animate-pulse");
+    }
+
+    const badge = document.getElementById("vm-status-badge");
+    badge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${style.badge}`;
+    document.getElementById("vm-status-text").textContent = data.status;
+
+    if (data.last_start) {
+      const d = new Date(data.last_start);
+      document.getElementById("vm-last-start").textContent = "Started " + d.toLocaleString();
+    } else {
+      document.getElementById("vm-last-start").textContent = "";
+    }
+
+    const btn = document.getElementById("vm-action-btn");
+    if (VM_TRANSITION_STATES.has(data.status)) {
+      btn.disabled = true;
+      btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-surface-700 text-surface-400 opacity-60 cursor-not-allowed flex items-center gap-2";
+      btn.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> ' + data.status + '…';
+      startVmPoll();
+    } else if (data.status === "RUNNING") {
+      btn.disabled = false;
+      btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-500 text-white transition-colors";
+      btn.textContent = "Stop VM";
+      stopVmPoll();
+    } else {
+      btn.disabled = false;
+      btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-500 text-white transition-colors";
+      btn.textContent = "Start VM";
+      stopVmPoll();
+    }
+
+    updateVmTargetButtons(data.status === "RUNNING");
+  }
+
+  function updateVmTargetButtons(vmRunning) {
+    const targetBtn = document.getElementById("target-modal-vm-btn");
+    if (targetBtn) {
+      targetBtn.disabled = !vmRunning;
+      const sub = document.getElementById("target-modal-vm-subtitle");
+      sub.textContent = vmRunning
+        ? "Run ETL on dedicated VM, writes to GCE Redis"
+        : "VM is not running";
+    }
+
+    const jobToggle = document.getElementById("job-target-vm");
+    if (jobToggle) {
+      jobToggle.disabled = !vmRunning;
+      if (!vmRunning && jobToggle.classList.contains("ring-2")) {
+        document.getElementById("job-target-local").click();
+      }
+    }
+  }
+
+  async function fetchVmStatus() {
+    try {
+      const resp = await fetch("/api/etl/vm/status");
+      const data = await resp.json();
+      if (data.success) {
+        renderVmStatus(data);
+      }
+    } catch (e) {
+      console.error("VM status fetch error:", e);
+    }
+  }
+
+  function startVmPoll() {
+    if (_vmPollTimer) return;
+    _vmPollTimer = setInterval(fetchVmStatus, 5000);
+  }
+
+  function stopVmPoll() {
+    if (_vmPollTimer) {
+      clearInterval(_vmPollTimer);
+      _vmPollTimer = null;
+    }
+  }
+
+  async function vmAction() {
+    const action = _vmCurrentStatus === "RUNNING" ? "stop" : "start";
+    const verb = action === "stop" ? "Stop" : "Start";
+    if (!confirm(`${verb} the ETL VM?`)) return;
+
+    const btn = document.getElementById("vm-action-btn");
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-1" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> ' + verb + 'ing…';
+
+    try {
+      const resp = await fetch(`/api/etl/vm/${action}`, { method: "POST" });
+      const data = await resp.json();
+      if (!data.success) {
+        alert("Error: " + (data.error || "Unknown error"));
+        btn.disabled = false;
+        return;
+      }
+      startVmPoll();
+      fetchVmStatus();
+    } catch (e) {
+      alert("Request failed: " + e.message);
+      btn.disabled = false;
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Redis environment switcher
+  // -----------------------------------------------------------------------
+  let _currentRedisEnv = "{{ current_env }}";
+
+  async function switchRedisEnv() {
+    const targetEnv = _currentRedisEnv === "local" ? "public" : "local";
+    const btn = document.getElementById("redis-switch-btn");
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Switching…";
+
+    try {
+      const res = await fetch(`/api/switch-redis?env=${targetEnv}`, { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        _currentRedisEnv = targetEnv;
+
+        document.getElementById("redis-env-label").textContent =
+          targetEnv.charAt(0).toUpperCase() + targetEnv.slice(1) + " Redis";
+        document.getElementById("etl-env-label").textContent = targetEnv;
+
+        const dot = document.getElementById("redis-status-dot");
+        const txt = document.getElementById("redis-status-text");
+        const connected = data.status?.status === "connected";
+        dot.className = `w-2 h-2 rounded-full ${connected ? "bg-green-400" : "bg-red-400"}`;
+        txt.className = `text-sm ${connected ? "text-green-400" : "text-red-400"}`;
+        txt.textContent = connected ? "Connected" : "Disconnected";
+
+        const nextEnv = targetEnv === "local" ? "Public" : "Local";
+        btn.textContent = `Switch to ${nextEnv}`;
+        btn.className = btn.className.replace(
+          /bg-(blue|amber)-600 hover:bg-(blue|amber)-500/,
+          targetEnv === "local"
+            ? "bg-blue-600 hover:bg-blue-500"
+            : "bg-amber-600 hover:bg-amber-500"
+        );
+
+        refreshJobStates();
+      } else {
+        alert("Switch failed: " + (data.error || "Unknown error"));
+        btn.textContent = origText;
+      }
+    } catch (e) {
+      alert("Switch failed: " + e.message);
+      btn.textContent = origText;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  fetchVmStatus();
 </script>
 {% endblock %}

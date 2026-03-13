@@ -25,6 +25,8 @@ services:
     build:
       context: ..
       dockerfile: docker/cloudrun.Dockerfile
+      args:
+        INSTALL_DEV_TOOLS: "true"
     ulimits:
       nofile:
         soft: 65536
@@ -52,6 +54,9 @@ services:
       - ../scripts:/app/scripts:ro
       # Mount data directory for ETL input/output (read-write)
       - ../data:/app/data
+      # Host gcloud credentials + SSH keys for ETL VM log viewer
+      - ${HOME}/.config/gcloud:/root/.config/gcloud
+      - ${HOME}/.ssh:/root/.ssh:ro
     ports:
       - "9001:8080"
     depends_on:

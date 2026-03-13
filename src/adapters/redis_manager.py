@@ -31,7 +31,7 @@ class RedisManager:
     """Manages Redis connections for different environments."""
 
     _instance = None
-    _current_env: RedisEnvironment = RedisEnvironment.LOCAL
+    _current_env: RedisEnvironment = RedisEnvironment.PUBLIC
     _connections: dict[RedisEnvironment, Redis] = {}
 
     def __new__(cls):

@@ -537,8 +537,10 @@ class ETLRunner:
                 self._run_metadata.mm_rebuild_errors.append(str(e))
                 self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
 
-        # Finalize publish as the very last Media Manager step
-        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
+        # Finalize publish as the very last Media Manager step.
+        # Skipped for filtered (single-job) runs to avoid triggering a full
+        # live redeployment on the Media Manager side.
+        if mm_client and self._run_metadata.total_mm_docs_sent > 0 and not job_filter:
             try:
                 logger.info("Finalizing Media Manager publish...")
                 finalize_resp = await mm_client.finalize_publish()
@@ -564,6 +566,9 @@ class ETLRunner:
                 logger.error("Media Manager finalize-publish failed: %s", e)
                 self._run_metadata.mm_finalize_error = str(e)
                 self._run_metadata.add_log(f"Media Manager finalize-publish error: {e}")
+        elif mm_client and self._run_metadata.total_mm_docs_sent > 0 and job_filter:
+            logger.info("Skipping finalize_publish (filtered job run)")
+            self._run_metadata.add_log("Skipping finalize_publish (filtered job run)")
 
         if mm_client:
             try:
