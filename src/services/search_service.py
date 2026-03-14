@@ -27,6 +27,7 @@ from core.ranking import (
     score_podcast_result,
 )
 from core.search_queries import (
+    STOPWORDS,
     build_autocomplete_query,
     build_books_autocomplete_query,
     build_filter_query,
@@ -38,7 +39,12 @@ from core.search_queries import (
     strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
-from utils.soft_comparison import is_author_name_match, is_person_autocomplete_match
+from utils.normalize import normalize
+from utils.soft_comparison import (
+    _levenshtein_distance,
+    is_author_name_match,
+    is_person_autocomplete_match,
+)
 
 # Stream event: either (source, results, latency_ms) or an exact-match item event.
 StreamEvent = Union[
@@ -1104,9 +1110,86 @@ async def resolve(
 
     matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
 
+    # Fuzzy fallback: when the prefix query returned zero candidates, retry
+    # with Levenshtein distance-1 matching so misspellings still surface.
+    _FUZZY_FETCH_LIMIT = 20
+    if near_misses > 0 and not matches and not candidates:
+        fuzzy_query_str = build_fuzzy_fulltext_query(q)
+        if fuzzy_query_str != "*":
+            fuzzy_tasks: list[Any] = []
+            for source in sources:
+                if source in ("tv", "movie"):
+                    src_q = _build_media_source_query(fuzzy_query_str, source)
+                elif source in MINIMAL_AUTOCOMPLETE_SOURCES:
+                    src_q = fuzzy_query_str
+                else:
+                    continue
+                if full:
+                    if source in ("tv", "movie"):
+                        fuzzy_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search(src_q, limit=_FUZZY_FETCH_LIMIT, sort_by="popularity"),
+                            )
+                        )
+                    else:
+                        fuzzy_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search_projected(
+                                    source=source,
+                                    query_str=src_q,
+                                    fields=[],
+                                    limit=_FUZZY_FETCH_LIMIT,
+                                    sort_by="popularity",
+                                ),
+                            )
+                        )
+                else:
+                    assert projected_fields is not None
+                    fuzzy_tasks.append(
+                        timed_task(
+                            source,
+                            repo.search_projected(
+                                source=source,
+                                query_str=src_q,
+                                fields=projected_fields,
+                                limit=_FUZZY_FETCH_LIMIT,
+                                sort_by="popularity",
+                            ),
+                        )
+                    )
+            fuzzy_results = await asyncio.gather(*fuzzy_tasks, return_exceptions=True)
+            query_norm = " ".join(
+                w for w in normalize(q).split() if w not in STOPWORDS
+            )
+            for item in fuzzy_results:
+                if isinstance(item, BaseException):
+                    continue
+                if not (isinstance(item, tuple) and len(item) == 3):
+                    continue
+                fname, fdata, felapsed = item
+                timing_parts.append(f"fuzzy_{fname}={felapsed:.0f}ms")
+                if not fdata or isinstance(fdata, BaseException) or not hasattr(fdata, "docs"):
+                    continue
+                if full:
+                    fparsed = [parse_doc(doc) for doc in fdata.docs]
+                else:
+                    fparsed = [_parse_projected_doc(doc) for doc in fdata.docs]
+                for doc in fparsed:
+                    doc["source"] = fname
+                    title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
+                    title_norm = " ".join(
+                        w for w in normalize(title).split() if w not in STOPWORDS
+                    )
+                    dist = _levenshtein_distance(query_norm, title_norm)
+                    popularity = float(doc.get("popularity") or 0)
+                    doc["_rank"] = (dist, -popularity)
+                    candidates.append(doc)
+
     near_miss_results: list[dict[str, Any]] = []
     if near_misses > 0 and not matches:
-        candidates.sort(key=lambda c: c.get("_rank", (999, 9999, 0.0)))
+        candidates.sort(key=lambda c: c.get("_rank", (999, 0.0)))
         near_miss_results = candidates[:near_misses]
         for doc in near_miss_results:
             doc.pop("_rank", None)
