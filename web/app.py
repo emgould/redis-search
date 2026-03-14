@@ -590,6 +590,13 @@ async def api_resolve(
         default=False,
         description="When true, return the complete Redis document for each match.",
     ),
+    near_misses: int = Query(
+        default=0,
+        ge=0,
+        le=10,
+        description="When > 0 and no exact matches are found, return up to this many "
+        "best-ranked near-miss candidates. 0 disables (default).",
+    ),
 ):
     """
     Resolve a fully-formed title to all exact-match entities.
@@ -600,11 +607,15 @@ async def api_resolve(
     between multiple entities sharing the same name (e.g. "The Godfather"
     1972 vs 1990).
 
+    When ``near_misses`` > 0 and no exact matches are found, the response
+    includes the top N best-ranked candidates in the ``near_misses`` array.
+
     Response shape::
 
         {
             "query": "The Godfather",
             "matches": [ { ... }, { ... } ],
+            "near_misses": [],
             "total": 2,
             "latency_ms": 12.3
         }
@@ -637,7 +648,9 @@ async def api_resolve(
                 status_code=400,
             )
 
-    result = await resolve(q=q, sources=sources_set, fields=field_list, full=full)
+    result = await resolve(
+        q=q, sources=sources_set, fields=field_list, full=full, near_misses=near_misses
+    )
     return JSONResponse(content=result)
 
 

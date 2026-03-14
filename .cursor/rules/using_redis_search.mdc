@@ -86,12 +86,21 @@ SSE streaming version of `/api/search`. Same parameters. Same SSE event format a
 
 Resolve a fully-formed title to all exact-match (tier 0-1) entities. Unlike `/api/autocomplete` which returns a single `exact_match` winner, this returns every qualifying match ranked by popularity/recency.
 
+When `near_misses` > 0 and no exact matches are found, the top N best-ranked non-exact candidates are returned in a `near_misses` key, enabling "Did you mean?" fallback UX. Uses a three-tier fallback strategy:
+
+1. **Prefix candidates** — non-exact results from the primary prefix query.
+2. **Fuzzy fallback** — RediSearch Levenshtein distance-1 matching when prefix returned nothing.
+3. **Google Suggest fallback** — queries Google autocomplete for a spelling correction when fuzzy also returned nothing, then re-runs the prefix query with the corrected term. 2-second timeout; failure is silent.
+
+Fuzzy and Google Suggest candidates are ranked by Levenshtein distance to the query (stopwords stripped) with popularity as tiebreaker.
+
 | Param | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `q` | string | yes | — | Fully-formed title (min 2 chars) |
 | `sources` | string | no | tv,movie | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
 | `fields` | string | no | default set | Extra field names to include per match. Ignored when `full=true`. |
 | `full` | bool | no | false | Return the complete Redis document for each match |
+| `near_misses` | int | no | 0 | When > 0 and no exact matches found, return up to N best-ranked near-miss candidates. Range: 0–10. |
 
 Default fields (always included): `mc_id`, `mc_type`, `title`, `search_title`, `release_date`, `first_air_date`, `last_aired_date`.
 
@@ -106,8 +115,24 @@ Response:
     { "mc_id": "tmdb_238", "mc_type": "movie", "title": "The Godfather", ... },
     { "mc_id": "tmdb_240", "mc_type": "movie", "title": "The Godfather Part II", ... }
   ],
+  "near_misses": [],
   "total": 2,
   "latency_ms": 12.3
+}
+```
+
+Near-miss fallback (no exact matches, `near_misses=2`):
+
+```json
+{
+  "query": "Godfater",
+  "matches": [],
+  "near_misses": [
+    { "mc_id": "tmdb_238", "mc_type": "movie", "source": "movie", "search_title": "The Godfather", ... },
+    { "mc_id": "tmdb_240", "mc_type": "movie", "source": "movie", "search_title": "The Godfather Part II", ... }
+  ],
+  "total": 0,
+  "latency_ms": 14.1
 }
 ```
 
@@ -116,6 +141,7 @@ Key differences from autocomplete/search:
 - Returns **all** exact matches, not just one `exact_match` winner.
 - Only indexed sources (no brokered APIs).
 - Supports `full=true` for complete Redis documents.
+- Supports `near_misses` for fallback suggestions when no exact match is found.
 
 ### Detail Lookups
 

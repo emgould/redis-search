@@ -2,9 +2,11 @@ import asyncio
 import json
 import re
 import time
+import urllib.parse
 from collections.abc import AsyncIterator
 from typing import Any, Literal, Union
 
+import aiohttp
 from pydantic import BaseModel
 
 from adapters.redis_client import get_redis
@@ -27,6 +29,7 @@ from core.ranking import (
     score_podcast_result,
 )
 from core.search_queries import (
+    STOPWORDS,
     build_autocomplete_query,
     build_books_autocomplete_query,
     build_filter_query,
@@ -38,7 +41,12 @@ from core.search_queries import (
     strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
-from utils.soft_comparison import is_author_name_match, is_person_autocomplete_match
+from utils.normalize import normalize
+from utils.soft_comparison import (
+    _levenshtein_distance,
+    is_author_name_match,
+    is_person_autocomplete_match,
+)
 
 # Stream event: either (source, results, latency_ms) or an exact-match item event.
 StreamEvent = Union[
@@ -987,11 +995,35 @@ _RESOLVE_RANKERS: dict[
 }
 
 
+_GOOGLE_SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
+_GOOGLE_SUGGEST_TIMEOUT = aiohttp.ClientTimeout(total=2)
+
+
+async def _google_suggest_top(query: str) -> str | None:
+    """Return the top Google autocomplete suggestion for *query*, or None."""
+    params = {"client": "firefox", "ds": "yt", "q": query}
+    url = f"{_GOOGLE_SUGGEST_URL}?{urllib.parse.urlencode(params)}"
+    try:
+        async with (
+            aiohttp.ClientSession(timeout=_GOOGLE_SUGGEST_TIMEOUT) as session,
+            session.get(url) as resp,
+        ):
+            if resp.status != 200:
+                return None
+            data = await resp.json(content_type=None)
+            if isinstance(data, list) and len(data) >= 2 and isinstance(data[1], list) and data[1]:
+                return str(data[1][0])
+    except (TimeoutError, aiohttp.ClientError, ValueError, IndexError):
+        return None
+    return None
+
+
 async def resolve(
     q: str,
     sources: set[str],
     fields: list[str] | None = None,
     full: bool = False,
+    near_misses: int = 0,
 ) -> dict[str, Any]:
     """
     Return all exact-match (tier 0-1) documents for a fully-formed title.
@@ -1000,15 +1032,20 @@ async def resolve(
     match.  Otherwise only the fields listed in *fields* (defaulting to
     ``RESOLVE_DEFAULT_FIELDS``) are projected from the index.
 
+    When *near_misses* > 0 and no exact matches are found, the top N
+    best-ranked non-exact candidates are returned in a ``near_misses`` key.
+
     Args:
         q: Fully-formed title string (min 2 chars).
         sources: Set of indexed source names to search.
         fields: Extra field names to project (merged with the default set).
                 Ignored when *full* is True.
         full: When True, return the entire Redis JSON document per match.
+        near_misses: Max number of near-miss results to return when there
+                     are no exact matches.  0 disables (default).
 
     Returns:
-        ``{"query": ..., "matches": [...], "total": int, "latency_ms": float}``
+        ``{"query": ..., "matches": [...], "near_misses": [...], "total": int, "latency_ms": float}``
     """
     repo = get_repo()
     total_start = time.perf_counter()
@@ -1065,6 +1102,7 @@ async def resolve(
     timed_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     matches: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
     timing_parts: list[str] = []
 
     for item in timed_results:
@@ -1086,23 +1124,190 @@ async def resolve(
 
         ranker = _RESOLVE_RANKERS.get(name)
         for doc in parsed:
+            doc["source"] = name
+            rank = ranker(doc, q) if ranker is not None else (999, 9999, 0.0)
             if is_exact_match(q, doc, name):
-                doc["source"] = name
-                if ranker is not None:
-                    doc["_rank"] = ranker(doc, q)
+                doc["_rank"] = rank
                 matches.append(doc)
+            elif near_misses > 0:
+                doc["_rank"] = rank
+                candidates.append(doc)
 
     matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
+
+    # Fuzzy fallback: when the prefix query returned zero candidates, retry
+    # with Levenshtein distance-1 matching so misspellings still surface.
+    _FUZZY_FETCH_LIMIT = 20
+    if near_misses > 0 and not matches and not candidates:
+        fuzzy_query_str = build_fuzzy_fulltext_query(q)
+        if fuzzy_query_str != "*":
+            fuzzy_tasks: list[Any] = []
+            for source in sources:
+                if source in ("tv", "movie"):
+                    src_q = _build_media_source_query(fuzzy_query_str, source)
+                elif source in MINIMAL_AUTOCOMPLETE_SOURCES:
+                    src_q = fuzzy_query_str
+                else:
+                    continue
+                if full:
+                    if source in ("tv", "movie"):
+                        fuzzy_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search(src_q, limit=_FUZZY_FETCH_LIMIT, sort_by="popularity"),
+                            )
+                        )
+                    else:
+                        fuzzy_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search_projected(
+                                    source=source,
+                                    query_str=src_q,
+                                    fields=[],
+                                    limit=_FUZZY_FETCH_LIMIT,
+                                    sort_by="popularity",
+                                ),
+                            )
+                        )
+                else:
+                    assert projected_fields is not None
+                    fuzzy_tasks.append(
+                        timed_task(
+                            source,
+                            repo.search_projected(
+                                source=source,
+                                query_str=src_q,
+                                fields=projected_fields,
+                                limit=_FUZZY_FETCH_LIMIT,
+                                sort_by="popularity",
+                            ),
+                        )
+                    )
+            fuzzy_results = await asyncio.gather(*fuzzy_tasks, return_exceptions=True)
+            query_norm = " ".join(
+                w for w in normalize(q).split() if w not in STOPWORDS
+            )
+            for item in fuzzy_results:
+                if isinstance(item, BaseException):
+                    continue
+                if not (isinstance(item, tuple) and len(item) == 3):
+                    continue
+                fname, fdata, felapsed = item
+                timing_parts.append(f"fuzzy_{fname}={felapsed:.0f}ms")
+                if not fdata or isinstance(fdata, BaseException) or not hasattr(fdata, "docs"):
+                    continue
+                if full:
+                    fparsed = [parse_doc(doc) for doc in fdata.docs]
+                else:
+                    fparsed = [_parse_projected_doc(doc) for doc in fdata.docs]
+                for doc in fparsed:
+                    doc["source"] = fname
+                    title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
+                    title_norm = " ".join(
+                        w for w in normalize(title).split() if w not in STOPWORDS
+                    )
+                    dist = _levenshtein_distance(query_norm, title_norm)
+                    popularity = float(doc.get("popularity") or 0)
+                    doc["_rank"] = (dist, -popularity)
+                    candidates.append(doc)
+
+    # Google Suggest fallback: when both prefix and fuzzy returned nothing,
+    # ask Google autocomplete for a spelling correction, then re-query Redis.
+    if near_misses > 0 and not matches and not candidates:
+        suggestion = await _google_suggest_top(q)
+        if suggestion and suggestion.lower().strip() != q.lower().strip():
+            timing_parts.append(f"google_suggest='{suggestion}'")
+            suggest_query = build_minimal_autocomplete_query(suggestion)
+            suggest_tasks: list[Any] = []
+            for source in sources:
+                if source in ("tv", "movie"):
+                    src_q = _build_media_source_query(suggest_query, source)
+                elif source in MINIMAL_AUTOCOMPLETE_SOURCES:
+                    src_q = suggest_query
+                else:
+                    continue
+                if full:
+                    if source in ("tv", "movie"):
+                        suggest_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search(src_q, limit=near_misses, sort_by="popularity"),
+                            )
+                        )
+                    else:
+                        suggest_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search_projected(
+                                    source=source,
+                                    query_str=src_q,
+                                    fields=[],
+                                    limit=near_misses,
+                                    sort_by="popularity",
+                                ),
+                            )
+                        )
+                else:
+                    assert projected_fields is not None
+                    suggest_tasks.append(
+                        timed_task(
+                            source,
+                            repo.search_projected(
+                                source=source,
+                                query_str=src_q,
+                                fields=projected_fields,
+                                limit=near_misses,
+                                sort_by="popularity",
+                            ),
+                        )
+                    )
+            suggest_results = await asyncio.gather(*suggest_tasks, return_exceptions=True)
+            suggest_norm = " ".join(
+                w for w in normalize(suggestion).split() if w not in STOPWORDS
+            )
+            for item in suggest_results:
+                if isinstance(item, BaseException):
+                    continue
+                if not (isinstance(item, tuple) and len(item) == 3):
+                    continue
+                sname, sdata, selapsed = item
+                timing_parts.append(f"suggest_{sname}={selapsed:.0f}ms")
+                if not sdata or isinstance(sdata, BaseException) or not hasattr(sdata, "docs"):
+                    continue
+                if full:
+                    sparsed = [parse_doc(doc) for doc in sdata.docs]
+                else:
+                    sparsed = [_parse_projected_doc(doc) for doc in sdata.docs]
+                for doc in sparsed:
+                    doc["source"] = sname
+                    title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
+                    title_norm = " ".join(
+                        w for w in normalize(title).split() if w not in STOPWORDS
+                    )
+                    dist = _levenshtein_distance(suggest_norm, title_norm)
+                    popularity = float(doc.get("popularity") or 0)
+                    doc["_rank"] = (dist, -popularity)
+                    candidates.append(doc)
+
+    near_miss_results: list[dict[str, Any]] = []
+    if near_misses > 0 and not matches:
+        candidates.sort(key=lambda c: c.get("_rank", (999, 0.0)))
+        near_miss_results = candidates[:near_misses]
+        for doc in near_miss_results:
+            doc.pop("_rank", None)
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
     logger.info(
         f"Resolve '{q}' sources={sorted(sources)} matches={len(matches)} "
+        f"near_misses={len(near_miss_results)} "
         f"total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
     )
 
     return {
         "query": q,
         "matches": matches,
+        "near_misses": near_miss_results,
         "total": len(matches),
         "latency_ms": round(total_elapsed, 1),
     }

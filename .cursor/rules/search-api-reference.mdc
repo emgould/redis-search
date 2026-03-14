@@ -82,10 +82,18 @@ GET /api/autocomplete/minimal?q={query}&sources={sources}&limit={limit}&fields={
 ### 1c. Resolve (Exact-Match Disambiguation)
 
 ```
-GET /api/resolve?q={title}&sources={sources}&fields={fields}&full={full}
+GET /api/resolve?q={title}&sources={sources}&fields={fields}&full={full}&near_misses={n}
 ```
 
 Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked by the standard scoring (popularity / recency). Use this when the caller needs to confirm an exact title or disambiguate between multiple entities sharing the same name (e.g. "The Godfather" 1972 vs 1990).
+
+When `near_misses` > 0 and no exact matches are found, the response includes the top N best-ranked candidates that were not exact matches, enabling "Did you mean?" UX. Uses a three-tier fallback strategy:
+
+1. **Prefix candidates** — non-exact results from the primary prefix query, ranked by the standard ranker.
+2. **Fuzzy fallback** — if prefix returned nothing, retries with RediSearch Levenshtein distance-1 matching (`%term%`). Catches single-character misspellings (e.g., "Godfater" → "The Godfather").
+3. **Google Suggest fallback** — if fuzzy also returned nothing, queries Google autocomplete for a spelling correction, then re-runs the prefix query with the corrected term. Catches larger misspellings (e.g., "brakeing bad" → "Breaking Bad"). 2-second timeout; failure is silent.
+
+Fuzzy and Google Suggest results are ranked by Levenshtein distance to the query (stopwords stripped) with popularity as tiebreaker.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
@@ -94,6 +102,7 @@ Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked b
 | `sources` | string | No | `tv,movie` | Comma-separated indexed sources: tv, movie, person, podcast, author, book |
 | `fields` | string | No | default set | Comma-separated extra field names to include per match. Ignored when `full=true`. |
 | `full` | bool | No | `false` | When true, return the complete Redis document for each match. |
+| `near_misses` | int | No | `0` | When > 0 and no exact matches found, return up to this many best-ranked near-miss candidates. Range: 0–10. |
 
 **Default fields** (always included): `mc_id`, `mc_type`, `title`, `search_title`, `release_date`, `first_air_date`, `last_aired_date`
 
@@ -107,8 +116,23 @@ Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked b
         { "mc_id": "tmdb_238", "mc_type": "movie", "title": "The Godfather", "release_date": "1972-03-14", ... },
         { "mc_id": "tmdb_240", "mc_type": "movie", "title": "The Godfather Part II", ... }
     ],
+    "near_misses": [],
     "total": 2,
     "latency_ms": 12.3
+}
+```
+
+When no exact matches exist and `near_misses` > 0:
+```json
+{
+    "query": "Godfater",
+    "matches": [],
+    "near_misses": [
+        { "mc_id": "tmdb_238", "mc_type": "movie", "source": "movie", "search_title": "The Godfather", ... },
+        { "mc_id": "tmdb_240", "mc_type": "movie", "source": "movie", "search_title": "The Godfather Part II", ... }
+    ],
+    "total": 0,
+    "latency_ms": 14.1
 }
 ```
 
@@ -117,6 +141,7 @@ Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked b
 - Returns **all** exact matches, not just one `exact_match` winner.
 - Only searches indexed sources (no brokered APIs).
 - Supports `full=true` to return complete Redis documents.
+- Supports `near_misses` for fallback suggestions when no exact match is found.
 
 **Example:**
 ```
@@ -124,9 +149,10 @@ Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked b
 /api/resolve?q=breaking+bad&sources=tv,movie
 /api/resolve?q=brad+pitt&sources=person&fields=popularity,image
 /api/resolve?q=the+godfather&sources=movie&full=true
+/api/resolve?q=godfater&sources=movie&near_misses=2
 ```
 
-**Web UI:** The **Direct Match** toggle in the search bar activates resolve mode. When ON, autocomplete and search are suppressed; Enter calls `/api/resolve` with the active source filters. Results are grouped by `mc_type` and rendered using the standard card layout.
+**Web UI:** The **Direct Match** toggle in the search bar activates resolve mode. When ON, autocomplete and search are suppressed; Enter calls `/api/resolve` with the active source filters and `near_misses=2`. Results are grouped by `mc_type` and rendered using the standard card layout. When no exact match is found, near misses render under a "Did you mean?" header with amber styling.
 
 ---
 
