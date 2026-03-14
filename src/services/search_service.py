@@ -2,9 +2,11 @@ import asyncio
 import json
 import re
 import time
+import urllib.parse
 from collections.abc import AsyncIterator
 from typing import Any, Literal, Union
 
+import aiohttp
 from pydantic import BaseModel
 
 from adapters.redis_client import get_redis
@@ -993,6 +995,29 @@ _RESOLVE_RANKERS: dict[
 }
 
 
+_GOOGLE_SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
+_GOOGLE_SUGGEST_TIMEOUT = aiohttp.ClientTimeout(total=2)
+
+
+async def _google_suggest_top(query: str) -> str | None:
+    """Return the top Google autocomplete suggestion for *query*, or None."""
+    params = {"client": "firefox", "ds": "yt", "q": query}
+    url = f"{_GOOGLE_SUGGEST_URL}?{urllib.parse.urlencode(params)}"
+    try:
+        async with (
+            aiohttp.ClientSession(timeout=_GOOGLE_SUGGEST_TIMEOUT) as session,
+            session.get(url) as resp,
+        ):
+            if resp.status != 200:
+                return None
+            data = await resp.json(content_type=None)
+            if isinstance(data, list) and len(data) >= 2 and isinstance(data[1], list) and data[1]:
+                return str(data[1][0])
+    except (TimeoutError, aiohttp.ClientError, ValueError, IndexError):
+        return None
+    return None
+
+
 async def resolve(
     q: str,
     sources: set[str],
@@ -1183,6 +1208,84 @@ async def resolve(
                         w for w in normalize(title).split() if w not in STOPWORDS
                     )
                     dist = _levenshtein_distance(query_norm, title_norm)
+                    popularity = float(doc.get("popularity") or 0)
+                    doc["_rank"] = (dist, -popularity)
+                    candidates.append(doc)
+
+    # Google Suggest fallback: when both prefix and fuzzy returned nothing,
+    # ask Google autocomplete for a spelling correction, then re-query Redis.
+    if near_misses > 0 and not matches and not candidates:
+        suggestion = await _google_suggest_top(q)
+        if suggestion and suggestion.lower().strip() != q.lower().strip():
+            timing_parts.append(f"google_suggest='{suggestion}'")
+            suggest_query = build_minimal_autocomplete_query(suggestion)
+            suggest_tasks: list[Any] = []
+            for source in sources:
+                if source in ("tv", "movie"):
+                    src_q = _build_media_source_query(suggest_query, source)
+                elif source in MINIMAL_AUTOCOMPLETE_SOURCES:
+                    src_q = suggest_query
+                else:
+                    continue
+                if full:
+                    if source in ("tv", "movie"):
+                        suggest_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search(src_q, limit=near_misses, sort_by="popularity"),
+                            )
+                        )
+                    else:
+                        suggest_tasks.append(
+                            timed_task(
+                                source,
+                                repo.search_projected(
+                                    source=source,
+                                    query_str=src_q,
+                                    fields=[],
+                                    limit=near_misses,
+                                    sort_by="popularity",
+                                ),
+                            )
+                        )
+                else:
+                    assert projected_fields is not None
+                    suggest_tasks.append(
+                        timed_task(
+                            source,
+                            repo.search_projected(
+                                source=source,
+                                query_str=src_q,
+                                fields=projected_fields,
+                                limit=near_misses,
+                                sort_by="popularity",
+                            ),
+                        )
+                    )
+            suggest_results = await asyncio.gather(*suggest_tasks, return_exceptions=True)
+            suggest_norm = " ".join(
+                w for w in normalize(suggestion).split() if w not in STOPWORDS
+            )
+            for item in suggest_results:
+                if isinstance(item, BaseException):
+                    continue
+                if not (isinstance(item, tuple) and len(item) == 3):
+                    continue
+                sname, sdata, selapsed = item
+                timing_parts.append(f"suggest_{sname}={selapsed:.0f}ms")
+                if not sdata or isinstance(sdata, BaseException) or not hasattr(sdata, "docs"):
+                    continue
+                if full:
+                    sparsed = [parse_doc(doc) for doc in sdata.docs]
+                else:
+                    sparsed = [_parse_projected_doc(doc) for doc in sdata.docs]
+                for doc in sparsed:
+                    doc["source"] = sname
+                    title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
+                    title_norm = " ".join(
+                        w for w in normalize(title).split() if w not in STOPWORDS
+                    )
+                    dist = _levenshtein_distance(suggest_norm, title_norm)
                     popularity = float(doc.get("popularity") or 0)
                     doc["_rank"] = (dist, -popularity)
                     candidates.append(doc)

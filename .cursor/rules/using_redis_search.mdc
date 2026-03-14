@@ -86,7 +86,13 @@ SSE streaming version of `/api/search`. Same parameters. Same SSE event format a
 
 Resolve a fully-formed title to all exact-match (tier 0-1) entities. Unlike `/api/autocomplete` which returns a single `exact_match` winner, this returns every qualifying match ranked by popularity/recency.
 
-When `near_misses` > 0 and no exact matches are found, the top N best-ranked non-exact candidates are returned in a `near_misses` key, enabling "Did you mean?" fallback UX. Uses a two-pass strategy: first collects non-exact candidates from the prefix query, then falls back to RediSearch fuzzy matching (Levenshtein distance 1) when the prefix query returned nothing (e.g., misspellings). Fuzzy candidates are ranked by edit distance to the query (stopwords stripped) with popularity as tiebreaker.
+When `near_misses` > 0 and no exact matches are found, the top N best-ranked non-exact candidates are returned in a `near_misses` key, enabling "Did you mean?" fallback UX. Uses a three-tier fallback strategy:
+
+1. **Prefix candidates** — non-exact results from the primary prefix query.
+2. **Fuzzy fallback** — RediSearch Levenshtein distance-1 matching when prefix returned nothing.
+3. **Google Suggest fallback** — queries Google autocomplete for a spelling correction when fuzzy also returned nothing, then re-runs the prefix query with the corrected term. 2-second timeout; failure is silent.
+
+Fuzzy and Google Suggest candidates are ranked by Levenshtein distance to the query (stopwords stripped) with popularity as tiebreaker.
 
 | Param | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

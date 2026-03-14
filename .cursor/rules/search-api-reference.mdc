@@ -87,7 +87,13 @@ GET /api/resolve?q={title}&sources={sources}&fields={fields}&full={full}&near_mi
 
 Returns **all** tier 0-1 exact-match entities for a fully-formed title, ranked by the standard scoring (popularity / recency). Use this when the caller needs to confirm an exact title or disambiguate between multiple entities sharing the same name (e.g. "The Godfather" 1972 vs 1990).
 
-When `near_misses` > 0 and no exact matches are found, the response includes the top N best-ranked candidates that were not exact matches, enabling "Did you mean?" UX. Uses a two-pass strategy: first tries the standard prefix query, then falls back to RediSearch fuzzy matching (Levenshtein distance 1) if the prefix query returned nothing. Fuzzy results are ranked by edit distance to the query (stopwords stripped) with popularity as tiebreaker.
+When `near_misses` > 0 and no exact matches are found, the response includes the top N best-ranked candidates that were not exact matches, enabling "Did you mean?" UX. Uses a three-tier fallback strategy:
+
+1. **Prefix candidates** — non-exact results from the primary prefix query, ranked by the standard ranker.
+2. **Fuzzy fallback** — if prefix returned nothing, retries with RediSearch Levenshtein distance-1 matching (`%term%`). Catches single-character misspellings (e.g., "Godfater" → "The Godfather").
+3. **Google Suggest fallback** — if fuzzy also returned nothing, queries Google autocomplete for a spelling correction, then re-runs the prefix query with the corrected term. Catches larger misspellings (e.g., "brakeing bad" → "Breaking Bad"). 2-second timeout; failure is silent.
+
+Fuzzy and Google Suggest results are ranked by Levenshtein distance to the query (stopwords stripped) with popularity as tiebreaker.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
