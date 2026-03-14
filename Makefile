@@ -1,7 +1,7 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -70,7 +70,12 @@ help:
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
 	@echo "    make deploy-etl       - Deploy ETL service to Dedicated ETL VM"
 	@echo "    make setup-etl-schedule - Setup daily ETL schedule (2 AM UTC, auto-shutdown)"
+	@echo "    make etl-vm-status    - Check ETL VM status (RUNNING/TERMINATED/etc.)"
+	@echo "    make etl-vm-start     - Start ETL VM"
+	@echo "    make etl-vm-stop      - Stop ETL VM"
+	@echo "    make finalize-publish - Trigger Media Manager finalize-publish (live deploy)"
 	@echo "    make create-redis-vm  - Create Redis Stack VM on GCE (one-time)"
+	@echo "    make upgrade-redis-vm - Upgrade Redis VM machine type (in-place, safe)"
 	@echo "    make tunnel           - Create IAP tunnel to public Redis VM (localhost:6381)"
 	@echo ""
 	@echo "  Cache Version Management (REDIS=local|public required):"
@@ -330,6 +335,13 @@ local:
 create-redis-vm:
 	./scripts/create_redis_vm.sh
 
+# Upgrade Redis VM machine type in-place (safe, no data loss)
+# Usage: make upgrade-redis-vm                                  # default: e2-highmem-2, 12gb
+#        make upgrade-redis-vm MACHINE=e2-standard-4 MAXMEM=14gb
+#        make upgrade-redis-vm ARGS=--dry-run
+upgrade-redis-vm:
+	./scripts/upgrade_redis_vm.sh $(or $(ARGS),$(MACHINE) $(MAXMEM))
+
 # Deploy to Cloud Run (dev environment)
 # Deploy Search API to Cloud Run (for autocomplete/search endpoints)
 deploy-web: secrets-setup
@@ -342,6 +354,20 @@ deploy-etl: secrets-setup
 # Setup scheduled ETL (2 AM UTC daily, auto-shutdown after completion)
 setup-etl-schedule:
 	./scripts/setup_etl_schedule.sh
+
+# ETL VM lifecycle
+etl-vm-status:
+	@gcloud compute instances describe etl-runner-vm --zone=us-central1-a --format='table(name,status,machineType.basename(),lastStartTimestamp)'
+
+etl-vm-start:
+	gcloud compute instances start etl-runner-vm --zone=us-central1-a
+
+etl-vm-stop:
+	gcloud compute instances stop etl-runner-vm --zone=us-central1-a
+
+# Trigger Media Manager finalize-publish (live redeployment)
+finalize-publish:
+	@curl -s -X POST http://localhost:8080/api/etl/finalize-publish | python -m json.tool
 
 # Legacy alias
 deploy: deploy-api

@@ -143,6 +143,9 @@ gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap --command=
     docker stop etl-runner 2>/dev/null || true
     docker rm etl-runner 2>/dev/null || true
     
+    # Persistent log directory (survives container replacements)
+    mkdir -p /var/log/etl
+    
     # Load environment variables
     set -a
     source .env
@@ -154,6 +157,8 @@ gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap --command=
     docker run -d \\
         --name etl-runner \\
         --restart always \\
+        --network host \\
+        -v /var/log/etl:/var/log/etl \\
         -e REDIS_HOST=${REDIS_HOST} \\
         -e REDIS_PORT=6379 \\
         -e REDIS_PASSWORD=\${REDIS_PASSWORD} \\

@@ -43,7 +43,7 @@ from core.normalize import document_to_redis, normalize_document, resolve_timest
 from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
 from etl.documentary_filter import is_documentary, is_eligible_documentary
 from etl.media_manager_filter import passes_media_manager_filter
-from etl.rt_enrichment import enrich_redis_doc_with_fallback
+from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
 
@@ -464,13 +464,6 @@ class TMDBChangesETL(TMDBService):
                 item_dict["_media_type"] = media_type
                 item_dict["_tmdb_id"] = tmdb_id
 
-                # Debug: log first item's key fields
-                if stats.fetch_phase.items_processed == 1:
-                    logger.info(f"DEBUG first item keys: {list(item_dict.keys())[:15]}")
-                    logger.info(
-                        f"DEBUG first item popularity={item_dict.get('popularity')} vote_count={item_dict.get('vote_count')}"
-                    )
-
                 # Existing items always pass — we must update them
                 stats.enriched_count += 1
                 is_existing = existing_ids is not None and tmdb_id in existing_ids
@@ -611,6 +604,29 @@ class TMDBChangesETL(TMDBService):
             # Load items
             load_start = time.time()
             batch_size = 100
+            enrich_semaphore = asyncio.Semaphore(20)
+
+            async def _enrich_with_backoff(redis_doc: dict[str, Any]) -> None:
+                """Enrich a single doc: local first, then Algolia with rate-limit backoff."""
+                if enrich_from_local(redis_doc):
+                    return
+                max_retries = 4
+                delay = 1.0
+                async with enrich_semaphore:
+                    for attempt in range(max_retries):
+                        try:
+                            await enrich_from_algolia(redis_doc)
+                            return
+                        except Exception as exc:
+                            is_rate_limit = "429" in str(exc)
+                            if is_rate_limit and attempt < max_retries - 1:
+                                logger.debug("Algolia 429, backing off %.1fs", delay)
+                                await asyncio.sleep(delay)
+                                delay = min(delay * 2, 16.0)
+                            else:
+                                if not is_rate_limit:
+                                    logger.debug("Algolia enrichment failed for doc: %s", exc)
+                                return
 
             for i in range(0, len(items), batch_size):
                 batch = items[i : i + batch_size]
@@ -634,11 +650,15 @@ class TMDBChangesETL(TMDBService):
                                 continue
                             key = f"{prefix}{doc.id}"
                             redis_doc = document_to_redis(doc)
-                            await enrich_redis_doc_with_fallback(redis_doc)
                             prepared.append((key, redis_doc))
                     except Exception as e:
                         stats.load_phase.items_failed += 1
                         stats.load_phase.errors.append(f"{item.get('id')}: {e}")
+
+                if prepared and media_type != "person":
+                    await asyncio.gather(
+                        *[_enrich_with_backoff(doc) for _, doc in prepared]
+                    )
 
                 if prepared:
                     now_ts = int(datetime.now(UTC).timestamp())

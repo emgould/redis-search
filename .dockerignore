@@ -24,6 +24,9 @@ __pycache__/
 config/*.env
 tests/
 data/
+!data/wikidata_tmdb_tms_crossref.json
+!data/itpc/
+!data/aliases/
 
 # Docker - ignore compose files but allow entrypoint scripts
 docker/*.yml

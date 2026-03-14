@@ -29,6 +29,7 @@ from etl.etl_metadata import (
 )
 from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
 from etl.tmdb_nightly_etl import ChangesETLStats, run_nightly_etl
+from utils.alerts import send_alert
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -395,9 +396,11 @@ class ETLRunner:
             try:
                 mm_client = MediaManagerClient()
                 await mm_client.health_check()
+                self._run_metadata.mm_health_check = "ok"
                 self._run_metadata.add_log("Media Manager health check passed")
             except Exception as e:
                 logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+                self._run_metadata.mm_health_check = "unavailable"
                 if mm_client:
                     await mm_client.close()
                 mm_client = None
@@ -504,33 +507,77 @@ class ETLRunner:
                         }
                     )
 
-        # Drain queue and rebuild FAISS indexes first
+        # Drain queue and rebuild FAISS indexes
         if mm_client and self._run_metadata.total_mm_docs_sent > 0:
             try:
                 logger.info("Polling Media Manager queue before index rebuild...")
                 await mm_client.poll_until_drained()
+                self._run_metadata.mm_queue_drained = True
+                self._run_metadata.add_log("Media Manager queue drained")
             except Exception as e:
                 logger.error("Media Manager queue drain failed: %s", e)
+                self._run_metadata.mm_queue_drained = False
+                self._run_metadata.mm_queue_drain_error = str(e)
                 self._run_metadata.add_log(f"Media Manager queue drain error: {e}")
+                send_alert(
+                    subject="ETL: Media Manager queue drain failed",
+                    body=f"The MM queue did not fully drain. Index rebuild and finalize publish were skipped.\n\n{e}",
+                    severity="critical",
+                    metadata={
+                        "Run ID": self._run_metadata.run_id,
+                        "Jobs": ", ".join(jr.job_name for jr in self._run_metadata.job_results),
+                        "Docs Sent to MM": self._run_metadata.total_mm_docs_sent,
+                    },
+                )
 
-            try:
-                logger.info("Rebuilding Media Manager FAISS indexes...")
-                rebuild_results = await mm_client.rebuild_all_indexes()
-                for r in rebuild_results:
-                    self._run_metadata.add_log(
-                        f"Index '{r['index_name']}' rebuilt: "
-                        f"{r['total_documents']} docs in {r['duration_seconds']:.1f}s"
-                    )
-            except Exception as e:
-                logger.error("Media Manager index rebuild failed: %s", e)
-                self._run_metadata.add_log(f"Media Manager index rebuild error: {e}")
+            if self._run_metadata.mm_queue_drained:
+                indexes_to_rebuild: list[str] = []
+                if job_filter:
+                    for jr in self._run_metadata.job_results:
+                        if jr.mm_docs_sent > 0 and jr.media_type in MEDIA_INDEX_NAMES:
+                            idx = MEDIA_INDEX_NAMES[jr.media_type]
+                            if idx not in indexes_to_rebuild:
+                                indexes_to_rebuild.append(idx)
+                else:
+                    indexes_to_rebuild = list(MEDIA_INDEX_NAMES.values())
 
-        # Finalize publish as the very last Media Manager step
-        if mm_client and self._run_metadata.total_mm_docs_sent > 0:
+                for index_name in indexes_to_rebuild:
+                    try:
+                        logger.info("Rebuilding Media Manager index '%s'...", index_name)
+                        r = await mm_client.rebuild_index(index_name)
+                        self._run_metadata.mm_indexes_rebuilt.append({
+                            "index_name": r["index_name"],
+                            "total_documents": r["total_documents"],
+                            "duration_seconds": r["duration_seconds"],
+                        })
+                        self._run_metadata.add_log(
+                            f"Index '{r['index_name']}' rebuilt: "
+                            f"{r['total_documents']} docs in {r['duration_seconds']:.1f}s"
+                        )
+                    except Exception as e:
+                        logger.error("Media Manager index '%s' rebuild failed: %s", index_name, e)
+                        self._run_metadata.mm_rebuild_errors.append(f"{index_name}: {e}")
+                        self._run_metadata.add_log(f"Media Manager index '{index_name}' rebuild error: {e}")
+            else:
+                logger.warning("Skipping index rebuild — queue not fully drained")
+                self._run_metadata.add_log("Skipping index rebuild — queue not fully drained")
+
+        # Finalize publish as the very last Media Manager step.
+        # Skipped for filtered (single-job) runs to avoid triggering a full
+        # live redeployment on the Media Manager side.
+        if mm_client and self._run_metadata.total_mm_docs_sent > 0 and not job_filter:
             try:
                 logger.info("Finalizing Media Manager publish...")
                 finalize_resp = await mm_client.finalize_publish()
                 logger.info("Media Manager finalize-publish: %s", finalize_resp)
+                self._run_metadata.mm_finalize_publish = {
+                    "status": finalize_resp["status"],
+                    "movies_added": finalize_resp["movies_added"],
+                    "tv_added": finalize_resp["tv_added"],
+                    "movies_updated": finalize_resp["movies_updated"],
+                    "tv_updated": finalize_resp["tv_updated"],
+                    "readers_recycled": finalize_resp["readers_recycled"],
+                }
                 self._run_metadata.add_log(
                     "Media Manager finalize-publish: "
                     f"status={finalize_resp['status']}, "
@@ -542,7 +589,11 @@ class ETLRunner:
                 )
             except Exception as e:
                 logger.error("Media Manager finalize-publish failed: %s", e)
+                self._run_metadata.mm_finalize_error = str(e)
                 self._run_metadata.add_log(f"Media Manager finalize-publish error: {e}")
+        elif mm_client and self._run_metadata.total_mm_docs_sent > 0 and job_filter:
+            logger.info("Skipping finalize_publish (filtered job run)")
+            self._run_metadata.add_log("Skipping finalize_publish (filtered job run)")
 
         if mm_client:
             try:
@@ -572,6 +623,12 @@ class ETLRunner:
             self.metadata_store.save_run_metadata(self._run_metadata)
         except Exception as e:
             logger.warning(f"Failed to save run metadata to GCS: {e}")
+
+        # Persist run summary into job_states file so the web UI has it
+        try:
+            self.metadata_store.save_run_summary(self._run_metadata)
+        except Exception as e:
+            logger.warning(f"Failed to save run summary: {e}")
 
         # Send email notification
         from etl.notifications import send_etl_summary_email
@@ -709,6 +766,7 @@ async def run_single_etl(
     redis_password: str | None = None,
     verbose: bool = False,
     stats: ChangesETLStats | None = None,
+    max_batches: int = 0,
 ) -> ChangesETLStats:
     """
     Run a single ETL job directly without YAML config.
@@ -724,6 +782,7 @@ async def run_single_etl(
         redis_password: Redis password (defaults to env)
         verbose: Enable verbose logging
         stats: Optional pre-created stats object for live progress tracking
+        max_batches: Limit fetch batches (0 = unlimited, each batch ≈ 20 items)
 
     Returns:
         ChangesETLStats with results
@@ -767,6 +826,7 @@ async def run_single_etl(
             verbose=verbose,
             stats=stats,
             media_manager_client=mm_client,
+            max_batches=max_batches,
         )
 
         # For single-job/manual runs, do not finalize publish here.

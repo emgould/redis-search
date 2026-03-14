@@ -7,6 +7,8 @@ import os
 from typing import Any, TypedDict
 from urllib.parse import urlparse
 
+import google.auth.transport.requests
+import google.oauth2.id_token
 import httpx
 
 from utils.get_logger import get_logger
@@ -31,6 +33,7 @@ class InsertDocsResponse(TypedDict):
 
 class StatusResponse(TypedDict):
     queue_depth: int
+    in_flight: int
     total_processed: int
     total_dry_run: int
     total_errors: int
@@ -101,7 +104,28 @@ class MediaManagerClient:
             parsed = urlparse(self._base_url)
             port = parsed.port or (443 if parsed.scheme == "https" else 80)
             headers["Host"] = f"localhost:{port}"
+
+        id_token = self._fetch_id_token()
+        if id_token:
+            headers["Authorization"] = f"Bearer {id_token}"
+
         return headers
+
+    def _fetch_id_token(self) -> str | None:
+        """Fetch a GCP identity token for Cloud Run authentication.
+
+        Returns None when not running on GCE/Cloud Run or when the
+        target is a local URL (localhost / host.docker.internal).
+        """
+        if any(h in self._base_url for h in ("localhost", "127.0.0.1", "host.docker.internal")):
+            return None
+        try:
+            request = google.auth.transport.requests.Request()
+            token: str = google.oauth2.id_token.fetch_id_token(request, self._base_url)
+            return token
+        except Exception as exc:
+            logger.debug("Could not fetch GCP identity token (expected in local dev): %s", exc)
+            return None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -204,6 +228,7 @@ class MediaManagerClient:
         data: dict[str, Any] = resp.json()
         return StatusResponse(
             queue_depth=data["queue_depth"],
+            in_flight=data.get("in_flight", 0),
             total_processed=data["total_processed"],
             total_dry_run=data.get("total_dry_run", 0),
             total_errors=data["total_errors"],
@@ -244,16 +269,33 @@ class MediaManagerClient:
         self,
         index_name: str,
         re_embedding: bool = False,
+        max_retries: int = 5,
+        initial_backoff: float = 30.0,
     ) -> RebuildIndexResponse:
-        """POST /api/index/{index_name}/rebuild — blocks until rebuild completes."""
+        """POST /api/index/{index_name}/rebuild — blocks until rebuild completes.
+
+        Retries with exponential backoff on 409 Conflict (index busy).
+        """
         client = await self._get_client()
         logger.info("Rebuilding index '%s' (re_embedding=%s)...", index_name, re_embedding)
-        resp = await client.post(
-            f"/api/index/{index_name}/rebuild",
-            json={"re_embedding": re_embedding},
-            timeout=REBUILD_TIMEOUT,
-        )
-        resp.raise_for_status()
+        delay = initial_backoff
+        for attempt in range(max_retries):
+            resp = await client.post(
+                f"/api/index/{index_name}/rebuild",
+                json={"re_embedding": re_embedding},
+                timeout=REBUILD_TIMEOUT,
+            )
+            if resp.status_code == 409 and attempt < max_retries - 1:
+                logger.warning(
+                    "Index '%s' returned 409 Conflict (attempt %d/%d), "
+                    "retrying in %.0fs...",
+                    index_name, attempt + 1, max_retries, delay,
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 300.0)
+                continue
+            resp.raise_for_status()
+            break
         data: dict[str, Any] = resp.json()
         result = RebuildIndexResponse(
             status=data.get("status", "ok"),
@@ -280,7 +322,7 @@ class MediaManagerClient:
     async def poll_until_drained(
         self,
         poll_interval: float = 5.0,
-        max_wait: float = 1800.0,
+        max_wait: float = 21600.0,
     ) -> StatusResponse:
         """Poll ``/insert-docs/status`` until ``queue_depth == 0``.
 
@@ -290,18 +332,25 @@ class MediaManagerClient:
         waited = 0.0
         while waited < max_wait:
             status = await self.get_status()
-            if status["queue_depth"] == 0:
+            if status["queue_depth"] == 0 and status["in_flight"] == 0:
                 logger.info(
                     "Queue drained (total_processed=%d)", status["total_processed"]
                 )
                 return status
             logger.info(
-                "Waiting for queue drain: queue_depth=%d, total_processed=%d (%.0fs elapsed)",
+                "Waiting for queue drain: queue_depth=%d, in_flight=%d, "
+                "total_processed=%d (%.0fs elapsed)",
                 status["queue_depth"],
+                status["in_flight"],
                 status["total_processed"],
                 waited,
             )
             await asyncio.sleep(poll_interval)
             waited += poll_interval
-        logger.warning("Max wait %.0fs reached, queue may not be fully drained", max_wait)
-        return await self.get_status()
+        final_status = await self.get_status()
+        raise TimeoutError(
+            f"Queue not drained after {max_wait:.0f}s — "
+            f"queue_depth={final_status['queue_depth']}, "
+            f"in_flight={final_status['in_flight']}, "
+            f"total_processed={final_status['total_processed']}"
+        )

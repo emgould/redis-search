@@ -68,10 +68,14 @@ fi
 # Grant GCS access for ETL metadata
 GCS_BUCKET="mc-redis-etl"
 echo "🪣 Ensuring GCS bucket access..."
-gsutil iam ch "serviceAccount:${SERVICE_ACCOUNT}:objectAdmin" "gs://${GCS_BUCKET}" 2>/dev/null || {
-    echo "   ⚠️  Failed to grant GCS access. ETL metadata may not persist."
-}
-echo "   ✅ GCS access configured"
+if gsutil iam ch "serviceAccount:${SERVICE_ACCOUNT}:objectAdmin" "gs://${GCS_BUCKET}" 2>/dev/null; then
+    echo "   ✅ GCS access granted"
+elif gsutil ls "gs://${GCS_BUCKET}/" >/dev/null 2>&1; then
+    echo "   ✅ GCS bucket accessible (IAM grant skipped — already configured or cross-project bucket)"
+else
+    echo "   ❌ GCS bucket gs://${GCS_BUCKET} is not accessible. ETL metadata will not persist."
+    exit 1
+fi
 
 # Build the image
 echo ""
