@@ -992,6 +992,7 @@ async def resolve(
     sources: set[str],
     fields: list[str] | None = None,
     full: bool = False,
+    near_misses: int = 0,
 ) -> dict[str, Any]:
     """
     Return all exact-match (tier 0-1) documents for a fully-formed title.
@@ -1000,15 +1001,20 @@ async def resolve(
     match.  Otherwise only the fields listed in *fields* (defaulting to
     ``RESOLVE_DEFAULT_FIELDS``) are projected from the index.
 
+    When *near_misses* > 0 and no exact matches are found, the top N
+    best-ranked non-exact candidates are returned in a ``near_misses`` key.
+
     Args:
         q: Fully-formed title string (min 2 chars).
         sources: Set of indexed source names to search.
         fields: Extra field names to project (merged with the default set).
                 Ignored when *full* is True.
         full: When True, return the entire Redis JSON document per match.
+        near_misses: Max number of near-miss results to return when there
+                     are no exact matches.  0 disables (default).
 
     Returns:
-        ``{"query": ..., "matches": [...], "total": int, "latency_ms": float}``
+        ``{"query": ..., "matches": [...], "near_misses": [...], "total": int, "latency_ms": float}``
     """
     repo = get_repo()
     total_start = time.perf_counter()
@@ -1065,6 +1071,7 @@ async def resolve(
     timed_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     matches: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
     timing_parts: list[str] = []
 
     for item in timed_results:
@@ -1086,23 +1093,35 @@ async def resolve(
 
         ranker = _RESOLVE_RANKERS.get(name)
         for doc in parsed:
+            doc["source"] = name
+            rank = ranker(doc, q) if ranker is not None else (999, 9999, 0.0)
             if is_exact_match(q, doc, name):
-                doc["source"] = name
-                if ranker is not None:
-                    doc["_rank"] = ranker(doc, q)
+                doc["_rank"] = rank
                 matches.append(doc)
+            elif near_misses > 0:
+                doc["_rank"] = rank
+                candidates.append(doc)
 
     matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
+
+    near_miss_results: list[dict[str, Any]] = []
+    if near_misses > 0 and not matches:
+        candidates.sort(key=lambda c: c.get("_rank", (999, 9999, 0.0)))
+        near_miss_results = candidates[:near_misses]
+        for doc in near_miss_results:
+            doc.pop("_rank", None)
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
     logger.info(
         f"Resolve '{q}' sources={sorted(sources)} matches={len(matches)} "
+        f"near_misses={len(near_miss_results)} "
         f"total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
     )
 
     return {
         "query": q,
         "matches": matches,
+        "near_misses": near_miss_results,
         "total": len(matches),
         "latency_ms": round(total_elapsed, 1),
     }

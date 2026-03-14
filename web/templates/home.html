@@ -707,6 +707,7 @@ Shows{% endblock %} {% block body %}
         q: query,
         sources: sources,
         fields: "poster_path,year,popularity,rating,source_id",
+        near_misses: "2",
       });
       const response = await fetch(getApiUrl(`/api/resolve?${params.toString()}`));
       const payload = await response.json();
@@ -720,6 +721,9 @@ Shows{% endblock %} {% block body %}
         const src = match.mc_type || match.source || "unknown";
         if (!results[src]) results[src] = [];
         results[src].push(match);
+      }
+      if (payload.near_misses && payload.near_misses.length > 0) {
+        results._near_misses = payload.near_misses;
       }
       results._resolve_meta = {
         query: payload.query,
@@ -1070,6 +1074,24 @@ Shows{% endblock %} {% block body %}
     }
 
     if (categories.length === 0) {
+      const nearMisses = results._near_misses || [];
+      if (nearMisses.length > 0) {
+        const nearMissHtml = nearMisses
+          .map((item, index) => `<div class="category-item">${renderResultItem(item, index, query)}</div>`)
+          .join("");
+        resultsList.innerHTML = `
+          <div class="p-4 text-center text-surface-400 border-b border-surface-700">
+            <p class="text-sm">No exact match for "<span class="text-surface-300 font-medium">${query}</span>"</p>
+          </div>
+          <div class="category-section" data-category="near_misses">
+            <div class="flex items-center justify-between px-4 py-2 bg-amber-900/20 border-b border-amber-800/30">
+              <h4 class="text-sm font-medium text-amber-400">Did you mean?</h4>
+              <span class="text-xs text-amber-500/70">${nearMisses.length} near match${nearMisses.length !== 1 ? "es" : ""}</span>
+            </div>
+            <div class="category-items">${nearMissHtml}</div>
+          </div>`;
+        return;
+      }
       resultsList.innerHTML = `
             <div class="p-8 text-center text-surface-500">
                 <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

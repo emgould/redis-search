@@ -103,8 +103,10 @@ When the **Direct Match** toggle is active:
 - Enter routes to `searchDirectMatch()` → `GET /api/resolve`.
 - Focus auto-search is suppressed.
 - Requests extra fields (`poster_path`, `year`, `popularity`, `rating`, `source_id`) so results render with images.
+- Requests `near_misses=2` so near-miss fallbacks appear when no exact match is found.
 - Source filter buttons are respected — e.g. toggling only "TV" restricts resolve to `sources=tv`.
 - The flat `matches` array from `/api/resolve` is grouped by `mc_type` and fed to the standard `renderResults()`.
+- When no exact matches exist but near misses are returned, `renderResults()` displays them under a "Did you mean?" header with amber styling instead of the empty-state message.
 
 ## Controller API
 
