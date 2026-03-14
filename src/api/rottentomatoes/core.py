@@ -54,9 +54,8 @@ class RottenTomatoesService(BaseAPIClient):
     Handles search operations for movies, TV shows, and people.
     """
 
-    # Rate limiter configuration: Algolia is generous but we'll be conservative
-    # Using 10 requests per second to be safe
-    _rate_limit_max = 2
+    # Rate limiter configuration: Algolia allows generous throughput.
+    _rate_limit_max = 10
     _rate_limit_period = 1
 
     def __init__(self):

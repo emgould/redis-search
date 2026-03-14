@@ -3225,6 +3225,7 @@ async def run_nightly_etl_task(
     start_date: str | None = None,
     end_date: str | None = None,
     job_filter: list[str] | None = None,
+    max_batches: int = 0,
 ) -> None:
     """Background task to run the full nightly ETL."""
     global _nightly_etl_status
@@ -3239,6 +3240,11 @@ async def run_nightly_etl_task(
         print("run_nightly_etl_task: loading config", flush=True)
         config = ETLConfig.from_env()
         runner = ETLRunner(config)
+
+        if max_batches > 0:
+            for job in config.jobs:
+                for run_params in job.runs:
+                    run_params.max_batches = max_batches
 
         total_jobs = sum(len(j.runs) for j in config.jobs if j.enabled)
         print(f"run_nightly_etl_task: setting progress, total_jobs={total_jobs}", flush=True)
@@ -3274,6 +3280,7 @@ async def run_changes_job_task(
     start_date: str | None = None,
     end_date: str | None = None,
     verbose: bool = False,
+    max_batches: int = 0,
 ) -> None:
     """Background task to run a single changes ETL job."""
     global _changes_job_status, _changes_job_live_stats
@@ -3303,6 +3310,7 @@ async def run_changes_job_task(
             redis_password=redis_config.password,
             verbose=verbose,
             stats=stats,
+            max_batches=max_batches,
         )
 
         completed_at = datetime.now()
@@ -3430,6 +3438,7 @@ async def trigger_nightly_etl(
     start_date = body.get("start_date")
     end_date = body.get("end_date")
     job_filter = body.get("job_filter")
+    max_batches = int(body.get("max_batches", 0))
 
     # Initialize task status
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -3451,7 +3460,7 @@ async def trigger_nightly_etl(
             import asyncio
 
             print("ETL thread: calling asyncio.run()", flush=True)
-            asyncio.run(run_nightly_etl_task(start_date, end_date, job_filter))
+            asyncio.run(run_nightly_etl_task(start_date, end_date, job_filter, max_batches))
             print("ETL thread: asyncio.run() completed", flush=True)
         except Exception as e:
             import traceback
@@ -3573,6 +3582,7 @@ async def trigger_changes_job(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     verbose: bool = Query(False, description="Enable verbose logging"),
+    max_batches: int = Query(0, ge=0, description="Max batches (0=unlimited, each batch ≈ 20 items)"),
     _: None = Depends(require_api_key),
 ):
     """
@@ -3616,7 +3626,7 @@ async def trigger_changes_job(
     # Use a thread to avoid blocking
     job_thread = threading.Thread(
         target=lambda: __import__("asyncio").run(
-            run_changes_job_task(task_id, media_type, start_date, end_date, verbose)
+            run_changes_job_task(task_id, media_type, start_date, end_date, verbose, max_batches)
         ),
         daemon=True,
     )
@@ -3791,10 +3801,13 @@ _SSH_NOISE = re.compile(
     r"(Updating project ssh metadata|"
     r"Updated \[https://|"
     r"Waiting for SSH key|"
+    r"WARNING:\s*$|"
     r"WARNING:.*tcp-forwarding|"
     r"WARNING:.*NumPy|"
     r"WARNING:.*zonal-dns|"
     r"WARNING:.*global DNS|"
+    r"To increase the performance of the tunnel|"
+    r"please see https://cloud\.google\.com/iap/docs|"
     r"Pseudo-terminal will not be allocated|"
     r"\.{3,}done\.)",
 )
@@ -4085,6 +4098,64 @@ async def trigger_finalize_publish(
         await client.close()
 
 
+@app.post("/api/etl/vm/finalize-publish")
+async def trigger_vm_finalize_publish(
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Run finalize-publish on the ETL VM via SSH (uses the VM's MM connection)."""
+    remote_cmd = (
+        "docker exec etl-runner python -c \""
+        "import asyncio; "
+        "from adapters.media_manager_client import MediaManagerClient; "
+        "async def run(): "
+        "    c = MediaManagerClient(); "
+        "    await c.health_check(); "
+        "    r = await c.finalize_publish(); "
+        "    await c.close(); "
+        "    import json; print(json.dumps(r)); "
+        "asyncio.run(run())"
+        "\""
+    )
+    try:
+        output, rc = await asyncio.to_thread(_ssh_run, remote_cmd, 600)
+        if rc != 0:
+            return JSONResponse(
+                status_code=502,
+                content={"success": False, "error": output or f"SSH exited {rc}"},
+            )
+        try:
+            data = json.loads(output.strip().splitlines()[-1])
+        except Exception:
+            data = {"raw_output": output}
+
+        return JSONResponse(content={
+            "success": True,
+            "status": data.get("status", "ok"),
+            "movies_added": data.get("movies_added", 0),
+            "tv_added": data.get("tv_added", 0),
+            "movies_updated": data.get("movies_updated", 0),
+            "tv_updated": data.get("tv_updated", 0),
+            "readers_recycled": data.get("readers_recycled", False),
+            "metadata_only_updated": data.get("metadata_only_updated", 0),
+            "total_errors": data.get("total_errors", 0),
+        })
+    except subprocess.TimeoutExpired:
+        return JSONResponse(
+            status_code=504,
+            content={
+                "success": False,
+                "error": "Timed out waiting for finalize-publish on VM (600s).",
+            },
+        )
+    except FileNotFoundError:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": "gcloud CLI not found."},
+        )
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
+
 # ---------------------------------------------------------------------------
 # ETL VM remote trigger — dispatch ETL jobs to the ETL VM via SSH
 # ---------------------------------------------------------------------------
@@ -4105,6 +4176,7 @@ async def trigger_etl_on_vm(
     job = body.get("job")
     start_date = body.get("start_date")
     end_date = body.get("end_date")
+    max_batches = int(body.get("max_batches") or 0)
 
     if job and job not in ("tv", "movie", "person"):
         return JSONResponse(
@@ -4119,6 +4191,8 @@ async def trigger_etl_on_vm(
         etl_args += f" --start-date {start_date}"
     if end_date:
         etl_args += f" --end-date {end_date}"
+    if max_batches > 0:
+        etl_args += f" --max-batches {max_batches}"
 
     remote_cmd = (
         "docker exec -d etl-runner bash -c '"

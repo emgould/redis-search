@@ -110,7 +110,7 @@
         same process that runs on the nightly schedule.
       </p>
 
-      <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="grid md:grid-cols-2 gap-6 mb-4">
         <!-- Date Override -->
         <div>
           <label class="block text-sm font-medium text-surface-300 mb-2"
@@ -137,6 +137,18 @@
           />
           <p class="text-xs text-surface-500 mt-1">Leave empty to use today</p>
         </div>
+      </div>
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-surface-300 mb-2">Max Batches (optional)</label>
+        <input
+          type="number"
+          id="full-etl-max-batches"
+          min="0"
+          value="0"
+          class="w-40 px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+        />
+        <p class="text-xs text-surface-500 mt-1">0 = unlimited. Each batch ≈ 20 items. Use for testing.</p>
       </div>
 
       <button
@@ -236,7 +248,7 @@
           </p>
         </div>
         <button
-          onclick="triggerFinalizePublish()"
+          onclick="openFinalizeModal()"
           id="btn-finalize-publish"
           class="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -502,6 +514,55 @@ Loading configuration...</pre
   </div>
 </div>
 
+<!-- Finalize Publish Target Modal -->
+<div
+  id="finalize-target-modal"
+  class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center"
+  style="display: none"
+>
+  <div class="bg-surface-900 rounded-xl border border-surface-700 shadow-2xl w-full max-w-md mx-4">
+    <div class="flex items-center justify-between p-4 border-b border-surface-700">
+      <h3 class="text-lg font-semibold flex items-center gap-2">
+        <span>📡</span>
+        <span>Finalize Publish Target</span>
+      </h3>
+      <button onclick="closeFinalizeModal()" class="text-surface-400 hover:text-white p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <p class="text-surface-300 mb-4">
+        Where should finalize-publish run? This promotes staged data to serving instances.
+      </p>
+      <div class="space-y-3">
+        <button
+          onclick="closeFinalizeModal(); triggerFinalizePublish('local');"
+          class="w-full flex items-center gap-3 p-4 bg-surface-800 hover:bg-surface-700 border border-surface-600 hover:border-brand-500/50 rounded-lg transition-colors text-left"
+        >
+          <span class="text-2xl">🐳</span>
+          <div>
+            <p class="font-medium text-white">Local</p>
+            <p class="text-sm text-surface-400">Call Media Manager from this web server's configured URL</p>
+          </div>
+        </button>
+        <button
+          id="finalize-modal-vm-btn"
+          onclick="closeFinalizeModal(); triggerFinalizePublish('vm');"
+          class="w-full flex items-center gap-3 p-4 bg-surface-800 hover:bg-surface-700 border border-surface-600 hover:border-green-500/50 rounded-lg transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface-800 disabled:hover:border-surface-600"
+          disabled
+        >
+          <span class="text-2xl">🖥️</span>
+          <div>
+            <p class="font-medium text-white">ETL VM Instance</p>
+            <p class="text-sm text-surface-400" id="finalize-modal-vm-subtitle">Checking VM status...</p>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div class="flex justify-end p-4 border-t border-surface-700">
+      <button onclick="closeFinalizeModal()" class="px-4 py-2 bg-surface-700 hover:bg-surface-600 rounded-lg font-medium transition-colors">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Job Modal -->
 <div
   id="job-modal"
@@ -574,6 +635,19 @@ Loading configuration...</pre
           />
           <span class="text-sm text-surface-300">Verbose logging</span>
         </label>
+      </div>
+
+      <!-- Max Batches -->
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-1">Max Batches</label>
+        <input
+          type="number"
+          id="job-max-batches"
+          min="0"
+          value="0"
+          class="w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+        />
+        <p class="text-xs text-surface-500 mt-1">0 = unlimited. Each batch ≈ 20 items.</p>
       </div>
 
       <!-- Execution Target -->
@@ -787,9 +861,15 @@ Loading configuration...</pre
   // Finalize Publish
   // ============================================================
 
-  async function triggerFinalizePublish() {
-    if (!confirm("This will trigger a LIVE redeployment on Media Manager.\n\nAll staged data will be promoted to serving instances.\n\nContinue?")) return;
+  function openFinalizeModal() {
+    document.getElementById("finalize-target-modal").style.display = "flex";
+  }
 
+  function closeFinalizeModal() {
+    document.getElementById("finalize-target-modal").style.display = "none";
+  }
+
+  async function triggerFinalizePublish(target) {
     const btn = document.getElementById("btn-finalize-publish");
     const resultEl = document.getElementById("finalize-publish-result");
     const statsEl = document.getElementById("finalize-stats");
@@ -800,11 +880,16 @@ Loading configuration...</pre
     resultEl.classList.remove("hidden");
     statsEl.classList.add("hidden");
     indicator.textContent = "⏳";
-    label.textContent = "Running finalize-publish...";
+    const targetLabel = target === "vm" ? "VM" : "local";
+    label.textContent = `Running finalize-publish (${targetLabel})...`;
     label.className = "font-medium text-sm text-amber-400";
 
+    const endpoint = target === "vm"
+      ? "/api/etl/vm/finalize-publish"
+      : "/api/etl/finalize-publish";
+
     try {
-      const res = await fetch("/api/etl/finalize-publish", { method: "POST" });
+      const res = await fetch(endpoint, { method: "POST" });
       const data = await res.json();
 
       if (!data.success) {
@@ -812,16 +897,18 @@ Loading configuration...</pre
       }
 
       indicator.textContent = "✅";
-      label.textContent = `Finalize publish completed — ${data.status}`;
+      label.textContent = `Finalize publish completed (${targetLabel}) — ${data.status || "ok"}`;
       label.className = "font-medium text-sm text-green-400";
 
-      document.getElementById("fp-movies-added").textContent = data.movies_added;
-      document.getElementById("fp-movies-updated").textContent = data.movies_updated;
-      document.getElementById("fp-tv-added").textContent = data.tv_added;
-      document.getElementById("fp-tv-updated").textContent = data.tv_updated;
-      document.getElementById("fp-readers-recycled").textContent = data.readers_recycled ? "Yes" : "No";
-      document.getElementById("fp-errors").textContent = data.total_errors;
-      statsEl.classList.remove("hidden");
+      if (data.movies_added !== undefined) {
+        document.getElementById("fp-movies-added").textContent = data.movies_added;
+        document.getElementById("fp-movies-updated").textContent = data.movies_updated;
+        document.getElementById("fp-tv-added").textContent = data.tv_added;
+        document.getElementById("fp-tv-updated").textContent = data.tv_updated;
+        document.getElementById("fp-readers-recycled").textContent = data.readers_recycled ? "Yes" : "No";
+        document.getElementById("fp-errors").textContent = data.total_errors;
+        statsEl.classList.remove("hidden");
+      }
     } catch (e) {
       indicator.textContent = "❌";
       label.textContent = "Error: " + e.message;
@@ -864,12 +951,14 @@ Loading configuration...</pre
     const startDate =
       document.getElementById("full-etl-start-date").value || null;
     const endDate = document.getElementById("full-etl-end-date").value || null;
+    const maxBatches = parseInt(document.getElementById("full-etl-max-batches").value) || 0;
 
     if (etlTarget === "vm") {
       try {
         const body = {};
         if (startDate) body.start_date = startDate;
         if (endDate) body.end_date = endDate;
+        if (maxBatches > 0) body.max_batches = maxBatches;
 
         const res = await fetch("/api/etl/vm/trigger", {
           method: "POST",
@@ -903,6 +992,7 @@ Loading configuration...</pre
       const body = {};
       if (startDate) body.start_date = startDate;
       if (endDate) body.end_date = endDate;
+      if (maxBatches > 0) body.max_batches = maxBatches;
 
       const res = await fetch(triggerUrl, {
         method: "POST",
@@ -1066,17 +1156,18 @@ Loading configuration...</pre
     const startDate = document.getElementById("job-start-date").value || null;
     const endDate = document.getElementById("job-end-date").value || null;
     const verbose = document.getElementById("job-verbose").checked;
+    const maxBatches = parseInt(document.getElementById("job-max-batches").value) || 0;
 
     closeJobModal();
 
     if (_jobTarget === "vm") {
-      await triggerVmJob(mediaType, startDate, endDate);
+      await triggerVmJob(mediaType, startDate, endDate, maxBatches);
     } else {
-      await triggerSingleJob(mediaType, startDate, endDate, verbose);
+      await triggerSingleJob(mediaType, startDate, endDate, verbose, maxBatches);
     }
   }
 
-  async function triggerVmJob(mediaType, startDate, endDate) {
+  async function triggerVmJob(mediaType, startDate, endDate, maxBatches) {
     const btn = document.getElementById(`btn-job-${mediaType}`);
     const statusEl = document.getElementById(`job-status-${mediaType}`);
 
@@ -1094,6 +1185,7 @@ Loading configuration...</pre
       const body = { job: mediaType };
       if (startDate) body.start_date = startDate;
       if (endDate) body.end_date = endDate;
+      if (maxBatches > 0) body.max_batches = maxBatches;
 
       const res = await fetch("/api/etl/vm/trigger", {
         method: "POST",
@@ -1124,7 +1216,7 @@ Loading configuration...</pre
     }
   }
 
-  async function triggerSingleJob(mediaType, startDate, endDate, verbose) {
+  async function triggerSingleJob(mediaType, startDate, endDate, verbose, maxBatches) {
     const btn = document.getElementById(`btn-job-${mediaType}`);
     const statusEl = document.getElementById(`job-status-${mediaType}`);
 
@@ -1144,6 +1236,7 @@ Loading configuration...</pre
     if (startDate) params.set("start_date", startDate);
     if (endDate) params.set("end_date", endDate);
     params.set("verbose", verbose.toString());
+    if (maxBatches > 0) params.set("max_batches", maxBatches.toString());
 
     try {
       const res = await fetch(`/api/etl/job/trigger?${params.toString()}`, {
@@ -1898,6 +1991,15 @@ Loading configuration...</pre
       const sub = document.getElementById("target-modal-vm-subtitle");
       sub.textContent = vmRunning
         ? "Run ETL on dedicated VM, writes to GCE Redis"
+        : "VM is not running";
+    }
+
+    const fpVmBtn = document.getElementById("finalize-modal-vm-btn");
+    if (fpVmBtn) {
+      fpVmBtn.disabled = !vmRunning;
+      const fpSub = document.getElementById("finalize-modal-vm-subtitle");
+      fpSub.textContent = vmRunning
+        ? "Run finalize-publish via ETL VM's Media Manager connection"
         : "VM is not running";
     }
 
