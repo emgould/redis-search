@@ -2,8 +2,8 @@
 # Manage Cloud Scheduler jobs that start/stop the ETL VM on a daily schedule.
 #
 # Two jobs are created:
-#   etl-vm-start  -- starts the VM at 9 PM ET (1-2 hrs before 3 AM UTC cron)
-#   etl-vm-stop   -- stops the VM at 6 PM ET (end of business day)
+#   etl-vm-start  -- starts the VM at 2 AM ET (30 min before warmup, 1 hr before ETL)
+#   etl-vm-stop   -- stops the VM at 7 AM ET (buffer after up to 3 hr ETL run)
 #
 # The VM's Docker container uses --restart=always, so the etl-runner container
 # (and its internal cron) comes back automatically when the VM starts.
@@ -23,10 +23,10 @@ ZONE="${REGION}-a"
 VM_NAME="etl-runner-vm"
 
 # Schedule defaults (America/New_York)
-#   Start at 9 PM ET → 2 AM UTC (EST) / 1 AM UTC (EDT), 1-2 hrs before 3 AM cron
-#   Stop at 6 PM ET → 11 PM UTC (EST) / 10 PM UTC (EDT)
-START_SCHEDULE="${ETL_VM_START_SCHEDULE:-0 21 * * *}"
-STOP_SCHEDULE="${ETL_VM_STOP_SCHEDULE:-0 18 * * *}"
+#   Start at 2 AM ET — 30 min before warmup, 1 hr before ETL cron
+#   Stop at 7 AM ET — buffer for up to 3 hr ETL run
+START_SCHEDULE="${ETL_VM_START_SCHEDULE:-0 2 * * *}"
+STOP_SCHEDULE="${ETL_VM_STOP_SCHEDULE:-0 7 * * *}"
 TIME_ZONE="${ETL_VM_TIME_ZONE:-America/New_York}"
 
 # Scheduler job names

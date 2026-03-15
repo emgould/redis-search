@@ -148,7 +148,7 @@ class MediaManagerClient:
         """
         client = await self._get_client()
         try:
-            resp = await client.get("/health", timeout=10.0)
+            resp = await client.get("/health", timeout=60.0)
             resp.raise_for_status()
         except (httpx.HTTPError, httpx.StreamError) as exc:
             raise RuntimeError(

@@ -68,7 +68,7 @@ services:
   # ETL runner for testing (run with: make etl-docker)
   # Uses entrypoint script:
   #   - "run" (default): Run ETL once and exit
-  #   - "cron": Start cron daemon for scheduled runs at 3 AM UTC
+  #   - "cron": Start cron daemon for scheduled runs at 3 AM Eastern
   #   - "test": Verify environment and dry-run
   etl:
     build:

@@ -63,13 +63,13 @@ help:
 	@echo "    make etl-docker-person - Run Person ETL only in Docker"
 	@echo "    make etl-docker-build - Build ETL Docker image"
 	@echo "    make etl-docker-test  - Test ETL configuration and environment (dry-run)"
-	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM UTC daily)"
+	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM Eastern daily)"
 	@echo "    make etl-docker-cron-stop - Stop cron scheduler container"
 	@echo ""
 	@echo "  Deployment:"
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
 	@echo "    make deploy-etl       - Deploy ETL service to Dedicated ETL VM"
-	@echo "    make setup-etl-schedule - Setup daily ETL schedule (2 AM UTC, auto-shutdown)"
+	@echo "    make setup-etl-schedule - Manage ETL VM schedule (Cloud Scheduler, 2-8 AM ET)"
 	@echo "    make etl-vm-status    - Check ETL VM status (RUNNING/TERMINATED/etc.)"
 	@echo "    make etl-vm-start     - Start ETL VM"
 	@echo "    make etl-vm-stop      - Stop ETL VM"
@@ -259,10 +259,10 @@ etl-docker-person:
 etl-docker-test:
 	cd docker && docker-compose --profile etl run --rm etl test
 
-# Start ETL container with cron daemon (runs at 3 AM UTC)
+# Start ETL container with cron daemon (runs at 3 AM Eastern)
 etl-docker-cron:
 	@echo "🕐 Starting ETL container with cron scheduler..."
-	@echo "   ETL will run daily at 3 AM UTC"
+	@echo "   ETL will run daily at 3 AM Eastern"
 	@echo "   View logs: docker logs -f redis-search-etl-1"
 	@echo "   Run manually: docker exec redis-search-etl-1 python -m etl.run_nightly_etl"
 	cd docker && docker-compose --profile etl run -d --name redis-search-etl-cron etl cron
@@ -351,9 +351,10 @@ deploy-web: secrets-setup
 deploy-etl: secrets-setup
 	./scripts/deploy_etl_vm.sh
 
-# Setup scheduled ETL (2 AM UTC daily, auto-shutdown after completion)
+# Manage Cloud Scheduler jobs for ETL VM (2 AM start, 8 AM stop Eastern)
+# Usage: make setup-etl-schedule action=create|update|status|delete|test
 setup-etl-schedule:
-	./scripts/setup_etl_schedule.sh
+	./scripts/setup_etl_vm_scheduler.sh $(or $(action),status)
 
 # ETL VM lifecycle
 etl-vm-status:

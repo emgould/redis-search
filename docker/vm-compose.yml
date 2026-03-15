@@ -55,7 +55,7 @@ services:
     volumes:
       - ${GCS_CREDENTIALS_PATH:-/dev/null}:/app/credentials/gcs-key.json:ro
       - etl-data:/app/data
-    # Start cron daemon - runs ETL at 3 AM UTC daily
+    # Start cron daemon - runs ETL at 3 AM Eastern daily (TZ=America/New_York in image)
     # Logs output to Docker stdout/stderr for visibility
     command: ["cron"]
 

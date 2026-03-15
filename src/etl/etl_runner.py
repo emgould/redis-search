@@ -34,7 +34,7 @@ from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_JOB_TIMEOUT_SECONDS = 5400  # 90 minutes
+DEFAULT_JOB_TIMEOUT_SECONDS = 10800  # 3 hours
 
 
 @dataclass
