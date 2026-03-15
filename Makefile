@@ -69,7 +69,7 @@ help:
 	@echo "  Deployment:"
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
 	@echo "    make deploy-etl       - Deploy ETL service to Dedicated ETL VM"
-	@echo "    make setup-etl-schedule - Setup daily ETL schedule (2 AM UTC, auto-shutdown)"
+	@echo "    make setup-etl-schedule - Manage ETL VM schedule (Cloud Scheduler, 2-8 AM ET)"
 	@echo "    make etl-vm-status    - Check ETL VM status (RUNNING/TERMINATED/etc.)"
 	@echo "    make etl-vm-start     - Start ETL VM"
 	@echo "    make etl-vm-stop      - Stop ETL VM"
@@ -351,9 +351,10 @@ deploy-web: secrets-setup
 deploy-etl: secrets-setup
 	./scripts/deploy_etl_vm.sh
 
-# Setup scheduled ETL (2 AM UTC daily, auto-shutdown after completion)
+# Manage Cloud Scheduler jobs for ETL VM (2 AM start, 8 AM stop Eastern)
+# Usage: make setup-etl-schedule action=create|update|status|delete|test
 setup-etl-schedule:
-	./scripts/setup_etl_schedule.sh
+	./scripts/setup_etl_vm_scheduler.sh $(or $(action),status)
 
 # ETL VM lifecycle
 etl-vm-status:
