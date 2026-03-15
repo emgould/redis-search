@@ -63,7 +63,23 @@ echo "=== ETL Run Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$
 SCRIPT
     chmod +x /app/run-etl-cron.sh
 
+    # Warmup script: pings Media Manager /health to keep Cloud Run warm
+    cat > /app/run-mm-warmup.sh << 'SCRIPT'
+#!/bin/bash
+. /app/.env
+cd /app
+LOG_DIR="/var/log/etl"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/etl-$(date +%Y-%m-%d).log"
+echo "=== MM Warmup Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+python -m etl.mm_warmup 2>&1 | tee -a "$LOG_FILE" > /proc/1/fd/1
+echo "=== MM Warmup Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+SCRIPT
+    chmod +x /app/run-mm-warmup.sh
+
     cat > /etc/cron.d/etl-cron << EOF
+# Warm up Media Manager Cloud Run at VM start (runs 5 hrs, covers full window)
+0 2 * * * root /app/run-mm-warmup.sh &
 # Run ETL at 3 AM Eastern daily (container TZ=America/New_York)
 0 3 * * * root /app/run-etl-cron.sh
 
@@ -87,6 +103,7 @@ case "${1:-run}" in
         setup_cron
         
         echo "Starting cron daemon..."
+        echo "MM warmup starts at 2:00 AM Eastern (pings every 60s for 5 hrs)"
         echo "ETL will run daily at 3 AM Eastern"
         echo "To run manually: docker exec etl-runner python -m etl.run_nightly_etl"
         echo ""
