@@ -2,19 +2,19 @@
 # Setup scheduled ETL on GCP
 #
 # This script:
-# 1. Creates an Instance Schedule to start the ETL VM at 2 AM UTC
-# 2. Creates an Instance Schedule to stop the ETL VM at 5 AM UTC
-# 3. The cron daemon inside the container handles the actual ETL at 3 AM UTC
+# 1. Creates an Instance Schedule to start the ETL VM at 2 AM Eastern
+# 2. Creates an Instance Schedule to stop the ETL VM at 6 AM Eastern
+# 3. The cron daemon inside the container handles the actual ETL at 3 AM Eastern
 #
-# Timeline:
-#   2 AM UTC: VM starts (Instance Schedule)
-#   3 AM UTC: ETL runs (Cron inside container)
-#   5 AM UTC: VM stops (Instance Schedule)
+# Timeline (Eastern):
+#   2 AM ET: VM starts (Instance Schedule)
+#   3 AM ET: ETL runs (Cron inside container, TZ=America/New_York)
+#   6 AM ET: VM stops (Instance Schedule)
 #
 # Benefits:
-#   - Manual VM starts don't trigger ETL (cron only fires at 3 AM)
+#   - Manual VM starts don't trigger ETL (cron only fires at 3 AM ET)
 #   - Easy debugging - can start VM anytime without ETL running
-#   - Cost savings - VM only runs 3 hours per day
+#   - Cost savings - VM only runs 4 hours per day
 #
 # Usage:
 #   ./scripts/setup_etl_schedule.sh
@@ -36,9 +36,9 @@ echo " Setting up Scheduled ETL"
 echo "=============================================="
 echo " Project:  ${PROJECT_ID}"
 echo " VM:       ${VM_NAME}"
-echo " Start:    2 AM UTC (Instance Schedule)"
-echo " ETL:      3 AM UTC (Cron inside container)"
-echo " Stop:     5 AM UTC (Instance Schedule)"
+echo " Start:    2 AM Eastern (Instance Schedule)"
+echo " ETL:      3 AM Eastern (Cron inside container)"
+echo " Stop:     6 AM Eastern (Instance Schedule)"
 echo "=============================================="
 echo ""
 
@@ -64,18 +64,18 @@ if gcloud compute resource-policies describe "$SCHEDULE_NAME" --region="$REGION"
 fi
 
 # Create schedule:
-#   - Start VM at 2 AM UTC (1 hour before cron)
-#   - Stop VM at 5 AM UTC (2 hours after cron, plenty of buffer)
+#   - Start VM at 2 AM Eastern (1 hour before cron)
+#   - Stop VM at 6 AM Eastern (3 hours after cron, plenty of buffer)
 gcloud compute resource-policies create instance-schedule "$SCHEDULE_NAME" \
     --region="$REGION" \
     --vm-start-schedule="0 2 * * *" \
-    --vm-stop-schedule="0 5 * * *" \
-    --timezone="UTC" \
-    --description="ETL schedule: Start 2AM, Stop 5AM UTC"
+    --vm-stop-schedule="0 6 * * *" \
+    --timezone="America/New_York" \
+    --description="ETL schedule: Start 2AM, Stop 6AM Eastern"
 
 echo "   ✅ Schedule created"
-echo "      Start: 2 AM UTC"
-echo "      Stop:  5 AM UTC"
+echo "      Start: 2 AM Eastern"
+echo "      Stop:  6 AM Eastern"
 
 # -----------------------------------------------------------------------------
 # 2. Attach schedule to VM
@@ -106,7 +106,7 @@ if [ "$VM_STATUS" = "RUNNING" ]; then
         --command "docker exec etl-runner crontab -l 2>/dev/null || echo 'Container not running'" 2>/dev/null || echo "SSH failed")
     
     if echo "$CRON_CHECK" | grep -q "etl.run_nightly_etl"; then
-        echo "   ✅ Cron is configured: 3 AM UTC"
+        echo "   ✅ Cron is configured: 3 AM Eastern"
     else
         echo "   ⚠️  Cron may not be configured. Run: make deploy-etl"
     fi
@@ -119,13 +119,13 @@ echo "=============================================="
 echo " ✅ Scheduled ETL Setup Complete"
 echo "=============================================="
 echo ""
-echo " Daily Timeline (UTC):"
+echo " Daily Timeline (Eastern):"
 echo "   2:00 AM - VM starts automatically"
 echo "   3:00 AM - Cron triggers ETL"
 echo "   ~3:30 AM - ETL completes, email sent"
-echo "   5:00 AM - VM stops automatically"
+echo "   6:00 AM - VM stops automatically"
 echo ""
-echo " Cost: ~\$1.50/month (3 hours/day × 30 days × \$0.017/hr)"
+echo " Cost: ~\$2.00/month (4 hours/day × 30 days × \$0.017/hr)"
 echo ""
 echo " Manual Operations:"
 echo "   Start VM:    gcloud compute instances start ${VM_NAME} --zone=${ZONE}"

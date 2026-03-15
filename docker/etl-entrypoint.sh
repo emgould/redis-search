@@ -3,7 +3,7 @@
 #
 # This script handles two modes:
 # 1. "run" (default): Run ETL once and exit
-# 2. "cron": Start cron daemon for scheduled ETL runs at 3 AM UTC
+# 2. "cron": Start cron daemon for scheduled ETL runs at 3 AM Eastern
 #
 # When running in cron mode, environment variables are exported to
 # /etc/environment so cron jobs can access them.
@@ -43,9 +43,9 @@ EOF
     chmod 600 /app/.env
 }
 
-# Setup cron job to run at 3 AM UTC
+# Setup cron job to run at 3 AM Eastern
 setup_cron() {
-    echo "Setting up cron job for 3 AM UTC..."
+    echo "Setting up cron job for 3 AM Eastern..."
 
     mkdir -p /var/log/etl
 
@@ -64,7 +64,7 @@ SCRIPT
     chmod +x /app/run-etl-cron.sh
 
     cat > /etc/cron.d/etl-cron << EOF
-# Run ETL at 3 AM UTC daily (logs persisted to /var/log/etl/)
+# Run ETL at 3 AM Eastern daily (container TZ=America/New_York)
 0 3 * * * root /app/run-etl-cron.sh
 
 # Empty line required by cron
@@ -87,7 +87,7 @@ case "${1:-run}" in
         setup_cron
         
         echo "Starting cron daemon..."
-        echo "ETL will run daily at 3 AM UTC"
+        echo "ETL will run daily at 3 AM Eastern"
         echo "To run manually: docker exec etl-runner python -m etl.run_nightly_etl"
         echo ""
         

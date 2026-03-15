@@ -63,7 +63,7 @@ help:
 	@echo "    make etl-docker-person - Run Person ETL only in Docker"
 	@echo "    make etl-docker-build - Build ETL Docker image"
 	@echo "    make etl-docker-test  - Test ETL configuration and environment (dry-run)"
-	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM UTC daily)"
+	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM Eastern daily)"
 	@echo "    make etl-docker-cron-stop - Stop cron scheduler container"
 	@echo ""
 	@echo "  Deployment:"
@@ -259,10 +259,10 @@ etl-docker-person:
 etl-docker-test:
 	cd docker && docker-compose --profile etl run --rm etl test
 
-# Start ETL container with cron daemon (runs at 3 AM UTC)
+# Start ETL container with cron daemon (runs at 3 AM Eastern)
 etl-docker-cron:
 	@echo "🕐 Starting ETL container with cron scheduler..."
-	@echo "   ETL will run daily at 3 AM UTC"
+	@echo "   ETL will run daily at 3 AM Eastern"
 	@echo "   View logs: docker logs -f redis-search-etl-1"
 	@echo "   Run manually: docker exec redis-search-etl-1 python -m etl.run_nightly_etl"
 	cd docker && docker-compose --profile etl run -d --name redis-search-etl-cron etl cron

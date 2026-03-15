@@ -12,11 +12,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (gcc for compiling, cron for scheduling)
+# Install system dependencies (gcc for compiling, cron for scheduling, tzdata for timezone)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     cron \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+# Container runs on Eastern time so cron schedules align with US business hours
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
