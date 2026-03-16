@@ -21,7 +21,7 @@ import os
 import time
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from redis.asyncio import Redis
@@ -30,6 +30,7 @@ from adapters.config import load_env
 from api.openlibrary.bulk.load_author_index import mc_author_to_redis_doc
 from api.openlibrary.models import MCAuthorItem
 from api.openlibrary.wrappers import openlibrary_wrapper
+from core.normalize import resolve_timestamps
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 
@@ -490,28 +491,37 @@ class BestsellerAuthorETL(BaseAPIClient):
                 logger.info(f"Phase 3: Loading {len(found_authors)} new authors to Redis")
 
                 load_start = time.time()
-                pipeline = redis.pipeline()
-                batch_count = 0
+                prepared: list[tuple[str, dict[str, Any]]] = []
 
                 for author in found_authors:
                     stats.load_phase.items_processed += 1
 
                     try:
-                        # Convert MCAuthorItem to Redis document format
                         author_dict = author.model_dump(mode="json")
                         redis_doc = mc_author_to_redis_doc(author_dict)
-
-                        # Generate key
                         key = f"{KEY_PREFIX}{redis_doc['id']}"
 
-                        pipeline.json().set(key, "$", redis_doc)
-                        batch_count += 1
+                        prepared.append((key, redis_doc))
                         stats.load_phase.items_success += 1
 
-                        if batch_count >= BATCH_SIZE:
-                            await pipeline.execute()
-                            pipeline = redis.pipeline()
-                            batch_count = 0
+                        if len(prepared) >= BATCH_SIZE:
+                            now_ts = int(datetime.now(UTC).timestamp())
+                            read_pipe = redis.pipeline()
+                            for k, _ in prepared:
+                                read_pipe.json().get(k)
+                            existing_docs: list[object] = await read_pipe.execute()
+
+                            write_pipe = redis.pipeline()
+                            for (k, doc), existing in zip(
+                                prepared, existing_docs, strict=True
+                            ):
+                                existing_dict = existing if isinstance(existing, dict) else None
+                                ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                                doc["created_at"] = ca
+                                doc["modified_at"] = ma
+                                write_pipe.json().set(k, "$", doc)
+                            await write_pipe.execute()
+                            prepared = []
 
                     except Exception as e:
                         error_msg = f"Error loading author {author.name}: {e}"
@@ -519,9 +529,23 @@ class BestsellerAuthorETL(BaseAPIClient):
                         stats.load_phase.errors.append(error_msg)
                         stats.load_phase.items_failed += 1
 
-                # Execute remaining batch
-                if batch_count > 0:
-                    await pipeline.execute()
+                if prepared:
+                    now_ts = int(datetime.now(UTC).timestamp())
+                    read_pipe = redis.pipeline()
+                    for k, _ in prepared:
+                        read_pipe.json().get(k)
+                    existing_docs = await read_pipe.execute()
+
+                    write_pipe = redis.pipeline()
+                    for (k, doc), existing in zip(
+                        prepared, existing_docs, strict=True
+                    ):
+                        existing_dict = existing if isinstance(existing, dict) else None
+                        ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+                        doc["created_at"] = ca
+                        doc["modified_at"] = ma
+                        write_pipe.json().set(k, "$", doc)
+                    await write_pipe.execute()
 
                 stats.load_phase.completed_at = datetime.now()
                 load_duration = time.time() - load_start

@@ -18,7 +18,7 @@ import json
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ from redis.asyncio import Redis
 from adapters.config import load_env
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCSources, MCType
-from core.normalize import SearchDocument, document_to_redis
+from core.normalize import SearchDocument, document_to_redis, resolve_timestamps
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -377,35 +377,29 @@ class PersonETLService:
         if not self.redis:
             raise RuntimeError("Not connected to Redis")
 
-        pipeline = self.redis.pipeline()
-        batch_count = 0
+        prepared: list[tuple[str, dict[str, Any]]] = []
 
         for person in results:
-            # Normalize the document for search index
             search_doc = self._normalize_person_for_search(person)
 
             if search_doc is None:
                 stats.documents_skipped += 1
                 continue
 
-            # Convert to Redis format
             key = f"person:{search_doc.id}"
             redis_doc = document_to_redis(search_doc)
 
-            # Add also_known_as to the document for search
             also_known_as = person.get("also_known_as", [])
             if also_known_as:
-                redis_doc["also_known_as"] = " | ".join(also_known_as[:10])  # Limit to 10
+                redis_doc["also_known_as"] = " | ".join(also_known_as[:10])
             else:
                 redis_doc["also_known_as"] = ""
 
-            # Add display fields not in SearchDocument
             redis_doc["known_for_department"] = person.get("known_for_department") or ""
             redis_doc["birthday"] = person.get("birthday")
             redis_doc["deathday"] = person.get("deathday")
             redis_doc["place_of_birth"] = person.get("place_of_birth")
 
-            # Calculate age
             birthday = person.get("birthday")
             deathday = person.get("deathday")
             if birthday:
@@ -426,32 +420,26 @@ class PersonETLService:
                 redis_doc["age"] = None
                 redis_doc["is_deceased"] = False
 
-            # Add known_for titles if available
             known_for = person.get("known_for", [])
             if known_for:
                 known_for_titles = []
-                for item in known_for[:3]:  # Top 3
-                    title = item.get("title") or item.get("name")
+                for kf_item in known_for[:3]:
+                    title = kf_item.get("title") or kf_item.get("name")
                     if title:
                         known_for_titles.append(title)
                 redis_doc["known_for_titles"] = known_for_titles
             else:
                 redis_doc["known_for_titles"] = []
 
-            # Add to pipeline
-            pipeline.json().set(key, "$", redis_doc)
-            batch_count += 1
+            prepared.append((key, redis_doc))
             stats.documents_loaded += 1
 
-            # Execute batch
-            if batch_count >= self.config.batch_size:
-                await pipeline.execute()
-                pipeline = self.redis.pipeline()
-                batch_count = 0
+            if len(prepared) >= self.config.batch_size:
+                await self._write_batch_with_timestamps(prepared)
+                prepared = []
 
-        # Execute remaining items
-        if batch_count > 0:
-            await pipeline.execute()
+        if prepared:
+            await self._write_batch_with_timestamps(prepared)
 
         await self.disconnect()
 
@@ -469,6 +457,28 @@ class PersonETLService:
         print("🎉 Load Complete!")
 
         return stats
+
+    async def _write_batch_with_timestamps(
+        self,
+        prepared: list[tuple[str, dict[str, Any]]],
+    ) -> None:
+        """Flush a batch with read-before-write timestamp resolution."""
+        if not prepared or not self.redis:
+            return
+        now_ts = int(datetime.now(UTC).timestamp())
+        read_pipe = self.redis.pipeline()
+        for key, _ in prepared:
+            read_pipe.json().get(key)
+        existing_docs: list[object] = await read_pipe.execute()
+
+        write_pipe = self.redis.pipeline()
+        for (key, redis_doc), existing in zip(prepared, existing_docs, strict=True):
+            existing_dict = existing if isinstance(existing, dict) else None
+            ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
+            redis_doc["created_at"] = ca
+            redis_doc["modified_at"] = ma
+            write_pipe.json().set(key, "$", redis_doc)
+        await write_pipe.execute()
 
     def _normalize_person_for_search(self, person: dict) -> SearchDocument | None:
         """
