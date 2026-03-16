@@ -1,0 +1,62 @@
+---
+description: ETL manual job behavior, resume windows, timestamp-preserving upserts, and TMDB existing-item lookup rules
+globs:
+  - "src/etl/*.py"
+  - "src/services/person_etl_service.py"
+  - "web/app.py"
+  - "web/templates/etl.html"
+alwaysApply: false
+---
+
+# ETL Manual Jobs And Existing-Item Checks
+
+## Manual job types
+
+The local ETL UI and manual trigger endpoints support these single-job runs:
+
+- `tv`
+- `movie`
+- `person`
+- `podcast`
+- `book`
+
+The CLI runner in `src/etl/run_nightly_etl.py` must keep the same job vocabulary when `--job` is used.
+
+## Resume window semantics
+
+Manual and scheduled ETL windows are day-based.
+
+- `start_date` and `end_date` are treated as the requested TMDB changes window.
+- The next automatic start date is `last_successful_run + 1 day`.
+- If a job last completed on `2026-03-12`, the next run should begin on `2026-03-13`, not re-run `2026-03-12`.
+
+## TMDB existing-item checks
+
+The TMDB changes ETL must not scan the entire Redis keyspace to decide whether a changed item already exists.
+
+- Do **not** build a startup `set[int]` by `SCAN`ning `media:*`.
+- Do **not** assume bare TMDB numeric IDs are globally unique across movie and TV.
+- Existing-item checks must use the typed Redis media key shape:
+  - movie: `media:tmdb_movie_{tmdb_id}`
+  - tv: `media:tmdb_tv_{tmdb_id}`
+- Prefer pipelined per-batch `EXISTS` checks over any full-keyspace scan.
+
+Reasoning:
+
+- movie and TV TMDB IDs can collide
+- the Redis key shape is MCID-based and media-type-qualified
+- batch point lookups scale with the TMDB changes result set, while `SCAN` scales with the whole Redis dataset
+
+## Existing-item filter behavior
+
+If a changed TMDB item already exists in Redis, it should bypass the new-item media filter and be re-indexed.
+
+This rule exists so updates to already indexed titles are not skipped just because the title would no longer pass the insertion filter.
+
+## Timestamp-preserving upserts
+
+Person ETL and bestseller-author ETL writes should preserve Redis document timestamps.
+
+- Read the existing JSON document before overwrite.
+- Use `resolve_timestamps(...)` to keep `created_at` stable and refresh `modified_at`.
+- Batch this as read-before-write pipelines rather than blind overwrites.

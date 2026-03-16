@@ -47,8 +47,8 @@ def parse_args() -> argparse.Namespace:
         "--job",
         "-j",
         type=str,
-        help="Run specific job only (tv, movie, person, podcast)",
-        choices=["tv", "movie", "person", "podcast"],
+        help="Run specific job only (tv, movie, person, podcast, book)",
+        choices=["tv", "movie", "person", "podcast", "book"],
     )
     parser.add_argument(
         "--start-date",
@@ -103,10 +103,11 @@ async def main() -> int:
     # Build job filter if specific job requested
     job_filter = None
     if args.job:
-        if args.job == "podcast":
-            job_filter = ["podcastindex_changes"]
-        else:
-            job_filter = [f"tmdb_{args.job}_changes"]
+        job_filter_map = {
+            "podcast": "podcastindex_changes",
+            "book": "bestseller_authors",
+        }
+        job_filter = [job_filter_map.get(args.job, f"tmdb_{args.job}_changes")]
 
     if args.dry_run:
         logger.info("DRY RUN - showing resolved job windows")

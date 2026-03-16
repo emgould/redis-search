@@ -369,7 +369,7 @@ class TMDBChangesETL(TMDBService):
         end_date: str,
         stats: ChangesETLStats,
         max_batches: int = 0,
-        existing_ids: set[int] | None = None,
+        redis_conn: Redis | None = None,
     ) -> Path:
         """Phase 1: Fetch all data from TMDB and save to staging file."""
         stats.fetch_phase.started_at = datetime.now()
@@ -423,6 +423,17 @@ class TMDBChangesETL(TMDBService):
 
             batch_time = time.time() - batch_start
 
+            # Pipelined EXISTS check: O(batch_size) point lookups instead of O(keyspace) SCAN.
+            existing_in_batch: set[int] = set()
+            if redis_conn is not None and media_type in ("movie", "tv"):
+                pipe = redis_conn.pipeline(transaction=False)
+                for tid in batch:
+                    pipe.exists(f"media:tmdb_{media_type}_{tid}")
+                exists_results = await pipe.execute()
+                for tid, exists in zip(batch, exists_results, strict=True):
+                    if exists:
+                        existing_in_batch.add(tid)
+
             for tmdb_id, result in zip(batch, results, strict=True):
                 stats.fetch_phase.items_processed += 1
 
@@ -466,7 +477,7 @@ class TMDBChangesETL(TMDBService):
 
                 # Existing items always pass — we must update them
                 stats.enriched_count += 1
-                is_existing = existing_ids is not None and tmdb_id in existing_ids
+                is_existing = tmdb_id in existing_in_batch
 
                 if is_existing:
                     enriched_items.append(item_dict)
@@ -854,37 +865,21 @@ async def run_nightly_etl(
 
     # Phase 1: Fetch
     if not load_only:
-        # Build set of existing tmdb_ids so updates to indexed items bypass the filter
-        existing_ids: set[int] | None = None
+        redis_conn: Redis | None = None
         if media_type in ("movie", "tv"):
-            prefix = "media:tmdb_"
-            existing_ids = set()
-            redis = Redis(
+            redis_conn = Redis(
                 host=redis_host,
                 port=redis_port,
                 password=redis_password or None,
                 decode_responses=True,
             )
-            try:
-                cursor = 0
-                while True:
-                    cursor, keys = await redis.scan(cursor=cursor, match=f"{prefix}*", count=1000)
-                    for k in keys:
-                        try:
-                            suffix = k[len(prefix):]
-                            if suffix.isdigit():
-                                existing_ids.add(int(suffix))
-                        except ValueError:
-                            continue
-                    if cursor == 0:
-                        break
-                logger.info(f"Found {len(existing_ids)} existing {media_type} items in index")
-            finally:
-                await redis.aclose()
-
-        staging_path = await etl.fetch_and_stage(
-            media_type, start_date, end_date, stats, max_batches, existing_ids=existing_ids
-        )
+        try:
+            staging_path = await etl.fetch_and_stage(
+                media_type, start_date, end_date, stats, max_batches, redis_conn=redis_conn
+            )
+        finally:
+            if redis_conn is not None:
+                await redis_conn.aclose()
 
         print("📊 Phase 1 (Fetch) Results:")
         print(f"  Items found: {stats.total_changes_found}")

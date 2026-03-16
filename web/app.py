@@ -31,9 +31,11 @@ from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, prepare_media_redis_document
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
+from etl.bestseller_author_etl import BestsellerETLStats, run_bestseller_author_etl
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig, JobRunResult
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
 from etl.media_manager_filter import passes_media_manager_filter
+from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
 from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
     MINIMAL_AUTOCOMPLETE_SOURCES,
@@ -3295,60 +3297,120 @@ async def run_changes_job_task(
     verbose: bool = False,
     max_batches: int = 0,
 ) -> None:
-    """Background task to run a single changes ETL job."""
+    """Background task to run a single ETL job."""
     global _changes_job_status, _changes_job_live_stats
 
-    # Create stats object upfront for progress tracking
-    stats = ChangesETLStats()
-    _changes_job_live_stats[task_id] = stats
     started_at = datetime.now()
 
+    # Live progress tracking only for TMDB changes ETL
+    stats: ChangesETLStats | None = None
+    if media_type in ("tv", "movie", "person"):
+        stats = ChangesETLStats()
+        _changes_job_live_stats[task_id] = stats
+
     try:
-        # Get Redis config from current environment
         current_env = RedisManager.get_current_env()
         redis_config = RedisManager.get_config(current_env)
         config = ETLConfig.from_env()
         runner = ETLRunner(config, metadata_store=_get_etl_metadata_store())
-        resolved_job_name = f"tmdb_{media_type}_changes_{media_type}"
+
+        # Resolve job name and dates per ETL type
+        job_name_map = {
+            "tv": "tmdb_tv_changes_tv",
+            "movie": "tmdb_movie_changes_movie",
+            "person": "tmdb_person_changes_person",
+            "podcast": "podcastindex_changes_podcast",
+            "book": "bestseller_authors_book",
+        }
+        resolved_job_name = job_name_map[media_type]
         resolved_start_date = runner.get_job_start_date(resolved_job_name, start_date)
         resolved_end_date = end_date or datetime.now().date().isoformat()
 
-        # Pass stats object so we can track progress during execution
-        final_stats = await run_single_etl(
-            media_type=media_type,
-            start_date=resolved_start_date,
-            end_date=resolved_end_date,
-            redis_host=redis_config.host,
-            redis_port=redis_config.port,
-            redis_password=redis_config.password,
-            verbose=verbose,
-            stats=stats,
-            max_batches=max_batches,
-        )
+        result_dict: dict[str, Any]
+        changes_found = 0
+        documents_upserted = 0
+        documents_skipped = 0
+        errors_count = 0
+        mm_docs_sent = 0
+        all_errors: list[str] = []
+
+        if media_type in ("tv", "movie", "person"):
+            assert stats is not None
+            final_stats = await run_single_etl(
+                media_type=media_type,
+                start_date=resolved_start_date,
+                end_date=resolved_end_date,
+                redis_host=redis_config.host,
+                redis_port=redis_config.port,
+                redis_password=redis_config.password,
+                verbose=verbose,
+                stats=stats,
+                max_batches=max_batches,
+            )
+            result_dict = final_stats.to_dict()
+            all_errors = final_stats.fetch_phase.errors + final_stats.load_phase.errors
+            changes_found = final_stats.total_changes_found
+            documents_upserted = final_stats.load_phase.items_success
+            documents_skipped = final_stats.failed_filter
+            errors_count = len(all_errors)
+            mm_docs_sent = final_stats.mm_docs_sent
+
+        elif media_type == "podcast":
+            pi_stats: PIETLStats = await run_pi_nightly_etl(
+                media_type="podcast",
+                redis_host=redis_config.host,
+                redis_port=redis_config.port,
+                redis_password=redis_config.password,
+                max_batches=max_batches,
+            )
+            result_dict = pi_stats.to_dict()
+            changes_found = pi_stats.total_updated
+            documents_upserted = pi_stats.documents_loaded
+            documents_skipped = pi_stats.documents_skipped
+            all_errors = pi_stats.error_messages
+            errors_count = pi_stats.errors
+
+        elif media_type == "book":
+            bs_stats: BestsellerETLStats = await run_bestseller_author_etl(
+                media_type="book",
+                start_date=resolved_start_date,
+                redis_host=redis_config.host,
+                redis_port=redis_config.port,
+                redis_password=redis_config.password,
+                verbose=verbose,
+                max_batches=max_batches,
+            )
+            result_dict = bs_stats.to_dict()
+            changes_found = bs_stats.new_authors
+            documents_upserted = bs_stats.load_phase.items_success
+            all_errors = bs_stats.load_phase.errors
+            errors_count = len(all_errors)
+
+        else:
+            raise ValueError(f"Unsupported media_type: {media_type}")
 
         completed_at = datetime.now()
-        load_errors = final_stats.load_phase.items_failed
-        all_errors = final_stats.fetch_phase.errors + final_stats.load_phase.errors
+        load_status = "success" if errors_count == 0 else "partial"
         job_result = JobRunResult(
             job_name=resolved_job_name,
             media_type=media_type,
-            status="success" if load_errors == 0 else "partial",
+            status=load_status,
             started_at=started_at,
             completed_at=completed_at,
             duration_seconds=(completed_at - started_at).total_seconds(),
             effective_start_date=resolved_start_date,
             effective_end_date=resolved_end_date,
-            changes_found=final_stats.total_changes_found,
-            documents_upserted=final_stats.load_phase.items_success,
-            documents_skipped=final_stats.failed_filter,
-            errors_count=len(all_errors),
-            mm_docs_sent=final_stats.mm_docs_sent,
+            changes_found=changes_found,
+            documents_upserted=documents_upserted,
+            documents_skipped=documents_skipped,
+            errors_count=errors_count,
+            mm_docs_sent=mm_docs_sent,
             error_message=all_errors[0] if all_errors else None,
             errors=all_errors,
         )
         runner.metadata_store.update_job_state(job_result.job_name, job_result)
 
-        _changes_job_status[task_id]["result"] = final_stats.to_dict()
+        _changes_job_status[task_id]["result"] = result_dict
 
     except Exception as e:
         _changes_job_status[task_id]["error"] = str(e)
@@ -3356,7 +3418,6 @@ async def run_changes_job_task(
     finally:
         _changes_job_status[task_id]["running"] = False
         _changes_job_status[task_id]["completed_at"] = datetime.now().isoformat()
-        # Clean up live stats
         if task_id in _changes_job_live_stats:
             del _changes_job_live_stats[task_id]
 
@@ -3591,7 +3652,7 @@ async def get_cloud_etl_status(_: None = Depends(require_api_key)) -> JSONRespon
 @app.post("/api/etl/job/trigger")
 async def trigger_changes_job(
     background_tasks: BackgroundTasks,
-    media_type: str = Query(..., description="Media type: tv, movie, or person"),
+    media_type: str = Query(..., description="Media type: tv, movie, person, podcast, or book"),
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     verbose: bool = Query(False, description="Enable verbose logging"),
@@ -3605,7 +3666,7 @@ async def trigger_changes_job(
     """
     global _changes_job_status
 
-    if media_type not in ["tv", "movie", "person"]:
+    if media_type not in ["tv", "movie", "person", "podcast", "book"]:
         return JSONResponse(
             status_code=400,
             content={"success": False, "error": f"Invalid media_type: {media_type}"},
@@ -4191,7 +4252,7 @@ async def trigger_etl_on_vm(
     end_date = body.get("end_date")
     max_batches = int(body.get("max_batches") or 0)
 
-    if job and job not in ("tv", "movie", "person"):
+    if job and job not in ("tv", "movie", "person", "podcast", "book"):
         return JSONResponse(
             status_code=400,
             content={"success": False, "error": f"Invalid job: {job}"},
