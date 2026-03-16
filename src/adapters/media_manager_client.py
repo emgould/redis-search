@@ -139,10 +139,15 @@ class MediaManagerClient:
         age = time.monotonic() - self._id_token_fetched_at
         return age >= (_TOKEN_LIFETIME - _TOKEN_REFRESH_MARGIN)
 
+    def _refresh_auth(self) -> None:
+        """Re-fetch the OIDC token and update the live client headers."""
+        if self._client is not None and not self._client.is_closed:
+            self._client.headers.update(self._build_headers())
+
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is not None and not self._client.is_closed and self._token_needs_refresh():
-            logger.debug("OIDC token approaching expiry, refreshing headers")
-            self._client.headers.update(self._build_headers())
+            logger.debug("OIDC token approaching expiry, refreshing proactively")
+            self._refresh_auth()
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 base_url=self._base_url,
@@ -150,6 +155,21 @@ class MediaManagerClient:
                 timeout=httpx.Timeout(self._timeout),
             )
         return self._client
+
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Execute a request with automatic OIDC token refresh on 401."""
+        client = await self._get_client()
+        resp = await client.request(method, url, **kwargs)
+        if resp.status_code == 401 and self._id_token_fetched_at > 0:
+            logger.info("Received 401 from %s %s, refreshing OIDC token and retrying", method, url)
+            self._refresh_auth()
+            resp = await client.request(method, url, **kwargs)
+        return resp
 
     async def close(self) -> None:
         if self._client and not self._client.is_closed:
@@ -161,9 +181,8 @@ class MediaManagerClient:
 
         Raises ``RuntimeError`` if the service is unhealthy.
         """
-        client = await self._get_client()
         try:
-            resp = await client.get("/health", timeout=60.0)
+            resp = await self._request("GET", "/health", timeout=60.0)
             resp.raise_for_status()
         except (httpx.HTTPError, httpx.StreamError) as exc:
             raise RuntimeError(
@@ -200,11 +219,7 @@ class MediaManagerClient:
         if metadata_only:
             body["metadata_only"] = True
 
-        client = await self._get_client()
-        resp = await client.post(
-            "/insert-docs",
-            json=body,
-        )
+        resp = await self._request("POST", "/insert-docs", json=body)
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()
         return InsertDocsResponse(
@@ -222,8 +237,7 @@ class MediaManagerClient:
 
         Returns `None` when the media id is not present.
         """
-        client = await self._get_client()
-        resp = await client.post("/api/metadata", json={"media_id": media_id})
+        resp = await self._request("POST", "/api/metadata", json={"media_id": media_id})
 
         if resp.status_code == 404:
             return None
@@ -237,8 +251,7 @@ class MediaManagerClient:
 
     async def get_status(self) -> StatusResponse:
         """GET /insert-docs/status for current processing state."""
-        client = await self._get_client()
-        resp = await client.get("/insert-docs/status")
+        resp = await self._request("GET", "/insert-docs/status")
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()
         return StatusResponse(
@@ -254,8 +267,7 @@ class MediaManagerClient:
 
     async def finalize_publish(self) -> FinalizePublishResponse:
         """POST /api/etl/finalize-publish — blocks until publish completes."""
-        client = await self._get_client()
-        resp = await client.post("/api/etl/finalize-publish")
+        resp = await self._request("POST", "/api/etl/finalize-publish")
         resp.raise_for_status()
         data: dict[str, Any] = resp.json()
         return FinalizePublishResponse(
@@ -291,11 +303,11 @@ class MediaManagerClient:
 
         Retries with exponential backoff on 409 Conflict (index busy).
         """
-        client = await self._get_client()
         logger.info("Rebuilding index '%s' (re_embedding=%s)...", index_name, re_embedding)
         delay = initial_backoff
         for attempt in range(max_retries):
-            resp = await client.post(
+            resp = await self._request(
+                "POST",
                 f"/api/index/{index_name}/rebuild",
                 json={"re_embedding": re_embedding},
                 timeout=REBUILD_TIMEOUT,
