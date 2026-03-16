@@ -121,7 +121,10 @@ class MediaManagerClient:
         Returns None when not running on GCE/Cloud Run or when the
         target is a local URL (localhost / host.docker.internal).
         """
-        if any(h in self._base_url for h in ("localhost", "127.0.0.1", "host.docker.internal")):
+        if any(
+            h in self._base_url
+            for h in ("localhost", "127.0.0.1", "host.docker.internal")
+        ):
             return None
         try:
             request = google.auth.transport.requests.Request()
@@ -129,7 +132,9 @@ class MediaManagerClient:
             self._id_token_fetched_at = time.monotonic()
             return token
         except Exception as exc:
-            logger.debug("Could not fetch GCP identity token (expected in local dev): %s", exc)
+            logger.debug(
+                "Could not fetch GCP identity token (expected in local dev): %s", exc
+            )
             return None
 
     def _token_needs_refresh(self) -> bool:
@@ -145,7 +150,11 @@ class MediaManagerClient:
             self._client.headers.update(self._build_headers())
 
     async def _get_client(self) -> httpx.AsyncClient:
-        if self._client is not None and not self._client.is_closed and self._token_needs_refresh():
+        if (
+            self._client is not None
+            and not self._client.is_closed
+            and self._token_needs_refresh()
+        ):
             logger.debug("OIDC token approaching expiry, refreshing proactively")
             self._refresh_auth()
         if self._client is None or self._client.is_closed:
@@ -166,7 +175,11 @@ class MediaManagerClient:
         client = await self._get_client()
         resp = await client.request(method, url, **kwargs)
         if resp.status_code == 401 and self._id_token_fetched_at > 0:
-            logger.info("Received 401 from %s %s, refreshing OIDC token and retrying", method, url)
+            logger.info(
+                "Received 401 from %s %s, refreshing OIDC token and retrying",
+                method,
+                url,
+            )
             self._refresh_auth()
             resp = await client.request(method, url, **kwargs)
         return resp
@@ -191,9 +204,7 @@ class MediaManagerClient:
 
         data: dict[str, Any] = resp.json()
         if data.get("status") != "ok" or not data.get("media_manager_initialized"):
-            raise RuntimeError(
-                f"Media Manager not ready: {data}"
-            )
+            raise RuntimeError(f"Media Manager not ready: {data}")
         logger.info("Media Manager health check passed: %s", data)
         return HealthResponse(
             status=data["status"],
@@ -246,7 +257,9 @@ class MediaManagerClient:
         data: dict[str, object] = resp.json()
         metadata = data.get("metadata")
         if not isinstance(metadata, dict):
-            raise ValueError("Unexpected /api/metadata response: missing metadata object")
+            raise ValueError(
+                "Unexpected /api/metadata response: missing metadata object"
+            )
         return MetadataResponse(metadata=metadata)
 
     async def get_status(self) -> StatusResponse:
@@ -303,7 +316,9 @@ class MediaManagerClient:
 
         Retries with exponential backoff on 409 Conflict (index busy).
         """
-        logger.info("Rebuilding index '%s' (re_embedding=%s)...", index_name, re_embedding)
+        logger.info(
+            "Rebuilding index '%s' (re_embedding=%s)...", index_name, re_embedding
+        )
         delay = initial_backoff
         for attempt in range(max_retries):
             resp = await self._request(
@@ -316,7 +331,10 @@ class MediaManagerClient:
                 logger.warning(
                     "Index '%s' returned 409 Conflict (attempt %d/%d), "
                     "retrying in %.0fs...",
-                    index_name, attempt + 1, max_retries, delay,
+                    index_name,
+                    attempt + 1,
+                    max_retries,
+                    delay,
                 )
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 300.0)
