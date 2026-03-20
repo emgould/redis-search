@@ -1102,7 +1102,9 @@ async def api_tmdb_details(
             if hasattr(details, "error") and details.error:
                 continue
             mc_data: dict[str, Any] = (
-                details.model_dump(mode="json") if hasattr(details, "model_dump") else details
+                details.model_dump(mode="json")
+                if hasattr(details, "model_dump")
+                else dict(details) if isinstance(details, dict) else {"data": details}
             )
             mc_data["_tmdb_live"] = True
             mc_items.append(mc_data)
@@ -1115,8 +1117,12 @@ async def api_tmdb_details(
             continue
         if hasattr(details, "error") and details.error:
             continue
-        mc_data = details.model_dump(mode="json") if hasattr(details, "model_dump") else details
-        item_dict = dict(mc_data)
+        mc_data = (
+            details.model_dump(mode="json")
+            if hasattr(details, "model_dump")
+            else dict(details) if isinstance(details, dict) else {"data": details}
+        )
+        item_dict: dict[str, Any] = dict(mc_data)
         item_dict["_media_type"] = media_type_enum.value
         normalized = normalize_document(item_dict, genre_mapping=GENRE_MAPPING)
         if normalized is None:
@@ -1688,7 +1694,7 @@ async def promote_status(_: None = Depends(require_api_key)):
 # ============================================================================
 
 
-def run_copy_to_local_task(indices: list[str] | None = None):
+def run_copy_to_local_task(indices: list[str] | None = None, clean: bool = False):
     """Run copy from public to local Redis in background."""
     global _copy_to_local_status
     _copy_to_local_status = {"running": True, "output": "", "error": ""}
@@ -1698,7 +1704,7 @@ def run_copy_to_local_task(indices: list[str] | None = None):
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
-        # Build command - use promote script with --reverse flag
+        # Build command
         cmd = [
             sys.executable,
             "-u",
@@ -1707,6 +1713,9 @@ def run_copy_to_local_task(indices: list[str] | None = None):
 
         if indices:
             cmd.extend(["--indices"] + indices)
+
+        if clean:
+            cmd.append("--clean")
 
         process = subprocess.Popen(
             cmd,
@@ -1798,6 +1807,7 @@ async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
 async def copy_to_local(
     background_tasks: BackgroundTasks,
     indices: list[str] | None = Query(default=None),
+    clean: bool = Query(default=False),
     _: None = Depends(require_api_key),
 ):
     """
@@ -1806,6 +1816,7 @@ async def copy_to_local(
     Args:
         indices: Optional list of index names to copy. If not provided,
                  copies all available indices.
+        clean: If True, delete all target documents before copy (slower but exact mirror).
     """
     global _copy_to_local_status
 
@@ -1815,13 +1826,14 @@ async def copy_to_local(
             content={"success": False, "error": "A copy task is already running"},
         )
 
-    background_tasks.add_task(run_copy_to_local_task, indices)
+    background_tasks.add_task(run_copy_to_local_task, indices, clean)
 
     indices_msg = f"indices: {', '.join(indices)}" if indices else "all indices"
+    clean_msg = " (mirror/clean mode)" if clean else ""
     return JSONResponse(
         content={
             "success": True,
-            "message": f"Started copying public Redis to local ({indices_msg})",
+            "message": f"Started copying public Redis to local ({indices_msg}){clean_msg}",
         }
     )
 

@@ -173,29 +173,49 @@ async def get_index_schema(redis: Redis, index_name: str) -> IndexSchema | None:
                     prefix = prefixes[0]
                 break
 
-    schema_fields: list[dict[str, str]] = []
+    schema_fields: list[dict[str, str | list[str]]] = []
     if "attributes" in info:
         for attr in info["attributes"]:
-            field_info: dict[str, str] = {}
-            for k in range(0, len(attr), 2):
-                field_info[attr[k]] = attr[k + 1]
+            field_info: dict[str, str | list[str]] = {}
+            flags: list[str] = []
+            k = 0
+            while k < len(attr):
+                key = attr[k]
+                # Check if this is a standalone flag (no value follows)
+                if key in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}:
+                    flags.append(key)
+                    k += 1
+                elif k + 1 >= len(attr):
+                    # Last element is a flag
+                    flags.append(key)
+                    k += 1
+                else:
+                    field_info[key] = attr[k + 1]
+                    k += 2
+            if flags:
+                field_info["flags"] = flags
             schema_fields.append(field_info)
 
     return IndexSchema(name=index_name, prefix=prefix, fields=schema_fields)
 
 
-def build_schema_from_fields(fields: list[dict[str, str]]) -> list[Field]:
+def build_schema_from_fields(fields: list[dict[str, str | list[str]]]) -> list[Field]:
     """Reconstruct a Redis search schema from introspected field definitions."""
     schema: list[Field] = []
     for f in fields:
-        field_type = f.get("type", "").upper()
-        identifier = f.get("identifier", "")
-        attribute = f.get("attribute", identifier)
-        sortable = "SORTABLE" in f.get("flags", "") if "flags" in f else False
-        weight = float(f.get("weight", 1.0)) if "weight" in f else 1.0
+        field_type = str(f.get("type", "")).upper()
+        identifier = str(f.get("identifier", ""))
+        attribute = str(f.get("attribute", identifier))
+        flags = f.get("flags", [])
+        if isinstance(flags, str):
+            flags = [flags] if flags else []
+        sortable = "SORTABLE" in flags
+        no_stem = "NOSTEM" in flags
+        weight_val = f.get("WEIGHT", 1.0)
+        weight = float(weight_val) if weight_val else 1.0
 
         if field_type == "TEXT":
-            schema.append(TextField(identifier, as_name=attribute, weight=weight))
+            schema.append(TextField(identifier, as_name=attribute, weight=weight, no_stem=no_stem))
         elif field_type == "TAG":
             schema.append(TagField(identifier, as_name=attribute))
         elif field_type == "NUMERIC":

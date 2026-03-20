@@ -30,13 +30,10 @@ _SEARCH_POOL_MAX_CONNECTIONS = 50
 def _default_redis_env() -> RedisEnvironment:
     """Determine the default Redis environment.
 
-    Cloud Run (K_SERVICE set) uses LOCAL because it reaches the Redis VM
-    directly over VPC via REDIS_HOST.  Local development defaults to PUBLIC
-    (IAP tunnel) so the web-UI toggle starts pointed at the shared instance.
+    Both Cloud Run (K_SERVICE set) and local development default to LOCAL.
+    Use the UI toggle to switch to PUBLIC when needed.
     """
-    if os.getenv("K_SERVICE"):
-        return RedisEnvironment.LOCAL
-    return RedisEnvironment.PUBLIC
+    return RedisEnvironment.LOCAL
 
 
 class RedisManager:

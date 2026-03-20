@@ -383,7 +383,8 @@ Shows{% endblock %} {% block body %}
   let currentApiBaseKey = "local";
 
   function connectionLabel() {
-    return currentApiBaseKey === "public" ? "Public Cloud Run" : "Local API";
+    const env = redisEnvLabel?.dataset.env?.toLowerCase() || "local";
+    return env === "public" ? "Public Redis" : "Local Redis";
   }
 
   function updateApiBaseControls() {
@@ -404,9 +405,43 @@ Shows{% endblock %} {% block body %}
     return `${base}${path}`;
   }
 
-  apiBaseToggle.addEventListener("click", () => {
-    currentApiBaseKey = currentApiBaseKey === "public" ? "local" : "public";
-    updateApiBaseControls();
+  apiBaseToggle.addEventListener("click", async () => {
+    // Switch Redis environment on the backend
+    const currentEnv = redisEnvLabel?.dataset.env?.toLowerCase() || "local";
+    const newEnv = currentEnv === "public" ? "local" : "public";
+    
+    apiBaseToggle.disabled = true;
+    apiBaseToggle.textContent = "Switching...";
+    
+    try {
+      const res = await fetch(`/api/switch-redis?env=${newEnv}`, { method: "POST" });
+      const data = await res.json();
+      
+      if (data.success) {
+        // Update the label
+        if (redisEnvLabel) {
+          redisEnvLabel.dataset.env = newEnv.charAt(0).toUpperCase() + newEnv.slice(1);
+          redisEnvLabel.textContent = `${redisEnvLabel.dataset.env} Redis`;
+          // Update indicator dot color
+          const dot = redisEnvLabel.previousElementSibling;
+          if (dot) {
+            dot.classList.remove("bg-green-500", "bg-blue-500");
+            dot.classList.add(newEnv === "local" ? "bg-green-500" : "bg-blue-500");
+          }
+        }
+        // Also switch API base to match
+        currentApiBaseKey = newEnv === "local" ? "local" : "public";
+        updateApiBaseControls();
+      } else {
+        alert("Failed to switch Redis: " + (data.error || "Unknown error"));
+        updateApiBaseControls();
+      }
+    } catch (err) {
+      alert("Failed to switch Redis: " + err.message);
+      updateApiBaseControls();
+    } finally {
+      apiBaseToggle.disabled = false;
+    }
   });
 
   updateApiBaseControls();
@@ -1103,11 +1138,12 @@ Shows{% endblock %} {% block body %}
       return;
     }
 
-    // Build lookup for TV/movie items (for View Redis Doc button)
+    // Build lookup for TV/movie/person/rating items (for View Redis Doc button)
     window._itemsByMcId = {};
     for (const cat of categories) {
       for (const item of cat.items || []) {
-        if (item && (item.mc_type === "tv" || item.mc_type === "movie")) {
+        const isRating = item && (item.source === "rottentomatoes" || item.critics_score !== undefined);
+        if (item && (item.mc_type === "tv" || item.mc_type === "movie" || item.mc_type === "person" || isRating)) {
           const key = item.id || item.mc_id;
           if (key) window._itemsByMcId[key] = item;
         }
@@ -1427,8 +1463,12 @@ Shows{% endblock %} {% block body %}
       }
             </div>
             
-            <!-- Arrow -->
-            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <!-- Action buttons + Arrow -->
+            <div class="flex-shrink-0 self-center flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" onclick="event.stopPropagation(); showRedisDoc('${item.id || item.mc_id || ""}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    View Redis Doc
+                </button>
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -1828,8 +1868,12 @@ Shows{% endblock %} {% block body %}
                 </div>
             </div>
             
-            <!-- RT Link icon -->
-            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <!-- Action buttons + RT Link icon -->
+            <div class="flex-shrink-0 self-center flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" onclick="event.stopPropagation(); event.preventDefault(); showRedisDoc('${item.id || item.mc_id || ""}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    View Redis Doc
+                </button>
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
@@ -2485,13 +2529,24 @@ Shows{% endblock %} {% block body %}
 
   // --- showRedisDoc / fetchMediaDetails ---
 
-  window.showRedisDoc = function (mcId) {
-    const item = window._itemsByMcId && mcId ? window._itemsByMcId[mcId] : null;
-    if (!item) {
-      openJsonModal("Redis Doc (not found)", JSON.stringify({ error: "Item not found in results" }, null, 2));
+  window.showRedisDoc = async function (mcId) {
+    if (!mcId) {
+      openJsonModal("Redis Doc (not found)", JSON.stringify({ error: "No mc_id provided" }, null, 2));
       return;
     }
-    openJsonModal("Redis Doc", JSON.stringify(item, null, 2), !item._tmdb_live, item.mc_id || mcId);
+    // Always fetch fresh from Redis to ensure we see current data after env switches
+    openJsonModal("Redis Doc", "Loading...");
+    try {
+      const res = await fetch(`/api/media/${mcId}`);
+      const data = await res.json();
+      if (res.ok) {
+        openJsonModal("Redis Doc", JSON.stringify(data, null, 2), true, data.mc_id || mcId);
+      } else {
+        openJsonModal("Redis Doc (error)", JSON.stringify(data, null, 2));
+      }
+    } catch (err) {
+      openJsonModal("Redis Doc (error)", JSON.stringify({ error: err.message }, null, 2));
+    }
   };
 
   window.fetchMcItem = async function (tmdbId, mediaType) {

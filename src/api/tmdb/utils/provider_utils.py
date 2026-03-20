@@ -80,12 +80,16 @@ def extract_provider_items(
         if provider_id is None:
             continue
 
+        # Check provider_map first (curated master brands)
         provider_entry = provider_map.get(str(provider_id))
+        is_master_brand = provider_entry is not None
 
         if provider_entry is None:
+            # Fallback to master_providers.json (not master brands)
             provider_entry = master_provider_map.get(str(provider_id))
 
         if provider_entry is None:
+            # Unknown provider - not a master brand
             normalized_provider_id = (
                 int(provider_id)
                 if isinstance(provider_id, str) and provider_id.isdigit()
@@ -97,9 +101,10 @@ def extract_provider_items(
                 "logo_path": None,
                 "display_priority": _UNKNOWN_PROVIDER_ORDER,
                 "mkt_share_order": _UNKNOWN_PROVIDER_ORDER,
+                "is_master_brand": False,
             }
         else:
-            provider_entry_display = _provider_display_entry(provider_entry)
+            provider_entry_display = _provider_display_entry(provider_entry, is_master_brand)
 
         provider_key = str(provider_entry_display["provider_id"])
         if provider_key not in normalized_providers:
@@ -111,7 +116,7 @@ def extract_provider_items(
     )
 
 
-def _provider_display_entry(provider: dict[str, Any]) -> dict[str, Any]:
+def _provider_display_entry(provider: dict[str, Any], is_master_brand: bool = False) -> dict[str, Any]:
     mkt_share_order = provider.get("mkt_share_order")
     if mkt_share_order is None:
         mkt_share_order = provider.get("display_priority")
@@ -124,6 +129,7 @@ def _provider_display_entry(provider: dict[str, Any]) -> dict[str, Any]:
         "logo_path": provider.get("logo_path"),
         "display_priority": mkt_share_order,
         "mkt_share_order": mkt_share_order,
+        "is_master_brand": is_master_brand,
     }
 
 
@@ -147,19 +153,27 @@ def build_streaming_platform_summary(
 ) -> dict[str, Any]:
     response = _empty_streaming_platform_summary(watch_region)
 
+    # Note: flat_rate_providers and on_demand_providers are already processed
+    # by extract_provider_items and contain is_master_brand, so we use them directly
     primary_provider_full = flat_rate_providers[0] if flat_rate_providers else {}
     if primary_provider_full:
-        response["primary_provider"] = _provider_display_entry(primary_provider_full)
+        response["primary_provider"] = primary_provider_full
         response["primary_provider_id"] = primary_provider_full.get("provider_id")
         response["primary_provider_type"] = "flatrate"
 
     if flat_rate_providers:
-        response["streaming_platforms"] = [_provider_display_entry(p) for p in flat_rate_providers]
-        response["streaming_platform_ids"] = [p.get("provider_id") for p in flat_rate_providers]
+        response["streaming_platforms"] = flat_rate_providers
+        # Only include master brand IDs in streaming_platform_ids
+        response["streaming_platform_ids"] = [
+            p.get("provider_id") for p in flat_rate_providers if p.get("is_master_brand")
+        ]
 
     if on_demand_providers:
-        response["on_demand_platforms"] = [_provider_display_entry(p) for p in on_demand_providers]
-        response["on_demand_platform_ids"] = [p.get("provider_id") for p in on_demand_providers]
+        response["on_demand_platforms"] = on_demand_providers
+        # Only include master brand IDs in on_demand_platform_ids
+        response["on_demand_platform_ids"] = [
+            p.get("provider_id") for p in on_demand_providers if p.get("is_master_brand")
+        ]
 
     return response
 
