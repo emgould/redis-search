@@ -109,13 +109,38 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
                     break
 
         # Parse schema fields from attributes
+        # Note: attributes can contain standalone flags (e.g., NOSTEM, SORTABLE)
+        # that are not key-value pairs, so we can't assume strict pairs
         schema_fields = []
         if "attributes" in info:
             attrs = info["attributes"]
             for attr in attrs:
-                field_info = {}
-                for k in range(0, len(attr), 2):
-                    field_info[attr[k]] = attr[k + 1]
+                field_info: dict[str, str | bool] = {}
+                flags: list[str] = []
+                k = 0
+                while k < len(attr):
+                    key = attr[k]
+                    # Check if this is a standalone flag (no value follows, or next item is also a key)
+                    is_flag = (
+                        k + 1 >= len(attr)
+                        or (
+                            isinstance(attr[k + 1], str)
+                            and attr[k + 1].isupper()
+                            and attr[k + 1] in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}
+                        )
+                    )
+                    if key in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}:
+                        flags.append(key)
+                        k += 1
+                    elif is_flag and k + 1 >= len(attr):
+                        # Last element is a flag
+                        flags.append(key)
+                        k += 1
+                    else:
+                        field_info[key] = attr[k + 1]
+                        k += 2
+                if flags:
+                    field_info["flags"] = flags
                 schema_fields.append(field_info)
 
         friendly_name = index_name
@@ -173,12 +198,14 @@ def build_schema_from_fields(fields: list[dict]) -> list[Field]:
         identifier = field.get("identifier", "")
         attribute = field.get("attribute", identifier)
 
-        sortable = "SORTABLE" in field.get("flags", []) if "flags" in field else False
-        weight = float(field.get("weight", 1.0)) if "weight" in field else 1.0
+        flags = field.get("flags", [])
+        sortable = "SORTABLE" in flags
+        no_stem = "NOSTEM" in flags
+        weight = float(field.get("WEIGHT", 1.0)) if "WEIGHT" in field else 1.0
 
         if field_type == "TEXT":
             schema.append(
-                TextField(identifier, as_name=attribute, weight=weight)
+                TextField(identifier, as_name=attribute, weight=weight, no_stem=no_stem)
             )
         elif field_type == "TAG":
             schema.append(TagField(identifier, as_name=attribute))
@@ -222,10 +249,13 @@ async def copy_documents(
     target: Redis,
     prefix: str,
     dry_run: bool = False,
-    batch_size: int = 1000,
+    batch_size: int = 5000,
+    concurrency: int = 20,  # Not used in simplified version, kept for API compat
 ) -> tuple[int, int, list[str]]:
     """
     Copy all documents with given prefix from source to target.
+
+    Uses large pipeline batches for speed.
 
     Returns:
         (copied_count, error_count, error_messages)
@@ -235,37 +265,40 @@ async def copy_documents(
     if not keys:
         return 0, 0, []
 
+    if dry_run:
+        return len(keys), 0, []
+
     copied = 0
     errors = 0
     error_messages: list[str] = []
+    total_keys = len(keys)
 
     for i in range(0, len(keys), batch_size):
         batch_keys = keys[i : i + batch_size]
 
-        if dry_run:
-            copied += len(batch_keys)
-            continue
-
-        pipeline = source.pipeline()
-        for key in batch_keys:
-            pipeline.json().get(key)
-
         try:
+            # Read batch from source
+            pipeline = source.pipeline()
+            for key in batch_keys:
+                pipeline.json().get(key)
             docs = await pipeline.execute()
 
+            # Write batch to target
             target_pipeline = target.pipeline()
+            valid_count = 0
             for key, doc in zip(batch_keys, docs, strict=True):
                 if doc is not None:
                     target_pipeline.json().set(key, "$", doc)
+                    valid_count += 1
 
             await target_pipeline.execute()
-            copied += len([d for d in docs if d is not None])
+            copied += valid_count
         except Exception as e:
             errors += len(batch_keys)
             error_messages.append(f"Batch error at {i}: {e}")
 
-        if (i // batch_size) % 10 == 0 and i > 0:
-            print(f"      Progress: {copied:,} documents copied...")
+        # Progress update
+        print(f"      Progress: {copied:,}/{total_keys:,} documents copied...")
 
     return copied, errors, error_messages
 
@@ -276,6 +309,8 @@ async def copy_index(
     index_info: IndexInfo,
     dry_run: bool = False,
     batch_size: int = 1000,
+    concurrency: int = 10,
+    clean: bool = False,
 ) -> dict:
     """
     Copy a single index from source (public) to target (local).
@@ -314,12 +349,23 @@ async def copy_index(
             result["success"] = True
             return result
 
-        print("      Dropping target index (with documents)...")
-        dropped = await drop_index_safe(target, index_info.redis_name, delete_documents=True)
-        if dropped:
-            print("      Index and documents dropped")
+        # Drop index - with or without documents depending on clean flag
+        # clean=False is much faster (no DD flag), but orphan docs may remain
+        # clean=True uses DD flag to delete all docs first (slower but exact mirror)
+        if clean:
+            print("      Dropping target index (with documents - clean mode)...")
+            dropped = await drop_index_safe(target, index_info.redis_name, delete_documents=True)
+            if dropped:
+                print("      Index and documents dropped")
+            else:
+                print("      Index did not exist")
         else:
-            print("      Index did not exist")
+            print("      Dropping target index (keeping documents)...")
+            dropped = await drop_index_safe(target, index_info.redis_name, delete_documents=False)
+            if dropped:
+                print("      Index dropped (documents retained for overwrite)")
+            else:
+                print("      Index did not exist")
 
         print("      Creating index with schema...")
         await create_index_from_schema(
@@ -328,11 +374,11 @@ async def copy_index(
             prefix,
             index_info.schema_fields,
         )
-        print("      Index created")
+        print("      Index created (will re-index as documents are written)")
 
-        print("      Copying documents...")
+        print(f"      Copying documents (concurrency={concurrency})...")
         copied, errors, error_msgs = await copy_documents(
-            source, target, prefix, dry_run=False, batch_size=batch_size
+            source, target, prefix, dry_run=False, batch_size=batch_size, concurrency=concurrency
         )
         result["docs_copied"] = copied
         result["errors"] = errors
@@ -445,6 +491,8 @@ async def main(
     list_only: bool = False,
     output_json: bool = False,
     batch_size: int = 1000,
+    concurrency: int = 10,
+    clean: bool = False,
 ) -> int:
     """
     Main copy function.
@@ -455,6 +503,8 @@ async def main(
         list_only: Just list available indices
         output_json: Output JSON format (for API integration)
         batch_size: Documents per pipeline batch (env: COPY_TO_LOCAL_BATCH_SIZE)
+        concurrency: Number of concurrent batch operations (default 10)
+        clean: Delete all target documents before copy (slower but exact mirror)
 
     Returns exit code (0 = success, 1 = error).
     """
@@ -493,6 +543,8 @@ async def main(
         print()
 
     print(f"   Batch size: {batch_size:,} documents per pipeline")
+    print(f"   Concurrency: {concurrency} parallel batches")
+    print(f"   Clean mode: {'Yes (delete orphans)' if clean else 'No (fast overwrite)'}")
     print()
 
     # Connect to public Redis (SOURCE)
@@ -571,7 +623,7 @@ async def main(
         print(f"   📦 Index: {info.name} ({info.redis_name})")
         # NOTE: source is public, target is local
         result = await copy_index(
-            public_redis, local_redis, info, dry_run=dry_run, batch_size=batch_size
+            public_redis, local_redis, info, dry_run=dry_run, batch_size=batch_size, concurrency=concurrency, clean=clean
         )
         results.append(result)
         total_copied += result["docs_copied"]
@@ -638,8 +690,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=int(os.getenv("COPY_TO_LOCAL_BATCH_SIZE", "1000")),
-        help="Documents per pipeline batch (default: 1000, env: COPY_TO_LOCAL_BATCH_SIZE)",
+        default=int(os.getenv("COPY_TO_LOCAL_BATCH_SIZE", "5000")),
+        help="Documents per pipeline batch (default: 5000, env: COPY_TO_LOCAL_BATCH_SIZE)",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=int(os.getenv("COPY_TO_LOCAL_CONCURRENCY", "20")),
+        help="Number of concurrent batch operations (default: 20, env: COPY_TO_LOCAL_CONCURRENCY)",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Delete all target documents before copy (slower but exact mirror, removes orphans)",
     )
 
     args = parser.parse_args()
@@ -651,6 +714,8 @@ if __name__ == "__main__":
             list_only=args.list,
             output_json=args.json,
             batch_size=args.batch_size,
+            concurrency=args.concurrency,
+            clean=args.clean,
         )
     )
     sys.exit(exit_code)

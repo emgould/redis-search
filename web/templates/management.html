@@ -1189,6 +1189,18 @@
             <!-- Dynamically populated -->
           </div>
 
+          <!-- Mirror Mode Option -->
+          <div id="copy-options" class="hidden pt-2 border-t border-surface-700">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" id="copy-clean-mode"
+                class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500" />
+              <div>
+                <span class="text-sm text-surface-200">Mirror mode (clean)</span>
+                <p class="text-xs text-surface-400">Delete orphan documents that don't exist in source. Slower but exact copy.</p>
+              </div>
+            </label>
+          </div>
+
           <!-- Error State -->
           <div id="copy-indices-error" class="hidden py-4 text-center text-red-400">
             Failed to load indices
@@ -2195,9 +2207,12 @@
 
       loadingEl.classList.add('hidden');
       listEl.classList.remove('hidden');
+      document.getElementById('copy-options').classList.remove('hidden');
 
     } catch (e) {
       loadingEl.classList.add('hidden');
+      errorEl.classList.add('hidden');
+      document.getElementById('copy-options').classList.add('hidden');
       errorEl.classList.remove('hidden');
       errorEl.textContent = e.message;
     }
@@ -2205,6 +2220,8 @@
 
   function closeCopyToLocalModal() {
     document.getElementById('copy-to-local-modal').style.display = 'none';
+    // Reset clean mode checkbox
+    document.getElementById('copy-clean-mode').checked = false;
   }
 
   function toggleCopySelectAll() {
@@ -2223,14 +2240,15 @@
   async function startCopyToLocalFromModal() {
     const checkboxes = document.querySelectorAll('input[name="copy-index"]:checked');
     const indices = Array.from(checkboxes).map(cb => cb.value);
+    const clean = document.getElementById('copy-clean-mode').checked;
 
     if (indices.length === 0) return;
 
     closeCopyToLocalModal();
-    await startCopyToLocal(indices);
+    await startCopyToLocal(indices, clean);
   }
 
-  async function startCopyToLocal(indices) {
+  async function startCopyToLocal(indices, clean = false) {
     const btn = document.getElementById('btn-copy-to-local');
     const icon = document.getElementById('copy-icon');
 
@@ -2266,15 +2284,20 @@
     statusElFresh.classList.remove('hidden');
     indicatorElFresh.textContent = '⏳';
     indicatorElFresh.className = 'animate-spin';
-    labelElFresh.textContent = 'Starting copy...';
+    labelElFresh.textContent = clean ? 'Starting mirror copy (clean)...' : 'Starting copy...';
     outputElFresh.textContent = '';
 
     try {
-      // Build URL with indices query params
+      // Build URL with indices and clean query params
       let url = '/api/copy-to-local';
+      const params = new URLSearchParams();
       if (indices && indices.length > 0) {
-        const params = new URLSearchParams();
         indices.forEach(idx => params.append('indices', idx));
+      }
+      if (clean) {
+        params.append('clean', 'true');
+      }
+      if (params.toString()) {
         url += '?' + params.toString();
       }
 
