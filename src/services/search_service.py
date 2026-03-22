@@ -536,6 +536,26 @@ def build_authors_autocomplete_query(q: str) -> str:
         return f"({title_query}) | ({name_query})"
 
 
+# Indexed sources only; brokered APIs are never called from JSON autocomplete.
+_AUTOCOMPLETE_INDEXED_SOURCES: frozenset[str] = frozenset(
+    {"tv", "movie", "person", "podcast", "author", "book"}
+)
+_AUTOCOMPLETE_LIMIT = 10
+_AUTOCOMPLETE_RESPONSE_KEYS: tuple[str, ...] = (
+    "tv",
+    "movie",
+    "person",
+    "podcast",
+    "author",
+    "book",
+    "news",
+    "video",
+    "ratings",
+    "artist",
+    "album",
+)
+
+
 async def autocomplete(
     q: str,
     sources: set[str] | None = None,
@@ -544,317 +564,57 @@ async def autocomplete(
     full: bool = False,
 ) -> dict[str, Any]:
     """
-    Autocomplete search that returns categorized results.
+    Autocomplete JSON results for indexed sources.
 
-    Args:
-        q: Search query string
-        sources: Optional set of sources to search. If None, searches all sources.
-                 Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
-        raw: If True, treat q as raw RediSearch syntax for indexed sources (validated, raises on error)
-
-    Returns:
-        dict with keys: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
-        Note: news, video, ratings, artist, album results come from external APIs (cached via Redis), not from Redis search indices
+    Delegates to :func:`search` with the same ``limit`` (10), ranking, and
+    ``exact_match`` selection as ``GET /api/search`` so per-source list order
+    matches batch search for the same ``q``, indexed ``sources``, and flags.
+    Brokered sources are never fetched; their keys are always empty lists.
     """
-    all_sources = {
-        "tv",
-        "movie",
-        "person",
-        "podcast",
-        "author",
-        "book",
-        "news",
-        "video",
-        "ratings",
-        "artist",
-        "album",
-    }
-    if sources is None:
-        sources = all_sources
+    _all_requested: set[str] = (
+        {
+            "tv",
+            "movie",
+            "person",
+            "podcast",
+            "author",
+            "book",
+            "news",
+            "video",
+            "ratings",
+            "artist",
+            "album",
+        }
+        if sources is None
+        else sources
+    )
 
     if not q or len(q) < 2:
         return {
             "exact_match": None,
-            "tv": [],
-            "movie": [],
-            "person": [],
-            "podcast": [],
-            "author": [],
-            "book": [],
-            "news": [],
-            "video": [],
-            "ratings": [],
-            "artist": [],
-            "album": [],
+            **{k: [] for k in _AUTOCOMPLETE_RESPONSE_KEYS},
         }
 
-    repo = get_repo()
+    indexed = _all_requested & _AUTOCOMPLETE_INDEXED_SOURCES
+    if not indexed:
+        return {
+            "exact_match": None,
+            **{k: [] for k in _AUTOCOMPLETE_RESPONSE_KEYS},
+        }
 
-    # Build queries - raw mode passes query through to all indexed sources
-    media_query = build_media_query_from_user_input(q, raw=raw)
-    if raw:
-        raw_query = q.strip()
-        people_query = raw_query
-        podcasts_query = raw_query
-        authors_query = raw_query
-        books_query = raw_query
-    else:
-        people_query = build_people_autocomplete_query(q)
-        podcasts_query = build_podcasts_autocomplete_query(q)
-        authors_query = build_authors_autocomplete_query(q)
-        books_query = build_books_autocomplete_query(q)
+    merged = await search(
+        q,
+        sources=indexed,
+        limit=_AUTOCOMPLETE_LIMIT,
+        raw=raw,
+        no_duplicate=no_duplicate,
+        full=full,
+    )
 
-    # Debug logging for query with colons
-    if ":" in q:
-        logger.info(f"Autocomplete query for '{q}': media_query='{media_query}'")
-
-    # Create empty result placeholder
-    empty_result = type("obj", (object,), {"docs": []})()
-
-    # Search all indexes AND external APIs concurrently (with timing)
-    # Note: News, video, ratings, artist, album are fetched via APIs (cached in Redis) rather than from Redis search indices
-    total_start = time.perf_counter()
-    try:
-        # Build task list based on requested sources
-        timed_tasks = []
-
-        # RediSearch (local) - no timeout needed
-        media_limit = 250 if full else 50
-        if "tv" in sources:
-            timed_tasks.append(
-                timed_task(
-                    "tv_media",
-                    repo.search(_build_media_source_query(media_query, "tv"), limit=media_limit),
-                )
-            )
-        if "movie" in sources:
-            timed_tasks.append(
-                timed_task(
-                    "movie_media",
-                    repo.search(_build_media_source_query(media_query, "movie"), limit=media_limit),
-                )
-            )
-        if "person" in sources:
-            # Fetch more results for post-query filtering (handles 1-char prefix case)
-            timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=20)))
-        if "podcast" in sources:
-            timed_tasks.append(
-                timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
-            )
-        if "author" in sources:
-            timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=10)))
-        if "book" in sources:
-            timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=10)))
-
-        # External/brokered APIs (news, video, ratings, artist, album) are excluded
-        # from autocomplete to avoid excessive API calls during debounce/typing.
-        # They are only fetched on the /api/search endpoint (Enter key).
-
-        timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
-        total_elapsed = (time.perf_counter() - total_start) * 1000
-
-        # Parse timed results and log
-        timing_map: dict[str, float] = {}
-        results_by_name: dict[str, Any] = {}
-        for item in timed_results:
-            if isinstance(item, tuple) and len(item) == 3:
-                name, result, elapsed = item
-                results_by_name[name] = result
-                timing_map[name] = elapsed
-
-        timing_parts = [
-            f"{k}={v:.0f}ms" for k, v in sorted(timing_map.items(), key=lambda x: -x[1])
-        ]
-        logger.info(
-            f"Autocomplete '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
-        )
-
-        # Map to original variable names
-        tv_media_res = results_by_name.get("tv_media", empty_result)
-        movie_media_res = results_by_name.get("movie_media", empty_result)
-        people_res = results_by_name.get("person", empty_result)
-        podcasts_res = results_by_name.get("podcast", empty_result)
-        authors_res = results_by_name.get("author", empty_result)
-        books_res = results_by_name.get("book", empty_result)
-        news_res = results_by_name.get("news")
-        video_res = results_by_name.get("video")
-        ratings_res = results_by_name.get("ratings")
-        artist_res = results_by_name.get("artist")
-        album_res = results_by_name.get("album")
-    except Exception:
-        # If concurrent search fails, try individually
-        try:
-            tv_media_res = (
-                await repo.search(_build_media_source_query(media_query, "tv"), limit=250 if full else 50)
-                if "tv" in sources
-                else empty_result
-            )
-        except Exception:
-            tv_media_res = empty_result
-
-        try:
-            movie_media_res = (
-                await repo.search(
-                    _build_media_source_query(media_query, "movie"), limit=250 if full else 50
-                )
-                if "movie" in sources
-                else empty_result
-            )
-        except Exception:
-            movie_media_res = empty_result
-
-        try:
-            people_res = await repo.search_people(people_query, limit=20)
-        except Exception:
-            people_res = empty_result
-
-        try:
-            podcasts_res = await repo.search_podcasts(podcasts_query, limit=10)
-        except Exception:
-            podcasts_res = empty_result
-
-        try:
-            authors_res = await repo.search_authors(authors_query, limit=10)
-        except Exception:
-            authors_res = empty_result
-
-        try:
-            books_res = await repo.search_books(books_query, limit=10)
-        except Exception:
-            books_res = empty_result
-
-        # Brokered APIs excluded from autocomplete fallback
-        news_res = None
-        video_res = None
-        ratings_res = None
-        artist_res = None
-        album_res = None
-
-    # Handle exceptions from gather
-    if isinstance(tv_media_res, BaseException):
-        tv_media_res = empty_result
-    if isinstance(movie_media_res, BaseException):
-        movie_media_res = empty_result
-    if isinstance(people_res, BaseException):
-        people_res = empty_result
-    if isinstance(podcasts_res, BaseException):
-        podcasts_res = empty_result
-    if isinstance(authors_res, BaseException):
-        authors_res = empty_result
-    if isinstance(books_res, BaseException):
-        books_res = empty_result
-    if isinstance(news_res, BaseException):
-        news_res = None
-    if isinstance(video_res, BaseException):
-        video_res = None
-    if isinstance(ratings_res, BaseException):
-        ratings_res = None
-    if isinstance(artist_res, BaseException):
-        artist_res = None
-    if isinstance(album_res, BaseException):
-        album_res = None
-
-    # Parse and rank media results for each requested source independently.
-    tv_results = _parse_media_results(tv_media_res, q) if "tv" in sources else []
-    movie_results = _parse_media_results(movie_media_res, q) if "movie" in sources else []
-
-    # Parse person results and filter using autocomplete prefix matching
-    # This ensures "Rhea S" matches "Rhea Seehorn" even when RediSearch can't handle 1-char prefix
-    person_results_raw = [parse_doc(doc) for doc in people_res.docs]  # type: ignore[union-attr]
-    person_results_filtered = [
-        p
-        for p in person_results_raw
-        if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
-    ]
-    # Re-rank to prioritize exact matches and shorter names over pure popularity
-    person_results = sorted(person_results_filtered, key=lambda p: _rank_person_result(p, q))
-
-    # Parse podcast results and re-rank: exact title matches first, then by recency/episodes/popularity
-    podcast_results_raw = [parse_doc(doc) for doc in podcasts_res.docs]  # type: ignore[union-attr]
-    podcast_results = sorted(podcast_results_raw, key=lambda p: _rank_podcast_result(p, q))
-
-    # Parse author results and filter to exact word matches only
-    # (prevents "tennis" from matching "Jeni Tennison")
-    author_results_raw = [parse_doc(doc) for doc in authors_res.docs]  # type: ignore[union-attr]
-    author_results = [
-        a
-        for a in author_results_raw
-        if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
-    ]
-
-    # Parse book results and re-rank: exact matches first, then by popularity
-    book_results_raw = [parse_doc(doc) for doc in books_res.docs]  # type: ignore[union-attr]
-    book_results = sorted(book_results_raw, key=lambda b: _rank_book_result(b, q))
-
-    # Parse news results (from API, not index)
-    news_results: list[dict] = []
-    if (
-        news_res
-        and not isinstance(news_res, Exception)
-        and news_res.status_code == 200
-        and news_res.results
-    ):
-        news_results = [article.model_dump() for article in news_res.results[:10]]
-
-    # Parse video results (from YouTube API, cached with 24h TTL)
-    video_results: list[dict] = []
-    if (
-        video_res
-        and not isinstance(video_res, Exception)
-        and video_res.status_code == 200
-        and video_res.results
-    ):
-        video_results = [video.model_dump() for video in video_res.results[:10]]
-
-    # Parse ratings results (from RottenTomatoes API, cached with 72h TTL)
-    ratings_results: list[dict] = []
-    if (
-        ratings_res
-        and not isinstance(ratings_res, Exception)
-        and ratings_res.status_code == 200
-        and ratings_res.results
-    ):
-        ratings_results = [item.model_dump() for item in ratings_res.results[:10]]
-
-    # Parse artist results (from Spotify API, cached with 24h TTL)
-    artist_results: list[dict] = []
-    if (
-        artist_res
-        and not isinstance(artist_res, Exception)
-        and artist_res.status_code == 200
-        and artist_res.results
-    ):
-        artist_results = [artist.model_dump() for artist in artist_res.results[:10]]
-
-    # Parse album results (from Spotify API, cached with 24h TTL)
-    album_results: list[dict] = []
-    if (
-        album_res
-        and not isinstance(album_res, Exception)
-        and album_res.status_code == 200
-        and album_res.results
-    ):
-        album_results = [album.model_dump() for album in album_res.results[:10]]
-
-    result = {
-        "tv": tv_results[:10],  # Limit each category
-        "movie": movie_results[:10],
-        "person": person_results[:10],
-        "podcast": podcast_results[:10],
-        "author": author_results[:10],
-        "book": book_results[:10],
-        "news": news_results,  # From API (cached in Redis), not indexed
-        "video": video_results,  # From YouTube API (24h cache), not indexed
-        "ratings": ratings_results,  # From RottenTomatoes API (72h cache), not indexed
-        "artist": artist_results,  # From Spotify API (24h cache), not indexed
-        "album": album_results,  # From Spotify API (24h cache), not indexed
-    }
-    exact = _pick_exact_match(result, q)
-    result["exact_match"] = exact
-    if no_duplicate and exact is not None:
-        _remove_exact_from_results(result, exact)
-    return result
-
+    out: dict[str, Any] = {"exact_match": merged.get("exact_match")}
+    for key in _AUTOCOMPLETE_RESPONSE_KEYS:
+        out[key] = merged.get(key, []) if key in indexed else []
+    return out
 
 # ---------------------------------------------------------------------------
 # Lightweight / projected autocomplete
@@ -1468,8 +1228,10 @@ async def autocomplete_stream(
     # Create named tasks based on requested sources
     tasks_dict: dict[asyncio.Task, str] = {}  # type: ignore[type-arg]
 
-    # RediSearch tasks (local) - no timeout
-    ac_media_limit = 250 if full else 50
+    # Match /api/search indexed fetch sizes (limit=10) so streamed slices and
+    # exact-match resolution align with batch search.
+    ac_limit = _AUTOCOMPLETE_LIMIT
+    ac_media_limit = 250 if full else max(ac_limit * 5, 50)
     if "tv" in sources:
         tasks_dict[
             asyncio.create_task(
@@ -1491,21 +1253,27 @@ async def autocomplete_stream(
     if "person" in sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         tasks_dict[
-            asyncio.create_task(timed_task("person", repo.search_people(people_query, limit=20)))
+            asyncio.create_task(
+                timed_task("person", repo.search_people(people_query, limit=ac_limit * 2))
+            )
         ] = "person"
     if "podcast" in sources:
         tasks_dict[
             asyncio.create_task(
-                timed_task("podcast", repo.search_podcasts(podcasts_query, limit=10))
+                timed_task("podcast", repo.search_podcasts(podcasts_query, limit=ac_limit))
             )
         ] = "podcast"
     if "author" in sources:
         tasks_dict[
-            asyncio.create_task(timed_task("author", repo.search_authors(authors_query, limit=10)))
+            asyncio.create_task(
+                timed_task("author", repo.search_authors(authors_query, limit=ac_limit))
+            )
         ] = "author"
     if "book" in sources:
         tasks_dict[
-            asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=10)))
+            asyncio.create_task(
+                timed_task("book", repo.search_books(books_query, limit=ac_limit))
+            )
         ] = "book"
 
     # External/brokered APIs (news, video, ratings, artist, album) are excluded
@@ -1519,6 +1287,7 @@ async def autocomplete_stream(
     total_start = time.perf_counter()
     timing_parts: list[str] = []
     streamed_results: dict[str, list[dict[str, Any]]] = {}
+    streamed_full: dict[str, list[dict[str, Any]]] = {}
 
     # Yield results as they complete (fastest first)
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
@@ -1536,9 +1305,11 @@ async def autocomplete_stream(
             if name in {"tv_media", "movie_media"}:
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     source_name = "tv" if name == "tv_media" else "movie"
-                    media_results = _parse_media_results(data, q)[:10]
+                    media_parsed_full = _parse_media_results(data, q)
+                    streamed_full[source_name] = media_parsed_full
+                    media_results = media_parsed_full[:ac_limit]
                     streamed_results[source_name] = media_results
-                    media_exact = _iter_exact_matches(source_name, media_results, q)
+                    media_exact = _iter_exact_matches(source_name, media_parsed_full, q)
                     if no_duplicate and media_exact:
                         media_results = _filter_exact_items(media_results, media_exact)
                     if media_results:
@@ -1559,30 +1330,35 @@ async def autocomplete_stream(
                         )
                     ]
                     # Re-rank to prioritize exact matches and shorter names
-                    parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[:10]
+                    person_full = sorted(filtered, key=lambda p: _rank_person_result(p, q))
+                    streamed_full["person"] = person_full
+                    parsed_results = person_full[:ac_limit]
 
             elif name == "podcast":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     # Re-rank podcasts: title starts with query > contains query
-                    parsed_results = sorted(parsed_all, key=lambda p: _rank_podcast_result(p, q))[
-                        :10
-                    ]
+                    podcast_full = sorted(parsed_all, key=lambda p: _rank_podcast_result(p, q))
+                    streamed_full["podcast"] = podcast_full
+                    parsed_results = podcast_full[:ac_limit]
 
             elif name == "author":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
-                    parsed_results = [
+                    author_full = [
                         a
                         for a in parsed_all
                         if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
-                    ][:10]
+                    ]
+                    streamed_full["author"] = author_full
+                    parsed_results = author_full[:ac_limit]
 
             elif name == "book":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
-                    # Re-rank books: exact matches first, then by popularity
-                    parsed_results = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))[:10]
+                    book_full = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))
+                    streamed_full["book"] = book_full
+                    parsed_results = book_full[:ac_limit]
 
             elif name in ("news", "video", "ratings", "artist", "album"):
                 if (
@@ -1593,11 +1369,12 @@ async def autocomplete_stream(
                     and hasattr(data, "results")
                     and data.results
                 ):
-                    parsed_results = [item.model_dump() for item in data.results[:10]]
+                    parsed_results = [item.model_dump() for item in data.results[:ac_limit]]
 
             if parsed_results:
                 streamed_results[name] = parsed_results
-                exact_items = _iter_exact_matches(name, parsed_results, q)
+                full_for_exact = streamed_full.get(name, parsed_results)
+                exact_items = _iter_exact_matches(name, full_for_exact, q)
                 if no_duplicate and exact_items:
                     parsed_results = _filter_exact_items(parsed_results, exact_items)
                 if parsed_results:
@@ -1611,7 +1388,7 @@ async def autocomplete_stream(
 
     # Log total timing
     total_elapsed = (time.perf_counter() - total_start) * 1000
-    final_exact = _pick_exact_match(streamed_results, q)
+    final_exact = _pick_exact_match(streamed_full, q)
     if final_exact is not None:
         yield ("exact_match_final", final_exact)
     logger.info(
