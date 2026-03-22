@@ -24,8 +24,10 @@ The search UI uses a componentized controller (`web/static/js/search-controller.
 
 - **Endpoint:** `GET /api/autocomplete?q=...` (default) or `GET /api/autocomplete/minimal?q=...` (when **Lite** toggle is ON)
 - **Sources:** Local RediSearch only — tv, movie, person, podcast, author, book
-- **No brokered APIs** — no news, video, ratings, artist, album
-- **Lite mode:** When the Lite toggle is active, Tier 1 uses `/api/autocomplete/minimal` with Redis field projection. Only the requested fields are transferred from the index. When no source filters are selected, defaults to `tv,movie`.
+- **No brokered APIs** — no news, video, ratings, artist, album (those keys are always empty arrays on the JSON autocomplete response)
+- **Parity with batch search:** Default JSON autocomplete (`src/services/search_service.py` `autocomplete`) delegates indexed sources to the same `search()` pipeline used by `GET /api/search` with `limit=10` and the same `raw` / `no_duplicate` / `full` flags, so per-source list order and `exact_match` match batch search for the same `q` and indexed `sources`.
+- **Streaming autocomplete** (`autocomplete_stream`): uses the same Redis fetch sizes as `search()` for indexed sources and resolves `exact_match_final` from full parsed lists (before the limit slice), aligned with batch search semantics.
+- **Lite mode:** When the Lite toggle is active, Tier 1 uses `/api/autocomplete/minimal` with Redis field projection. Only the requested fields are transferred from the index. When no source filters are selected, defaults to `tv,movie`. (Still a separate, projection-optimized path — not identical to full `search()`.)
 - **Purpose:** Instant type-ahead results while the user is still typing
 
 ### Tier 2 — Full Search (750ms or Enter)
