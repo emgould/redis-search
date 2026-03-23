@@ -4,6 +4,7 @@ import re
 import time
 import urllib.parse
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Union
 
 import aiohttp
@@ -152,6 +153,42 @@ def _normalize_exact_match_cast(item: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
+def _has_watch_providers(item: dict[str, Any]) -> bool:
+    """Return True if the item has at least one real streaming or on-demand provider."""
+    wp = item.get("watch_providers")
+    if not isinstance(wp, dict):
+        return False
+    if wp.get("streaming_platform_ids"):
+        return True
+    if wp.get("on_demand_platform_ids"):
+        return True
+    return bool(wp.get("primary_provider"))
+
+
+_THEATRICAL_WINDOW_DAYS = 183
+
+
+def _in_theatrical_window(item: dict[str, Any]) -> bool:
+    """Return True for movies released within the last ~6 months.
+
+    Movies still in their theatrical window legitimately lack streaming/on-demand
+    providers and should not be penalised by the watch-provider tiebreaker.
+    """
+    if item.get("mc_type") != "movie":
+        return False
+    raw = item.get("release_date")
+    if not raw or not isinstance(raw, str):
+        return False
+    try:
+        rd = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if rd.tzinfo is None:
+            rd = rd.replace(tzinfo=UTC)
+        cutoff = datetime.now(tz=UTC) - timedelta(days=_THEATRICAL_WINDOW_DAYS)
+        return rd >= cutoff
+    except (ValueError, TypeError):
+        return False
+
+
 def _pick_exact_match(
     results: dict[str, list[dict[str, Any]]], query: str | None
 ) -> dict[str, Any] | None:
@@ -161,6 +198,10 @@ def _pick_exact_match(
     Media exact matches are compared by the same rank/year/popularity scoring used
     for source-local ordering so the best exact movie/TV result wins regardless of
     source bucket. Non-media sources fall back to static cross-source priority.
+
+    When multiple media exact matches exist, candidates without watch_providers are
+    eliminated before ranking — unless the candidate is a movie still in its
+    theatrical window (~6 months), or unless no candidates survive the filter.
     """
     if not query or len(query.strip()) < 2:
         return None
@@ -174,6 +215,15 @@ def _pick_exact_match(
                 media_exact_candidates.append((source, item))
 
     if media_exact_candidates:
+        if len(media_exact_candidates) > 1:
+            viable = [
+                (s, item)
+                for s, item in media_exact_candidates
+                if _has_watch_providers(item) or _in_theatrical_window(item)
+            ]
+            if viable:
+                media_exact_candidates = viable
+
         priority_index = {source: idx for idx, source in enumerate(EXACT_MATCH_SOURCE_PRIORITY)}
         _, best_media_item = min(
             media_exact_candidates,
