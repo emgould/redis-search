@@ -144,6 +144,30 @@ function initSearchController(cfg) {
     return Number.isFinite(n) ? n : 0;
   }
 
+  function hasWatchProviders(item) {
+    const wp = item && item.watch_providers;
+    if (wp == null || typeof wp !== "object") return false;
+    if (Array.isArray(wp.streaming_platform_ids) && wp.streaming_platform_ids.length > 0) return true;
+    if (Array.isArray(wp.on_demand_platform_ids) && wp.on_demand_platform_ids.length > 0) return true;
+    if (wp.primary_provider) return true;
+    return false;
+  }
+
+  const THEATRICAL_WINDOW_MS = 183 * 24 * 60 * 60 * 1000;
+
+  function inTheatricalWindow(item) {
+    if (!item || (item.mc_type !== "movie")) return false;
+    const rd = item.release_date;
+    if (!rd) return false;
+    const ts = new Date(rd).getTime();
+    if (Number.isNaN(ts)) return false;
+    return ts >= Date.now() - THEATRICAL_WINDOW_MS;
+  }
+
+  function isViableExactCandidate(item) {
+    return hasWatchProviders(item) || inTheatricalWindow(item);
+  }
+
   function pickPreferredExactMatch(current, incoming) {
     if (!incoming) return current;
     if (!current) return incoming;
@@ -154,6 +178,12 @@ function initSearchController(cfg) {
     const incomingIsMedia = incomingSource === "movie" || incomingSource === "tv";
 
     if (currentIsMedia && incomingIsMedia) {
+      const currentViable = isViableExactCandidate(current);
+      const incomingViable = isViableExactCandidate(incoming);
+      if (currentViable !== incomingViable) {
+        return incomingViable ? incoming : current;
+      }
+
       const currentYear = numericValue(current.year);
       const incomingYear = numericValue(incoming.year);
       if (incomingYear !== currentYear) return incomingYear > currentYear ? incoming : current;

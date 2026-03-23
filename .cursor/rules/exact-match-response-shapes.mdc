@@ -71,7 +71,9 @@ The exact match feature adds a new `exact_match` property to search and autocomp
 **`exact_match` field:**
 - **Type:** `ExactMatchItem | null`
 - **When present:** At least one exact match found; contains the single best match.
-- **Media tie-break:** For `movie`/`tv`, exact matches are compared by exact-title tier, then newer `year`, then higher `popularity`.
+- **Media tie-break:** For `movie`/`tv`, when multiple exact matches exist:
+  1. Candidates without watch providers are eliminated — unless they are movies released within the last ~6 months (theatrical window) or unless no candidates survive the filter.
+  2. Remaining candidates are ranked by exact-title tier, then newer `year`, then higher `popularity`.
 - **Non-media fallback:** After media, non-media exact matches fall back to source priority (`person > podcast > book > author`).
 - **When absent:** Omit key, or use `"exact_match": null` for consistent typing (recommend always include, use `null` when none)
 - **Cast shape:** For `exact_match`, `cast` is now `Array<{ name: string, id: string | null }>` (name + TMDB ID).
