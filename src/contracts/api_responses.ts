@@ -62,6 +62,7 @@ export type ExactMatchItem =
 
 export interface SearchResponse {
   exact_match: ExactMatchItem | null;
+  exact_matches: ExactMatchItem[];
   tv: MediaItem[];
   movie: MediaItem[];
   person: PersonItem[];
@@ -116,6 +117,9 @@ export interface StreamResultEvent {
 
 /** SSE "exact_match" event — emitted as soon as a source yields an exact match */
 export type StreamExactMatchEvent = ExactMatchItem;
+
+/** SSE "exact_matches_final" event — full ranked array of all exact matches */
+export type StreamExactMatchesFinalEvent = ExactMatchItem[];
 
 /** SSE "done" event — signals all sources have completed */
 export interface StreamDoneEvent {

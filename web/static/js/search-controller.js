@@ -168,6 +168,15 @@ function initSearchController(cfg) {
     return hasWatchProviders(item) || inTheatricalWindow(item);
   }
 
+  function effectiveDateYYYYMM(item) {
+    const src = exactSourceKey(item);
+    const raw = src === "movie" ? item.release_date : item.last_air_date;
+    if (!raw) return 0;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return 0;
+    return d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
+  }
+
   function pickPreferredExactMatch(current, incoming) {
     if (!incoming) return current;
     if (!current) return incoming;
@@ -184,15 +193,18 @@ function initSearchController(cfg) {
         return incomingViable ? incoming : current;
       }
 
-      const currentYear = numericValue(current.year);
-      const incomingYear = numericValue(incoming.year);
-      if (incomingYear !== currentYear) return incomingYear > currentYear ? incoming : current;
+      const currentYM = effectiveDateYYYYMM(current);
+      const incomingYM = effectiveDateYYYYMM(incoming);
+      if (incomingYM !== currentYM) return incomingYM > currentYM ? incoming : current;
 
       const currentPopularity = numericValue(current.popularity);
       const incomingPopularity = numericValue(incoming.popularity);
       if (incomingPopularity !== currentPopularity) {
         return incomingPopularity > currentPopularity ? incoming : current;
       }
+
+      if (currentSource === "movie" && incomingSource !== "movie") return current;
+      if (incomingSource === "movie" && currentSource !== "movie") return incoming;
       return current;
     }
 
@@ -324,6 +336,18 @@ function initSearchController(cfg) {
         );
       } catch (err) {
         console.error("[Search Stream] exact_match_final parse error:", err);
+      }
+    });
+
+    eventSource.addEventListener("exact_matches_final", (e) => {
+      if (query !== currentQuery) return;
+      try {
+        const items = JSON.parse(e.data);
+        currentResults.exact_matches = items;
+        render(query);
+        console.debug("[Search Stream] exact_matches_final:", items.length, "items");
+      } catch (err) {
+        console.error("[Search Stream] exact_matches_final parse error:", err);
       }
     });
 

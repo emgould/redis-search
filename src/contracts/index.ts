@@ -70,6 +70,7 @@ export type {
   AutocompleteResponse,
   StreamResultEvent,
   StreamExactMatchEvent,
+  StreamExactMatchesFinalEvent,
   StreamDoneEvent,
   DetailsErrorResponse,
 } from "./api_responses";
