@@ -22,7 +22,7 @@ JSON autocomplete for the search input. Returns categorized results from all or 
 | `no_duplicate` | bool | no | false | Exclude exact match item from its source results list |
 | `full` | bool | no | false | Fetch 250 media candidates instead of 50 for deeper ranking |
 
-Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }` keyed by source.
+Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...}, exact_matches: [...] }` keyed by source.
 
 Supports source hints in the query (e.g. `movie: matrix`). Returns `source_hint` in response when detected.
 
@@ -48,7 +48,8 @@ SSE streaming version of autocomplete. Same parameters as above. Results stream 
 SSE events:
 - `event: result` → `{ source, results, latency_ms }`
 - `event: exact_match` → provisional exact match
-- `event: exact_match_final` → authoritative exact match
+- `event: exact_match_final` → authoritative exact match (hero pick)
+- `event: exact_matches_final` → all qualifying exact matches (ranked array)
 - `event: done` → all sources complete
 
 #### `GET /api/search`
@@ -76,7 +77,7 @@ Unified multi-source search with filtering. Supports both text queries and field
 
 Sources: Indexed (tv, movie, person, podcast, author, book) support field-only filtering. Brokered (artist, album, video, news, ratings) require a text query. Ratings can be enriched from indexed tv/movie results when requested together.
 
-Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...} }` keyed by source.
+Response: `{ movie: [...], tv: [...], person: [...], ... , exact_match: {...}, exact_matches: [...] }` keyed by source.
 
 #### `GET /api/search/stream`
 
@@ -258,13 +259,14 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 ### Exact match behavior
 
-- JSON search/autocomplete responses expose a single `exact_match`.
-- For media (`movie`/`tv`), the best exact match is selected by:
-  - exact-title tier
-  - newer `year`
-  - higher `popularity`
-- Non-media exact matches still fall back to the existing source-priority ordering.
-- Stream responses may emit provisional `exact_match` events during the search, and a final authoritative `exact_match_final` event at stream completion.
+- JSON search/autocomplete responses expose both `exact_match` (single hero pick) and `exact_matches` (all qualifying items, ranked array including the hero pick).
+- For media (`movie`/`tv`), when multiple exact matches exist:
+  1. **Viable filter:** candidates without watch providers are eliminated — unless they are movies in their theatrical window (~6 months) or unless no candidates survive the filter.
+  2. **Sort by effective date (YYYYMM) descending:** `release_date` for movies, `last_air_date` for TV, rounded to year-month. Most recent month-bucket wins.
+  3. **Within same YYYYMM:** higher `popularity` wins.
+  4. **Within same YYYYMM and popularity:** movie before TV.
+- Non-media exact matches fall back to the static source-priority ordering (`person > podcast > book > author`).
+- Stream responses emit provisional `exact_match` events during the search, then an authoritative `exact_match_final` event and an `exact_matches_final` event (full ranked array) at stream completion.
 
 ## `idx:media` (`media:`)
 
@@ -548,13 +550,15 @@ Search TMDB by query string. Hits TMDB `/search/movie` and `/search/tv` for disc
   "mode": "redis",
   "movie": [ ... ],
   "tv": [ ... ],
-  "exact_match": null
+  "exact_match": null,
+  "exact_matches": []
 }
 ```
 
 - `movie`: array of items matching the query as movies
 - `tv`: array of items matching the query as TV series
 - `exact_match`: reserved, currently `null`
+- `exact_matches`: reserved, currently `[]`
 
 When `mode=redis`, each item includes:
 

@@ -905,7 +905,7 @@ Shows{% endblock %} {% block body %}
           });
         }
       } else {
-        // Exact match: render at very top (tier -1) when present
+        // Exact match hero card: render at very top (tier -1) when present
         if (results.exact_match && typeof results.exact_match === "object") {
           const em = results.exact_match;
           const label = em.mc_type === "movie" ? "🎬 Movie (Exact Match)" : em.mc_type === "tv" ? "📺 TV Show (Exact Match)" : em.mc_type === "person" ? "👤 Person (Exact Match)" : em.mc_type === "podcast" ? "🎙️ Podcast (Exact Match)" : em.mc_type === "book" ? "📚 Book (Exact Match)" : em.mc_type === "author" ? "✍️ Author (Exact Match)" : "✨ Exact Match";
@@ -919,11 +919,29 @@ Shows{% endblock %} {% block body %}
           });
         }
 
+        // Exact matches group: all items that qualified, minus the hero card
+        const exactMatchesArr = Array.isArray(results.exact_matches) ? results.exact_matches : [];
+        const heroId = results.exact_match?.mc_id || null;
+        const otherExactMatches = heroId
+          ? exactMatchesArr.filter((it) => it.mc_id !== heroId)
+          : exactMatchesArr;
+        if (otherExactMatches.length > 0) {
+          categories.push({
+            key: "exact_matches",
+            label: "Exact Matches",
+            items: otherExactMatches,
+            topPopularity: 999998,
+            color: "amber",
+            tier: -0.5,  // Just below hero card
+          });
+        }
+
         // Build category objects with items, popularity, and tier
-        // Helper: filter out exact match from a list to avoid duplicate display
-        const exactMatchId = results.exact_match?.mc_id || null;
+        // Helper: filter out all exact-match items from source lists to avoid duplicate display
+        const exactMatchIds = new Set(exactMatchesArr.map((it) => it.mc_id).filter(Boolean));
+        if (heroId) exactMatchIds.add(heroId);
         const withoutExactMatch = (arr) =>
-          exactMatchId && Array.isArray(arr) ? arr.filter((it) => it.mc_id !== exactMatchId) : arr || [];
+          exactMatchIds.size > 0 && Array.isArray(arr) ? arr.filter((it) => !exactMatchIds.has(it.mc_id)) : arr || [];
 
         // Tier 1: Media (TV, Movie, Podcast, Book) - sorted by popularity within tier
         // Tier 2: People (Person, Author) - sorted by popularity within tier
