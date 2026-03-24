@@ -1019,7 +1019,14 @@ async def resolve(
                 doc["_rank"] = rank
                 candidates.append(doc)
 
-    matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
+    def _resolve_sort_key(m: dict[str, Any]) -> tuple[float, ...]:
+        rank: tuple[float, ...] = m.pop("_rank", (999, 9999, 0.0))
+        src = m.get("source", "")
+        if src in ("movie", "tv"):
+            return _exact_match_media_sort_key((src, m))
+        return rank
+
+    matches.sort(key=_resolve_sort_key)
 
     # Fuzzy fallback: when the prefix query returned zero candidates, retry
     # with Levenshtein distance-1 matching so misspellings still surface.
