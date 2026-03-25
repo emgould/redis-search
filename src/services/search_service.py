@@ -213,18 +213,21 @@ def _effective_date_yyyymm(source: str, item: dict[str, Any]) -> int:
 
 def _exact_match_media_sort_key(
     candidate: tuple[str, dict[str, Any]],
-) -> tuple[int, float, int]:
+) -> tuple[int, int, float, int]:
     """Sort key for media exact-match candidates.
 
     Ordering (all via ``min()``):
-      1. Most recent ``YYYYMM`` first  (negate for ascending min)
-      2. Highest popularity first       (negate for ascending min)
-      3. Movie before TV                (lower source-priority index)
+      1. Viable first                   (has providers or in theatrical window)
+      2. Most recent ``YYYYMM`` first   (negate for ascending min)
+      3. Highest popularity first        (negate for ascending min)
+      4. Movie before TV                 (lower source-priority index)
     """
     source, item = candidate
+    viable = 0 if (_has_watch_providers(item) or _in_theatrical_window(item)) else 1
     yyyymm = _effective_date_yyyymm(source, item)
     popularity = float(item.get("popularity") or 0)
     return (
+        viable,
         -yyyymm,
         -popularity,
         _SOURCE_PRIORITY_INDEX.get(source, len(EXACT_MATCH_SOURCE_PRIORITY)),
@@ -279,15 +282,18 @@ def _pick_exact_match(
 
 
 def _collect_exact_matches(
-    results: dict[str, list[dict[str, Any]]], query: str | None
+    results: dict[str, list[dict[str, Any]]],
+    query: str | None,
+    hero: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Return all exact-match items across sources, ranked.
 
     Media items are sorted by effective-date YYYYMM descending, then popularity
     descending, then movie-before-tv.  Non-media items follow the static
-    ``EXACT_MATCH_SOURCE_PRIORITY`` order.  The list includes the hero pick
-    (``_pick_exact_match`` winner) — callers that need to deduplicate should do
-    so at render time.
+    ``EXACT_MATCH_SOURCE_PRIORITY`` order.
+
+    When *hero* is provided its ``mc_id`` is guaranteed to be at index 0
+    regardless of sort order.
     """
     if not query or len(query.strip()) < 2:
         return []
@@ -298,8 +304,12 @@ def _collect_exact_matches(
     media_candidates: list[tuple[str, dict[str, Any]]] = []
     for source in ("movie", "tv"):
         for item in results.get(source) or []:
-            if is_exact_match(q, item, source):
-                media_candidates.append((source, item))
+            if not is_exact_match(q, item, source):
+                continue
+            wp = item.get("watch_providers")
+            if not isinstance(wp, dict) or not wp.get("streaming_platform_ids"):
+                continue
+            media_candidates.append((source, item))
 
     if media_candidates:
         media_candidates.sort(key=_exact_match_media_sort_key)
@@ -311,6 +321,12 @@ def _collect_exact_matches(
         for item in results.get(source) or []:
             if is_exact_match(q, item, source):
                 collected.append(_normalize_exact_match_cast(item))
+
+    if hero is not None:
+        hero_id = hero.get("mc_id")
+        if hero_id:
+            collected = [m for m in collected if m.get("mc_id") != hero_id]
+            collected.insert(0, hero)
 
     return collected
 
@@ -1019,7 +1035,14 @@ async def resolve(
                 doc["_rank"] = rank
                 candidates.append(doc)
 
-    matches.sort(key=lambda m: m.pop("_rank", (999, 9999, 0.0)))
+    def _resolve_sort_key(m: dict[str, Any]) -> tuple[float, ...]:
+        rank: tuple[float, ...] = m.pop("_rank", (999, 9999, 0.0))
+        src = m.get("source", "")
+        if src in ("movie", "tv"):
+            return _exact_match_media_sort_key((src, m))
+        return rank
+
+    matches.sort(key=_resolve_sort_key)
 
     # Fuzzy fallback: when the prefix query returned zero candidates, retry
     # with Levenshtein distance-1 matching so misspellings still surface.
@@ -1517,7 +1540,7 @@ async def autocomplete_stream(
     final_exact = _pick_exact_match(streamed_full, q)
     if final_exact is not None:
         yield ("exact_match_final", final_exact)
-    all_exact = _collect_exact_matches(streamed_full, q)
+    all_exact = _collect_exact_matches(streamed_full, q, hero=final_exact)
     if all_exact:
         yield ("exact_matches_final", all_exact)
     logger.info(
@@ -2065,7 +2088,7 @@ async def search(
     q_for_exact = q if has_query else None
     exact = _pick_exact_match(final_results, q_for_exact)
     final_results["exact_match"] = exact
-    final_results["exact_matches"] = _collect_exact_matches(final_results, q_for_exact)
+    final_results["exact_matches"] = _collect_exact_matches(final_results, q_for_exact, hero=exact)
     if no_duplicate and exact is not None:
         _remove_exact_from_results(final_results, exact)
 
@@ -2408,7 +2431,7 @@ async def search_stream(
     final_exact = _pick_exact_match(streamed_results, q_for_exact)
     if final_exact is not None:
         yield ("exact_match_final", final_exact)
-    all_exact = _collect_exact_matches(streamed_results, q_for_exact)
+    all_exact = _collect_exact_matches(streamed_results, q_for_exact, hero=final_exact)
     if all_exact:
         yield ("exact_matches_final", all_exact)
     query_desc = f"'{q}'" if q else "[filters only]"

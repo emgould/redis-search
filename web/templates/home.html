@@ -919,17 +919,14 @@ Shows{% endblock %} {% block body %}
           });
         }
 
-        // Exact matches group: all items that qualified, minus the hero card
+        // Exact matches group: all items that qualified (hero is at index 0)
         const exactMatchesArr = Array.isArray(results.exact_matches) ? results.exact_matches : [];
         const heroId = results.exact_match?.mc_id || null;
-        const otherExactMatches = heroId
-          ? exactMatchesArr.filter((it) => it.mc_id !== heroId)
-          : exactMatchesArr;
-        if (otherExactMatches.length > 0) {
+        if (exactMatchesArr.length > 0) {
           categories.push({
             key: "exact_matches",
             label: "Exact Matches",
-            items: otherExactMatches,
+            items: exactMatchesArr,
             topPopularity: 999998,
             color: "amber",
             tier: -0.5,  // Just below hero card
