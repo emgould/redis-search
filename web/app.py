@@ -2810,17 +2810,44 @@ async def podcast_db_info():
     )
 
 
+_KEY_PREFIX_BY_TYPE: dict[str, str] = {
+    "person": "person:",
+    "podcast": "podcast:",
+    "author": "author:",
+    "book": "book:",
+}
+
+_KNOWN_PREFIXES = tuple(_KEY_PREFIX_BY_TYPE.values()) + ("media:",)
+
+
+def _redis_key_for_id(doc_id: str) -> str:
+    """Derive the full Redis key from a bare or prefixed document id.
+
+    Checks whether *doc_id* already carries a known prefix (``media:``,
+    ``person:``, ``podcast:``, ``author:``, ``book:``).  If so it is returned
+    as-is.  Otherwise the prefix is inferred from the id's embedded type
+    segment (e.g. ``tmdb_person_31`` → ``person:tmdb_person_31``).
+    """
+    if doc_id.startswith(_KNOWN_PREFIXES):
+        return doc_id
+
+    for type_segment, prefix in _KEY_PREFIX_BY_TYPE.items():
+        if f"_{type_segment}_" in doc_id or doc_id.startswith(f"{type_segment}_"):
+            return f"{prefix}{doc_id}"
+
+    return f"media:{doc_id}"
+
+
 @app.get("/api/media/{media_id}")
 async def get_media(media_id: str):
     """Get a single media item by ID."""
     redis = get_redis()
     try:
-        # Try with media: prefix first
-        key = media_id if media_id.startswith("media:") else f"media:{media_id}"
+        key = _redis_key_for_id(media_id)
         data = await redis.json().get(key)  # type: ignore[misc]
         if data:
             return JSONResponse(content={"id": key, **data})
-        return JSONResponse(status_code=404, content={"error": "Media not found"})
+        return JSONResponse(status_code=404, content={"error": "Document not found"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
@@ -2838,7 +2865,7 @@ class MediaDocumentUpdate(BaseModel):
 async def update_media(media_id: str, body: MediaDocumentUpdate) -> JSONResponse:
     """Update a Redis media document and optionally push to Media Manager."""
     redis = get_redis()
-    key = media_id if media_id.startswith("media:") else f"media:{media_id}"
+    key = _redis_key_for_id(media_id)
 
     try:
         existing: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
