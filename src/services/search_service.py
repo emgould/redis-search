@@ -39,6 +39,7 @@ from core.search_queries import (
     build_minimal_autocomplete_query,
     escape_redis_search_term,
     normalize_for_tag,
+    normalize_query_separators,
     strip_query_apostrophes,
 )
 from utils.get_logger import get_logger
@@ -457,10 +458,7 @@ def build_people_autocomplete_query(q: str) -> str:
     # Strip apostrophes to match indexed names (e.g. "O'Brien" -> "OBrien")
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    # Filter out stopwords and empty strings
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     stopwords = {
         "the",
         "a",
@@ -519,8 +517,7 @@ def _build_text_query_for_variation(
     Returns:
         Tuple of (title_query, author_query, skip_author)
     """
-    parts = variation.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(variation).split() if w]
     words = [w for w in words if w and w not in stopwords]
 
     if not words:
@@ -635,10 +632,7 @@ def build_authors_autocomplete_query(q: str) -> str:
     # Strip apostrophes to match indexed names
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    # Filter out stopwords and empty strings
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     stopwords = {
         "the",
         "a",
@@ -2456,9 +2450,7 @@ async def full_search(q: str) -> dict[str, list]:
     # Build queries
     media_query = build_fuzzy_fulltext_query(q)
     # For people, use a simpler fuzzy query on both fields
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     stopwords = {
         "the",
         "a",

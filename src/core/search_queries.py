@@ -184,6 +184,20 @@ def strip_query_apostrophes(q: str) -> str:
     return _APOSTROPHE_RE.sub("", q)
 
 
+_QUERY_SEPARATOR_RE = re.compile(r"[^a-zA-Z0-9\s]")
+
+
+def normalize_query_separators(q: str) -> str:
+    """Replace non-alphanumeric characters with spaces to match RediSearch's TEXT tokenizer.
+
+    RediSearch splits indexed text on any non-alphanumeric character, so
+    ``"X-Troop"`` becomes tokens ``["x", "troop"]``.  Applying the same
+    splitting at query time ensures the query tokens align with what was
+    indexed.  Call *after* ``strip_query_apostrophes``.
+    """
+    return _QUERY_SEPARATOR_RE.sub(" ", q)
+
+
 def normalize_for_tag(value: str) -> str:
     """
     Normalize a value for TAG field search (must match how tags are stored).
@@ -260,8 +274,7 @@ def build_minimal_autocomplete_query(q: str) -> str:
     No stopword filtering — titles contain stopwords and users type them.
     """
     q = strip_query_apostrophes(q)
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
 
     if not words:
         return "*"
@@ -297,10 +310,10 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     # Strip apostrophes to match indexed titles (e.g. "it's" -> "its")
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    # This handles cases like "Predator:Badlands" or "Predator: Badlands"
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    # Normalize separators to match RediSearch's TEXT tokenizer, which splits
+    # on any non-alphanumeric char (e.g. "X-Troop" -> "X Troop",
+    # "Predator:Badlands" -> "Predator Badlands").
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     # Filter out stopwords and empty strings
     words = [w for w in words if w and w not in STOPWORDS]
 
@@ -423,9 +436,7 @@ def build_fuzzy_fulltext_query(q: str) -> str:
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
@@ -451,9 +462,7 @@ def build_podcast_autocomplete_query(q: str, include_tag_fields: bool = True) ->
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
@@ -532,9 +541,7 @@ def build_books_autocomplete_query(q: str, include_tag_fields: bool = True) -> s
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
