@@ -122,6 +122,19 @@ Shows{% endblock %} {% block body %}
                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
             </button>
           </div>
+          <!-- OpenLibrary Mode Toggle -->
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
+            title="Search OpenLibrary directly for books. Disables autocomplete; press Enter to search.">
+            <label for="openlibrary-mode-toggle" class="text-xs text-emerald-400 cursor-pointer select-none whitespace-nowrap">
+              OpenLibrary
+            </label>
+            <button type="button" id="openlibrary-mode-toggle" role="switch" aria-checked="false"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-surface-900 bg-surface-600">
+              <span class="sr-only">Enable OpenLibrary search mode</span>
+              <span id="openlibrary-mode-toggle-dot" aria-hidden="true"
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+          </div>
           <!-- Direct Match Toggle -->
           <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-800 border border-surface-700 rounded-xl"
             title="Resolve exact title matches only. Disables autocomplete; press Enter to search. Returns all tier 0-1 matches.">
@@ -530,6 +543,9 @@ Shows{% endblock %} {% block body %}
   // TMDB mode: when active, autocomplete/search are suppressed; only explicit TMDB search fires
   let tmdbModeEnabled = false;
 
+  // OpenLibrary mode: when active, autocomplete/search are suppressed; Enter triggers OpenLibrary search
+  let openlibraryModeEnabled = false;
+
   // ---- Search Controller (imported from /static/js/search-controller.js) ----
   // Handles two-tier debounce: autocomplete (300ms) + full search (750ms).
   // See .cursor/rules/search-debounce-pattern.mdc for architecture docs.
@@ -548,6 +564,7 @@ Shows{% endblock %} {% block body %}
     isTmdbModeEnabled: () => tmdbModeEnabled,
     isMinimalAutocompleteEnabled: () => liteAutocompleteEnabled,
     isDirectMatchEnabled: () => directMatchEnabled,
+    isOpenlibraryModeEnabled: () => openlibraryModeEnabled,
   });
 
   // Stream mode toggle
@@ -776,6 +793,56 @@ Shows{% endblock %} {% block body %}
 
   window.searchDirectMatch = searchDirectMatch;
 
+  // OpenLibrary mode toggle
+  function toggleOpenlibraryMode() {
+    openlibraryModeEnabled = !openlibraryModeEnabled;
+    const toggle = document.getElementById("openlibrary-mode-toggle");
+    const dot = document.getElementById("openlibrary-mode-toggle-dot");
+
+    if (openlibraryModeEnabled) {
+      toggle.classList.remove("bg-surface-600");
+      toggle.classList.add("bg-emerald-500");
+      toggle.setAttribute("aria-checked", "true");
+      dot.classList.remove("translate-x-0");
+      dot.classList.add("translate-x-4");
+      searchController.cancelAll();
+    } else {
+      toggle.classList.remove("bg-emerald-500");
+      toggle.classList.add("bg-surface-600");
+      toggle.setAttribute("aria-checked", "false");
+      dot.classList.remove("translate-x-4");
+      dot.classList.add("translate-x-0");
+    }
+  }
+
+  document.getElementById("openlibrary-mode-toggle").addEventListener("click", toggleOpenlibraryMode);
+
+  async function searchOpenLibrary() {
+    const query = searchInput.value.trim();
+    if (!query || query.length < 2) return;
+
+    searchController.cancelAll();
+    loadingSpinner.classList.remove("hidden");
+    try {
+      const params = new URLSearchParams({ q: query, limit: "10" });
+      const response = await fetch(getApiUrl(`/api/openlibrary/search?${params.toString()}`));
+      const payload = await response.json();
+      if (!response.ok) {
+        const err = payload?.error || `OpenLibrary search failed (${response.status})`;
+        openJsonModal("OpenLibrary Search Error", JSON.stringify({ error: err }, null, 2));
+        return;
+      }
+      renderResults(payload, query);
+      resultsContainer.classList.remove("hidden");
+    } catch (error) {
+      openJsonModal("OpenLibrary Search Error", JSON.stringify({ error: String(error) }, null, 2));
+    } finally {
+      loadingSpinner.classList.add("hidden");
+    }
+  }
+
+  window.searchOpenLibrary = searchOpenLibrary;
+
   function formatYear(item) {
     // Use the normalized year field directly
     if (item.year) {
@@ -882,8 +949,20 @@ Shows{% endblock %} {% block body %}
 
     if (results && typeof results === "object" && !Array.isArray(results)) {
       const isTmdbSearch = results.mode === "redis" || results.mode === "tmdb";
+      const isOpenlibrarySearch = results.mode === "openlibrary";
 
-      if (isTmdbSearch) {
+      if (isOpenlibrarySearch) {
+        if (Array.isArray(results.book) && results.book.length > 0) {
+          categories.push({
+            key: "book",
+            label: "📚 OpenLibrary Books",
+            items: results.book,
+            topPopularity: parseFloat(results.book[0]?.readinglog_count) || 0,
+            color: "emerald",
+            tier: 1,
+          });
+        }
+      } else if (isTmdbSearch) {
         if (Array.isArray(results.movie) && results.movie.length > 0) {
           categories.push({
             key: "movie",
@@ -1158,7 +1237,8 @@ Shows{% endblock %} {% block body %}
     for (const cat of categories) {
       for (const item of cat.items || []) {
         const isRating = item && (item.source === "rottentomatoes" || item.critics_score !== undefined);
-        if (item && (item.mc_type === "tv" || item.mc_type === "movie" || item.mc_type === "person" || isRating)) {
+        const isBookLive = item && item._openlibrary_live === true;
+        if (item && (item.mc_type === "tv" || item.mc_type === "movie" || item.mc_type === "person" || isRating || isBookLive)) {
           const key = item.id || item.mc_id;
           if (key) window._itemsByMcId[key] = item;
         }
@@ -2108,7 +2188,7 @@ Shows{% endblock %} {% block body %}
     const title = item.search_title || item.title || "Unknown Book";
     const author = item.author || item.author_search || "";
     const cover_i = item.cover_i;
-    const coverUrl = cover_i ? `https://covers.openlibrary.org/b/id/${cover_i}-M.jpg` : "";
+    const coverUrl = item.book_image || item.image || (cover_i ? `https://covers.openlibrary.org/b/id/${cover_i}-M.jpg` : "");
     const firstPublishYear = item.first_publish_year;
     const description = item.description || "";
     const subjects = item.subjects || [];
@@ -2116,23 +2196,17 @@ Shows{% endblock %} {% block body %}
     const ratingsCount = item.ratings_count;
     const openlibraryKey = item.openlibrary_key || item.key;
     const openlibraryUrl = openlibraryKey ? `https://openlibrary.org${openlibraryKey}` : "";
+    const isOpenlibraryLive = item._openlibrary_live === true;
 
-    // Format year display
     const yearDisplay = firstPublishYear ? `${firstPublishYear}` : "";
-
-    // Truncate description for display
     const descSnippet = description.length > 100 ? description.substring(0, 100) + "..." : description;
 
-    // Format rating display
     let ratingDisplay = "";
     if (ratingsAverage && ratingsCount) {
       ratingDisplay = `${ratingsAverage.toFixed(1)} (${ratingsCount.toLocaleString()} ratings)`;
     }
 
-    // Format subjects
     const subjectsDisplay = subjects.slice(0, 3).join(", ");
-
-    // source_id for detail view
     const sourceId = item.source_id || "";
 
     return `
@@ -2187,8 +2261,27 @@ Shows{% endblock %} {% block body %}
       }
             </div>
             
-            <!-- Arrow -->
-            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <!-- Action buttons + Arrow -->
+            <div class="flex-shrink-0 self-center flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                ${isOpenlibraryLive
+        ? `<button type="button" onclick="event.stopPropagation(); showRedisDoc('${item.id || item.mc_id || ""}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    View Redis Doc
+                </button>
+                <button type="button" onclick="event.stopPropagation(); showBookMcItem('${item.id || item.mc_id || ""}')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    MC Item
+                </button>
+                <button type="button" onclick="event.stopPropagation(); window.open('${openlibraryUrl}', '_blank')"
+                    class="px-2 py-0.5 text-xs rounded bg-surface-700 hover:bg-surface-600 text-surface-300 hover:text-white transition-colors whitespace-nowrap">
+                    OpenLibrary
+                </button>
+                <button type="button" onclick="event.stopPropagation(); addOpenLibraryToRedis('${openlibraryKey || ""}', this)"
+                    class="px-2 py-0.5 text-xs rounded ${item._exists_in_redis ? 'bg-green-600/80 hover:bg-green-500' : 'bg-emerald-600/80 hover:bg-emerald-500'} text-white transition-colors whitespace-nowrap">
+                    ${item._exists_in_redis ? "UPDATE REDIS" : "ADD TO REDIS"}
+                </button>`
+        : ""
+      }
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -2665,6 +2758,60 @@ Shows{% endblock %} {% block body %}
           button.classList.add("bg-green-600/80", "hover:bg-green-500");
         } else {
           button.classList.add("bg-orange-600/80", "hover:bg-orange-500");
+        }
+      }
+      openJsonModal("Error", JSON.stringify({ error: String(err) }, null, 2));
+    }
+  };
+
+  window.showBookMcItem = function (mcId) {
+    const item = window._itemsByMcId && window._itemsByMcId[mcId];
+    if (!item) {
+      openJsonModal("MC Item", JSON.stringify({ error: "Item not found in current results" }, null, 2));
+      return;
+    }
+    openJsonModal("MC Item (OpenLibrary)", JSON.stringify(item, null, 2));
+  };
+
+  window.addOpenLibraryToRedis = async function (openlibraryKey, buttonEl) {
+    if (!openlibraryKey) {
+      openJsonModal("ADD TO REDIS", JSON.stringify({ error: "Missing openlibrary_key" }, null, 2));
+      return;
+    }
+
+    const button = buttonEl instanceof HTMLButtonElement ? buttonEl : null;
+    const originalText = button ? button.textContent?.trim() : null;
+    const isUpdate = originalText === "UPDATE REDIS";
+    if (button) {
+      button.disabled = true;
+      button.textContent = isUpdate ? "UPDATING..." : "ADDING...";
+      button.classList.add("opacity-60", "cursor-not-allowed");
+    }
+
+    try {
+      const base = getApiUrl("/api/openlibrary/add-to-redis");
+      const params = new URLSearchParams({ openlibrary_key: openlibraryKey });
+      const resp = await fetch(`${base}?${params.toString()}`, { method: "POST" });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || `HTTP ${resp.status}`);
+      }
+
+      if (button) {
+        button.textContent = isUpdate ? "UPDATED" : "ADDED";
+        button.classList.remove("bg-emerald-600/80", "hover:bg-emerald-500", "bg-green-600/80", "hover:bg-green-500");
+        button.classList.add("bg-emerald-700/80");
+      }
+      openJsonModal(isUpdate ? "Updated Redis Doc" : "Added to Redis", JSON.stringify(data, null, 2));
+    } catch (err) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText || "ADD TO REDIS";
+        button.classList.remove("opacity-60", "cursor-not-allowed");
+        if (isUpdate) {
+          button.classList.add("bg-green-600/80", "hover:bg-green-500");
+        } else {
+          button.classList.add("bg-emerald-600/80", "hover:bg-emerald-500");
         }
       }
       openJsonModal("Error", JSON.stringify({ error: String(err) }, null, 2));
