@@ -56,6 +56,7 @@ const EXACT_MATCH_PRIORITY = {
  * @param {function():boolean} cfg.isFullSearchEnabled       — returns current full-search toggle state
  * @param {function():boolean} cfg.isMinimalAutocompleteEnabled — returns current lite autocomplete toggle state
  * @param {function():boolean} cfg.isDirectMatchEnabled        — returns current direct match toggle state
+ * @param {function():boolean} cfg.isOpenlibraryModeEnabled    — returns current OpenLibrary mode toggle state
  */
 function initSearchController(cfg) {
   const {
@@ -73,6 +74,7 @@ function initSearchController(cfg) {
     isTmdbModeEnabled,
     isMinimalAutocompleteEnabled,
     isDirectMatchEnabled,
+    isOpenlibraryModeEnabled,
   } = cfg;
 
   // ---- State ----
@@ -398,9 +400,10 @@ function initSearchController(cfg) {
       return;
     }
 
-    // In TMDB or Direct Match mode, suppress autocomplete and search — only Enter triggers
+    // In TMDB, Direct Match, or OpenLibrary mode, suppress autocomplete and search — only Enter triggers
     if ((isTmdbModeEnabled && isTmdbModeEnabled()) ||
-        (isDirectMatchEnabled && isDirectMatchEnabled())) {
+        (isDirectMatchEnabled && isDirectMatchEnabled()) ||
+        (isOpenlibraryModeEnabled && isOpenlibraryModeEnabled())) {
       return;
     }
 
@@ -437,6 +440,11 @@ function initSearchController(cfg) {
         if (typeof window.searchDirectMatch === "function") window.searchDirectMatch();
         return;
       }
+      // In OpenLibrary mode, route Enter to searchOpenLibrary
+      if (isOpenlibraryModeEnabled && isOpenlibraryModeEnabled()) {
+        if (typeof window.searchOpenLibrary === "function") window.searchOpenLibrary();
+        return;
+      }
       triggerSearch(query);
     }
   });
@@ -444,6 +452,7 @@ function initSearchController(cfg) {
   searchInput.addEventListener("focus", () => {
     if (isTmdbModeEnabled && isTmdbModeEnabled()) return;
     if (isDirectMatchEnabled && isDirectMatchEnabled()) return;
+    if (isOpenlibraryModeEnabled && isOpenlibraryModeEnabled()) return;
     const query = searchInput.value.trim();
     if (query.length < 2) return;
     if (Object.keys(currentResults).length > 0 && currentQuery === query) {

@@ -25,10 +25,17 @@ from adapters.media_manager_client import MediaManagerClient
 from adapters.redis_client import get_redis
 from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
+from api.openlibrary.bulk.load_book_index import mc_book_to_redis_doc
+from api.openlibrary.search import OpenLibrarySearchService
 from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import search_movies_async, search_tv_shows_async
 from contracts.models import MCType
-from core.normalize import document_to_redis, normalize_document, prepare_media_redis_document
+from core.normalize import (
+    document_to_redis,
+    normalize_document,
+    prepare_media_redis_document,
+    resolve_timestamps,
+)
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, validate_raw_query
 from etl.bestseller_author_etl import BestsellerETLStats, run_bestseller_author_etl
@@ -3101,6 +3108,122 @@ async def api_add_tmdb_to_redis(
     except Exception as e:
         logging.exception("Error adding TMDB item to Redis")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ---------------------------------------------------------------------------
+# OpenLibrary search & add-to-redis
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/openlibrary/search")
+async def api_openlibrary_search(
+    q: str = Query(..., min_length=2, description="OpenLibrary search query string"),
+    limit: int = Query(default=10, ge=1, le=50, description="Maximum book results"),
+) -> JSONResponse:
+    """Search OpenLibrary directly and return book results as Redis-shaped documents.
+
+    Results include ``_openlibrary_live`` flag and ``_exists_in_redis``
+    boolean so the UI can show ADD vs UPDATE buttons.
+    """
+    service = OpenLibrarySearchService()
+    search_result = await service.search_books(query=q, limit=limit, no_cache=True)
+
+    if search_result.error:
+        return JSONResponse(
+            status_code=search_result.status_code or 500,
+            content={"error": search_result.error},
+        )
+
+    books: list[dict[str, Any]] = []
+    now_ts = int(datetime.now(UTC).timestamp())
+
+    for book_item in search_result.results:
+        book_dict = book_item.model_dump(mode="json")
+        redis_doc = mc_book_to_redis_doc(book_dict)
+        redis_doc["_openlibrary_live"] = True
+        redis_doc["created_at"] = now_ts
+        redis_doc["modified_at"] = now_ts
+        redis_doc["_source"] = "openlibrary_live_search"
+        books.append(redis_doc)
+
+    # Check which items already exist in Redis
+    redis = get_redis()
+    mc_ids = [b.get("id", "") for b in books]
+    redis_keys = [f"book:{mc_id}" if not mc_id.startswith("book:") else mc_id for mc_id in mc_ids]
+
+    if redis_keys:
+        pipe = redis.pipeline()
+        for rk in redis_keys:
+            pipe.exists(rk)
+        per_key: list[int] = await pipe.execute()  # type: ignore[assignment]
+        for item, exists_flag in zip(books, per_key, strict=True):
+            item["_exists_in_redis"] = bool(exists_flag)
+
+    return JSONResponse(
+        content={
+            "mode": "openlibrary",
+            "book": books,
+            "exact_match": None,
+        }
+    )
+
+
+@app.post("/api/openlibrary/add-to-redis")
+async def api_add_openlibrary_to_redis(
+    openlibrary_key: str = Query(
+        ..., description="OpenLibrary work key, e.g. /works/OL12345W"
+    ),
+) -> JSONResponse:
+    """Fetch an OpenLibrary work, build a Redis doc, and insert/update ``idx:book``."""
+    service = OpenLibrarySearchService()
+    redis = get_redis()
+
+    # Search by exact key — the key is also set as openlibrary_key on the MCBookItem
+    search_result = await service.search_books(query=openlibrary_key, limit=5, no_cache=True)
+
+    if search_result.error:
+        return JSONResponse(
+            status_code=search_result.status_code or 500,
+            content={"error": search_result.error},
+        )
+
+    # Find the matching book
+    target: dict[str, Any] | None = None
+    for book_item in search_result.results:
+        if book_item.openlibrary_key == openlibrary_key or book_item.key == openlibrary_key:
+            target = book_item.model_dump(mode="json")
+            break
+
+    if target is None and search_result.results:
+        target = search_result.results[0].model_dump(mode="json")
+
+    if target is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"No book found for key: {openlibrary_key}"},
+        )
+
+    redis_doc = mc_book_to_redis_doc(target)
+    mc_id = redis_doc.get("id", "")
+    key = f"book:{mc_id}" if not mc_id.startswith("book:") else mc_id
+
+    existing_doc: dict[str, Any] | None = await redis.json().get(key)  # type: ignore[assignment]
+    now_ts = int(datetime.now(UTC).timestamp())
+    ca, ma, src = resolve_timestamps(existing_doc, now_ts, source_tag="manual_add_openlibrary")
+    redis_doc["created_at"] = ca
+    redis_doc["modified_at"] = ma
+    redis_doc["_source"] = src
+
+    await redis.json().set(key, "$", redis_doc)  # type: ignore[misc]
+
+    status = "updated" if isinstance(existing_doc, dict) else "inserted"
+    return JSONResponse(
+        content={
+            "status": status,
+            "id": key,
+            **redis_doc,
+        }
+    )
 
 
 @app.get("/api/media-details")
