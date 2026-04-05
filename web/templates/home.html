@@ -2480,7 +2480,7 @@ Shows{% endblock %} {% block body %}
     jsonModalEditStatus.classList.add("hidden");
 
     try {
-      const base = typeof getApiUrl === "function" ? getApiUrl(`/api/media/${mediaId}`) : `/api/media/${mediaId}`;
+      const base = `/api/media/${mediaId}`;
       const resp = await fetch(base, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
