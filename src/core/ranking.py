@@ -94,10 +94,12 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
     # Pre-normalize query ONCE
     query_lower = query.lower().strip()
     query_norm = normalize_for_match(query)
+    query_compact = query_norm.replace("_", "")
 
     # Extract fields ONCE
     title_raw = (doc.get("search_title") or doc.get("title") or "").lower().strip()
     title_norm = normalize_for_match(title_raw)
+    title_compact = str(doc.get("title_compact") or "") or title_norm.replace("_", "")
     director = doc.get("director_name") or ""
     cast_names: list[str] = doc.get("cast_names") or []
     keywords: list[str] = doc.get("keywords") or []
@@ -112,6 +114,10 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
 
     # Tier 1: EXACT title (normalized)
     if query_norm == title_norm:
+        return (1, -year, -popularity)
+
+    # Tier 1: EXACT title (compact) — collapsed-token queries like "goodwillhunting"
+    if len(query_compact) >= 4 and query_compact == title_compact:
         return (1, -year, -popularity)
 
     # Tier 2: EXACT director_name
@@ -176,6 +182,10 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
     if query_norm in title_norm:
         return (11, -year, -popularity)
 
+    # Compact substring (e.g. "goodwillhunt" in "goodwillhunting")
+    if len(query_compact) >= 4 and query_compact in title_compact:
+        return (11, -year, -popularity)
+
     # Also check IPTC-expanded aliases in title (e.g., "AI" -> "artificial_intelligence")
     query_aliases = get_search_aliases(query_norm)
     if any(alias in title_norm for alias in query_aliases if alias != query_norm):
@@ -197,6 +207,10 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
 
     # Tier 13: PREFIX title
     if title_norm.startswith(query_norm):
+        return (13, -year, -popularity)
+
+    # Compact prefix (e.g. "goodwillhunt" -> "goodwillhunting")
+    if len(query_compact) >= 4 and title_compact.startswith(query_compact):
         return (13, -year, -popularity)
 
     # Tier 14: PREFIX any TAG field

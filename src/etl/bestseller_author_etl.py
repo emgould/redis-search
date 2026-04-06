@@ -31,6 +31,7 @@ from api.openlibrary.bulk.load_author_index import mc_author_to_redis_doc
 from api.openlibrary.models import MCAuthorItem
 from api.openlibrary.wrappers import openlibrary_wrapper
 from core.normalize import resolve_timestamps
+from core.search_queries import escape_redis_search_term, normalize_query_separators
 from utils.base_api_client import BaseAPIClient
 from utils.get_logger import get_logger
 
@@ -282,8 +283,9 @@ class BestsellerAuthorETL(BaseAPIClient):
         for author in authors:
             try:
                 # Search for author by name in the idx:author index
-                # Use FT.SEARCH to find exact or close matches
-                query = f"@search_title:{author}"
+                words = normalize_query_separators(author).split()
+                escaped = " ".join(escape_redis_search_term(w) for w in words if w)
+                query = f"@search_title:({escaped})" if escaped else "*"
                 result = await redis.ft(INDEX_NAME).search(query)
 
                 if result.total == 0:

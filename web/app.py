@@ -31,6 +31,7 @@ from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import search_movies_async, search_tv_shows_async
 from contracts.models import MCType
 from core.normalize import (
+    compact_title,
     document_to_redis,
     normalize_document,
     prepare_media_redis_document,
@@ -2896,6 +2897,10 @@ async def update_media(media_id: str, body: MediaDocumentUpdate) -> JSONResponse
     merged["modified_at"] = int(datetime.now(UTC).timestamp())
     merged["_source"] = "manual_edit"
 
+    if "title" in body.document or "search_title" in body.document:
+        canonical = merged.get("title") or merged.get("search_title") or ""
+        merged["title_compact"] = compact_title(canonical)
+
     try:
         await redis.json().set(key, "$", merged)  # type: ignore[misc]
     except Exception as e:
@@ -4609,6 +4614,7 @@ INDEX_CONFIGS = {
             # Text fields
             TextField("$.original_title", as_name="original_title", weight=1.0),
             TextField("$.tagline", as_name="tagline", weight=1.0),
+            TextField("$.title_compact", as_name="title_compact", weight=1.0, no_stem=True),
             # Source filter
             TagField("$.source", as_name="source"),
             # Canonical cross-system identifier for exact lookup

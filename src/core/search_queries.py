@@ -184,6 +184,20 @@ def strip_query_apostrophes(q: str) -> str:
     return _APOSTROPHE_RE.sub("", q)
 
 
+_QUERY_SEPARATOR_RE = re.compile(r"[^a-zA-Z0-9\s]")
+
+
+def normalize_query_separators(q: str) -> str:
+    """Replace non-alphanumeric characters with spaces to match RediSearch's TEXT tokenizer.
+
+    RediSearch splits indexed text on any non-alphanumeric character, so
+    ``"X-Troop"`` becomes tokens ``["x", "troop"]``.  Applying the same
+    splitting at query time ensures the query tokens align with what was
+    indexed.  Call *after* ``strip_query_apostrophes``.
+    """
+    return _QUERY_SEPARATOR_RE.sub(" ", q)
+
+
 def normalize_for_tag(value: str) -> str:
     """
     Normalize a value for TAG field search (must match how tags are stored).
@@ -197,6 +211,51 @@ def normalize_for_tag(value: str) -> str:
     value = value.strip().lower()
     value = re.sub(r"[^a-z0-9]+", "_", value)
     return value.strip("_")
+
+
+_COMPACT_QUERY_MIN_LEN = 4
+
+# Local compact-title logic (mirrors core.normalize.compact_title but avoids
+# circular import: normalize → … → search_queries → normalize).
+_NON_ALNUM_SPACE_RE = re.compile(r"[^a-z0-9\s]")
+_MULTI_SPACE_RE = re.compile(r"\s+")
+
+
+def _compact_query(text: str) -> str:
+    """Collapse query text the same way ``compact_title`` collapses indexed titles."""
+    s = text.lower().strip()
+    s = _NON_ALNUM_SPACE_RE.sub("", s)
+    s = _MULTI_SPACE_RE.sub(" ", s).strip()
+    return s.replace(" ", "")
+
+
+def _is_compact_query(words: list[str]) -> bool:
+    """Return True when the query looks like a single collapsed token (no spaces)."""
+    return len(words) == 1 and len(words[0]) >= _COMPACT_QUERY_MIN_LEN
+
+
+def _compact_title_prefix_clause(all_words: list[str]) -> str | None:
+    """Build ``@title_compact:...*`` using the same collapse as indexed documents.
+
+    Uses **all** tokens (including stopwords) so the collapsed form matches.
+    """
+    if not all_words:
+        return None
+    collapsed = _compact_query(" ".join(all_words))
+    if len(collapsed) < _COMPACT_QUERY_MIN_LEN:
+        return None
+    return f"@title_compact:{escape_redis_search_term(collapsed)}*"
+
+
+def _compact_title_fuzzy_clause(all_words: list[str]) -> str | None:
+    """Fuzzy ``@title_compact`` clause for full-text search."""
+    if not all_words:
+        return None
+    collapsed = _compact_query(" ".join(all_words))
+    if len(collapsed) < _COMPACT_QUERY_MIN_LEN:
+        return None
+    term = escape_redis_search_term(collapsed)
+    return f"@title_compact:(%{term}%)"
 
 
 def escape_redis_search_term(term: str) -> str:
@@ -258,10 +317,13 @@ def build_minimal_autocomplete_query(q: str) -> str:
     narrow progressively as the user types.  Single-char trailing words
     are dropped (user is between words).  No TAG field union.
     No stopword filtering — titles contain stopwords and users type them.
+
+    When the collapsed form of the full query (``compact_title`` on all tokens)
+    has length ≥4, a ``@title_compact`` prefix clause is OR-ed in so slug-style
+    matches work (single collapsed tokens, ``goodwill hunting``, etc.).
     """
     q = strip_query_apostrophes(q)
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
 
     if not words:
         return "*"
@@ -274,11 +336,16 @@ def build_minimal_autocomplete_query(q: str) -> str:
         return "*"
 
     if len(escaped) == 1:
-        return f"@search_title:{escaped[0]}*"
+        title_clause = f"@search_title:{escaped[0]}*"
+    else:
+        exact = " ".join(escaped[:-1])
+        last = escaped[-1]
+        title_clause = f"@search_title:({exact} {last}*)"
 
-    exact = " ".join(escaped[:-1])
-    last = escaped[-1]
-    return f"@search_title:({exact} {last}*)"
+    if cc := _compact_title_prefix_clause(words):
+        return f"({title_clause}) | ({cc})"
+
+    return title_clause
 
 
 def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
@@ -297,12 +364,12 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
     # Strip apostrophes to match indexed titles (e.g. "it's" -> "its")
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    # This handles cases like "Predator:Badlands" or "Predator: Badlands"
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    # Filter out stopwords and empty strings
-    words = [w for w in words if w and w not in STOPWORDS]
+    # Normalize separators to match RediSearch's TEXT tokenizer, which splits
+    # on any non-alphanumeric char (e.g. "X-Troop" -> "X Troop",
+    # "Predator:Badlands" -> "Predator Badlands").
+    all_words = [w.lower() for w in normalize_query_separators(q).split() if w]
+    # Filter out stopwords and empty strings (title/TAG clauses only)
+    words = [w for w in all_words if w and w not in STOPWORDS]
 
     if not words:
         # If only stopwords, return a broad match
@@ -354,8 +421,10 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
             # Prefix match for longer last word
             title_query = f"@search_title:({exact_words} {last_word}*)"
 
-    # If not including TAG fields, return just title query
+    # If not including TAG fields, return title query (with optional compact)
     if not include_tag_fields:
+        if cc := _compact_title_prefix_clause(all_words):
+            return f"({title_query}) | ({cc})"
         return title_query
 
     # Build TAG field queries for union search
@@ -364,6 +433,9 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
 
     # Build union query parts
     query_parts = [title_query]
+
+    if cc := _compact_title_prefix_clause(all_words):
+        query_parts.append(cc)
 
     # For TAG fields (cast, director, genres):
     # - Short queries (<=3 chars) use exact matching to avoid false positives
@@ -419,14 +491,16 @@ def build_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
 
 
 def build_fuzzy_fulltext_query(q: str) -> str:
-    """Build a fuzzy full-text search query."""
+    """Build a fuzzy full-text search query.
+
+    Also fuzzy-matches ``@title_compact`` when the collapsed query (all tokens)
+    is long enough, so collapsed and merged-token titles still match.
+    """
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
-    words = [w for w in words if w and w not in STOPWORDS]
+    all_words = [w.lower() for w in normalize_query_separators(q).split() if w]
+    words = [w for w in all_words if w and w not in STOPWORDS]
 
     if not words:
         return "*"
@@ -436,7 +510,12 @@ def build_fuzzy_fulltext_query(q: str) -> str:
 
     # Fuzzy match on each word
     fuzzy_terms = " ".join(f"%{w}%" for w in escaped_words)
-    return f"@search_title:({fuzzy_terms})"
+    title_clause = f"@search_title:({fuzzy_terms})"
+
+    if cc := _compact_title_fuzzy_clause(all_words):
+        return f"({title_clause}) | ({cc})"
+
+    return title_clause
 
 
 def build_podcast_autocomplete_query(q: str, include_tag_fields: bool = True) -> str:
@@ -451,9 +530,7 @@ def build_podcast_autocomplete_query(q: str, include_tag_fields: bool = True) ->
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
@@ -532,9 +609,7 @@ def build_books_autocomplete_query(q: str, include_tag_fields: bool = True) -> s
     # Strip apostrophes to match indexed titles
     q = strip_query_apostrophes(q)
 
-    # Split on both spaces and colons, then flatten
-    parts = q.replace(":", " : ").split()
-    words = [w.lower() for w in parts if w and w != ":"]
+    words = [w.lower() for w in normalize_query_separators(q).split() if w]
     words = [w for w in words if w and w not in STOPWORDS]
 
     if not words:
