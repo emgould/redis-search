@@ -37,7 +37,11 @@ GET /api/autocomplete?q={query}&sources={sources}
 /api/autocomplete?q=matrix&sources=tv,movie
 ```
 
-**Response:** JSON object with results grouped by source type. When a source hint was applied, includes `source_hint` (array of source names).
+**Response:** JSON object with results grouped by source type, plus exact-match keys:
+
+- `exact_match` - single hero-pick exact match (`ExactMatchItem | null`).
+- `exact_matches` - all qualifying exact matches as a ranked array (hero pick at index 0). Empty when no exact match exists.
+- `source_hint` - present when a source hint was parsed from the query.
 
 **Media ranking behavior:**
 - When `tv` and/or `movie` are requested, Redis is queried per media source bucket, not as one shared mixed media pool.
@@ -167,7 +171,8 @@ Same parameters as above, but returns **Server-Sent Events (SSE)** where results
 **Event Types:**
 - `result` - Contains results from one source: `{source, results, latency_ms}`
 - `exact_match` - Provisional exact match emitted as a source yields an exact hit. Data is a single MCBaseItem. May fire multiple times per stream.
-- `exact_match_final` - Final authoritative exact match for the whole stream, chosen by the same backend logic used by non-stream responses.
+- `exact_match_final` - Final authoritative exact match (hero pick) for the whole stream, chosen by the same backend logic used by non-stream responses.
+- `exact_matches_final` - All qualifying exact matches as a ranked array (hero pick at index 0). Emitted once at stream completion when at least one exact match exists.
 - `done` - Indicates all sources have completed. Payload may include `source_hint` when a source hint was applied.
 
 **Example JavaScript:**
@@ -186,7 +191,12 @@ es.addEventListener('exact_match', (e) => {
 
 es.addEventListener('exact_match_final', (e) => {
   const item = JSON.parse(e.data);
-  // Final authoritative exact match for the completed stream
+  // Final authoritative exact match (hero pick) for the completed stream
+});
+
+es.addEventListener('exact_matches_final', (e) => {
+  const items = JSON.parse(e.data);
+  // All qualifying exact matches, ranked array (hero at index 0)
 });
 
 es.addEventListener('done', () => es.close());
@@ -231,6 +241,14 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
   - **With query**: Direct RottenTomatoes search using the query
   - **Filter-only (no query)**: Ratings are enriched from indexed tv/movie results by searching RottenTomatoes for each title
 - Ratings results are sorted according to `ratings_sort` parameter (default: popularity)
+
+**Response:** JSON object with results grouped by source type, plus exact-match keys:
+
+- `exact_match` - single hero-pick exact match (`ExactMatchItem | null`).
+- `exact_matches` - all qualifying exact matches as a ranked array (hero pick at index 0). Empty when no exact match exists.
+- `source_hint` - present when a source hint was parsed from the query.
+
+Same SSE event format as autocomplete streaming for `/api/search/stream`.
 
 **Media ranking behavior:**
 - When `tv` and/or `movie` are requested, Redis is queried per media source bucket, not as one shared mixed media pool.
@@ -455,10 +473,11 @@ Example: Searching "spielberg" will match movies directed by Spielberg via the `
 
 ### Non-Stream (JSON) Response
 
-Top-level keys include per-source arrays (`tv`, `movie`, `person`, etc.), optionally `exact_match`, and optionally `source_hint`:
+Top-level keys include per-source arrays (`tv`, `movie`, `person`, etc.), exact-match keys, and optionally `source_hint`:
 
-- **`exact_match`** - `ExactMatchItem | null`. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Media exact matches (`movie`/`tv`) are compared by exact-title tier, then newer `year`, then higher `popularity`; non-media sources fall back to source priority (`person > podcast > book > author` after media).
-- **`source_hint`** - `string[]`. Present when a source hint was parsed from the query (e.g., "godfather movie" → sources restricted to movie). Omitted when no hint was applied.
+- **`exact_match`** — `ExactMatchItem | null`. Single hero-pick exact match. Present when the query exactly matches a known entity (e.g., "the godfather" → movie "The Godfather"). Media exact matches (`movie`/`tv`) are compared by exact-title tier, then newer `year`, then higher `popularity`; non-media sources fall back to source priority (`person > podcast > book > author` after media).
+- **`exact_matches`** — `ExactMatchItem[]`. All qualifying exact matches as a ranked array. The hero pick is guaranteed at index 0. Empty array when no exact match exists. Includes matches from all sources (media items sorted by effective-date YYYYMM desc → popularity desc → movie-before-tv; non-media items follow `person > podcast > book > author` priority).
+- **`source_hint`** — `string[]`. Present when a source hint was parsed from the query (e.g., "godfather movie" → sources restricted to movie). Omitted when no hint was applied.
 
 ### Result Item Format
 
@@ -505,6 +524,32 @@ The `exact_match` object still follows item contract fields, but its cast payloa
 
 - `cast` on non-exact-match list items remains name-only arrays in index payloads (`["Bryan Cranston", ...]`).
 - `exact_match.cast` uses objects: `[{ "name": "Bryan Cranston", "id": "1234" }, ...]`.
+
+### Exact Match Determination Flow
+
+The non-streaming (JSON) and streaming (SSE) paths use the same ranking logic but differ in when results are emitted.
+
+#### Non-streaming (JSON) path
+
+All source queries run concurrently. Once every source has returned, two functions run back-to-back:
+
+1. **`_pick_exact_match`** — scans all source results, applies the viable filter (watch providers / theatrical window) to media candidates, sorts by effective-date YYYYMM desc → popularity desc → movie-before-tv, and returns the single best hero pick. Non-media sources fall back to static priority (`person > podcast > book > author`). Result is set as `exact_match`.
+2. **`_collect_exact_matches`** — collects every qualifying exact match across all sources, ranks them with the same sort, and pins the hero from step 1 at index 0. Result is set as `exact_matches`.
+
+#### Streaming (SSE) path — three phases
+
+Source queries are dispatched concurrently and results are yielded as each source completes (`asyncio.as_completed`).
+
+**Phase 1 — Provisional `exact_match` events (mid-stream):**
+As each source task finishes, `_iter_exact_matches()` runs on that source's results. Every item that passes `is_exact_match()` is immediately yielded as an `exact_match` event. These are per-source, fire-and-forget hints — the client can render a provisional hero card before all sources have returned. Multiple `exact_match` events may fire (e.g., movie returns first with a hit, then TV returns with another).
+
+**Phase 2 — `exact_match_final` (end of stream):**
+After all source tasks complete, `_pick_exact_match()` runs against the full accumulated results from every source — the same function the JSON path uses. The single authoritative winner is yielded as `exact_match_final`. This supersedes any provisional `exact_match` events from phase 1.
+
+**Phase 3 — `exact_matches_final` (end of stream):**
+Immediately after, `_collect_exact_matches()` runs against the same accumulated results. All qualifying exact matches are ranked and the hero from phase 2 is pinned at index 0. Yielded as `exact_matches_final`.
+
+The `done` event fires after all three phases.
 
 ---
 
