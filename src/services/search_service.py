@@ -767,6 +767,7 @@ MINIMAL_FIELD_ALLOWLIST: frozenset[str] = frozenset(
         "mc_subtype",
         "search_title",
         "title",
+        "title_compact",
         "name",
         "year",
         "poster_path",
@@ -855,15 +856,28 @@ def _item_date_key(item: dict[str, Any]) -> str:
 def _rerank_results(
     results: list[dict[str, Any]], query_words: list[str], limit: int
 ) -> list[dict[str, Any]]:
-    """Sort results: titles starting with the typed text first, then by recency."""
+    """Sort results: titles starting with the typed text first, then by recency.
+
+    Also promotes compact-title matches so collapsed queries like
+    ``goodwillhunting`` surface the correct title.
+    """
     prefix = " ".join(query_words)
+    compact_query = "".join(query_words)
+
+    def _is_title_match(item: dict[str, Any]) -> int:
+        title = str(item.get("search_title") or item.get("title") or "").lower().strip()
+        if title.startswith(prefix):
+            return 0
+        if len(compact_query) >= 4:
+            tc = str(item.get("title_compact") or "")
+            if not tc:
+                tc = "".join(c for c in title if c.isalnum())
+            if tc == compact_query or tc.startswith(compact_query):
+                return 0
+        return 1
 
     results.sort(key=_item_date_key, reverse=True)
-    results.sort(
-        key=lambda item: 0
-        if str(item.get("search_title") or item.get("title") or "").lower().strip().startswith(prefix)
-        else 1
-    )
+    results.sort(key=_is_title_match)
     return results[:limit]
 
 
@@ -873,6 +887,7 @@ RESOLVE_DEFAULT_FIELDS: frozenset[str] = frozenset(
         "mc_type",
         "title",
         "search_title",
+        "title_compact",
         "release_date",
         "first_air_date",
         "last_aired_date",
@@ -1111,6 +1126,10 @@ async def resolve(
                         w for w in normalize(title).split() if w not in STOPWORDS
                     )
                     dist = _levenshtein_distance(query_norm, title_norm)
+                    tc = str(doc.get("title_compact") or "")
+                    if tc:
+                        qc = query_norm.replace(" ", "")
+                        dist = min(dist, _levenshtein_distance(qc, tc))
                     popularity = float(doc.get("popularity") or 0)
                     doc["_rank"] = (dist, -popularity)
                     candidates.append(doc)

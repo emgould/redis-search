@@ -27,6 +27,26 @@ from utils.genre_mapping import get_genre_mapping_with_fallback
 # RediSearch tokenizes apostrophes as word separators, so "It's" becomes ["it", "s"].
 # Stripping them produces "Its" which tokenizes as ["its"] — matching user queries.
 _APOSTROPHE_RE = re.compile(r"[\u0027\u2018\u2019\u02BC]")  # ' ' ' ʼ
+_NON_ALNUM_SPACE_RE = re.compile(r"[^a-z0-9\s]")
+_MULTI_SPACE_RE = re.compile(r"\s+")
+
+
+def compact_title(title: str) -> str:
+    """Derive a slug-style compact title for exact collapsed-token matching.
+
+    Steps: lowercase, strip non-alphanumeric (keep spaces), collapse
+    whitespace, then remove all spaces.
+
+    Examples::
+
+        "Good Will Hunting"       -> "goodwillhunting"
+        "Spider-Man: No Way Home" -> "spidermannowayhome"
+        "It's Complicated"        -> "itscomplicated"
+    """
+    s = title.lower().strip()
+    s = _NON_ALNUM_SPACE_RE.sub("", s)
+    s = _MULTI_SPACE_RE.sub(" ", s).strip()
+    return s.replace(" ", "")
 
 
 def normalize_search_title(title: str) -> str:
@@ -801,6 +821,7 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "mc_id": media_mc_id,
         "title": doc.search_title,
         "search_title": normalize_search_title(doc.search_title),
+        "title_compact": compact_title(doc.search_title),
         "mc_type": doc.mc_type.value,
         "mc_subtype": doc.mc_subtype.value if doc.mc_subtype else None,
         "source": doc.source.value,

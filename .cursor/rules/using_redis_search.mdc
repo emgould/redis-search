@@ -257,6 +257,20 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 - Bucket-local Python re-ranking still uses the shared media ranker (`score_media_result`) after Redis returns candidates for that source.
 - This avoids exact-title TV hits being pushed out by higher-popularity movie keyword / genre matches before re-ranking.
 
+### Compact title search (`title_compact`)
+
+`title_compact` enables searches where the user types a title with no spaces (e.g. `goodwillhunting`). The field is a TEXT NOSTEM field storing the slug-style compact form of each title.
+
+**Derivation:** `compact_title()` in `src/core/normalize.py` — lowercase, strip non `[a-z0-9\s]`, collapse whitespace, remove spaces. Emitted by `document_to_redis()` and recomputed in `PUT /api/media/{media_id}` when `title` or `search_title` changes.
+
+**Query activation:** Media query builders (`build_autocomplete_query`, `build_minimal_autocomplete_query`, `build_fuzzy_fulltext_query`) add a `@title_compact` clause only when the preprocessed query is a single token of 4+ characters. Normal spaced queries use `@search_title` only.
+
+**Ranking:** `score_media_result()` compares compact forms at tier 1 (exact) and tiers 11/13 (substring/prefix). `_rerank_results()` also promotes compact matches for `/api/autocomplete/minimal`. Fuzzy near-miss scoring in `/api/resolve` considers compact Levenshtein distance when `title_compact` is available.
+
+**Backfill:** Existing `media:*` documents must be populated via `scripts/backfill_title_compact.py`. The `--alter-index` flag issues `FT.ALTER` to add the field to the live `idx:media` index. New documents get the field automatically via `document_to_redis()`.
+
+**Verification:** Run `python scripts/verify_title_compact.py` (loads `ENV_FILE` / `config/local.env` by default). Use `--redis` to ping Redis, check `FT.INFO idx:media` for `title_compact`, and sample `JSON.GET` on a `media:*` key.
+
 ### Exact match behavior
 
 - JSON search/autocomplete responses expose both `exact_match` (single hero pick) and `exact_matches` (all qualifying items, ranked array including the hero pick).
@@ -280,7 +294,8 @@ All keys are present when values are available, and absent fields are omitted by
 - `id`: canonical identifier (`{source}_{source_id}`), e.g. `tmdb_550`
 - `mc_id`: canonical identifier (`{source}_{source_id}`), e.g. `tmdb_550`
 - `title`: display title
-- `search_title`: indexed title tokenized version
+- `search_title`: indexed title tokenized version (apostrophes stripped)
+- `title_compact`: slug-style derived field for collapsed-token matching (lowercase, all non-alphanumeric removed, no spaces). E.g. `"Good Will Hunting"` → `"goodwillhunting"`
 - `mc_type`: `movie` or `tv`
 - `mc_subtype`: optional subtype
 - `source`: always `tmdb`
@@ -331,7 +346,7 @@ All keys are present when values are available, and absent fields are omitted by
 
 ### Indexed (queryable/sortable) media fields
 
-`search_title`, `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `mc_id`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
+`search_title`, `title_compact` (TEXT NOSTEM), `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `mc_id`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
 
 ### Example documents
 
@@ -342,6 +357,7 @@ All keys are present when values are available, and absent fields are omitted by
   "mc_type": "movie",
   "title": "Fight Club",
   "search_title": "Fight Club",
+  "title_compact": "fightclub",
   "release_date": "1999-10-15",
   "runtime": 139,
   "budget": 63000000,
@@ -367,6 +383,7 @@ All keys are present when values are available, and absent fields are omitted by
   "mc_type": "tv",
   "title": "Breaking Bad",
   "search_title": "Breaking Bad",
+  "title_compact": "breakingbad",
   "first_air_date": "2008-01-20",
   "last_air_date": "2013-09-29",
   "number_of_seasons": 5,
