@@ -567,15 +567,13 @@ Search TMDB by query string. Hits TMDB `/search/movie` and `/search/tv` for disc
   "mode": "redis",
   "movie": [ ... ],
   "tv": [ ... ],
-  "exact_match": null,
-  "exact_matches": []
+  "exact_match": null
 }
 ```
 
 - `movie`: array of items matching the query as movies
 - `tv`: array of items matching the query as TV series
 - `exact_match`: reserved, currently `null`
-- `exact_matches`: reserved, currently `[]`
 
 When `mode=redis`, each item includes:
 

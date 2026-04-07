@@ -512,7 +512,7 @@ def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
     - Media (tv, movie): tier 0-1 (exact title raw/normalized)
     - Person: tier 0-1 (exact name)
     - Book: tier 0-1 (exact title)
-    - Podcast: tier 0-3 (exact title, title starts with, exact author)
+    - Podcast: tier 0-1 (exact title raw/normalized)
     - Author: exact normalized name match
 
     Args:
@@ -538,7 +538,7 @@ def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
         return tier <= 1
     if source == "podcast":
         tier = score_podcast_result(q, doc)[0]
-        return tier <= 3
+        return tier <= 1
     if source == "author":
         name = (doc.get("search_title") or doc.get("name") or "").strip()
         if not name:

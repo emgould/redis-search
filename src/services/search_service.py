@@ -1828,18 +1828,23 @@ async def search(
 
     # Handle exceptions and parse results
     final_results: dict[str, Any] = {}
+    full_results: dict[str, list[dict[str, Any]]] = {}
 
     # Process media (tv/movie) results
     if "tv" in requested_sources:
         tv_media_res = results_map.get("tv_media", empty_result)
         if isinstance(tv_media_res, BaseException):
             tv_media_res = empty_result
-        final_results["tv"] = _parse_media_results(tv_media_res, q)[:limit]
+        tv_full = _parse_media_results(tv_media_res, q)
+        full_results["tv"] = tv_full
+        final_results["tv"] = tv_full[:limit]
     if "movie" in requested_sources:
         movie_media_res = results_map.get("movie_media", empty_result)
         if isinstance(movie_media_res, BaseException):
             movie_media_res = empty_result
-        final_results["movie"] = _parse_media_results(movie_media_res, q)[:limit]
+        movie_full = _parse_media_results(movie_media_res, q)
+        full_results["movie"] = movie_full
+        final_results["movie"] = movie_full[:limit]
 
     # Process person results with autocomplete prefix filtering and re-ranking
     if "person" in results_map:
@@ -1849,19 +1854,18 @@ async def search(
         parsed_people = [parse_doc(doc) for doc in _extract_docs(person_res)]
 
         if has_query and q:
-            # Filter using autocomplete prefix matching (handles 1-char prefix case)
             filtered_people = [
                 p
                 for p in parsed_people
                 if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
             ]
-            # Re-rank to prioritize exact matches and shorter names over pure popularity
-            final_results["person"] = sorted(
+            person_full = sorted(
                 filtered_people, key=lambda p: _rank_person_result(p, q)
-            )[:limit]
+            )
         else:
-            # Filter-only mode: return results as-is (sorted by popularity from Redis)
-            final_results["person"] = parsed_people[:limit]
+            person_full = parsed_people
+        full_results["person"] = person_full
+        final_results["person"] = person_full[:limit]
 
     # Process podcast results with re-ranking when query is present
     if "podcast" in results_map:
@@ -1869,9 +1873,9 @@ async def search(
         if isinstance(podcast_res, BaseException):
             podcast_res = empty_result
         parsed_podcasts = [parse_doc(doc) for doc in _extract_docs(podcast_res)]
-        # Re-rank: exact title matches first, then by recency/episodes/popularity
         if q:
             parsed_podcasts = sorted(parsed_podcasts, key=lambda p: _rank_podcast_result(p, q))
+        full_results["podcast"] = parsed_podcasts
         final_results["podcast"] = parsed_podcasts[:limit]
 
     # Process author results with exact word matching filter
@@ -1886,6 +1890,7 @@ async def search(
                 for a in parsed_authors
                 if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
             ]
+        full_results["author"] = parsed_authors
         final_results["author"] = parsed_authors[:limit]
 
     # Process book results
@@ -1894,9 +1899,9 @@ async def search(
         if isinstance(book_res, BaseException):
             book_res = empty_result
         parsed_books = [parse_doc(doc) for doc in _extract_docs(book_res)]
-        # Re-rank: exact matches first, then by popularity
         if q:
             parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
+        full_results["book"] = parsed_books
         final_results["book"] = parsed_books[:limit]
 
     # Process news results (API)
@@ -2097,11 +2102,13 @@ async def search(
         if src not in final_results:
             final_results[src] = []
 
-    # Add exact_match (single hero pick) and exact_matches (full ranked list)
+    # Add exact_match (single hero pick) and exact_matches (full ranked list).
+    # Scan the full (untruncated) candidate sets so exact matches that fell
+    # outside the per-source ``limit`` are still discovered.
     q_for_exact = q if has_query else None
-    exact = _pick_exact_match(final_results, q_for_exact)
+    exact = _pick_exact_match(full_results, q_for_exact)
     final_results["exact_match"] = exact
-    final_results["exact_matches"] = _collect_exact_matches(final_results, q_for_exact, hero=exact)
+    final_results["exact_matches"] = _collect_exact_matches(full_results, q_for_exact, hero=exact)
     if no_duplicate and exact is not None:
         _remove_exact_from_results(final_results, exact)
 
@@ -2305,6 +2312,7 @@ async def search_stream(
     total_start = time.perf_counter()
     timing_parts: list[str] = []
     streamed_results: dict[str, list[dict[str, Any]]] = {}
+    streamed_full: dict[str, list[dict[str, Any]]] = {}
 
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
         try:
@@ -2318,9 +2326,11 @@ async def search_stream(
             if name in {"tv_media", "movie_media"}:
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     source_name = "tv" if name == "tv_media" else "movie"
-                    media_results = _parse_media_results(data, q)[:limit]
+                    media_parsed_full = _parse_media_results(data, q)
+                    streamed_full[source_name] = media_parsed_full
+                    media_results = media_parsed_full[:limit]
                     streamed_results[source_name] = media_results
-                    media_exact = _iter_exact_matches(source_name, media_results, q)
+                    media_exact = _iter_exact_matches(source_name, media_parsed_full, q)
                     if no_duplicate and media_exact:
                         media_results = _filter_exact_items(media_results, media_exact)
                     if media_results:
@@ -2340,21 +2350,25 @@ async def search_stream(
                                 q, p.get("search_title", "") or p.get("name", "")
                             )
                         ]
-                        parsed_results = sorted(filtered, key=lambda p: _rank_person_result(p, q))[
-                            :limit
-                        ]
+                        person_full = sorted(
+                            filtered, key=lambda p: _rank_person_result(p, q)
+                        )
                     else:
-                        parsed_results = parsed_all[:limit]
+                        person_full = parsed_all
+                    streamed_full["person"] = person_full
+                    parsed_results = person_full[:limit]
 
             elif name == "podcast":
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if q:
-                        parsed_results = sorted(
+                        podcast_full = sorted(
                             parsed_all, key=lambda p: _rank_podcast_result(p, q)
-                        )[:limit]
+                        )
                     else:
-                        parsed_results = parsed_all[:limit]
+                        podcast_full = parsed_all
+                    streamed_full["podcast"] = podcast_full
+                    parsed_results = podcast_full[:limit]
                 else:
                     parsed_results = []
 
@@ -2362,15 +2376,17 @@ async def search_stream(
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if has_query and q:
-                        parsed_results = [
+                        author_full = [
                             a
                             for a in parsed_all
                             if is_author_name_match(
                                 q, a.get("search_title", "") or a.get("name", "")
                             )
-                        ][:limit]
+                        ]
                     else:
-                        parsed_results = parsed_all[:limit]
+                        author_full = parsed_all
+                    streamed_full["author"] = author_full
+                    parsed_results = author_full[:limit]
                 else:
                     parsed_results = []
 
@@ -2378,11 +2394,13 @@ async def search_stream(
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if q:
-                        parsed_results = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))[
-                            :limit
-                        ]
+                        book_full = sorted(
+                            parsed_all, key=lambda b: _rank_book_result(b, q)
+                        )
                     else:
-                        parsed_results = parsed_all[:limit]
+                        book_full = parsed_all
+                    streamed_full["book"] = book_full
+                    parsed_results = book_full[:limit]
                 else:
                     parsed_results = []
 
@@ -2427,7 +2445,8 @@ async def search_stream(
 
             if parsed_results:
                 streamed_results[name] = parsed_results
-                exact_items = _iter_exact_matches(name, parsed_results, q)
+                full_for_exact = streamed_full.get(name, parsed_results)
+                exact_items = _iter_exact_matches(name, full_for_exact, q)
                 if no_duplicate and exact_items:
                     parsed_results = _filter_exact_items(parsed_results, exact_items)
                 if parsed_results:
@@ -2441,10 +2460,10 @@ async def search_stream(
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
     q_for_exact = q if has_query else None
-    final_exact = _pick_exact_match(streamed_results, q_for_exact)
+    final_exact = _pick_exact_match(streamed_full, q_for_exact)
     if final_exact is not None:
         yield ("exact_match_final", final_exact)
-    all_exact = _collect_exact_matches(streamed_results, q_for_exact, hero=final_exact)
+    all_exact = _collect_exact_matches(streamed_full, q_for_exact, hero=final_exact)
     if all_exact:
         yield ("exact_matches_final", all_exact)
     query_desc = f"'{q}'" if q else "[filters only]"
