@@ -244,6 +244,7 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 | `categories[*]` | TAG | - | IPTC-expanded categories normalized |
 | `popularity` | NUMERIC | sortable | Computed popularity (0-100) |
 | `episode_count` | NUMERIC | sortable | Number of episodes |
+| `itunes_id` | NUMERIC | sortable | Apple iTunes catalog ID for cross-source matching (Apple `collectionId`); ~89% populated |
 
 ### Document Structure (Stored Fields)
 

@@ -448,7 +448,9 @@ All keys are present when values are available, and absent fields are omitted by
 
 ### Indexed fields for podcasts
 
-`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `popularity`, `episode_count`, `created_at`, `modified_at`.
+`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `popularity`, `episode_count`, `created_at`, `modified_at`, `itunes_id`.
+
+`itunes_id` is indexed as a sortable `NUMERIC` field on `$.itunes_id` to support exact integer lookups (e.g. mapping Apple iTunes Search API `collectionId` values to PodcastIndex feeds). Coverage is partial — about 89% of podcasts have a non-null `itunes_id` from the PodcastIndex source; the remaining ~11% are not indexable on this field.
 
 ## `idx:author` (`author:`)
 
