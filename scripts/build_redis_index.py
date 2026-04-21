@@ -24,10 +24,13 @@ Four indexes:
 import asyncio
 import os
 
+import _bootstrap
 from dotenv import load_dotenv
 from redis.asyncio import Redis
 from redis.commands.search.field import NumericField, TagField, TextField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
+
+_ = _bootstrap
 
 # Load env file (defaults to local.env for local development)
 env_file = os.getenv("ENV_FILE", "config/local.env")

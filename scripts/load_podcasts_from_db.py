@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+import _bootstrap
 from dotenv import load_dotenv
 from redis.asyncio import Redis
 
@@ -40,6 +41,8 @@ from src.etl.podcastindex_shared import (
     has_after_shows_tag,
     merge_rows_by_feed_id,
 )
+
+_ = _bootstrap
 
 # Load env file (defaults to local.env for local development)
 env_file = os.getenv("ENV_FILE", "config/local.env")
