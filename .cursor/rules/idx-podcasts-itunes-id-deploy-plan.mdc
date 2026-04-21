@@ -1,0 +1,85 @@
+---
+description: Deploy plan for adding $.itunes_id to idx:podcasts (PR #98). One-time per-environment FT.ALTER required because the repo has no schema migration runner.
+globs:
+  - "web/app.py"
+  - "scripts/build_redis_index.py"
+alwaysApply: false
+---
+
+# Deploy Plan — `itunes_id` on `idx:podcasts`
+
+## Background
+
+PR #98 adds `NumericField("$.itunes_id", as_name="itunes_id", sortable=True)` to `INDEX_CONFIGS["podcasts"]` in [web/app.py](web/app.py). This makes the existing `itunes_id` JSON field on every `podcast:*` document queryable via RediSearch.
+
+This repo has no automated schema migration runner. The API server does not apply schema changes on startup, and `POST /api/index/{name}` only creates indexes (it does not ALTER). Therefore, schema additions to a live index require an explicit per-environment `FT.ALTER`.
+
+## Per-environment status
+
+| Environment | Redis | `itunes_id` indexed? | Action required |
+|---|---|---|---|
+| Public / prod (GCE `redis-stack-vm`, IAP tunnel `localhost:6381`) | yes | **Yes** | None — already applied (see "Provenance" below) |
+| Local dev (Docker `localhost:6380`) | yes | No | Apply `FT.ALTER` after pulling this PR |
+| Scratch (Docker `localhost:6382`) | optional | n/a | None — disposable; gets schema next time it is rebuilt from public |
+| Any new/fresh provision | new | n/a | Use `python scripts/build_redis_index.py --rebuild-podcasts` — picks up updated `INDEX_CONFIGS` automatically |
+
+## Required commands
+
+### Local dev Redis (every engineer, after pulling)
+
+```bash
+redis-cli -p 6380 FT.ALTER idx:podcasts SCHEMA ADD '$.itunes_id' AS itunes_id NUMERIC SORTABLE
+```
+
+Verify backfill completes (background reindex of ~150k podcast docs typically finishes in under a minute on local):
+
+```bash
+redis-cli -p 6380 FT.INFO idx:podcasts | grep -E 'percent_indexed|hash_indexing_failures|indexing'
+```
+
+Expected when complete: `indexing 0`, `percent_indexed 1`, `hash_indexing_failures 0`.
+
+Sanity check the indexed field is queryable:
+
+```bash
+redis-cli -p 6380 FT.SEARCH idx:podcasts '@itunes_id:[-inf +inf]' LIMIT 0 0
+```
+
+### Public / prod Redis
+
+Already applied via IAP tunnel on `localhost:6381`. **No action required.** Verification command (read-only):
+
+```bash
+redis-cli -p 6381 -a "$PUBLIC_REDIS_PASSWORD" --no-auth-warning \
+  FT.INFO idx:podcasts | grep -A1 itunes_id
+```
+
+### Cloud Run / API deploy
+
+The API code change is shipped via the standard Cloud Run deploy. **No runtime behavior change** — no current query targets `itunes_id`, so the API can be deployed before or after the local migration without coordination.
+
+## Rollback
+
+If the new field needs to be removed:
+
+```bash
+redis-cli -p <port> [-a <password>] FT.ALTER idx:podcasts SCHEMA DEL itunes_id
+```
+
+This is non-destructive — it only removes the indexed attribute. The underlying `$.itunes_id` field on each JSON document is unaffected (it is written by the ETL regardless of indexing).
+
+## Provenance — how prod got altered
+
+The `FT.ALTER` against the public Redis (via IAP tunnel) was applied during the investigation that motivated this PR, before the source code change existed. That was a process violation — production schema mutations should not be applied from an investigative session and should not precede the source-code merge that documents them. Going forward, schema changes follow this order:
+
+1. Source-code change to `INDEX_CONFIGS` and review via PR.
+2. After merge, apply the `FT.ALTER` to each environment from a documented script or runbook (this file is that runbook for PR #98).
+
+The "schema migration runner" follow-up captured in [.cursor/rules/redis-schema-migration-runner-requirements.mdc](.cursor/rules/redis-schema-migration-runner-requirements.mdc) (separate PR) is the long-term fix so this is no longer ad-hoc.
+
+## Acceptance
+
+- [x] Source code in `INDEX_CONFIGS["podcasts"]` includes `itunes_id` as `NumericField` (sortable)
+- [x] Public Redis: `FT.INFO idx:podcasts` lists `itunes_id` as an attribute, `percent_indexed = 1`, `hash_indexing_failures = 0`
+- [ ] Local Redis: each engineer runs the `FT.ALTER` above after pulling this PR
+- [x] `FT.SEARCH idx:podcasts '@itunes_id:[<id> <id>]'` returns the matching podcast doc by integer equality on public Redis
