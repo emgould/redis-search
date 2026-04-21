@@ -4705,6 +4705,9 @@ INDEX_CONFIGS = {
             NumericField("$.episode_count", as_name="episode_count", sortable=True),
             NumericField("$.created_at", as_name="created_at", sortable=True),
             NumericField("$.modified_at", as_name="modified_at", sortable=True),
+            # Apple iTunes catalog ID - exact integer lookup for cross-source matching
+            # (e.g. mapping iTunes Search API collectionId -> PodcastIndex feed)
+            NumericField("$.itunes_id", as_name="itunes_id", sortable=True),
         ),
     },
     "author": {
