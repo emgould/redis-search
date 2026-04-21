@@ -12,7 +12,7 @@ Four indexes:
    - Display fields (stored, not indexed): image, overview (biography)
 
 3. idx:podcasts - Podcast data for autocomplete
-   - Indexed fields: search_title, author, mc_type, source, language, categories, popularity, episode_count
+   - Indexed fields: search_title, author, mc_type, source, language, categories, parent_mc_ids, spotify_url, spotify_id, popularity, episode_count
    - Display fields (stored, not indexed): image, description, url, site, etc.
 
 4. idx:book - OpenLibrary books
@@ -158,7 +158,7 @@ async def build_podcasts_index():
         print(f"Index '{PODCASTS_INDEX_NAME}' created successfully")
         print(
             "Indexed fields: search_title, author, id (mc_id), mc_type, source, language, "
-            "categories, parent_mc_ids, popularity, episode_count"
+            "categories, parent_mc_ids, spotify_url, spotify_id, popularity, episode_count"
         )
         print("Display fields (stored, not indexed): image, overview, title, url, site, etc.")
     except Exception as e:

@@ -41,7 +41,7 @@ async def _count_index_query(r: Redis, query: str) -> int:
     return int(result[0])
 
 
-async def _find_linked_after_shows_doc(r: Redis) -> tuple[str, list[str]] | None:
+async def _find_linked_after_shows_doc(r: Redis) -> tuple[str, str, list[str]] | None:
     cursor = 0
     while True:
         cursor, keys = await r.scan(cursor=cursor, match="podcast:*", count=250)
@@ -63,7 +63,9 @@ async def _find_linked_after_shows_doc(r: Redis) -> tuple[str, list[str]] | None
                 if isinstance(parent_mc_ids, list):
                     linked = [value for value in parent_mc_ids if isinstance(value, str) and value]
                     if linked:
-                        return key, linked
+                        title = payload.get("title") or payload.get("search_title") or ""
+                        podcast_title = title if isinstance(title, str) else ""
+                        return key, podcast_title, linked
         if cursor == 0:
             break
     return None
@@ -95,8 +97,11 @@ async def verify_redis(parent_mc_id: str | None) -> None:
         linked_doc = await _find_linked_after_shows_doc(r)
         if linked_doc is None:
             _fail("no after_shows podcast documents with non-empty parent_mc_ids were found")
-        sample_key, sample_parent_ids = linked_doc
-        print(f"OK: found linked after_shows doc {sample_key} -> {json.dumps(sample_parent_ids)}")
+        sample_key, podcast_title, sample_parent_ids = linked_doc
+        print(
+            "OK: found linked after_shows doc "
+            f"{sample_key} ({podcast_title}) -> {json.dumps(sample_parent_ids)}"
+        )
 
         if parent_mc_id:
             reverse_count = await _count_index_query(r, f"@parent_mc_ids:{{{parent_mc_id}}}")

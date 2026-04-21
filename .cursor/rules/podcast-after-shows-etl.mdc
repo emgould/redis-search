@@ -31,7 +31,9 @@ Use the shared PodcastIndex ETL helpers in `src/etl/podcastindex_shared.py` when
 ## Parent media linkage
 
 - `parent_mc_ids` stores canonical media `mc_id` values, not raw TMDB ids.
-- Populate `parent_mc_ids` only when `categories` contains `after_shows`.
+- Populate `parent_mc_ids` when either:
+  - `categories` contains `after_shows`, or
+  - the feed `site` is an official CBS show URL in the form `http(s)://www.cbs.com/shows/{slug}`; in that case resolve against the `{slug}` title first
 - Resolve parent media with `resolve_parent_mc_ids(...)` in `src/etl/podcast_parent_resolver.py`.
 - The resolver must use the shared exact-match helpers from `src/core/exact_matches.py` so ETL linkage stays aligned with Redis/API `exact_matches` behavior.
 - Multiple exact media matches are valid; persist all matching `mc_id`s in a stable list.

@@ -14,7 +14,11 @@ from api.subapi.spotify.models import (
     SpotifyArtistSearchResponse,
     SpotifyMultiSearchResponse,
     SpotifyPlaylist,
+    SpotifyPodcastEpisode,
+    SpotifyPodcastSearchResponse,
+    SpotifyPodcastShow,
     SpotifyTopTrackResponse,
+    parse_spotify_show_id,
 )
 from api.subapi.spotify.wrappers import SpotifyWrapper, spotify_wrapper
 
@@ -23,11 +27,16 @@ __all__ = [
     "SpotifyArtist",
     "SpotifyAlbum",
     "SpotifyPlaylist",
+    "SpotifyPodcastShow",
+    "SpotifyPodcastEpisode",
     "SpotifyAlbumMetadata",
     "SpotifyArtistSearchResponse",
     "SpotifyAlbumSearchResponse",
     "SpotifyMultiSearchResponse",
+    "SpotifyPodcastSearchResponse",
     "SpotifyTopTrackResponse",
+    # Helpers
+    "parse_spotify_show_id",
     # Wrappers
     "SpotifyWrapper",
     "spotify_wrapper",

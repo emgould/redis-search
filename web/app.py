@@ -4702,6 +4702,10 @@ INDEX_CONFIGS = {
             TagField("$.categories[*]", as_name="categories"),
             # Reverse lookup: companion podcasts for a media mc_id
             TagField("$.parent_mc_ids[*]", as_name="parent_mc_ids"),
+            # Exact lookup by Spotify show URL
+            TagField("$.spotify_url", as_name="spotify_url"),
+            # Exact lookup by Spotify show id (last path segment of spotify_url)
+            TagField("$.spotify_id", as_name="spotify_id"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),

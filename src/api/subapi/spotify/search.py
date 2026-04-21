@@ -7,9 +7,11 @@ import asyncio
 import logging
 from collections import Counter
 from datetime import UTC, datetime
+from typing import cast
 
 import aiohttp
 
+from adapters.redis_repository import RedisRepository
 from api.subapi.spotify.core import SpotifyService
 from api.subapi.spotify.models import (
     SpotifyAlbum,
@@ -18,9 +20,13 @@ from api.subapi.spotify.models import (
     SpotifyArtistSearchResponse,
     SpotifyMultiSearchResponse,
     SpotifyPlaylist,
+    SpotifyPodcastEpisode,
+    SpotifyPodcastSearchResponse,
+    SpotifyPodcastShow,
     SpotifyTopTrackResponse,
     SpotifyTrack,
 )
+from contracts.models import MCType
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__, level=logging.WARNING)
@@ -250,6 +256,97 @@ class SpotifySearchService(SpotifyService):
         except Exception as e:
             logger.error(f"Error searching by keyword '{keyword}': {e}")
             return SpotifyMultiSearchResponse(results=[], total_results=0, query=keyword)
+
+    async def search_podcasts(
+        self, query: str, limit: int = 20, include_episodes: bool = False
+    ) -> SpotifyPodcastSearchResponse:
+        """
+        Search Spotify podcast shows and, optionally, episodes.
+
+        Args:
+            query: Search query string
+            limit: Number of results to return per type (default=20)
+            include_episodes: Whether to include episode results alongside shows
+
+        Returns:
+            SpotifyPodcastSearchResponse with validated show and episode models
+        """
+        search_types = "show,episode" if include_episodes else "show"
+
+        try:
+            logger.info(
+                f"Searching Spotify podcasts for query: '{query}' "
+                f"(types={search_types}, limit={limit})"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                search_url = "https://api.spotify.com/v1/search"
+                params = {
+                    "q": query,
+                    "type": search_types,
+                    "limit": str(min(limit, 50)),
+                }
+
+                data = await self._make_spotify_request(session, search_url, params)
+                if not data:
+                    return SpotifyPodcastSearchResponse(results=[], total_results=0, query=query)
+
+                results: list[SpotifyPodcastShow | SpotifyPodcastEpisode] = []
+                show_count = 0
+                episode_count = 0
+
+                for item in data.get("shows", {}).get("items", []):
+                    if item:
+                        results.append(SpotifyPodcastShow.from_spotify_showdata(item))
+                        show_count += 1
+
+                if include_episodes:
+                    for item in data.get("episodes", {}).get("items", []):
+                        if item:
+                            results.append(SpotifyPodcastEpisode.from_spotify_episodedata(item))
+                            episode_count += 1
+
+                return SpotifyPodcastSearchResponse(
+                    results=results,
+                    total_results=len(results),
+                    show_count=show_count,
+                    episode_count=episode_count,
+                    query=query,
+                )
+
+        except aiohttp.ClientError as e:
+            logger.error(f"Network error searching Spotify podcasts: {e}")
+            return SpotifyPodcastSearchResponse(results=[], total_results=0, query=query)
+        except Exception as e:
+            logger.error(f"Unexpected error searching Spotify podcasts: {e}")
+            return SpotifyPodcastSearchResponse(results=[], total_results=0, query=query)
+
+    async def search_podcast_redis_docs(
+        self, query: str, limit: int = 20, include_episodes: bool = False
+    ) -> list[dict[str, object]]:
+        """Search Spotify shows, then resolve matching podcast Redis docs by spotify_id."""
+        spotify_results = await self.search_podcasts(
+            query=query,
+            limit=limit,
+            include_episodes=include_episodes,
+        )
+        if spotify_results.error or not spotify_results.results:
+            return []
+
+        spotify_ids: list[str] = []
+        for item in spotify_results.results:
+            if item.mc_type != MCType.PODCAST:
+                continue
+            spotify_show_id = getattr(item, "spotify_show_id", None)
+            if spotify_show_id:
+                spotify_ids.append(spotify_show_id)
+
+        if not spotify_ids:
+            return []
+
+        repo = RedisRepository()
+        docs = await repo.get_podcast_docs_by_spotify_ids(spotify_ids)
+        return cast(list[dict[str, object]], docs)
 
     async def get_artist(self, artist_id: str) -> SpotifyArtistSearchResponse:
         """

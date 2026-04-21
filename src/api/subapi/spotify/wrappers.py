@@ -4,6 +4,7 @@ Provides backward-compatible async wrappers for Firebase Functions integration.
 """
 
 import logging
+from typing import cast
 
 from api.subapi.spotify.models import (
     SpotifyAlbum,
@@ -11,6 +12,7 @@ from api.subapi.spotify.models import (
     SpotifyArtist,
     SpotifyArtistSearchResponse,
     SpotifyMultiSearchResponse,
+    SpotifyPodcastSearchResponse,
     SpotifyTopTrackResponse,
 )
 from api.subapi.spotify.search import spotify_search_service
@@ -229,6 +231,67 @@ class SpotifyWrapper:
                 error=str(e),
                 status_code=500,
             )
+
+    @RedisCache.use_cache(SpotifyWrapperCache, prefix="search_podcasts_wrapper")
+    async def search_podcasts(
+        self, query: str, limit: int = 20, include_episodes: bool = False, **kwargs
+    ) -> SpotifyPodcastSearchResponse:
+        """
+        Async wrapper function to search Spotify podcast shows and episodes.
+
+        Args:
+            query: Search query string
+            limit: Number of results to return per type (default=20)
+            include_episodes: Whether to include episode results
+            **kwargs: Additional arguments (for compatibility)
+
+        Returns:
+            SpotifyPodcastSearchResponse containing show and episode matches
+        """
+        try:
+            data: SpotifyPodcastSearchResponse = await self.service.search_podcasts(
+                query=query, limit=limit, include_episodes=include_episodes
+            )
+            return data
+
+        except Exception as e:
+            logger.error(f"Error in search_podcasts: {e}")
+            return SpotifyPodcastSearchResponse(
+                results=[],
+                total_results=0,
+                query=query,
+                error=str(e),
+                status_code=500,
+            )
+
+    async def search_podcast_redis_docs(
+        self, query: str, limit: int = 20, include_episodes: bool = False, **kwargs
+    ) -> list[dict[str, object]]:
+        """
+        Search Spotify podcast shows, then return matching podcast Redis docs.
+
+        Args:
+            query: Search query string
+            limit: Number of Spotify show results to inspect (default=20)
+            include_episodes: Whether to include episode results in Spotify search
+            **kwargs: Additional arguments (for compatibility)
+
+        Returns:
+            List of stored podcast Redis documents matched by exact spotify_id
+            (the trailing path segment of each Spotify show URL).
+        """
+        try:
+            return cast(
+                list[dict[str, object]],
+                await self.service.search_podcast_redis_docs(
+                    query=query,
+                    limit=limit,
+                    include_episodes=include_episodes,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Error in search_podcast_redis_docs: {e}")
+            return []
 
     @RedisCache.use_cache(SpotifyWrapperCache, prefix="search_artists_wrapper")
     async def search_artists(

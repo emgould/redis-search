@@ -445,11 +445,11 @@ All keys are present when values are available, and absent fields are omitted by
   - `author_normalized`
   - `episode_count`, `itunes_id`, `podcast_guid`, `popularity_score`
   - `last_update_time` (ISO timestamp string)
-  - `artwork`, `trend_score`, `spotify_url`, `relevancy_score`
+  - `artwork`, `trend_score`, `spotify_url`, `spotify_id`, `relevancy_score`
 
 ### Indexed fields for podcasts
 
-`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `parent_mc_ids`, `popularity`, `episode_count`, `created_at`, `modified_at`.
+`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `parent_mc_ids`, `spotify_url`, `spotify_id`, `popularity`, `episode_count`, `created_at`, `modified_at`.
 
 ### Companion podcast lookup
 
@@ -460,6 +460,28 @@ All keys are present when values are available, and absent fields are omitted by
   - `@parent_mc_ids:{tmdb_movie_550}`
 - The value stored is always the canonical media `mc_id`, never the raw TMDB numeric id.
 - `parent_mc_ids` is currently populated only for PodcastIndex feeds tagged `after_shows`.
+
+### Spotify lookup
+
+Both `spotify_url` and `spotify_id` are exposed as `TagField` entries on `idx:podcasts`.
+
+- `spotify_id` is the trailing path segment of the Spotify show URL (e.g.
+  `2k3X2cTt5uc0oZyOrRA7bS` for `https://open.spotify.com/show/2k3X2cTt5uc0oZyOrRA7bS`).
+- The canonical Spotify-show-to-podcast resolver
+  (`RedisRepository.get_podcast_docs_by_spotify_ids` /
+  `spotify_wrapper.search_podcast_redis_docs`) queries by `spotify_id` to avoid
+  URL escaping.
+  - `@spotify_id:{2k3X2cTt5uc0oZyOrRA7bS}`
+- `spotify_url` is still indexed for any legacy URL-based exact lookups via
+  `RedisRepository.get_podcast_docs_by_spotify_urls`.
+- Both fields are populated by the PodcastIndex loaders
+  (`scripts/load_podcasts_from_db.py`, `src/etl/pi_nightly_etl.py`) using the
+  shared `src/etl/spotify_enrichment.py` helper, which calls
+  `spotify_wrapper.search_podcasts(title, limit=1)` and accepts the top show
+  match. Existing Redis docs can be populated via
+  `scripts/backfill_podcast_spotify_ids.py`.
+- Neither field is intended for fuzzy search; they exist for exact reverse
+  lookup from a Spotify show id/URL back to the stored podcast doc.
 
 ## `idx:author` (`author:`)
 

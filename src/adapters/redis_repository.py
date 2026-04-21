@@ -1,4 +1,8 @@
+import asyncio
+import re
+from collections.abc import Sequence
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from redis.commands.search.query import Query
 
@@ -12,6 +16,20 @@ _SOURCE_INDEX_ATTR: dict[str, str] = {
     "author": "author_idx",
     "book": "book_idx",
 }
+
+_TAG_ESCAPE_RE = re.compile(r"([^A-Za-z0-9])")
+
+
+def _escape_tag_value(value: str) -> str:
+    """Escape a scalar value for use inside a RediSearch TAG query."""
+    return _TAG_ESCAPE_RE.sub(r"\\\1", value)
+
+
+def _normalize_spotify_url(url: str) -> str:
+    """Normalize Spotify URLs for exact-match TAG lookups."""
+    parsed = urlsplit(url.strip())
+    path = parsed.path.rstrip("/")
+    return urlunsplit((parsed.scheme.lower(), parsed.netloc.lower(), path, "", ""))
 
 
 class RedisRepository:
@@ -95,6 +113,89 @@ class RedisRepository:
             query = query.sort_by(sort_by, asc=sort_asc)
 
         return await self.podcasts_idx.search(query)
+
+    async def get_podcast_docs_by_spotify_urls(
+        self, spotify_urls: Sequence[str]
+    ) -> list[dict[str, Any]]:
+        """Return stored podcast JSON docs matched by exact Spotify show URL."""
+        normalized_urls: list[str] = []
+        seen_urls: set[str] = set()
+
+        for spotify_url in spotify_urls:
+            normalized = _normalize_spotify_url(spotify_url)
+            if normalized and normalized not in seen_urls:
+                seen_urls.add(normalized)
+                normalized_urls.append(normalized)
+
+        if not normalized_urls:
+            return []
+
+        queries = [
+            self.podcasts_idx.search(
+                Query(f"@spotify_url:{{{_escape_tag_value(spotify_url)}}}").paging(0, 1)
+            )
+            for spotify_url in normalized_urls
+        ]
+        return await self._collect_podcast_docs_from_queries(queries)
+
+    async def get_podcast_docs_by_spotify_ids(
+        self, spotify_ids: Sequence[str]
+    ) -> list[dict[str, Any]]:
+        """Return stored podcast JSON docs matched by exact Spotify show id.
+
+        ``spotify_id`` is the trailing path segment of a Spotify show URL
+        (e.g. ``2k3X2cTt5uc0oZyOrRA7bS``).  Lookup is an O(1) TAG match on the
+        indexed ``$.spotify_id`` field so URL escaping is unnecessary.
+        """
+        unique_ids: list[str] = []
+        seen_ids: set[str] = set()
+
+        for spotify_id in spotify_ids:
+            cleaned = spotify_id.strip()
+            if not cleaned or cleaned in seen_ids:
+                continue
+            seen_ids.add(cleaned)
+            unique_ids.append(cleaned)
+
+        if not unique_ids:
+            return []
+
+        queries = [
+            self.podcasts_idx.search(
+                Query(f"@spotify_id:{{{_escape_tag_value(spotify_id)}}}").paging(0, 1)
+            )
+            for spotify_id in unique_ids
+        ]
+        return await self._collect_podcast_docs_from_queries(queries)
+
+    async def _collect_podcast_docs_from_queries(
+        self, queries: Sequence[Any]
+    ) -> list[dict[str, Any]]:
+        """Run a list of podcast search queries and JSON.MGET the matched docs."""
+        search_results = await asyncio.gather(*queries)
+
+        redis_keys: list[str] = []
+        seen_keys: set[str] = set()
+        for result in search_results:
+            for doc in result.docs:
+                redis_key = getattr(doc, "id", None)
+                if isinstance(redis_key, str) and redis_key and redis_key not in seen_keys:
+                    seen_keys.add(redis_key)
+                    redis_keys.append(redis_key)
+
+        if not redis_keys:
+            return []
+
+        raw_docs: list[object] = await self.redis.json().mget(redis_keys, "$")  # type: ignore[misc]
+
+        docs: list[dict[str, Any]] = []
+        for raw_doc in raw_docs:
+            if isinstance(raw_doc, list) and raw_doc and isinstance(raw_doc[0], dict):
+                docs.append(raw_doc[0])
+            elif isinstance(raw_doc, dict):
+                docs.append(raw_doc)
+
+        return docs
 
     async def search_authors(
         self,

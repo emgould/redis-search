@@ -3,10 +3,30 @@ Spotify Models - Pydantic models for Spotify music data structures
 Follows Pydantic 2.0 patterns with full type safety and MCBaseItem integration.
 """
 
+import re
+
 from pydantic import Field, model_validator
 
 from api.subapi.spotify.core import process_spotify_images, process_spotify_links
 from contracts.models import MCBaseItem, MCLink, MCSources, MCSubType, MCType
+
+_SPOTIFY_SHOW_ID_RE = re.compile(r"/show/([A-Za-z0-9]+)")
+
+
+def parse_spotify_show_id(spotify_url: str | None) -> str | None:
+    """Extract the trailing show id from a Spotify show URL.
+
+    Examples:
+        ``https://open.spotify.com/show/2k3X2cTt5uc0oZyOrRA7bS`` -> ``2k3X2cTt5uc0oZyOrRA7bS``
+        ``https://open.spotify.com/show/2k3X2cTt5uc0oZyOrRA7bS?si=abc`` -> ``2k3X2cTt5uc0oZyOrRA7bS``
+        ``https://open.spotify.com/intl-pt/show/2k3X2cTt5uc0oZyOrRA7bS`` -> ``2k3X2cTt5uc0oZyOrRA7bS``
+    """
+    if not spotify_url:
+        return None
+    match = _SPOTIFY_SHOW_ID_RE.search(spotify_url)
+    if not match:
+        return None
+    return match.group(1)
 
 
 class SpotifyArtist(MCBaseItem):
@@ -264,6 +284,133 @@ class SpotifyPlaylist(MCBaseItem):
         )
 
 
+class SpotifyPodcastShow(MCBaseItem):
+    """Model for Spotify podcast/show data."""
+
+    id: str
+    name: str
+
+    title: str | None = None
+    publisher: str | None = None
+    description: str | None = None
+    total_episodes: int | None = None
+    languages: list[str] = Field(default_factory=list)
+    explicit: bool = False
+    spotify_url: str | None = None
+    spotify_show_id: str | None = None
+    default_image: str | None = None
+
+    mc_type: MCType = MCType.PODCAST
+    source: MCSources = MCSources.SPOTIFY
+
+    @classmethod
+    def from_spotify_showdata(cls, item: dict) -> "SpotifyPodcastShow":
+        """Process Spotify show data and format for MediaCircle."""
+        if item.get("type") != "show":
+            return SpotifyPodcastShow(
+                id="",
+                name="",
+                error="SpotifyPodcastShow: Item is not a show",
+            )
+
+        show_id = item.get("id")
+        show_name = item.get("name")
+        if not show_id or not show_name:
+            return SpotifyPodcastShow(
+                id="",
+                name="",
+                error="SpotifyPodcastShow: Missing required fields (id or name)",
+            )
+
+        images, default_image = process_spotify_images(item.get("images", []))
+        links, spotify_url = process_spotify_links(item)
+
+        return SpotifyPodcastShow(
+            id=show_id,
+            name=show_name,
+            title=show_name,
+            publisher=item.get("publisher"),
+            description=item.get("description"),
+            total_episodes=item.get("total_episodes"),
+            languages=item.get("languages", []),
+            explicit=item.get("explicit", False),
+            spotify_url=spotify_url,
+            spotify_show_id=parse_spotify_show_id(spotify_url) or show_id,
+            default_image=default_image,
+            images=images,
+            links=links,
+            source_id=show_id,
+        )
+
+
+class SpotifyPodcastEpisode(MCBaseItem):
+    """Model for Spotify podcast episode data."""
+
+    id: str
+    name: str
+
+    title: str | None = None
+    description: str | None = None
+    release_date: str | None = None
+    duration_ms: int | None = None
+    languages: list[str] = Field(default_factory=list)
+    explicit: bool = False
+    spotify_url: str | None = None
+    default_image: str | None = None
+    show_id: str | None = None
+    show_name: str | None = None
+    show_publisher: str | None = None
+
+    mc_type: MCType = MCType.PODCAST_EPISODE
+    source: MCSources = MCSources.SPOTIFY
+
+    @classmethod
+    def from_spotify_episodedata(cls, item: dict) -> "SpotifyPodcastEpisode":
+        """Process Spotify episode data and format for MediaCircle."""
+        if item.get("type") != "episode":
+            return SpotifyPodcastEpisode(
+                id="",
+                name="",
+                error="SpotifyPodcastEpisode: Item is not an episode",
+            )
+
+        episode_id = item.get("id")
+        episode_name = item.get("name")
+        if not episode_id or not episode_name:
+            return SpotifyPodcastEpisode(
+                id="",
+                name="",
+                error="SpotifyPodcastEpisode: Missing required fields (id or name)",
+            )
+
+        images, default_image = process_spotify_images(item.get("images", []))
+        links, spotify_url = process_spotify_links(item)
+
+        show = item.get("show", {})
+        show_id = show.get("id") if isinstance(show, dict) else None
+        show_name = show.get("name") if isinstance(show, dict) else None
+        show_publisher = show.get("publisher") if isinstance(show, dict) else None
+
+        return SpotifyPodcastEpisode(
+            id=episode_id,
+            name=episode_name,
+            title=episode_name,
+            description=item.get("description"),
+            release_date=item.get("release_date"),
+            duration_ms=item.get("duration_ms"),
+            languages=item.get("languages", []),
+            explicit=item.get("explicit", False),
+            spotify_url=spotify_url,
+            default_image=default_image,
+            show_id=show_id,
+            show_name=show_name,
+            show_publisher=show_publisher,
+            images=images,
+            links=links,
+            source_id=episode_id,
+        )
+
+
 class SpotifyAlbumMetadata(MCBaseItem):
     """Model for Spotify album metadata (used internally)."""
 
@@ -300,7 +447,7 @@ class SpotifyArtistSearchResponse(MCBaseItem):
     @model_validator(mode="after")
     def generate_mc_fields(self) -> "SpotifyArtistSearchResponse":
         """Auto-generate mc_id if not provided."""
-        if not self.mc_id and self.query:
+        if not self.model_dump().get("mc_id") and self.query:
             self.mc_id = f"spotify_artist_search_{self.query}"
         return self
 
@@ -319,7 +466,7 @@ class SpotifyAlbumSearchResponse(MCBaseItem):
     @model_validator(mode="after")
     def generate_mc_fields(self) -> "SpotifyAlbumSearchResponse":
         """Auto-generate mc_id if not provided."""
-        if not self.mc_id and self.query:
+        if not self.model_dump().get("mc_id") and self.query:
             self.mc_id = f"spotify_album_search_{self.query}"
         return self
 
@@ -341,8 +488,29 @@ class SpotifyMultiSearchResponse(MCBaseItem):
     @model_validator(mode="after")
     def generate_mc_fields(self) -> "SpotifyMultiSearchResponse":
         """Auto-generate mc_id if not provided."""
-        if not self.mc_id and self.query:
+        if not self.model_dump().get("mc_id") and self.query:
             self.mc_id = f"spotify_multi_search_{self.query}"
+        return self
+
+
+class SpotifyPodcastSearchResponse(MCBaseItem):
+    """Model for Spotify podcast search response."""
+
+    results: list[SpotifyPodcastShow | SpotifyPodcastEpisode] = Field(default_factory=list)
+    total_results: int = 0
+    show_count: int = 0
+    episode_count: int = 0
+    query: str = ""
+    data_source: str = "Spotify Podcast Search"
+
+    mc_type: MCType = MCType.MIXED
+    source: MCSources = MCSources.SPOTIFY
+
+    @model_validator(mode="after")
+    def generate_mc_fields(self) -> "SpotifyPodcastSearchResponse":
+        """Auto-generate mc_id if not provided."""
+        if not self.model_dump().get("mc_id") and self.query:
+            self.mc_id = f"spotify_podcast_search_{self.query}"
         return self
 
 
@@ -424,6 +592,6 @@ class SpotifyTopTrackResponse(MCBaseItem):
     @model_validator(mode="after")
     def generate_mc_fields(self) -> "SpotifyTopTrackResponse":
         """Auto-generate mc_id if not provided."""
-        if not self.mc_id and self.query:
+        if not self.model_dump().get("mc_id") and self.query:
             self.mc_id = f"spotify_top_track_{self.query}"
         return self

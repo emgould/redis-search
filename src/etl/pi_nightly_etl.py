@@ -49,14 +49,14 @@ from adapters.redis_repository import RedisRepository
 from contracts.models import MCSources, MCType
 from core.iptc import normalize_tag
 from core.normalize import SearchDocument, document_to_redis, resolve_timestamps
-from etl.podcast_parent_resolver import resolve_parent_mc_ids
+from etl.podcast_parent_resolver import resolve_parent_mc_ids, should_resolve_parent_mc_ids
 from etl.podcastindex_shared import (
     build_after_shows_query,
     build_categories_array,
     build_default_query,
-    has_after_shows_tag,
     merge_rows_by_feed_id,
 )
+from etl.spotify_enrichment import fetch_spotify_ids_for_title
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -323,6 +323,8 @@ class PodcastIndexNightlyETL:
         redis_doc: dict[str, Any],
         row: sqlite3.Row,
         parent_mc_ids: list[str] | None = None,
+        spotify_url: str | None = None,
+        spotify_id: str | None = None,
     ) -> dict[str, Any]:
         """Add podcast-specific display fields to Redis document."""
         redis_doc["title"] = row["title"]
@@ -354,8 +356,10 @@ class PodcastIndexNightlyETL:
         # Fields not available in DB dump
         redis_doc["artwork"] = None
         redis_doc["trend_score"] = None
-        redis_doc["spotify_url"] = None
         redis_doc["relevancy_score"] = None
+        # Spotify linkage (populated via spotify_enrichment helper when available)
+        redis_doc["spotify_url"] = spotify_url
+        redis_doc["spotify_id"] = spotify_id
 
         return redis_doc
 
@@ -368,12 +372,26 @@ class PodcastIndexNightlyETL:
         redis_doc = document_to_redis(search_doc)
         categories = self._build_categories_array(row)
         parent_mc_ids: list[str] | None = None
-        if has_after_shows_tag(categories):
+        row_keys = row.keys()
+        site_url = row["link"] if "link" in row_keys else None
+        normalized_site_url = str(site_url) if isinstance(site_url, str) and site_url else None
+        if should_resolve_parent_mc_ids(categories, normalized_site_url):
             if self.search_repo is None:
                 raise RuntimeError("Search repository is not initialized")
             title = row["title"] or ""
-            parent_mc_ids = await resolve_parent_mc_ids(self.search_repo, str(title))
-        redis_doc = self._add_display_fields(redis_doc, row, parent_mc_ids=parent_mc_ids)
+            parent_mc_ids = await resolve_parent_mc_ids(
+                self.search_repo,
+                str(title),
+                site_url=normalized_site_url,
+            )
+        spotify_url, spotify_id = await fetch_spotify_ids_for_title(row["title"])
+        redis_doc = self._add_display_fields(
+            redis_doc,
+            row,
+            parent_mc_ids=parent_mc_ids,
+            spotify_url=spotify_url,
+            spotify_id=spotify_id,
+        )
         key = f"podcast:{search_doc.id}"
         return key, redis_doc
 

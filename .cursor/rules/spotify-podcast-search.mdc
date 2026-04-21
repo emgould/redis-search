@@ -1,0 +1,57 @@
+## Spotify podcast search utility
+
+Use `api.subapi.spotify.wrappers.spotify_wrapper.search_podcasts(...)` when you need Spotify podcast candidates for reconciliation or enrichment.
+
+### Behavior
+
+- Calls Spotify search with `type=show` by default.
+- Accepts:
+  - `query: str`
+  - `limit: int = 20`
+  - `include_episodes: bool = False`
+- Returns `SpotifyPodcastSearchResponse`.
+- Higher-level linkage utility:
+  - `api.subapi.spotify.wrappers.spotify_wrapper.search_podcast_redis_docs(...)`
+  - Searches Spotify first, then exact-matches `idx:podcasts` via the indexed
+    `spotify_id` TAG field (the trailing path segment of the Spotify show URL).
+  - Returns stored podcast Redis docs, not Spotify models.
+
+### Spotify show id
+
+- `SpotifyPodcastShow.spotify_show_id` is parsed from the Spotify show URL via
+  `api.subapi.spotify.parse_spotify_show_id`.
+- The same value is persisted on `podcast:*` Redis docs as `spotify_id`, and
+  is the canonical join key between Spotify search results and PodcastIndex
+  documents.
+
+### ETL / backfill population
+
+- `src/etl/spotify_enrichment.fetch_spotify_ids_for_title(title)` is the single
+  helper used to populate both `spotify_url` and `spotify_id` on a podcast
+  doc. It calls `spotify_wrapper.search_podcasts(title, limit=1)` and accepts
+  the top show match.
+- The PodcastIndex loaders (`scripts/load_podcasts_from_db.py` and
+  `src/etl/pi_nightly_etl.py`) call this helper for every doc they write.
+- For docs already in Redis without a `spotify_id`, run
+  `scripts/backfill_podcast_spotify_ids.py`. Defaults to scanning all
+  `podcast:*` keys; supports `--after-shows-only`, `--refresh`, `--limit`,
+  `--dry-run`, `--concurrency`, `--scan-batch`.
+- For envs whose `idx:podcasts` was created before `spotify_id` existed, run
+  `scripts/alter_podcast_index_add_spotify_id.py` once to FT.ALTER the field
+  in.
+
+### Result shape
+
+- `results` is a mixed list of:
+  - `SpotifyPodcastShow` with `mc_type="podcast"` and `spotify_show_id` populated
+  - `SpotifyPodcastEpisode` with `mc_type="podcast_episode"`
+- Response also includes:
+  - `show_count`
+  - `episode_count`
+  - `total_results`
+
+### Intended use
+
+- Prefer show-only queries first when tying Spotify podcasts to PodcastIndex feeds.
+- Turn on episode results only when the Spotify show title is sparse and
+  episode metadata may help disambiguate official companion podcasts.
