@@ -212,6 +212,32 @@ Get recent news/reviews for a movie or TV show via NewsAI.
 | `media_type` | string | no | `tv` | `movie` or `tv` |
 | `page_size` | int | no | 10 | Number of articles (1–50) |
 
+#### `GET /api/podcast/related-to-tv`
+
+Return podcasts related to a TV show. Resolves the TV title from
+`media:{mc_id}`, queries the Apple iTunes Search API for
+`"{title} tv show"` (`media=podcast`), and crosswalks each result's
+`collectionId` against the indexed `itunes_id` field on `idx:podcasts`.
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `mc_id` | string | yes | — | TV show mc_id (e.g. `tmdb_1399`); document must have `mc_type == "tv"` |
+| `limit` | int | no | 5 | Max podcasts to return (1–50) |
+
+Response: JSON array (possibly empty) of `MCPodcastItem` documents in
+Apple iTunes' relevance order; deduped by `mc_id`. iTunes results whose
+`collectionId` is not present in `idx:podcasts` are skipped (~11% of
+PodcastIndex feeds have no `itunes_id`).
+
+Status codes: `200` (array), `400` (mc_id is not a tv show), `404`
+(mc_id not found / no title), `500` (Redis read), `502` (iTunes HTTP
+error).
+
+Hard dependency on the `$.itunes_id` numeric index on `idx:podcasts`.
+See `idx-podcasts-itunes-id-deploy-plan.mdc` and the dedicated
+`podcast-related-to-tv-endpoint.mdc` for the full contract and deploy
+notes.
+
 #### `GET /api/changes`
 
 Return documents modified in a time range across one or more indexes. Used for sync/replication.
