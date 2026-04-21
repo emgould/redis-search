@@ -1,0 +1,159 @@
+---
+description: Contract for GET /api/podcast/related-to-tv — resolves podcasts related to a TV show via Apple iTunes Search → Redis idx:podcasts itunes_id lookup.
+globs:
+  - "web/app.py"
+  - "src/api/podcast/core.py"
+alwaysApply: false
+---
+
+# `GET /api/podcast/related-to-tv`
+
+Returns up to `limit` podcasts related to a TV show, projected as
+`MCPodcastItem` JSON. Discovery uses the public Apple iTunes Search API and
+crosswalks `collectionId` → PodcastIndex feed via the `itunes_id` field
+indexed on `idx:podcasts` (see `idx-podcasts-itunes-id-deploy-plan.mdc`).
+
+## Request
+
+| Param  | Type   | Required | Default | Notes |
+|--------|--------|----------|---------|-------|
+| `mc_id` | string | yes | — | TV show mc_id, e.g. `tmdb_1399`. Document must exist in Redis with `mc_type == "tv"`. |
+| `limit` | int    | no  | `5` | `1..50`. Caps the returned array. |
+
+## Response
+
+`200 OK` — JSON array (possibly empty) of `MCPodcastItem` documents
+serialized with `model_dump(mode="json")`. The `id` field is the integer
+PodcastIndex feed id; `mc_id` is the auto-generated `podcast_<feed_id>`
+form (matches what the rest of the podcast API returns).
+
+Error responses:
+
+| Status | When |
+|--------|------|
+| `400`  | `mc_id` resolves to a document whose `mc_type` is not `tv` |
+| `404`  | No Redis document for `mc_id`, or document has no usable title |
+| `500`  | Redis read failed |
+| `502`  | Apple iTunes Search API call failed (network/HTTP error) |
+
+## Resolution flow
+
+1. `mc_id` → Redis key via `_redis_key_for_id` (yields `media:{mc_id}`),
+   then `JSON.GET` the document. The TV title is read from `title`,
+   falling back to `search_title`.
+2. Call Apple iTunes Search API:
+   `GET https://itunes.apple.com/search?term={title}+tv+show&media=podcast&limit={limit*4|>=25}`.
+   The `limit*4` over-fetch absorbs candidates whose `collectionId` is not
+   present in `idx:podcasts` (~11% of PodcastIndex feeds have no
+   `itunes_id`).
+3. For each iTunes result with a numeric `collectionId`, run
+   `FT.SEARCH idx:podcasts '@itunes_id:[{cid} {cid}]' LIMIT 0 1` via
+   `RedisRepository.search_podcasts`. Skip iTunes results that don't match
+   any indexed podcast.
+4. Convert each matched JSON document with
+   `api.podcast.core.redis_doc_to_mc_podcast_item` and append to the
+   response array, dedup'd by `mc_id`. Stop once `limit` items have been
+   collected.
+
+## Conversion helper: `redis_doc_to_mc_podcast_item`
+
+Lives in `src/api/podcast/core.py`. Translates a Redis `idx:podcasts` JSON
+document into an `MCPodcastItem` for API responses, normalizing two
+historical inconsistencies:
+
+- `MCPodcastItem.id` is the integer feed id, sourced from the document's
+  `source_id` string (the document's `id` field is the namespaced
+  `podcastindex_podcast_{feed_id}` form).
+- `categories` is stored as a `dict[str, str]` by the legacy bulk loader
+  but as a normalized `list[str]` by the nightly ETL. The helper accepts
+  either and yields a `dict[str, Any]` (lists are coerced to a positional
+  dict) so `MCPodcastItem` validation never fails on shape drift.
+
+## Local testing
+
+`scripts/test_podcasts_related_to_tv.py` is a thin async client around the
+endpoint. Two modes:
+
+```bash
+# One-shot
+make test-podcasts-related-to-tv MC_ID=tmdb_1399 LIMIT=10
+
+# Equivalent direct invocation
+python scripts/test_podcasts_related_to_tv.py tmdb_1399 --limit 10
+
+# Just titles, one per line
+make test-podcasts-related-to-tv MC_ID=tmdb_1399 TITLES=1
+
+# Interactive: omit positional mc_id, type queries `mc_id [limit]` per line
+python scripts/test_podcasts_related_to_tv.py
+```
+
+The script defaults to `http://localhost:9001` (override with `--host` /
+`HOST=`). It prints the request line and the JSON array (or error body) and
+exits non-zero on any HTTP error so it composes with shell pipelines / CI.
+
+## Dependencies
+
+- `idx:podcasts` must have `$.itunes_id` indexed as `NUMERIC SORTABLE`. See
+  `idx-podcasts-itunes-id-deploy-plan.mdc` for the per-environment
+  `FT.ALTER` requirement; without it, this endpoint will always return
+  `[]`.
+- Apple iTunes Search API is unauthenticated but soft rate-limited
+  (~20 req/min/IP). No caching is applied at the route layer; if traffic
+  warrants caching, layer it with `RedisCache` keyed on the normalized
+  TV title (not on `mc_id`, since multiple `mc_id`s can share a title).
+
+## Deployment
+
+This is a pure code change in `web/app.py` and `src/api/podcast/core.py`.
+There is **no** schema migration, no new index, no new env var, and no new
+secret. Standard Cloud Run deploy of the web/API service is sufficient.
+
+### Pre-deploy checks
+
+| Environment | `idx:podcasts.itunes_id` indexed? | Action |
+|---|---|---|
+| Public / prod (GCE `redis-stack-vm`) | Yes (PR #98 already deployed) | None |
+| Local dev (Docker `localhost:6380`) | Apply once if not done | `redis-cli -p 6380 FT.ALTER idx:podcasts SCHEMA ADD '$.itunes_id' AS itunes_id NUMERIC SORTABLE` (see `idx-podcasts-itunes-id-deploy-plan.mdc`) |
+| Cloud Run web service env | n/a (uses public Redis above) | None |
+
+If `itunes_id` is not indexed in the target Redis, the endpoint silently
+returns `[]` for every request. Verify with
+`FT.INFO idx:podcasts | grep itunes_id` before deploying anywhere new.
+
+### Deploy
+
+```bash
+# Web/API service only — endpoint lives here
+make deploy-web
+```
+
+`deploy-web` runs `scripts/deploy_web_cr.sh` which builds the container and
+deploys the `media-circle-search` Cloud Run service (dev environment).
+No restart of the ETL VM or Redis VM is required.
+
+### Post-deploy verification
+
+Replace `<host>` with the deployed Cloud Run URL (or
+`http://localhost:9001` for local).
+
+```bash
+# Sanity: route is registered (expect 422 from missing required mc_id)
+curl -sS -o /dev/null -w "%{http_code}\n" "<host>/api/podcast/related-to-tv"
+
+# Real check: known TV mc_id should return a JSON array (possibly empty)
+curl -sS "<host>/api/podcast/related-to-tv?mc_id=tmdb_1399&limit=5" | jq .
+
+# Same thing via the test script
+make test-podcasts-related-to-tv MC_ID=tmdb_1399 LIMIT=5 HOST=<host>
+make test-podcasts-related-to-tv MC_ID=tmdb_1399 LIMIT=10 TITLES=1 HOST=<host>
+```
+
+Expected: `200` with a JSON array of `MCPodcastItem` documents. An empty
+array for a popular show is the canary that `idx:podcasts.itunes_id` is not
+indexed in the Redis the service is pointed at.
+
+### Rollback
+
+Standard Cloud Run revision rollback — no data side effects, no schema to
+revert. Reverting the commit and redeploying also works.

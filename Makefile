@@ -456,6 +456,13 @@ etl-media:
 	@echo "=== TV ETL ==="
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && if [ -n "$(startdate)" ]; then python -m etl.run_nightly_etl --job tv --start-date $(startdate); else python -m etl.run_nightly_etl --job tv; fi'
 
+# Test the related-podcasts endpoint against the locally-running web app.
+# Usage: make test-podcasts-related-to-tv MC_ID=tmdb_1399 [LIMIT=10] [HOST=http://localhost:9001]
+#        make test-podcasts-related-to-tv MC_ID=tmdb_1399 TITLES=1
+test-podcasts-related-to-tv:
+	@if [ -z "$(MC_ID)" ]; then echo "ERROR: MC_ID is required. Usage: make test-podcasts-related-to-tv MC_ID=<tv_mc_id> [LIMIT=N]"; exit 1; fi
+	@bash -c 'source venv/bin/activate && PYTHONPATH=src:$$PWD python scripts/test_podcasts_related_to_tv.py $(MC_ID) $(if $(LIMIT),--limit $(LIMIT),) $(if $(HOST),--host $(HOST),) $(if $(TITLES),--titles-only,)'
+
 # Fetch TMDB media details for a single title
 # Usage: make get-media-details-tv ID=12345
 #        make get-media-details-movie ID=67890
