@@ -34,10 +34,10 @@ from src.core.iptc import normalize_tag
 from src.core.normalize import SearchDocument, document_to_redis
 from src.etl.podcast_parent_resolver import resolve_parent_mc_ids
 from src.etl.podcastindex_shared import (
-    AFTER_SHOWS_CATEGORY,
     build_after_shows_query,
     build_categories_array,
     build_default_query,
+    has_after_shows_source_category,
     has_after_shows_tag,
     merge_rows_by_feed_id,
 )
@@ -203,6 +203,10 @@ class PodcastBulkLoader:
             image=image_url,
             cast=[],  # Podcasts don't have cast (use author in display fields)
             overview=self._extract_overview(row["description"]),
+            genre_ids=[],
+            genres=[],
+            cast_ids=[],
+            cast_names=[],
         )
 
     def _add_podcast_display_fields(
@@ -493,9 +497,9 @@ class PodcastBulkLoader:
                         [category for category in categories if isinstance(category, str)]
                     )
                 elif isinstance(categories, dict):
-                    has_after_shows = AFTER_SHOWS_CATEGORY in {
-                        str(value).strip() for value in categories.values()
-                    }
+                    has_after_shows = has_after_shows_source_category(
+                        [str(value).strip() for value in categories.values()]
+                    )
                 if not has_after_shows:
                     continue
 

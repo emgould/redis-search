@@ -7,7 +7,7 @@ from typing import cast
 from core.iptc import expand_keywords
 from core.search_queries import build_media_query_from_user_input
 
-AFTER_SHOWS_CATEGORY = "After-Shows"
+AFTER_SHOWS_CATEGORY = "after-shows"
 AFTER_SHOWS_TAG = "after_shows"
 DEFAULT_MEDIA_FETCH_LIMIT = 50
 
@@ -19,7 +19,7 @@ _PODCAST_COLUMNS = """
     episodeCount, popularityScore, itunesId, podcastGuid, lastUpdate
 """
 _AFTER_SHOWS_CATEGORY_CLAUSE = " OR ".join(
-    [f"category{i} = '{AFTER_SHOWS_CATEGORY}'" for i in range(1, 11)]
+    [f"LOWER(TRIM(category{i})) = '{AFTER_SHOWS_CATEGORY}'" for i in range(1, 11)]
 )
 
 
@@ -105,7 +105,14 @@ def build_categories_array(row: sqlite3.Row) -> list[str]:
 
 def has_after_shows_tag(categories: Sequence[str]) -> bool:
     """Return True when the normalized category list includes after_shows."""
-    return AFTER_SHOWS_TAG in categories
+    normalized = {str(category).strip().lower().replace("-", "_").replace(" ", "_") for category in categories}
+    return AFTER_SHOWS_TAG in normalized
+
+
+def has_after_shows_source_category(categories: Sequence[str]) -> bool:
+    """Return True when raw source categories include after-shows."""
+    normalized = {str(category).strip().lower() for category in categories}
+    return AFTER_SHOWS_CATEGORY in normalized
 
 
 def merge_rows_by_feed_id(*row_sets: Sequence[sqlite3.Row]) -> list[sqlite3.Row]:
