@@ -27,6 +27,7 @@ from adapters.redis_manager import RedisEnvironment, RedisManager
 from adapters.redis_repository import RedisRepository
 from api.openlibrary.bulk.load_book_index import mc_book_to_redis_doc
 from api.openlibrary.search import OpenLibrarySearchService
+from api.podcast.core import redis_doc_to_mc_podcast_item
 from api.tmdb.core import TMDBService
 from api.tmdb.wrappers import search_movies_async, search_tv_shows_async
 from contracts.models import MCType
@@ -2816,6 +2817,133 @@ async def podcast_db_info():
             "modified": modified,
         }
     )
+
+
+_ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
+
+
+@app.get("/api/podcast/related-to-tv")
+async def get_podcasts_related_to_tv(
+    mc_id: str = Query(..., description="TV show mc_id (e.g., tmdb_1399)"),
+    limit: int = Query(default=5, ge=1, le=50, description="Max podcasts to return"),
+) -> JSONResponse:
+    """Return podcasts related to a TV show as an array of MCPodcastItem.
+
+    Flow:
+    1. Resolve the TV show title from the Redis ``media:`` document for ``mc_id``.
+    2. Query the Apple iTunes Search API with ``term="{title} tv show"`` and
+       ``media=podcast`` to discover candidate podcasts (the iTunes API returns
+       ``collectionId`` values that map to PodcastIndex via ``itunes_id``).
+    3. For each iTunes ``collectionId``, look up the matching podcast in
+       ``idx:podcasts`` via the indexed ``itunes_id`` numeric field.
+    4. Convert each matched Redis document to ``MCPodcastItem`` and return up
+       to ``limit`` items.
+
+    Candidates without an indexed ``itunes_id`` match in Redis are skipped.
+    """
+    redis = get_redis()
+
+    media_key = _redis_key_for_id(mc_id)
+    try:
+        media_doc: dict[str, Any] | None = await redis.json().get(media_key)  # type: ignore[assignment]
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"Redis read failed: {e}"})
+
+    if not isinstance(media_doc, dict):
+        return JSONResponse(
+            status_code=404, content={"error": f"TV show not found: {mc_id}"}
+        )
+
+    if media_doc.get("mc_type") != "tv":
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": (
+                    f"mc_id {mc_id!r} is not a tv show "
+                    f"(mc_type={media_doc.get('mc_type')!r})"
+                )
+            },
+        )
+
+    title = media_doc.get("title") or media_doc.get("search_title") or ""
+    if not isinstance(title, str) or not title.strip():
+        return JSONResponse(
+            status_code=404, content={"error": f"TV show {mc_id} has no title"}
+        )
+
+    itunes_params: dict[str, str | int] = {
+        "term": f"{title.strip()} tv show",
+        "media": "podcast",
+        "limit": max(limit * 4, 25),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(_ITUNES_SEARCH_URL, params=itunes_params)
+            resp.raise_for_status()
+            itunes_payload = resp.json()
+    except httpx.HTTPError as e:
+        return JSONResponse(status_code=502, content={"error": f"iTunes API failed: {e}"})
+    except Exception as e:
+        return JSONResponse(status_code=502, content={"error": f"iTunes API failed: {e}"})
+
+    itunes_results: list[dict[str, Any]] = itunes_payload.get("results", []) or []
+
+    repo = RedisRepository()
+    podcast_items: list[dict[str, Any]] = []
+    seen_mc_ids: set[str] = set()
+
+    for item in itunes_results:
+        if len(podcast_items) >= limit:
+            break
+
+        cid = item.get("collectionId")
+        if cid is None:
+            continue
+        try:
+            cid_int = int(cid)
+        except (TypeError, ValueError):
+            continue
+
+        try:
+            search_res = await repo.search_podcasts(
+                query_str=f"@itunes_id:[{cid_int} {cid_int}]",
+                limit=1,
+            )
+        except Exception as e:
+            logging.warning("Podcast itunes_id lookup failed for %s: %s", cid_int, e)
+            continue
+
+        for doc in getattr(search_res, "docs", []) or []:
+            raw_json = getattr(doc, "json", None)
+            if not raw_json:
+                continue
+            try:
+                podcast_doc = json.loads(raw_json)
+            except (TypeError, ValueError) as e:
+                logging.warning("Failed to parse podcast doc %s: %s", getattr(doc, "id", "?"), e)
+                continue
+            if not isinstance(podcast_doc, dict):
+                continue
+
+            try:
+                podcast_item = redis_doc_to_mc_podcast_item(podcast_doc)
+            except Exception as e:
+                logging.warning(
+                    "Failed to convert podcast doc %s to MCPodcastItem: %s",
+                    podcast_doc.get("id"),
+                    e,
+                )
+                continue
+
+            if podcast_item.mc_id in seen_mc_ids:
+                continue
+            seen_mc_ids.add(podcast_item.mc_id)
+            podcast_items.append(podcast_item.model_dump(mode="json"))
+
+            if len(podcast_items) >= limit:
+                break
+
+    return JSONResponse(content=podcast_items)
 
 
 _KEY_PREFIX_BY_TYPE: dict[str, str] = {
