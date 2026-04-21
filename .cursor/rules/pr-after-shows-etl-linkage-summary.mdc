@@ -31,5 +31,7 @@ Run these commands from repo root:
 ## Verification
 
 - `python3 -m py_compile src/core/exact_matches.py src/services/search_service.py src/etl/pi_nightly_etl.py src/etl/podcast_parent_resolver.py src/etl/podcastindex_shared.py scripts/load_podcasts_from_db.py`
-- Confirm `FT.INFO idx:podcasts` exposes `parent_mc_ids`
-- Spot-check known titles like American Idol and Hacks after backfill
+- `source venv/bin/activate && ENV_FILE=config/local.env python scripts/verify_after_shows_source_db.py`
+- `source venv/bin/activate && ENV_FILE=config/local.env python scripts/verify_podcast_parent_mc_ids.py`
+- Optional targeted reverse-lookup verification:
+  - `source venv/bin/activate && ENV_FILE=config/local.env python scripts/verify_podcast_parent_mc_ids.py --parent-mc-id tmdb_tv_<id>`
