@@ -15,12 +15,18 @@ alwaysApply: false
 
 ## Deployment / backfill
 
-1. Rebuild `idx:podcasts` with the new `parent_mc_ids` TagField.
-2. Run `python scripts/load_podcasts_from_db.py --after-shows-only` to backfill previously filtered companion podcasts from the PodcastIndex SQLite dump.
-3. Optionally run `python scripts/load_podcasts_from_db.py --relink-existing-after-shows` to recompute `parent_mc_ids` on already-loaded podcast docs.
-4. Validate with Redis queries for:
-   - `@categories:{after_shows}`
-   - `@parent_mc_ids:{tmdb_tv_<id>}`
+Run these commands from repo root:
+
+1. `source venv/bin/activate`
+2. `ENV_FILE=config/local.env python scripts/build_redis_index.py --rebuild-podcasts`
+3. `ENV_FILE=config/local.env python scripts/load_podcasts_from_db.py --after-shows-only --dry-run`
+4. `ENV_FILE=config/local.env python scripts/load_podcasts_from_db.py --after-shows-only`
+5. Optional relink pass:
+   - `ENV_FILE=config/local.env python scripts/load_podcasts_from_db.py --relink-existing-after-shows`
+6. Validate in Redis:
+   - confirm `FT.INFO idx:podcasts` shows `parent_mc_ids`
+   - query `@categories:{after_shows}`
+   - query `@parent_mc_ids:{tmdb_tv_<id>}`
 
 ## Verification
 
