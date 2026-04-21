@@ -441,6 +441,7 @@ All keys are present when values are available, and absent fields are omitted by
   - `title`, `url`, `site`, `author`, `owner_name`
   - `language` (normalized string tag)
   - `categories` (array)
+  - `parent_mc_ids` (array of canonical media `mc_id`s for companion-podcast linkage)
   - `author_normalized`
   - `episode_count`, `itunes_id`, `podcast_guid`, `popularity_score`
   - `last_update_time` (ISO timestamp string)
@@ -448,7 +449,17 @@ All keys are present when values are available, and absent fields are omitted by
 
 ### Indexed fields for podcasts
 
-`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `popularity`, `episode_count`, `created_at`, `modified_at`.
+`search_title`, `author`, `author_normalized`, `mc_type`, `source`, `id`, `language`, `categories`, `parent_mc_ids`, `popularity`, `episode_count`, `created_at`, `modified_at`.
+
+### Companion podcast lookup
+
+`parent_mc_ids` is a `TagField("$.parent_mc_ids[*]")` on `idx:podcasts`.
+
+- Reverse lookup from a movie or TV show to companion podcasts uses:
+  - `@parent_mc_ids:{tmdb_tv_124101}`
+  - `@parent_mc_ids:{tmdb_movie_550}`
+- The value stored is always the canonical media `mc_id`, never the raw TMDB numeric id.
+- `parent_mc_ids` is currently populated only for PodcastIndex feeds tagged `after_shows`.
 
 ## `idx:author` (`author:`)
 

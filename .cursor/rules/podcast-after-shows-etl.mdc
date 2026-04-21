@@ -1,0 +1,50 @@
+---
+description: PodcastIndex After-Shows ingestion, backfill, and parent media linkage
+globs: ["src/etl/pi_nightly_etl.py", "scripts/load_podcasts_from_db.py", "src/etl/podcast_parent_resolver.py", "src/etl/podcastindex_shared.py", "src/core/exact_matches.py", "web/app.py"]
+alwaysApply: false
+---
+
+# podcast-after-shows-etl
+
+Use the shared PodcastIndex ETL helpers in `src/etl/podcastindex_shared.py` whenever changing After-Shows ingestion behavior.
+
+## After-Shows ingestion policy
+
+- PodcastIndex feeds tagged with `After-Shows` must bypass the normal:
+  - `popularityScore >= 3` gate
+  - `language LIKE 'en%'` gate
+- Keep these basic source-quality filters even for After-Shows:
+  - `dead = 0`
+  - `episodeCount > 0`
+  - `imageUrl IS NOT NULL AND imageUrl != ''`
+
+## Shared query/category behavior
+
+- Nightly ETL and bulk backfill must use the same query builders:
+  - `build_default_query(...)`
+  - `build_after_shows_query(...)`
+- Nightly ETL and bulk backfill must write the same normalized podcast category shape:
+  - `categories` is an IPTC-expanded array from `build_categories_array(...)`
+  - never write numbered category dictionaries like `{"1": "After-Shows"}`
+- Merge default and After-Shows result sets by PodcastIndex feed id with `merge_rows_by_feed_id(...)`.
+
+## Parent media linkage
+
+- `parent_mc_ids` stores canonical media `mc_id` values, not raw TMDB ids.
+- Populate `parent_mc_ids` only when `categories` contains `after_shows`.
+- Resolve parent media with `resolve_parent_mc_ids(...)` in `src/etl/podcast_parent_resolver.py`.
+- The resolver must use the shared exact-match helpers from `src/core/exact_matches.py` so ETL linkage stays aligned with Redis/API `exact_matches` behavior.
+- Multiple exact media matches are valid; persist all matching `mc_id`s in a stable list.
+
+## Redis index
+
+- `idx:podcasts` indexes `parent_mc_ids` via:
+  - `TagField("$.parent_mc_ids[*]", as_name="parent_mc_ids")`
+- Companion-podcast reverse lookup from media uses:
+  - `@parent_mc_ids:{tmdb_tv_124101}`
+
+## Backfill / migration
+
+- `scripts/load_podcasts_from_db.py` is the DB-backed backfill path for After-Shows feeds that were previously excluded from Redis.
+- Use `--after-shows-only` for category-only backfills.
+- Use `--relink-existing-after-shows` only to recompute `parent_mc_ids` for existing Redis docs; it is not a substitute for the DB-backed After-Shows backfill.

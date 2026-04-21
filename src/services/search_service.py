@@ -1,11 +1,9 @@
 import asyncio
 import json
-import re
 import time
 import urllib.parse
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime, timedelta
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, cast
 
 import aiohttp
 from pydantic import BaseModel
@@ -20,6 +18,18 @@ from api.tmdb.models import MCMovieItem
 from api.tmdb.wrappers import get_person_credits_async
 from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
+from core.exact_matches import (
+    build_media_source_query as shared_build_media_source_query,
+)
+from core.exact_matches import (
+    collect_exact_matches,
+    exact_match_media_sort_key,
+    extract_redis_search_docs,
+    iter_exact_matches,
+    normalize_exact_match_cast,
+    parse_redis_search_doc,
+    pick_exact_match,
+)
 from core.iptc import expand_query_string, get_search_aliases
 from core.ranking import (
     EXACT_MATCH_SOURCE_PRIORITY,
@@ -107,15 +117,7 @@ def _iter_exact_matches(
     source: str, results: list[dict], query: str | None
 ) -> list[dict[str, Any]]:
     """Return items from results that are exact matches. Indexed sources only."""
-    if not query or len(query.strip()) < 2:
-        return []
-    if source not in EXACT_MATCH_SOURCE_PRIORITY:
-        return []
-    exact_items: list[dict[str, Any]] = []
-    for item in results:
-        if is_exact_match(query.strip(), item, source):
-            exact_items.append(_normalize_exact_match_cast(item))
-    return exact_items
+    return cast(list[dict[str, Any]], iter_exact_matches(source, results, query))
 
 
 def _normalize_exact_match_cast(item: dict[str, Any]) -> dict[str, Any]:
@@ -124,92 +126,7 @@ def _normalize_exact_match_cast(item: dict[str, Any]) -> dict[str, Any]:
 
     This preserves all existing fields and only rewrites `cast` for exact-match items.
     """
-    cast_names = item.get("cast")
-    cast_ids = item.get("cast_ids")
-
-    if not isinstance(cast_names, list):
-        item["cast"] = []
-        return item
-
-    if not cast_ids:
-        cast_ids = []
-    elif not isinstance(cast_ids, list):
-        cast_ids = [cast_ids]
-
-    normalized_cast: list[dict[str, Any]] = []
-    for index, cast_name in enumerate(cast_names):
-        if isinstance(cast_name, dict):
-            name = cast_name.get("name")
-            if not isinstance(name, str) or not name:
-                continue
-            cast_id = cast_name.get("id")
-            normalized_cast.append({"name": name, "id": str(cast_id) if cast_id else None})
-            continue
-        if not isinstance(cast_name, str) or not cast_name:
-            continue
-
-        cast_id = cast_ids[index] if index < len(cast_ids) else None
-        normalized_cast.append({"name": cast_name, "id": str(cast_id) if cast_id else None})
-
-    item["cast"] = normalized_cast
-    return item
-
-
-def _has_watch_providers(item: dict[str, Any]) -> bool:
-    """Return True if the item has at least one real streaming or on-demand provider."""
-    wp = item.get("watch_providers")
-    if not isinstance(wp, dict):
-        return False
-    if wp.get("streaming_platform_ids"):
-        return True
-    if wp.get("on_demand_platform_ids"):
-        return True
-    return bool(wp.get("primary_provider"))
-
-
-_THEATRICAL_WINDOW_DAYS = 183
-
-
-def _in_theatrical_window(item: dict[str, Any]) -> bool:
-    """Return True for movies released within the last ~6 months.
-
-    Movies still in their theatrical window legitimately lack streaming/on-demand
-    providers and should not be penalised by the watch-provider tiebreaker.
-    """
-    if item.get("mc_type") != "movie":
-        return False
-    raw = item.get("release_date")
-    if not raw or not isinstance(raw, str):
-        return False
-    try:
-        rd = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        if rd.tzinfo is None:
-            rd = rd.replace(tzinfo=UTC)
-        cutoff = datetime.now(tz=UTC) - timedelta(days=_THEATRICAL_WINDOW_DAYS)
-        return rd >= cutoff
-    except (ValueError, TypeError):
-        return False
-
-
-_SOURCE_PRIORITY_INDEX: dict[str, int] = {
-    s: idx for idx, s in enumerate(EXACT_MATCH_SOURCE_PRIORITY)
-}
-
-
-def _effective_date_yyyymm(source: str, item: dict[str, Any]) -> int:
-    """Return YYYYMM int from the effective date for exact-match sorting.
-
-    Movies use ``release_date``; TV uses ``last_air_date``.
-    Returns 0 when the date is missing or unparseable.
-    """
-    raw = item.get("release_date") if source == "movie" else item.get("last_air_date")
-    if not raw or not isinstance(raw, str):
-        return 0
-    try:
-        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        return dt.year * 100 + dt.month
-    except (ValueError, TypeError):
-        return 0
+    return cast(dict[str, Any], normalize_exact_match_cast(item))
 
 
 def _exact_match_media_sort_key(
@@ -223,16 +140,7 @@ def _exact_match_media_sort_key(
       3. Highest popularity first        (negate for ascending min)
       4. Movie before TV                 (lower source-priority index)
     """
-    source, item = candidate
-    viable = 0 if (_has_watch_providers(item) or _in_theatrical_window(item)) else 1
-    yyyymm = _effective_date_yyyymm(source, item)
-    popularity = float(item.get("popularity") or 0)
-    return (
-        viable,
-        -yyyymm,
-        -popularity,
-        _SOURCE_PRIORITY_INDEX.get(source, len(EXACT_MATCH_SOURCE_PRIORITY)),
-    )
+    return cast(tuple[int, int, float, int], exact_match_media_sort_key(candidate))
 
 
 def _pick_exact_match(
@@ -245,41 +153,7 @@ def _pick_exact_match(
     YYYYMM descending, popularity descending, movie-before-tv.
     Non-media sources fall back to static cross-source priority.
     """
-    if not query or len(query.strip()) < 2:
-        return None
-    q = query.strip()
-
-    media_exact_candidates: list[tuple[str, dict[str, Any]]] = []
-    for source in ("movie", "tv"):
-        items = results.get(source) or []
-        for item in items:
-            if is_exact_match(q, item, source):
-                media_exact_candidates.append((source, item))
-
-    if media_exact_candidates:
-        if len(media_exact_candidates) > 1:
-            viable = [
-                (s, item)
-                for s, item in media_exact_candidates
-                if _has_watch_providers(item) or _in_theatrical_window(item)
-            ]
-            if viable:
-                media_exact_candidates = viable
-
-        _, best_media_item = min(
-            media_exact_candidates,
-            key=_exact_match_media_sort_key,
-        )
-        return _normalize_exact_match_cast(best_media_item)
-
-    for source in EXACT_MATCH_SOURCE_PRIORITY:
-        if source in {"movie", "tv"}:
-            continue
-        items = results.get(source) or []
-        for item in items:
-            if is_exact_match(q, item, source):
-                return _normalize_exact_match_cast(item)
-    return None
+    return cast(dict[str, Any] | None, pick_exact_match(results, query))
 
 
 def _collect_exact_matches(
@@ -296,40 +170,7 @@ def _collect_exact_matches(
     When *hero* is provided its ``mc_id`` is guaranteed to be at index 0
     regardless of sort order.
     """
-    if not query or len(query.strip()) < 2:
-        return []
-    q = query.strip()
-
-    collected: list[dict[str, Any]] = []
-
-    media_candidates: list[tuple[str, dict[str, Any]]] = []
-    for source in ("movie", "tv"):
-        for item in results.get(source) or []:
-            if not is_exact_match(q, item, source):
-                continue
-            wp = item.get("watch_providers")
-            if not isinstance(wp, dict) or not wp.get("streaming_platform_ids"):
-                continue
-            media_candidates.append((source, item))
-
-    if media_candidates:
-        media_candidates.sort(key=_exact_match_media_sort_key)
-        collected.extend(_normalize_exact_match_cast(item) for _, item in media_candidates)
-
-    for source in EXACT_MATCH_SOURCE_PRIORITY:
-        if source in {"movie", "tv"}:
-            continue
-        for item in results.get(source) or []:
-            if is_exact_match(q, item, source):
-                collected.append(_normalize_exact_match_cast(item))
-
-    if hero is not None:
-        hero_id = hero.get("mc_id")
-        if hero_id:
-            collected = [m for m in collected if m.get("mc_id") != hero_id]
-            collected.insert(0, hero)
-
-    return collected
+    return cast(list[dict[str, Any]], collect_exact_matches(results, query, hero))
 
 
 def _remove_exact_from_results(results: dict[str, Any], exact: dict[str, Any]) -> None:
@@ -375,67 +216,17 @@ def reset_repo():
 
 def parse_doc(doc):
     """Parse Redis Search document, handling JSON documents."""
-    result = {"id": doc.id}
-
-    # For JSON documents, parse the 'json' attribute
-    if hasattr(doc, "json") and doc.json:
-        try:
-            parsed = json.loads(doc.json)
-            result.update(parsed)
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    # Ensure mc_id is always set - prefer parsed id over doc.id (which has Redis key prefix)
-    if "mc_id" not in result:
-        result["mc_id"] = result.get("id", doc.id)
-
-    # Also include any direct attributes
-    for key, value in doc.__dict__.items():
-        if key not in ("id", "payload", "json") and value is not None:
-            result[key] = value
-
-    # Use original title (with apostrophes) for display when available.
-    # search_title is normalized (apostrophes stripped) for search indexing,
-    # but the 'title' field preserves the original for display purposes.
-    if "title" in result and result["title"]:
-        result["search_title"] = result["title"]
-
-    # Fix legacy person data that may be missing tmdb_ prefix and source_id
-    # BUT skip this for OpenLibrary authors (mc_subtype === "author")
-    doc_id = result.get("id", "")
-    mc_type = result.get("mc_type", "")
-    mc_subtype = result.get("mc_subtype", "")
-
-    if mc_type == "person" and mc_subtype != "author":
-        # Fix id if missing tmdb_ prefix (e.g., "person_17419" -> "tmdb_person_17419")
-        if doc_id.startswith("person_") and not doc_id.startswith("tmdb_"):
-            result["id"] = f"tmdb_{doc_id}"
-            doc_id = result["id"]
-
-        # Extract source_id from id if not present
-        if not result.get("source_id"):
-            # Extract numeric ID from "tmdb_person_17419" or "person_17419"
-            match = re.search(r"_(\d+)$", doc_id)
-            if match:
-                result["source_id"] = match.group(1)
-
-    return result
+    return cast(dict[str, Any], parse_redis_search_doc(doc))
 
 
 def _extract_docs(result: object) -> list[object]:
     """Safely extract RediSearch docs from an arbitrary result object."""
-    docs = getattr(result, "docs", None)
-    if isinstance(docs, list):
-        return docs
-    return []
+    return cast(list[object], extract_redis_search_docs(result))
 
 
 def _build_media_source_query(query_str: str, media_source: str) -> str:
     """Restrict a media query to a specific source bucket."""
-    type_filter = f"@mc_type:{{{media_source}}}"
-    if query_str == "*":
-        return type_filter
-    return f"({query_str}) {type_filter}"
+    return cast(str, shared_build_media_source_query(query_str, media_source))
 
 
 def _parse_media_results(result: object, query: str | None) -> list[dict[str, Any]]:

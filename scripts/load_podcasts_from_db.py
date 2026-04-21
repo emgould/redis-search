@@ -20,20 +20,26 @@ import asyncio
 import math
 import os
 import sqlite3
-import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from dotenv import load_dotenv
 from redis.asyncio import Redis
 
+from src.adapters.redis_repository import RedisRepository
 from src.contracts.models import MCSources, MCType
+from src.core.iptc import normalize_tag
 from src.core.normalize import SearchDocument, document_to_redis
+from src.etl.podcast_parent_resolver import resolve_parent_mc_ids
+from src.etl.podcastindex_shared import (
+    AFTER_SHOWS_CATEGORY,
+    build_after_shows_query,
+    build_categories_array,
+    build_default_query,
+    has_after_shows_tag,
+    merge_rows_by_feed_id,
+)
 
 # Load env file (defaults to local.env for local development)
 env_file = os.getenv("ENV_FILE", "config/local.env")
@@ -41,6 +47,7 @@ load_dotenv(env_file)
 
 # Default database path
 DEFAULT_DB_PATH = "data/podcastindex/podcastindex_feeds.db"
+PARENT_RESOLUTION_BATCH_SIZE = 20
 
 
 @dataclass
@@ -84,6 +91,7 @@ class PodcastBulkLoader:
         self.redis_password = redis_password
         self.batch_size = batch_size
         self.redis: Redis | None = None
+        self.search_repo: RedisRepository | None = None
 
     async def connect(self) -> None:
         """Connect to Redis."""
@@ -94,11 +102,13 @@ class PodcastBulkLoader:
             decode_responses=True,
         )
         await self.redis.ping()
+        self.search_repo = RedisRepository()
 
     async def disconnect(self) -> None:
         """Disconnect from Redis."""
         if self.redis:
             await self.redis.aclose()
+        self.search_repo = None
 
     def _convert_timestamp(self, ts: int | None) -> str | None:
         """Convert Unix timestamp to ISO format string."""
@@ -110,16 +120,9 @@ class PodcastBulkLoader:
         except (ValueError, OSError):
             return None
 
-    def _build_categories_dict(self, row: sqlite3.Row) -> dict[str, str]:
-        """Build categories dictionary from category1-10 fields."""
-        categories = {}
-        row_keys = row.keys()
-        for i in range(1, 11):
-            cat_key = f"category{i}"
-            cat_value = row[cat_key] if cat_key in row_keys else ""
-            if cat_value and str(cat_value).strip():
-                categories[str(i)] = str(cat_value).strip()
-        return categories
+    def _build_categories_array(self, row: sqlite3.Row) -> list[str]:
+        """Build the normalized category array used by idx:podcasts."""
+        return build_categories_array(row)
 
     def _compute_popularity(self, popularity_score: int, episode_count: int) -> float:
         """
@@ -199,7 +202,12 @@ class PodcastBulkLoader:
             overview=self._extract_overview(row["description"]),
         )
 
-    def _add_podcast_display_fields(self, redis_doc: dict, row: sqlite3.Row) -> dict:
+    def _add_podcast_display_fields(
+        self,
+        redis_doc: dict[str, object],
+        row: sqlite3.Row,
+        parent_mc_ids: list[str] | None = None,
+    ) -> dict[str, object]:
         """
         Add podcast-specific display fields to the Redis document.
 
@@ -219,11 +227,17 @@ class PodcastBulkLoader:
         redis_doc["site"] = row["link"] or None
         redis_doc["author"] = row["itunesAuthor"] or None
         redis_doc["owner_name"] = row["itunesOwnerName"] or None
-        redis_doc["language"] = row["language"] or None
-        redis_doc["categories"] = self._build_categories_dict(row)
+        raw_language = row["language"] or ""
+        redis_doc["language"] = normalize_tag(raw_language) if raw_language else None
+        redis_doc["categories"] = self._build_categories_array(row)
+        if parent_mc_ids is not None:
+            redis_doc["parent_mc_ids"] = parent_mc_ids
+        raw_author = row["itunesAuthor"] or ""
+        redis_doc["author_normalized"] = normalize_tag(raw_author) if raw_author else None
         redis_doc["episode_count"] = row["episodeCount"] or 0
         redis_doc["itunes_id"] = row["itunesId"] or None
         redis_doc["podcast_guid"] = row["podcastGuid"] or None
+        redis_doc["popularity_score"] = row["popularityScore"] or 0
         row_keys = row.keys()
         redis_doc["last_update_time"] = self._convert_timestamp(row["lastUpdate"] if "lastUpdate" in row_keys else None)
 
@@ -235,11 +249,30 @@ class PodcastBulkLoader:
 
         return redis_doc
 
+    async def _prepare_row_document(self, row: sqlite3.Row) -> tuple[str, dict[str, object]] | None:
+        """Normalize a SQLite row and attach optional parent mc_ids."""
+        search_doc = self._normalize_podcast_for_search(row)
+        if search_doc is None:
+            return None
+
+        redis_doc = document_to_redis(search_doc)
+        categories = self._build_categories_array(row)
+        parent_mc_ids: list[str] | None = None
+        if has_after_shows_tag(categories):
+            if self.search_repo is None:
+                raise RuntimeError("Search repository is not initialized")
+            title = row["title"] or ""
+            parent_mc_ids = await resolve_parent_mc_ids(self.search_repo, str(title))
+        redis_doc = self._add_podcast_display_fields(redis_doc, row, parent_mc_ids=parent_mc_ids)
+        key = f"podcast:{search_doc.id}"
+        return key, redis_doc
+
     async def load_podcasts(
         self,
         min_popularity: int = 3,
         limit: int | None = None,
         dry_run: bool = False,
+        after_shows_only: bool = False,
     ) -> PodcastBulkLoaderStats:
         """
         Load podcasts from SQLite database into Redis.
@@ -267,6 +300,7 @@ class PodcastBulkLoader:
         print(f"  Limit: {limit or 'unlimited'}")
         print(f"  Batch Size: {self.batch_size}")
         print(f"  Dry Run: {dry_run}")
+        print(f"  After-Shows Only: {after_shows_only}")
         print()
 
         # Connect to Redis
@@ -278,6 +312,8 @@ class PodcastBulkLoader:
             except Exception as e:
                 print(f"  ❌ Connection failed: {e}")
                 return stats
+        elif self.search_repo is None:
+            self.search_repo = RedisRepository()
 
         # Connect to SQLite
         print("📂 Connecting to SQLite database...")
@@ -285,35 +321,43 @@ class PodcastBulkLoader:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Build query with filters
-        query = """
-            SELECT
-                id, title, url, link, description,
-                itunesAuthor, itunesOwnerName, imageUrl, language,
-                category1, category2, category3, category4, category5,
-                category6, category7, category8, category9, category10,
-                episodeCount, popularityScore, itunesId, podcastGuid, lastUpdate
-            FROM podcasts
-            WHERE
-                popularityScore >= ?
-                AND language LIKE 'en%'
-                AND episodeCount > 0
-                AND imageUrl != ''
-                AND imageUrl IS NOT NULL
-                AND dead = 0
-            ORDER BY popularityScore DESC, episodeCount DESC
-        """
-        params: list = [min_popularity]
-
-        if limit:
-            query += " LIMIT ?"
-            params.append(limit)
-
         print("📊 Querying database...")
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
+        default_rows: list[sqlite3.Row] = []
+        after_shows_rows: list[sqlite3.Row] = []
+        if after_shows_only:
+            after_shows_query, after_shows_params = build_after_shows_query(
+                since_timestamp=None,
+                limit=limit,
+            )
+            cursor.execute(after_shows_query, after_shows_params)
+            after_shows_rows = cursor.fetchall()
+            rows = after_shows_rows
+        else:
+            default_query, default_params = build_default_query(
+                since_timestamp=None,
+                min_popularity=min_popularity,
+                limit=limit,
+            )
+            after_shows_query, after_shows_params = build_after_shows_query(
+                since_timestamp=None,
+                limit=limit,
+            )
+            cursor.execute(default_query, default_params)
+            default_rows = cursor.fetchall()
+            cursor.execute(after_shows_query, after_shows_params)
+            after_shows_rows = cursor.fetchall()
+            rows = merge_rows_by_feed_id(default_rows, after_shows_rows)
+        if limit is not None:
+            rows = rows[:limit]
         stats.total_queried = len(rows)
-        print(f"  Found {len(rows):,} podcasts matching criteria")
+        if after_shows_only:
+            print(f"  Found {len(rows):,} after-shows podcasts")
+        else:
+            print(
+                "  Found "
+                f"{len(rows):,} podcasts matching criteria "
+                f"({len(default_rows):,} default + {len(after_shows_rows):,} after-shows override)"
+            )
         print()
 
         if not rows:
@@ -331,47 +375,43 @@ class PodcastBulkLoader:
         pipeline = None if dry_run else self.redis.pipeline()
         batch_count = 0
 
-        for row in rows:
-            try:
-                # Step 1: Normalize to SearchDocument (follows normalization paradigm)
-                search_doc = self._normalize_podcast_for_search(row)
+        for batch_start in range(0, len(rows), PARENT_RESOLUTION_BATCH_SIZE):
+            row_batch = rows[batch_start : batch_start + PARENT_RESOLUTION_BATCH_SIZE]
+            prepared_batch = await asyncio.gather(
+                *(self._prepare_row_document(row) for row in row_batch),
+                return_exceptions=True,
+            )
+            for row, prepared_result in zip(row_batch, prepared_batch, strict=True):
+                if isinstance(prepared_result, BaseException):
+                    stats.errors += 1
+                    if stats.errors <= 5:
+                        row_keys = row.keys()
+                        podcast_id = row["id"] if "id" in row_keys else "unknown"
+                        print(f"  ⚠️  Error processing podcast {podcast_id}: {prepared_result}")
+                    continue
 
-                if search_doc is None:
+                if prepared_result is None:
                     stats.documents_skipped += 1
                     continue
 
-                # Step 2: Convert to Redis format using document_to_redis()
-                redis_doc = document_to_redis(search_doc)
-
-                # Step 3: Add podcast-specific display fields
-                redis_doc = self._add_podcast_display_fields(redis_doc, row)
-
-                # Use mc_id (from SearchDocument.id) as the Redis key
-                key = f"podcast:{search_doc.id}"
+                key, redis_doc = prepared_result
+                search_title = redis_doc.get("search_title")
 
                 if dry_run:
                     stats.documents_loaded += 1
-                    if stats.documents_loaded <= 5:
-                        print(f"  [DRY RUN] Would load: {search_doc.search_title[:50]} -> {key}")
-                else:
-                    # Add to pipeline
-                    pipeline.json().set(key, "$", redis_doc)
-                    batch_count += 1
-                    stats.documents_loaded += 1
+                    if stats.documents_loaded <= 5 and isinstance(search_title, str):
+                        print(f"  [DRY RUN] Would load: {search_title[:50]} -> {key}")
+                    continue
 
-                    # Execute batch
-                    if batch_count >= self.batch_size:
-                        await pipeline.execute()
-                        pipeline = self.redis.pipeline()
-                        batch_count = 0
-                        print(f"  ✅ Loaded {stats.documents_loaded:,} podcasts...")
+                pipeline.json().set(key, "$", redis_doc)
+                batch_count += 1
+                stats.documents_loaded += 1
 
-            except Exception as e:
-                stats.errors += 1
-                if stats.errors <= 5:
-                    row_keys = row.keys()
-                    podcast_id = row["id"] if "id" in row_keys else "unknown"
-                    print(f"  ⚠️  Error processing podcast {podcast_id}: {e}")
+                if batch_count >= self.batch_size:
+                    await pipeline.execute()
+                    pipeline = self.redis.pipeline()
+                    batch_count = 0
+                    print(f"  ✅ Loaded {stats.documents_loaded:,} podcasts...")
 
         # Execute remaining items
         if not dry_run and batch_count > 0:
@@ -401,6 +441,97 @@ class PodcastBulkLoader:
         else:
             print("🎉 Load Complete!")
 
+        return stats
+
+    async def relink_existing_after_shows(self, dry_run: bool = False) -> PodcastBulkLoaderStats:
+        """Recompute parent_mc_ids for existing after-shows podcast docs in Redis."""
+        stats = PodcastBulkLoaderStats(started_at=datetime.now())
+
+        if not dry_run:
+            print("🔌 Connecting to Redis...")
+            try:
+                await self.connect()
+                print("  ✅ Connected")
+            except Exception as e:
+                print(f"  ❌ Connection failed: {e}")
+                return stats
+        elif self.search_repo is None:
+            self.search_repo = RedisRepository()
+
+        if self.redis is None and not dry_run:
+            raise RuntimeError("Not connected to Redis")
+        if self.search_repo is None:
+            raise RuntimeError("Search repository is not initialized")
+
+        print("🔁 Relinking existing After-Shows podcasts...")
+        cursor = 0
+        pending_updates: list[tuple[str, list[str]]] = []
+
+        while True:
+            if self.redis is None:
+                break
+            cursor, keys = await self.redis.scan(cursor=cursor, match="podcast:*", count=self.batch_size)
+            stats.total_queried += len(keys)
+            if not keys:
+                if cursor == 0:
+                    break
+                continue
+
+            docs = await self.redis.json().mget(keys, "$")
+            batch_candidates: list[tuple[str, str]] = []
+            for key, doc_value in zip(keys, docs, strict=True):
+                payload = doc_value[0] if isinstance(doc_value, list) and doc_value else doc_value
+                if not isinstance(payload, dict):
+                    continue
+                categories = payload.get("categories")
+                has_after_shows = False
+                if isinstance(categories, list):
+                    has_after_shows = has_after_shows_tag(
+                        [category for category in categories if isinstance(category, str)]
+                    )
+                elif isinstance(categories, dict):
+                    has_after_shows = AFTER_SHOWS_CATEGORY in {
+                        str(value).strip() for value in categories.values()
+                    }
+                if not has_after_shows:
+                    continue
+
+                title = payload.get("title") or payload.get("search_title")
+                if isinstance(title, str) and title:
+                    batch_candidates.append((key, title))
+
+            for batch_start in range(0, len(batch_candidates), PARENT_RESOLUTION_BATCH_SIZE):
+                relink_batch = batch_candidates[batch_start : batch_start + PARENT_RESOLUTION_BATCH_SIZE]
+                resolved_batch = await asyncio.gather(
+                    *(resolve_parent_mc_ids(self.search_repo, title) for _, title in relink_batch),
+                    return_exceptions=True,
+                )
+                for (key, _), resolved in zip(relink_batch, resolved_batch, strict=True):
+                    if isinstance(resolved, BaseException):
+                        stats.errors += 1
+                        if stats.errors <= 5:
+                            print(f"  ⚠️  Error relinking {key}: {resolved}")
+                        continue
+                    pending_updates.append((key, resolved))
+                    stats.documents_loaded += 1
+
+            if not dry_run and pending_updates and self.redis is not None:
+                pipeline = self.redis.pipeline()
+                for key, parent_mc_ids in pending_updates:
+                    pipeline.json().set(key, "$.parent_mc_ids", parent_mc_ids)
+                await pipeline.execute()
+                pending_updates.clear()
+
+            if cursor == 0:
+                break
+
+        if dry_run:
+            print(f"  [DRY RUN] Would relink {stats.documents_loaded:,} existing after-shows podcasts")
+
+        if not dry_run:
+            await self.disconnect()
+
+        stats.completed_at = datetime.now()
         return stats
 
 
@@ -434,6 +565,16 @@ async def main():
         default=100,
         help="Batch size for Redis pipeline (default: 100)",
     )
+    parser.add_argument(
+        "--after-shows-only",
+        action="store_true",
+        help="Backfill only PodcastIndex feeds tagged as After-Shows",
+    )
+    parser.add_argument(
+        "--relink-existing-after-shows",
+        action="store_true",
+        help="Recompute parent_mc_ids for existing after-shows Redis docs",
+    )
 
     args = parser.parse_args()
 
@@ -450,13 +591,17 @@ async def main():
         batch_size=args.batch_size,
     )
 
-    stats = await loader.load_podcasts(
-        min_popularity=args.min_popularity,
-        limit=args.limit,
-        dry_run=args.dry_run,
-    )
+    if args.relink_existing_after_shows:
+        stats = await loader.relink_existing_after_shows(dry_run=args.dry_run)
+    else:
+        stats = await loader.load_podcasts(
+            min_popularity=args.min_popularity,
+            limit=args.limit,
+            dry_run=args.dry_run,
+            after_shows_only=args.after_shows_only,
+        )
 
-    sys.exit(0 if stats.errors == 0 else 1)
+    raise SystemExit(0 if stats.errors == 0 else 1)
 
 
 if __name__ == "__main__":

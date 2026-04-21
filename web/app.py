@@ -4700,6 +4700,8 @@ INDEX_CONFIGS = {
             TagField("$.language", as_name="language"),
             # Categories array (normalized, IPTC-expanded)
             TagField("$.categories[*]", as_name="categories"),
+            # Reverse lookup: companion podcasts for a media mc_id
+            TagField("$.parent_mc_ids[*]", as_name="parent_mc_ids"),
             # Sortable numeric fields for ranking
             NumericField("$.popularity", as_name="popularity", sortable=True),
             NumericField("$.episode_count", as_name="episode_count", sortable=True),

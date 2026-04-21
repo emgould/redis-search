@@ -1,0 +1,29 @@
+---
+description: PR summary for After-Shows podcast ETL linkage
+globs: ["src/etl/pi_nightly_etl.py", "scripts/load_podcasts_from_db.py", "src/etl/podcast_parent_resolver.py", "src/etl/podcastindex_shared.py", "src/core/exact_matches.py", "web/app.py", "scripts/build_redis_index.py"]
+alwaysApply: false
+---
+
+# PR Summary: After-Shows podcast ETL linkage
+
+## Summary
+
+- Removes the PodcastIndex popularity and language gates for feeds tagged `After-Shows` while keeping core source-quality filters (`dead = 0`, `episodeCount > 0`, artwork required).
+- Adds `parent_mc_ids` to podcast Redis documents and indexes it on `idx:podcasts` for reverse lookup from media `mc_id` to official/companion podcasts.
+- Aligns nightly ETL and bulk backfill so both write the same normalized `categories` array shape and use the same After-Shows override query behavior.
+- Extracts shared exact-match helpers so ETL parent linkage uses the same exact-match qualification logic that powers Redis/API `exact_matches`.
+
+## Deployment / backfill
+
+1. Rebuild `idx:podcasts` with the new `parent_mc_ids` TagField.
+2. Run `python scripts/load_podcasts_from_db.py --after-shows-only` to backfill previously filtered companion podcasts from the PodcastIndex SQLite dump.
+3. Optionally run `python scripts/load_podcasts_from_db.py --relink-existing-after-shows` to recompute `parent_mc_ids` on already-loaded podcast docs.
+4. Validate with Redis queries for:
+   - `@categories:{after_shows}`
+   - `@parent_mc_ids:{tmdb_tv_<id>}`
+
+## Verification
+
+- `python3 -m py_compile src/core/exact_matches.py src/services/search_service.py src/etl/pi_nightly_etl.py src/etl/podcast_parent_resolver.py src/etl/podcastindex_shared.py scripts/load_podcasts_from_db.py`
+- Confirm `FT.INFO idx:podcasts` exposes `parent_mc_ids`
+- Spot-check known titles like American Idol and Hacks after backfill

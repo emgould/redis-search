@@ -153,7 +153,10 @@ async def build_podcasts_index():
     try:
         await r.ft(PODCASTS_INDEX_NAME).create_index(schema, definition=definition)
         print(f"Index '{PODCASTS_INDEX_NAME}' created successfully")
-        print("Indexed fields: search_title, author, id (mc_id), mc_type, source, language, category1, category2, popularity, episode_count")
+        print(
+            "Indexed fields: search_title, author, id (mc_id), mc_type, source, language, "
+            "categories, parent_mc_ids, popularity, episode_count"
+        )
         print("Display fields (stored, not indexed): image, overview, title, url, site, etc.")
     except Exception as e:
         if "Index already exists" in str(e):

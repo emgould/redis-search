@@ -40,14 +40,23 @@ import urllib.request
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from redis.asyncio import Redis
 
 from adapters.config import load_env
+from adapters.redis_repository import RedisRepository
 from contracts.models import MCSources, MCType
-from core.iptc import expand_keywords, normalize_tag
+from core.iptc import normalize_tag
 from core.normalize import SearchDocument, document_to_redis, resolve_timestamps
+from etl.podcast_parent_resolver import resolve_parent_mc_ids
+from etl.podcastindex_shared import (
+    build_after_shows_query,
+    build_categories_array,
+    build_default_query,
+    has_after_shows_tag,
+    merge_rows_by_feed_id,
+)
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +73,7 @@ REDIS_BATCH_SIZE = 100
 
 # Filtering thresholds (consistent with bulk loader)
 MIN_POPULARITY_SCORE = 3
-MIN_EPISODE_COUNT = 1
+PARENT_RESOLUTION_BATCH_SIZE = 20
 
 
 @dataclass
@@ -158,6 +167,7 @@ class PodcastIndexNightlyETL:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.db_path: Path | None = None
         self.redis: Redis | None = None
+        self.search_repo: RedisRepository | None = None
 
     async def _connect_redis(self) -> None:
         """Connect to Redis."""
@@ -172,6 +182,7 @@ class PodcastIndexNightlyETL:
             decode_responses=True,
         )
         await self.redis.ping()  # type: ignore[misc]
+        self.search_repo = RedisRepository()
         logger.info(f"Connected to Redis at {redis_host}:{redis_port}")
 
     async def _disconnect_redis(self) -> None:
@@ -179,6 +190,7 @@ class PodcastIndexNightlyETL:
         if self.redis:
             await self.redis.aclose()
             self.redis = None
+        self.search_repo = None
 
     def _download_database(self, stats: PIETLStats) -> Path:
         """Download and extract the PodcastIndex database dump."""
@@ -267,24 +279,7 @@ class PodcastIndexNightlyETL:
 
         Extracts all non-empty categories, normalizes them, and expands using IPTC aliases.
         """
-        raw_categories: list[str] = []
-        row_keys = row.keys()
-        for i in range(1, 11):
-            cat_key = f"category{i}"
-            cat_value = row[cat_key] if cat_key in row_keys else ""
-            if cat_value and str(cat_value).strip():
-                raw_categories.append(str(cat_value).strip())
-
-        if not raw_categories:
-            return []
-
-        # Convert to IPTC keyword format for expansion
-        # IPTC expand_keywords expects [{"name": "category"}, ...]
-        keyword_dicts: list[dict[str, str]] = [{"name": cat} for cat in raw_categories]
-
-        # expand_keywords normalizes and expands with IPTC aliases
-        expanded: list[str] = expand_keywords(keyword_dicts)
-        return expanded
+        return cast(list[str], build_categories_array(row))
 
     def _row_to_search_document(self, row: sqlite3.Row) -> SearchDocument:
         """Convert SQLite row to SearchDocument."""
@@ -323,7 +318,12 @@ class PodcastIndexNightlyETL:
             cast_names=[],
         )
 
-    def _add_display_fields(self, redis_doc: dict[str, Any], row: sqlite3.Row) -> dict[str, Any]:
+    def _add_display_fields(
+        self,
+        redis_doc: dict[str, Any],
+        row: sqlite3.Row,
+        parent_mc_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Add podcast-specific display fields to Redis document."""
         redis_doc["title"] = row["title"]
         redis_doc["url"] = row["url"]
@@ -335,6 +335,8 @@ class PodcastIndexNightlyETL:
         redis_doc["language"] = normalize_tag(raw_language) if raw_language else None
         # Normalized and IPTC-expanded categories array
         redis_doc["categories"] = self._build_categories_array(row)
+        if parent_mc_ids is not None:
+            redis_doc["parent_mc_ids"] = parent_mc_ids
         # Normalized author for exact TAG matching
         raw_author = row["itunesAuthor"] or ""
         redis_doc["author_normalized"] = normalize_tag(raw_author) if raw_author else None
@@ -356,6 +358,24 @@ class PodcastIndexNightlyETL:
         redis_doc["relevancy_score"] = None
 
         return redis_doc
+
+    async def _prepare_row_document(
+        self,
+        row: sqlite3.Row,
+    ) -> tuple[str, dict[str, Any]]:
+        """Build the Redis document for a PodcastIndex row."""
+        search_doc = self._row_to_search_document(row)
+        redis_doc = document_to_redis(search_doc)
+        categories = self._build_categories_array(row)
+        parent_mc_ids: list[str] | None = None
+        if has_after_shows_tag(categories):
+            if self.search_repo is None:
+                raise RuntimeError("Search repository is not initialized")
+            title = row["title"] or ""
+            parent_mc_ids = await resolve_parent_mc_ids(self.search_repo, str(title))
+        redis_doc = self._add_display_fields(redis_doc, row, parent_mc_ids=parent_mc_ids)
+        key = f"podcast:{search_doc.id}"
+        return key, redis_doc
 
     async def run(
         self,
@@ -389,6 +409,8 @@ class PodcastIndexNightlyETL:
             # Step 2: Connect to Redis
             if not dry_run:
                 await self._connect_redis()
+            elif self.search_repo is None:
+                self.search_repo = RedisRepository()
 
             # Step 3: Query database
             logger.info("Querying database for recent updates...")
@@ -403,36 +425,31 @@ class PodcastIndexNightlyETL:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # Build query with filters (same as bulk loader + lastUpdate filter)
-            query = """
-                SELECT
-                    id, title, url, link, description,
-                    itunesAuthor, itunesOwnerName, imageUrl, language,
-                    category1, category2, category3, category4, category5,
-                    category6, category7, category8, category9, category10,
-                    episodeCount, popularityScore, itunesId, podcastGuid, lastUpdate
-                FROM podcasts
-                WHERE
-                    lastUpdate >= ?
-                    AND popularityScore >= ?
-                    AND language LIKE 'en%'
-                    AND episodeCount > 0
-                    AND imageUrl != ''
-                    AND imageUrl IS NOT NULL
-                    AND dead = 0
-                ORDER BY popularityScore DESC, episodeCount DESC
-            """
-            params: list[Any] = [since_timestamp, MIN_POPULARITY_SCORE]
+            default_query, default_params = build_default_query(
+                since_timestamp=since_timestamp,
+                min_popularity=MIN_POPULARITY_SCORE,
+                limit=limit,
+            )
+            after_shows_query, after_shows_params = build_after_shows_query(
+                since_timestamp=since_timestamp,
+                limit=limit,
+            )
 
-            if limit:
-                query += " LIMIT ?"
-                params.append(limit)
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
+            cursor.execute(default_query, default_params)
+            default_rows = cursor.fetchall()
+            cursor.execute(after_shows_query, after_shows_params)
+            after_shows_rows = cursor.fetchall()
+            rows = merge_rows_by_feed_id(default_rows, after_shows_rows)
+            if limit is not None:
+                rows = rows[:limit]
 
             stats.after_filters = len(rows)
-            logger.info(f"  Found {len(rows):,} podcasts matching criteria")
+            logger.info(
+                "  Found %s podcasts matching criteria (%s default + %s after-shows override)",
+                f"{len(rows):,}",
+                f"{len(default_rows):,}",
+                f"{len(after_shows_rows):,}",
+            )
 
             if not rows:
                 logger.info("No podcasts to update")
@@ -444,30 +461,31 @@ class PodcastIndexNightlyETL:
 
             prepared: list[tuple[str, dict[str, Any]]] = []
 
-            for row in rows:
-                try:
-                    search_doc = self._row_to_search_document(row)
-                    redis_doc = document_to_redis(search_doc)
-                    redis_doc = self._add_display_fields(redis_doc, row)
-                    key = f"podcast:{search_doc.id}"
+            for batch_start in range(0, len(rows), PARENT_RESOLUTION_BATCH_SIZE):
+                row_batch = rows[batch_start : batch_start + PARENT_RESOLUTION_BATCH_SIZE]
+                prepared_batch = await asyncio.gather(
+                    *(self._prepare_row_document(row) for row in row_batch),
+                    return_exceptions=True,
+                )
+                for row, prepared_result in zip(row_batch, prepared_batch, strict=True):
+                    if isinstance(prepared_result, BaseException):
+                        stats.errors += 1
+                        if stats.errors <= 5:
+                            row_keys = row.keys()
+                            podcast_id = row["id"] if "id" in row_keys else "unknown"
+                            stats.error_messages.append(f"Feed {podcast_id}: {prepared_result}")
+                            logger.error(f"Error processing podcast {podcast_id}: {prepared_result}")
+                        continue
 
+                    key, redis_doc = prepared_result
+                    search_title = redis_doc.get("search_title")
                     if dry_run:
                         stats.documents_loaded += 1
-                        if stats.documents_loaded <= 5:
-                            logger.info(
-                                f"  [DRY RUN] Would load: {search_doc.search_title[:50]} -> {key}"
-                            )
+                        if stats.documents_loaded <= 5 and isinstance(search_title, str):
+                            logger.info(f"  [DRY RUN] Would load: {search_title[:50]} -> {key}")
                     else:
                         prepared.append((key, redis_doc))
                         stats.documents_loaded += 1
-
-                except Exception as e:
-                    stats.errors += 1
-                    if stats.errors <= 5:
-                        row_keys = row.keys()
-                        podcast_id = row["id"] if "id" in row_keys else "unknown"
-                        stats.error_messages.append(f"Feed {podcast_id}: {e}")
-                        logger.error(f"Error processing podcast {podcast_id}: {e}")
 
             if not dry_run:
                 for i in range(0, len(prepared), REDIS_BATCH_SIZE):
