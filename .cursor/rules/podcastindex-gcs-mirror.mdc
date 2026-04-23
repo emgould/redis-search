@@ -1,0 +1,56 @@
+# PodcastIndex GCS Mirror
+
+## Problem
+
+Cloudflare blocks the ETL VM's GCE egress IP (`104.197.234.17`) from
+`public.podcastindex.org` since ~2026-04-18.  Any User-Agent or HTTP client
+produces HTTP 403 from that source IP.  The block is IP/ASN-level and cannot
+be bypassed with header manipulation.
+
+## Solution
+
+A GitHub Actions workflow mirrors the daily PodcastIndex database dump to GCS.
+The ETL reads from GCS first and falls back to the public URL.
+
+### Components
+
+| Component | Path |
+|---|---|
+| GH Actions workflow | `.github/workflows/mirror-podcastindex-db.yml` |
+| ETL download logic | `src/etl/pi_nightly_etl.py` (`_download_from_gcs`, `_download_from_public_url`, `_download_database`) |
+
+### GCS Location
+
+```
+gs://mc-redis-etl/redis-search/podcastindex/podcastindex_feeds.db.tgz
+```
+
+### Schedule
+
+- **Mirror workflow**: daily at 10:00 UTC (after PI publishes ~09:00 UTC)
+- **Nightly ETL**: triggers at ~03:00 ET / 07:00 UTC (uses the GCS copy)
+
+### GitHub Repo Secret
+
+The workflow authenticates to GCS using the `GCP_SA_KEY` repo secret, which
+contains the JSON key for `media-manager@media-circle.iam.gserviceaccount.com`.
+
+### ETL Download Order
+
+1. `_download_from_gcs` — uses `gcloud storage cp` (available in the ETL container).
+2. `_download_from_public_url` — original `urllib` download; only attempted if GCS fails.
+
+### Failure Modes
+
+- **GCS mirror missing**: First run before the workflow has ever executed.
+  Falls back to public URL (will still fail on GCE but works locally).
+- **GCS mirror stale**: Workflow failed or PodcastIndex was late.  The ETL
+  uses whatever copy exists; the 48-hour `since_hours` window compensates.
+- **gcloud CLI missing**: `FileNotFoundError` is caught; falls back.
+
+### First-Time Setup
+
+1. Add the `GCP_SA_KEY` repo secret in GitHub → Settings → Secrets.
+   Value: contents of `config/media-circle-3db28338ecf4.json`.
+2. Trigger the workflow manually once (`workflow_dispatch`) to seed the GCS mirror.
+3. The next nightly ETL run will pick up the GCS copy automatically.

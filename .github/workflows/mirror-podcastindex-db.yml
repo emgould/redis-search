@@ -1,0 +1,50 @@
+name: Mirror PodcastIndex DB to GCS
+
+on:
+  schedule:
+    # Run daily at 10:00 UTC (after PI publishes ~09:00 UTC, before nightly ETL at 03:00 ET / 07:00 UTC)
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: mirror-podcastindex
+  cancel-in-progress: false
+
+env:
+  GCS_BUCKET: mc-redis-etl
+  GCS_PATH: redis-search/podcastindex/podcastindex_feeds.db.tgz
+  SOURCE_URL: https://public.podcastindex.org/podcastindex_feeds.db.tgz
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download podcastindex_feeds.db.tgz
+        run: |
+          echo "Downloading from $SOURCE_URL ..."
+          curl -fSL --retry 3 --retry-delay 10 \
+            -o podcastindex_feeds.db.tgz \
+            "$SOURCE_URL"
+          ls -lh podcastindex_feeds.db.tgz
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload to GCS
+        run: |
+          gcloud storage cp podcastindex_feeds.db.tgz \
+            "gs://${GCS_BUCKET}/${GCS_PATH}"
+          echo "Uploaded to gs://${GCS_BUCKET}/${GCS_PATH}"
+
+      - name: Verify upload
+        run: |
+          gcloud storage ls -l "gs://${GCS_BUCKET}/${GCS_PATH}"

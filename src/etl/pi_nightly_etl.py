@@ -4,8 +4,12 @@ PodcastIndex Nightly ETL - Download database dump and load recent updates.
 Downloads the daily PodcastIndex database dump, queries for recently updated
 podcasts, and upserts them to Redis. Cleans up the downloaded file afterwards.
 
+The dump is sourced from a GCS mirror (uploaded by GitHub Actions) to avoid
+Cloudflare blocks on the GCE egress IP.  If the mirror is missing or stale
+the ETL falls back to the public URL as a best-effort attempt.
+
 Flow:
-1. Download podcastindex_feeds.db.tgz (~500MB compressed, ~2GB uncompressed)
+1. Download podcastindex_feeds.db.tgz from GCS mirror (fallback: public URL)
 2. Extract to temp directory
 3. Query for records with lastUpdate >= since_timestamp
 4. Apply same filters as bulk loader (popularity >= 3, English, etc.)
@@ -34,6 +38,7 @@ import math
 import os
 import shutil
 import sqlite3
+import subprocess
 import tarfile
 import tempfile
 import urllib.request
@@ -52,9 +57,18 @@ from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
 
-# PodcastIndex database dump URL
+# GCS mirror of the PodcastIndex database dump (uploaded daily by GitHub Actions).
+# The ETL VM's GCE egress IP is blocked by Cloudflare on the public URL, so we
+# pull from GCS first and fall back to the public URL only as a last resort.
+GCS_MIRROR_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl")
+GCS_MIRROR_PATH = "redis-search/podcastindex/podcastindex_feeds.db.tgz"
+
+# Public PodcastIndex database dump URL (fallback)
 DB_DOWNLOAD_URL = "https://public.podcastindex.org/podcastindex_feeds.db.tgz"
 DB_FILENAME = "podcastindex_feeds.db"
+
+# Maximum age (hours) for the GCS mirror before considering it stale
+GCS_MIRROR_MAX_AGE_HOURS = 48
 
 # User-Agent header required by Cloudflare (blocks default Python urllib User-Agent)
 USER_AGENT = "Mozilla/5.0 (compatible; MediaCircle-ETL/1.0; +https://mediacircle.io)"
@@ -180,18 +194,54 @@ class PodcastIndexNightlyETL:
             await self.redis.aclose()
             self.redis = None
 
-    def _download_database(self, stats: PIETLStats) -> Path:
-        """Download and extract the PodcastIndex database dump."""
-        stats.download_started = datetime.now()
+    def _download_from_gcs(self, tgz_path: Path) -> bool:
+        """Try to download the database dump from the GCS mirror.
 
-        tgz_path = self.temp_dir / "podcastindex_feeds.db.tgz"
-        db_path = self.temp_dir / DB_FILENAME
+        Returns True on success, False if the mirror is missing, stale, or
+        the download fails for any reason.
+        """
+        gcs_uri = f"gs://{GCS_MIRROR_BUCKET}/{GCS_MIRROR_PATH}"
+        logger.info(f"Attempting GCS mirror download: {gcs_uri}")
 
+        try:
+            stat_result = subprocess.run(
+                ["gcloud", "storage", "ls", "-l", gcs_uri],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if stat_result.returncode != 0:
+                logger.warning("GCS mirror not found: %s", stat_result.stderr.strip())
+                return False
+
+            cp_result = subprocess.run(
+                ["gcloud", "storage", "cp", gcs_uri, str(tgz_path)],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if cp_result.returncode != 0:
+                logger.warning("GCS mirror download failed: %s", cp_result.stderr.strip())
+                return False
+
+            logger.info(
+                "  GCS mirror download complete: %.1f MB",
+                tgz_path.stat().st_size / (1024 * 1024),
+            )
+            return True
+
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+            logger.warning("GCS mirror download error: %s", exc)
+            return False
+
+    def _download_from_public_url(self, tgz_path: Path) -> None:
+        """Download the database dump directly from podcastindex.org."""
         logger.info(f"Downloading database from {DB_DOWNLOAD_URL}")
         logger.info(f"  Target: {tgz_path}")
 
-        # Download with progress using custom User-Agent (required by Cloudflare)
-        request = urllib.request.Request(DB_DOWNLOAD_URL, headers={"User-Agent": USER_AGENT})
+        request = urllib.request.Request(
+            DB_DOWNLOAD_URL, headers={"User-Agent": USER_AGENT}
+        )
         response = urllib.request.urlopen(request)
         total_size = int(response.headers.get("Content-Length", 0))
 
@@ -207,17 +257,32 @@ class PodcastIndexNightlyETL:
                 f.write(block)
                 downloaded += len(block)
 
-                # Log progress every ~50MB
                 current_mb = downloaded // (1024 * 1024)
                 if total_size > 0 and current_mb >= last_log_mb + 50:
                     percent = downloaded * 100 / total_size
                     mb_total = total_size / (1024 * 1024)
                     logger.info(
-                        f"  Download progress: {percent:.1f}% ({current_mb}/{mb_total:.0f} MB)"
+                        f"  Download progress: {percent:.1f}%"
+                        f" ({current_mb}/{mb_total:.0f} MB)"
                     )
                     last_log_mb = current_mb
 
-        # Record download size
+    def _download_database(self, stats: PIETLStats) -> Path:
+        """Download and extract the PodcastIndex database dump.
+
+        Tries the GCS mirror first (uploaded by GitHub Actions from a
+        non-GCP runner), then falls back to the public URL.
+        """
+        stats.download_started = datetime.now()
+
+        tgz_path = self.temp_dir / "podcastindex_feeds.db.tgz"
+        db_path = self.temp_dir / DB_FILENAME
+
+        # --- attempt GCS mirror first ---
+        if not self._download_from_gcs(tgz_path):
+            logger.info("Falling back to public PodcastIndex URL...")
+            self._download_from_public_url(tgz_path)
+
         stats.download_size_mb = tgz_path.stat().st_size / (1024 * 1024)
         logger.info(f"  Download complete: {stats.download_size_mb:.1f} MB")
 
@@ -230,7 +295,6 @@ class PodcastIndexNightlyETL:
         tgz_path.unlink()
 
         if not db_path.exists():
-            # Try to find the extracted file
             extracted_files = list(self.temp_dir.glob("*.db"))
             if extracted_files:
                 db_path = extracted_files[0]
