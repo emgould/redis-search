@@ -38,7 +38,6 @@ import math
 import os
 import shutil
 import sqlite3
-import subprocess
 import tarfile
 import tempfile
 import urllib.request
@@ -47,6 +46,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from google.cloud import storage as gcs_storage  # type: ignore[attr-defined]
 from redis.asyncio import Redis
 
 from adapters.config import load_env
@@ -197,32 +197,25 @@ class PodcastIndexNightlyETL:
     def _download_from_gcs(self, tgz_path: Path) -> bool:
         """Try to download the database dump from the GCS mirror.
 
-        Returns True on success, False if the mirror is missing, stale, or
-        the download fails for any reason.
+        Uses the google-cloud-storage Python SDK (already a project dependency)
+        so this works inside the slim ETL Docker container which has no gcloud CLI.
+
+        Returns True on success, False if the mirror is missing or the
+        download fails for any reason.
         """
         gcs_uri = f"gs://{GCS_MIRROR_BUCKET}/{GCS_MIRROR_PATH}"
         logger.info(f"Attempting GCS mirror download: {gcs_uri}")
 
         try:
-            stat_result = subprocess.run(
-                ["gcloud", "storage", "ls", "-l", gcs_uri],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if stat_result.returncode != 0:
-                logger.warning("GCS mirror not found: %s", stat_result.stderr.strip())
+            client = gcs_storage.Client()
+            bucket = client.bucket(GCS_MIRROR_BUCKET)
+            blob = bucket.blob(GCS_MIRROR_PATH)
+
+            if not blob.exists():
+                logger.warning("GCS mirror blob does not exist: %s", gcs_uri)
                 return False
 
-            cp_result = subprocess.run(
-                ["gcloud", "storage", "cp", gcs_uri, str(tgz_path)],
-                capture_output=True,
-                text=True,
-                timeout=600,
-            )
-            if cp_result.returncode != 0:
-                logger.warning("GCS mirror download failed: %s", cp_result.stderr.strip())
-                return False
+            blob.download_to_filename(str(tgz_path))
 
             logger.info(
                 "  GCS mirror download complete: %.1f MB",
@@ -230,7 +223,7 @@ class PodcastIndexNightlyETL:
             )
             return True
 
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        except Exception as exc:
             logger.warning("GCS mirror download error: %s", exc)
             return False
 
