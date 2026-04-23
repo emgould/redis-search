@@ -1,0 +1,146 @@
+---
+description: Requirements for an idempotent RediSearch schema migration runner. Background, problem statement, and acceptance criteria for a follow-up implementation PR.
+globs:
+  - "web/app.py"
+  - "scripts/build_redis_index.py"
+  - "scripts/promote_to_dev.py"
+  - "scripts/copy_to_local.py"
+  - "scripts/bulk_clone_prefix.py"
+alwaysApply: false
+---
+
+# RediSearch Schema Migration Runner — Requirements
+
+## Background
+
+The repo defines all RediSearch index schemas in `INDEX_CONFIGS` in [web/app.py](web/app.py). The currently registered indexes are `idx:media`, `idx:people`, `idx:podcasts`, `idx:author`, and `idx:book`.
+
+There is **no automated path** to apply schema additions to a live index. Specifically:
+
+- The API server's startup hook (`@app.on_event("startup")` in `web/app.py`) only configures logging.
+- `POST /api/index/{name}` (web/app.py `create_index`) is **create-only**. It returns "Index already exists" as a success when the index is present, and never issues `FT.ALTER`.
+- `scripts/build_redis_index.py` performs full create or drop-and-recreate, not incremental schema changes.
+- One precedent for an inline ALTER exists in `scripts/backfill_title_compact.py --alter-index`, but it is field-specific, not generic.
+
+Consequence: when a new field is added to `INDEX_CONFIGS`, applying it to each running Redis instance requires a manual, ad-hoc `FT.ALTER`, often per environment, with no record in source control of which environments have been migrated.
+
+## Problem statement
+
+PR #98 (`add itunes_id to idx:podcasts`) made this gap concrete. The schema field was added to `INDEX_CONFIGS`, but updating the running indexes was a hand-rolled `FT.ALTER` against the public Redis tunnel — without code review, without a runbook, and without any guarantee that other environments (local dev, dev/staging if separate, fresh provisions) stay consistent.
+
+We need a single, idempotent runner that takes the source-of-truth schema definitions and reconciles each Redis environment to that definition. The runner must be safe to invoke repeatedly, safe to invoke on a fresh environment, and safe to invoke on an already-migrated environment.
+
+## Goals
+
+1. **Source of truth = `INDEX_CONFIGS`.** Engineers change schema there. Nothing else needs editing to roll out the change.
+2. **Idempotent.** Re-running the migration on an already-migrated environment is a no-op.
+3. **Targeted.** Diffs only the missing attributes; does not drop or recreate existing indexes.
+4. **Observable.** Reports the diff before applying, and reports the apply result after.
+5. **Safe.** Does not perform destructive operations (no schema deletes, no index drops) without an explicit flag.
+
+## Out of scope
+
+- Type changes for an existing attribute (e.g. converting an existing TAG to NUMERIC). RediSearch cannot ALTER existing attribute types in place; this still requires a drop-and-recreate, which the runner should detect and refuse, deferring to operator decision.
+- Removing attributes from an index. RediSearch supports `FT.ALTER ... SCHEMA DEL`, but removal must be opt-in and explicit per-attribute; not part of the default reconcile path.
+- Runtime/async invocation from inside the API server. The runner is a CLI / script, not an in-process startup migration.
+- Data backfill for the new attribute. The runner only applies the schema delta. Any per-document backfill (e.g., populating a new derived field) is a separate concern owned by the caller.
+
+## Functional requirements
+
+### F1. Diff command
+
+`python scripts/redis_schema_migrate.py --diff [--index NAME] [--env ENV]`
+
+For each index in `INDEX_CONFIGS` (or just the named one):
+- Inspect the live index via `FT.INFO`.
+- Parse the existing attribute set into `(json_path, as_name, type, options)` tuples.
+- Parse the target schema from `INDEX_CONFIGS[name]["schema"]`.
+- Output, per index:
+  - Attributes present in target but missing on live (will be added).
+  - Attributes present on live but missing in target (will be reported, never deleted unless `--allow-delete` is passed).
+  - Attributes whose type or options changed (will be reported as **incompatible**; runner must refuse to apply).
+  - "No changes" if the live index matches.
+
+Exit code: 0 if no changes needed, 1 if changes pending, 2 on incompatible-type drift.
+
+### F2. Apply command
+
+`python scripts/redis_schema_migrate.py --apply [--index NAME] [--env ENV] [--allow-delete]`
+
+- Performs the diff first (must succeed with no incompatible drift).
+- For each missing attribute: emits a single `FT.ALTER {index} SCHEMA ADD {json_path} AS {as_name} {TYPE} [options]`.
+- Polls `FT.INFO` for `indexing == 0` and `percent_indexed == 1` per altered index before returning.
+- Reports `hash_indexing_failures` after backfill; non-zero is a non-fatal warning.
+
+Without `--allow-delete`, attributes only present on live are reported but not removed. With `--allow-delete`, missing-from-target attributes are removed via `FT.ALTER ... SCHEMA DEL`.
+
+### F3. Environment selection
+
+`--env` accepts at minimum `local`, `public` (alias for the IAP-tunnelled GCE Redis on `localhost:6381`), and `scratch`. Connection details are sourced from the same environment variables as the rest of the codebase (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `PUBLIC_REDIS_*`). The runner must never default to `--env public` without an explicit operator action.
+
+### F4. Schema introspection
+
+The runner must correctly parse the live `FT.INFO` response into the same shape it can compare against `INDEX_CONFIGS` `Field` objects (TextField, TagField, NumericField, with attributes like `weight`, `no_stem`, `sortable`, `as_name`, the JSON path). This is the only non-trivial implementation surface.
+
+### F5. Idempotence
+
+Running `--apply` twice in a row against the same env produces a no-op on the second run. CI or pre-deploy hooks can call it without coordination.
+
+## Non-functional requirements
+
+### N1. Read-only by default
+
+Default invocation with no flags must be `--diff`. There must be no path where invoking the runner with no arguments mutates Redis state.
+
+### N2. No side effects on documents
+
+The runner only touches `FT.ALTER` and `FT.INFO`. It does not write or modify any `JSON.SET`/`HSET` document keys.
+
+### N3. Logging and exit codes
+
+Exit codes must be machine-readable so the runner can be wrapped in a Make target, CI step, or deploy hook:
+- `0` — clean (no diff, or apply succeeded with zero failures)
+- `1` — diff has pending changes (when `--diff` is the mode)
+- `2` — incompatible drift detected, manual intervention required
+- `3` — connection / Redis error
+
+### N4. No new runtime dependencies
+
+The runner uses the same `redis.asyncio` client and `INDEX_CONFIGS` import pattern already used by `scripts/build_redis_index.py`. No new top-level packages.
+
+### N5. Documentation
+
+`.cursor/rules/using_redis_search.mdc` (and `redis-index-reference.mdc` if relevant) must be updated to point at the runner as the canonical path for any schema change. The "what to do when adding a field" guidance becomes:
+
+1. Update `INDEX_CONFIGS[name]["schema"]` in `web/app.py`.
+2. Run `python scripts/redis_schema_migrate.py --diff --env local` to confirm the expected change.
+3. Run `python scripts/redis_schema_migrate.py --apply --env local` to apply.
+4. Open PR with the source change.
+5. After merge, apply to other envs (or have CI/deploy hook do it).
+
+## Acceptance criteria
+
+A reviewer should be able to:
+
+1. Add a new `NumericField` to `INDEX_CONFIGS["podcasts"]` on a feature branch.
+2. Run the runner against a clean local Redis where that field is missing — diff reports exactly one pending change.
+3. Run `--apply` — the field is added, `percent_indexed` reaches 1, exit code 0.
+4. Re-run the runner — exit code 0, no changes reported.
+5. Manually drop one field from the live index using `FT.ALTER ... SCHEMA DEL` — diff reports it as missing-on-live, runner re-adds it on `--apply`.
+6. Manually attempt to change a field type in `INDEX_CONFIGS` (e.g. `TagField` -> `NumericField` on the same `as_name`) — diff reports incompatible drift with exit code 2 and refuses to apply.
+
+## Open questions for design phase
+
+These are decisions for the implementation PR, not part of the requirements:
+
+- **Where does the runner live?** Most likely `scripts/redis_schema_migrate.py` to match existing tooling, but could equally be a subcommand of `scripts/build_redis_index.py`.
+- **Should it be wired into `make` targets?** E.g. `make schema-diff` / `make schema-apply ENV=local`.
+- **Should Cloud Run deploy automatically run `--diff` against the target Redis as a smoke check?** This would catch source-vs-runtime drift at deploy time without mutating anything.
+- **How should "incompatible drift" be resolved?** Likely a separate `scripts/redis_index_rebuild.py` that does drop-and-recreate with explicit operator confirmation, but that script is out of scope for the migration runner.
+
+## Reference: precedents in the codebase
+
+- `scripts/backfill_title_compact.py --alter-index` — single-purpose ALTER for one specific field. Pattern to generalize.
+- `scripts/build_redis_index.py` — already imports `INDEX_CONFIGS` from `web/app.py`. Reuse that import pattern.
+- `scripts/promote_to_dev.py` and `scripts/copy_to_local.py` — already construct schema from `INDEX_CONFIGS`; the migration runner shares the same source-of-truth.
+- `scripts/bulk_clone_prefix.py` `recreate_index` — drop-and-recreate path; intentionally distinct from the incremental ALTER path the migration runner provides.
