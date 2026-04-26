@@ -105,6 +105,14 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
   "spoken_languages": ["en"],
   "production_companies": ["Fox 2000 Pictures"],
   "production_countries": ["US"],
+  "microgenres": {
+    "confidence": 0.9,
+    "microgenre_scores": {
+      "drama.crime.neonoir": 0.88,
+      "thriller.mystery.noir": 0.72
+    },
+    "rationale": "Stylized crime-noir character drama with strong psychological thriller overlap."
+  },
   "tagline": "How much can you know about yourself until the day your wife is gone?",
   "vote_count": 25600,
   "vote_average": 8.4,
@@ -121,6 +129,11 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 ```
 
 #### Movie vs TV populated fields
+
+Microgenre classifications, when available, are stored on both movie and TV
+documents as `microgenres: { confidence, microgenre_scores, rationale }`.
+This field is stored JSON only and is not currently part of the RediSearch
+schema.
 
 - Movie documents include:
   - `release_date`

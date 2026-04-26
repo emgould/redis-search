@@ -36,6 +36,9 @@ from redis.asyncio import Redis
 
 from adapters.config import load_env
 from adapters.media_manager_client import MEDIA_INDEX_NAMES, MediaManagerClient
+from ai.microgenre_batch import build_microgenre_input_from_document
+from ai.microgenre_document import microgenre_result_to_redis, valid_microgenres_value
+from ai.prompts.microgenre_classifier import score_microgenres
 from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
@@ -111,6 +114,8 @@ class ChangesETLStats:
     # Filtering
     passed_filter: int = 0
     failed_filter: int = 0
+    existing_items: int = 0
+    new_items: int = 0
     documentary_passed_filter: int = 0
     documentary_failed_filter: int = 0
 
@@ -129,6 +134,10 @@ class ChangesETLStats:
     current_phase: str = ""
     enriched_count: int = 0
     enrichment_errors: int = 0
+    microgenres_generated: int = 0
+    microgenres_preserved: int = 0
+    microgenres_skipped_existing: int = 0
+    microgenres_failed: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -139,6 +148,8 @@ class ChangesETLStats:
             "non_adult_changes": self.non_adult_changes,
             "passed_filter": self.passed_filter,
             "failed_filter": self.failed_filter,
+            "existing_items": self.existing_items,
+            "new_items": self.new_items,
             "documentary_passed_filter": self.documentary_passed_filter,
             "documentary_failed_filter": self.documentary_failed_filter,
             "staging_file": self.staging_file,
@@ -164,6 +175,12 @@ class ChangesETLStats:
                 "docs_queued": self.mm_docs_queued,
                 "docs_filtered": self.mm_docs_filtered,
                 "errors": self.mm_errors,
+            },
+            "microgenres": {
+                "generated": self.microgenres_generated,
+                "preserved": self.microgenres_preserved,
+                "skipped_existing": self.microgenres_skipped_existing,
+                "failed": self.microgenres_failed,
             },
         }
 
@@ -482,10 +499,12 @@ class TMDBChangesETL(TMDBService):
                 if is_existing:
                     enriched_items.append(item_dict)
                     stats.passed_filter += 1
+                    stats.existing_items += 1
                 elif media_type == "person":
                     if self._passes_person_filter(item_dict):
                         enriched_items.append(item_dict)
                         stats.passed_filter += 1
+                        stats.new_items += 1
                     else:
                         stats.failed_filter += 1
                 else:
@@ -493,6 +512,7 @@ class TMDBChangesETL(TMDBService):
                     if self._passes_media_filter(item_dict):
                         enriched_items.append(item_dict)
                         stats.passed_filter += 1
+                        stats.new_items += 1
                         if item_is_documentary:
                             stats.documentary_passed_filter += 1
                     else:
@@ -616,6 +636,10 @@ class TMDBChangesETL(TMDBService):
             load_start = time.time()
             batch_size = 100
             enrich_semaphore = asyncio.Semaphore(20)
+            microgenre_concurrency = max(
+                1, int(os.getenv("MICROGENRE_ETL_CONCURRENCY", "3"))
+            )
+            microgenre_semaphore = asyncio.Semaphore(microgenre_concurrency)
 
             async def _enrich_with_backoff(redis_doc: dict[str, Any]) -> None:
                 """Enrich a single doc: local first, then Algolia with rate-limit backoff."""
@@ -638,6 +662,62 @@ class TMDBChangesETL(TMDBService):
                                 if not is_rate_limit:
                                     logger.debug("Algolia enrichment failed for doc: %s", exc)
                                 return
+
+            async def _attach_microgenres(
+                redis_doc: dict[str, Any],
+                existing_doc: dict[str, Any] | None,
+            ) -> None:
+                """Attach compact microgenre metadata, failing open on classifier errors."""
+                existing_microgenres = valid_microgenres_value(
+                    existing_doc.get("microgenres") if existing_doc else None
+                )
+                if existing_microgenres is not None:
+                    redis_doc["microgenres"] = existing_microgenres
+                    stats.microgenres_preserved += 1
+                    return
+
+                if existing_doc is not None:
+                    stats.microgenres_skipped_existing += 1
+                    return
+
+                current_microgenres = valid_microgenres_value(redis_doc.get("microgenres"))
+                if current_microgenres is not None:
+                    redis_doc["microgenres"] = current_microgenres
+                    stats.microgenres_preserved += 1
+                    return
+
+                doc_media_type = redis_doc.get("mc_type")
+                if doc_media_type not in ("movie", "tv"):
+                    return
+
+                async with microgenre_semaphore:
+                    try:
+                        classifier_input = build_microgenre_input_from_document(
+                            redis_doc,
+                            cast(Literal["movie", "tv"], doc_media_type),
+                            score_threshold=0.1,
+                        )
+                        response = await score_microgenres(classifier_input)
+                    except Exception as exc:
+                        stats.microgenres_failed += 1
+                        logger.warning(
+                            "Microgenre classification raised for %s: %s",
+                            redis_doc.get("mc_id") or redis_doc.get("id"),
+                            exc,
+                        )
+                        return
+
+                if response.error is not None or response.result is None:
+                    stats.microgenres_failed += 1
+                    logger.warning(
+                        "Microgenre classification failed for %s: %s",
+                        redis_doc.get("mc_id") or redis_doc.get("id"),
+                        response.error or "no result",
+                    )
+                    return
+
+                redis_doc["microgenres"] = microgenre_result_to_redis(response.result)
+                stats.microgenres_generated += 1
 
             for i in range(0, len(items), batch_size):
                 batch = items[i : i + batch_size]
@@ -677,6 +757,19 @@ class TMDBChangesETL(TMDBService):
                     for key, _ in prepared:
                         read_pipe.json().get(key)
                     existing_docs: list[object] = await read_pipe.execute()
+
+                    if media_type != "person":
+                        await asyncio.gather(
+                            *[
+                                _attach_microgenres(
+                                    redis_doc,
+                                    existing if isinstance(existing, dict) else None,
+                                )
+                                for (_key, redis_doc), existing in zip(
+                                    prepared, existing_docs, strict=True
+                                )
+                            ]
+                        )
 
                     write_pipe = redis.pipeline()
                     for (key, redis_doc), existing in zip(prepared, existing_docs, strict=True):

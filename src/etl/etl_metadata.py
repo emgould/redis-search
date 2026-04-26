@@ -43,6 +43,11 @@ class JobRunResult:
     documents_skipped: int = 0
     errors_count: int = 0
     mm_docs_sent: int = 0
+    new_entries: int = 0
+    microgenres_generated: int = 0
+    microgenres_preserved: int = 0
+    microgenres_skipped_existing: int = 0
+    microgenres_failed: int = 0
 
     # Error tracking
     error_message: str | None = None
@@ -64,6 +69,11 @@ class JobRunResult:
             "documents_skipped": self.documents_skipped,
             "errors_count": self.errors_count,
             "mm_docs_sent": self.mm_docs_sent,
+            "new_entries": self.new_entries,
+            "microgenres_generated": self.microgenres_generated,
+            "microgenres_preserved": self.microgenres_preserved,
+            "microgenres_skipped_existing": self.microgenres_skipped_existing,
+            "microgenres_failed": self.microgenres_failed,
             "error_message": self.error_message,
             "errors": self.errors[:20] if self.errors else [],  # Limit stored errors
         }
@@ -91,6 +101,11 @@ class ETLRunMetadata:
     total_documents_upserted: int = 0
     total_errors: int = 0
     total_mm_docs_sent: int = 0
+    total_new_entries: int = 0
+    total_microgenres_generated: int = 0
+    total_microgenres_preserved: int = 0
+    total_microgenres_skipped_existing: int = 0
+    total_microgenres_failed: int = 0
 
     # Media Manager pipeline events (structured, not just log strings)
     mm_health_check: str | None = None  # "ok", "unavailable", or None (not configured)
@@ -132,6 +147,11 @@ class ETLRunMetadata:
             "total_documents_upserted": self.total_documents_upserted,
             "total_errors": self.total_errors,
             "total_mm_docs_sent": self.total_mm_docs_sent,
+            "total_new_entries": self.total_new_entries,
+            "total_microgenres_generated": self.total_microgenres_generated,
+            "total_microgenres_preserved": self.total_microgenres_preserved,
+            "total_microgenres_skipped_existing": self.total_microgenres_skipped_existing,
+            "total_microgenres_failed": self.total_microgenres_failed,
             "media_manager_pipeline": {
                 "health_check": self.mm_health_check,
                 "queue_drained": self.mm_queue_drained,

@@ -323,6 +323,11 @@ class ETLRunner:
             result.documents_skipped = stats.failed_filter
             if isinstance(stats, ChangesETLStats):
                 result.mm_docs_sent = stats.mm_docs_sent
+                result.new_entries = stats.new_items
+                result.microgenres_generated = stats.microgenres_generated
+                result.microgenres_preserved = stats.microgenres_preserved
+                result.microgenres_skipped_existing = stats.microgenres_skipped_existing
+                result.microgenres_failed = stats.microgenres_failed
 
             # Collect all errors - bestseller ETL also has search_phase
             all_errors = stats.fetch_phase.errors + stats.load_phase.errors
@@ -483,6 +488,13 @@ class ETLRunner:
                 self._run_metadata.total_documents_upserted += result.documents_upserted
                 self._run_metadata.total_errors += result.errors_count
                 self._run_metadata.total_mm_docs_sent += result.mm_docs_sent
+                self._run_metadata.total_new_entries += result.new_entries
+                self._run_metadata.total_microgenres_generated += result.microgenres_generated
+                self._run_metadata.total_microgenres_preserved += result.microgenres_preserved
+                self._run_metadata.total_microgenres_skipped_existing += (
+                    result.microgenres_skipped_existing
+                )
+                self._run_metadata.total_microgenres_failed += result.microgenres_failed
 
                 # Update job state (don't let GCS failures kill the whole run)
                 try:
