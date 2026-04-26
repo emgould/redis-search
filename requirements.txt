@@ -27,3 +27,4 @@ filelock
 PyJWT
 requests
 google-api-python-client
+openai

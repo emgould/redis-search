@@ -1,7 +1,8 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
+MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-external-ids etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -90,6 +91,10 @@ help:
 	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
+	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Backfill media microgenres from JSONL"
+	@echo "    make backfill-microgenres REDIS=dev ARGS='--dry-run --limit 100' - Backfill public/dev Redis microgenres"
+	@echo "    make microgenre-batch REDIS=local ARGS='--media-type movie --take 10 --dry-run' - Batch classify from Redis media docs"
+	@echo "    MICROGENRE_PYTHON='python' can override the default pyenv Python for microgenre targets"
 	@echo ""
 	@echo "  Redis Clone (public → local):"
 	@echo "    make scratch-redis-up    - Start disposable scratch Redis on port 6382"
@@ -104,6 +109,7 @@ help:
 	@echo "  Testing:"
 	@echo "    make lint          - Run linting and type checking"
 	@echo "    make test          - Run pytest suite"
+	@echo "    make test-microgenres-integration - Run live AI + Redis microgenre integration tests"
 
 install:
 	bash scripts/python_setup.sh
@@ -411,6 +417,14 @@ elif [ "$(REDIS)" = "public" ]; then source config/etl.dev.env; \
 else echo "ERROR: REDIS=local|public is required"; exit 1; fi
 endef
 
+define MICROGENRE_REDIS_ENV
+set -a && \
+if [ "$(REDIS)" = "local" ]; then source config/local.env; \
+elif [ "$(REDIS)" = "dev" ] || [ "$(REDIS)" = "public" ]; then source config/etl.dev.env; export REDIS_HOST=localhost; export REDIS_PORT=6381; \
+else echo "ERROR: REDIS=local|dev is required"; exit 1; fi; \
+set +a
+endef
+
 cache-version-get:
 	@bash -c '$(CACHE_REDIS_ENV) && python -c "from utils.redis_cache import get_cache_version; print(get_cache_version(\"$(PREFIX)\"))"'
 
@@ -512,6 +526,26 @@ backfill-rt:
 #        make backfill-external-ids ARGS="--dry-run --limit 100"
 backfill-external-ids:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# Backfill compact microgenre metadata from JSONL sidecars into media:* docs
+# Usage: make backfill-microgenres REDIS=local
+#        make backfill-microgenres REDIS=dev MC_TYPE=movie
+#        make backfill-microgenres REDIS=local ARGS="--dry-run --limit 100"
+#        make backfill-microgenres REDIS=dev ARGS="--force"
+backfill-microgenres:
+	@bash -c '$(MICROGENRE_REDIS_ENV) && $(MICROGENRE_PYTHON) scripts/backfill_microgenres.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# Batch classify Redis media docs into microgenre JSONL sidecars
+# Usage: make microgenre-batch REDIS=local ARGS="--media-type movie --take 10 --dry-run"
+#        make microgenre-batch REDIS=dev ARGS="--media-type tv --take 10 --dry-run"
+microgenre-batch:
+	@bash -c '$(MICROGENRE_REDIS_ENV) && PYTHONPATH=src:$$PWD $(MICROGENRE_PYTHON) -m ai.microgenre_batch_cli $(ARGS)'
+
+# Live AI + Redis integration tests for the microgenre pipeline
+# Usage: make test-microgenres-integration REDIS=local
+#        make test-microgenres-integration REDIS=dev
+test-microgenres-integration:
+	@bash -c '$(MICROGENRE_REDIS_ENV) && PYTHONPATH=src:$$PWD $(MICROGENRE_PYTHON) -m pytest -q src/ai/tests -m integration $(ARGS)'
 
 # ============================================================================
 # Redis Clone Operations (public → local)

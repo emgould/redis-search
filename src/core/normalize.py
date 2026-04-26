@@ -20,6 +20,7 @@ from typing import Any, cast
 
 from contracts.models import MCSources, MCSubType, MCType
 from core.iptc import expand_keywords, normalize_tag
+from core.microgenres import MicrogenresDocument, coerce_microgenres_document
 from core.wikidata_crossref import enrich_external_ids
 from utils.genre_mapping import get_genre_mapping_with_fallback
 
@@ -152,6 +153,7 @@ class SearchDocument:
     rt_vanity: str | None = None
     rt_release_year: int | None = None
     rt_runtime: int | None = None
+    microgenres: MicrogenresDocument | None = None
 
 
 class BaseNormalizer(ABC):
@@ -572,6 +574,7 @@ class TMDBMovieNormalizer(BaseTMDBNormalizer):
             spoken_languages=raw.get("spoken_languages"),
             runtime=raw.get("runtime"),
             external_ids=raw.get("external_ids"),
+            microgenres=coerce_microgenres_document(raw.get("microgenres")),
         )
 
 
@@ -642,6 +645,7 @@ class TMDBTvNormalizer(BaseTMDBNormalizer):
             production_companies=raw.get("production_companies"),
             production_countries=raw.get("production_countries"),
             external_ids=raw.get("external_ids"),
+            microgenres=coerce_microgenres_document(raw.get("microgenres")),
         )
 
 
@@ -875,6 +879,7 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "rt_vanity": doc.rt_vanity,
         "rt_release_year": doc.rt_release_year,
         "rt_runtime": doc.rt_runtime,
+        "microgenres": doc.microgenres,
         "created_at": doc.created_at,
         "modified_at": doc.modified_at,
         "_source": doc._source,

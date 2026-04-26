@@ -347,6 +347,8 @@ All keys are present when values are available, and absent fields are omitted by
 - `production_companies`, `production_countries`
 - `budget`, `revenue`
 - `spoken_languages`
+- `microgenres`: compact AI classification object when available:
+  `{ confidence, microgenre_scores, rationale }`
 - `created_at`, `modified_at`, `_source`
 - optional: `also_known_as` when populated
 
@@ -374,6 +376,8 @@ All keys are present when values are available, and absent fields are omitted by
 
 `search_title`, `title_compact` (TEXT NOSTEM), `mc_type`, `mc_subtype`, `spoken_languages`, `original_language`, `original_title`, `tagline`, `source`, `mc_id`, `genre_ids`, `genres`, `cast_ids`, `cast_names`, `director.id` (as `director_id`), `director.name_normalized` (as `director_name`), `keywords`, `origin_country`, `networks`, `watch_providers.watch_region`, `watch_providers.primary_provider_type`, `watch_providers.streaming_platform_ids` (string IDs), `watch_providers.on_demand_platform_ids` (string IDs), `watch_providers.primary_provider_id`, `popularity`, `rating`, `year`, `vote_count`, `number_of_seasons`, `revenue`, `created_at`, `modified_at`.
 
+`microgenres` is stored in Redis JSON but is not indexed by RediSearch. Consumers can read it from full document fetches and change feeds, but cannot filter on microgenre IDs until a future schema migration adds explicit indexed fields.
+
 ### Example documents
 
 ```json
@@ -391,6 +395,14 @@ All keys are present when values are available, and absent fields are omitted by
   "spoken_languages": ["en"],
   "director": {"id": "7467", "name": "David Fincher", "name_normalized": "david_fincher"},
   "production_companies": ["Fox 2000 Pictures"],
+  "microgenres": {
+    "confidence": 0.9,
+    "microgenre_scores": {
+      "drama.crime.neonoir": 0.88,
+      "thriller.mystery.noir": 0.72
+    },
+    "rationale": "Stylized crime-noir character drama with strong psychological thriller overlap."
+  },
   "status": "Released",
   "watch_providers": {
     "watch_region": "US",
