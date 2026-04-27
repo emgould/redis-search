@@ -2,7 +2,7 @@
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -70,6 +70,8 @@ help:
 	@echo "  Deployment:"
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
 	@echo "    make deploy-etl       - Deploy ETL service to Dedicated ETL VM"
+	@echo "    make deploy-etl-force - Deploy ETL with --no-cache Docker build"
+	@echo "    make etl-smoke-test   - Build + verify ETL image (taxonomy, imports, notifications)"
 	@echo "    make setup-etl-schedule - Manage ETL VM schedule (Cloud Scheduler, 2-8 AM ET)"
 	@echo "    make etl-vm-status    - Check ETL VM status (RUNNING/TERMINATED/etc.)"
 	@echo "    make etl-vm-start     - Start ETL VM"
@@ -356,6 +358,27 @@ deploy-web: secrets-setup
 # Deploy ETL service to VM (ETL container only, Redis unchanged)
 deploy-etl: secrets-setup
 	./scripts/deploy_etl_vm.sh
+
+# Deploy ETL with cache-busted Docker build (forces fresh src/ and data layers)
+deploy-etl-force: secrets-setup
+	DOCKER_NO_CACHE=1 ./scripts/deploy_etl_vm.sh
+
+# Build ETL image locally and verify taxonomy, imports, and notification template
+etl-smoke-test:
+	@echo "📦 Building ETL image (no-cache)..."
+	docker build --no-cache --platform linux/amd64 -f docker/etl.Dockerfile -t redis-search-etl-smoke .
+	@echo ""
+	@echo "🔍 Verifying ETL image contents..."
+	docker run --rm redis-search-etl-smoke sh -c '\
+		echo "1/4 Taxonomy file..." && \
+		test -f /app/src/ai/prompts/taste-profile-taxonomy.json && echo "  ✓ packaged taxonomy exists" && \
+		echo "2/4 Taxonomy import..." && \
+		python -c "import ai.prompts.microgenre_taxonomy as t; print(\"  ✓ taxonomy v\" + t.TAXONOMY.version)" && \
+		echo "3/4 ETL import chain..." && \
+		python -c "import etl.tmdb_nightly_etl; print(\"  ✓ etl.tmdb_nightly_etl imports\")" && \
+		echo "4/4 Notification template..." && \
+		grep -q total_microgenres_generated /app/src/etl/notifications.py && echo "  ✓ microgenre stats in notifications" && \
+		echo "" && echo "✅ All smoke checks passed"'
 
 # Manage Cloud Scheduler jobs for ETL VM (2 AM start, 8 AM stop Eastern)
 # Usage: make setup-etl-schedule action=create|update|status|delete|test
