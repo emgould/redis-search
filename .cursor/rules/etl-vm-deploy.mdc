@@ -1,0 +1,72 @@
+# ETL VM Deploy — Packaging and Verification
+
+## Two Deploy Surfaces
+
+| Surface | Dockerfile | Build tool | Image copies `data/` files via |
+|---------|-----------|------------|-------------------------------|
+| **Cloud Run API** | `docker/cloudrun.Dockerfile` | `gcloud builds submit` (respects `.gcloudignore`) | `COPY . ./` — entire build context |
+| **ETL VM** | `docker/etl.Dockerfile` | Local `docker build` in `scripts/deploy_etl_vm.sh` | Explicit `COPY` lines only |
+
+Cloud Run gets everything in the build context minus `.gcloudignore` exclusions.
+The ETL image only gets files explicitly listed — adding to `.dockerignore` alone is not sufficient.
+
+## Microgenre Taxonomy Packaging
+
+`src/ai/prompts/microgenre_taxonomy.py` loads the taxonomy at **import time** (`TAXONOMY = load_taxonomy()`).
+If the file is missing the ETL process fails before it even starts.
+
+The module resolves the taxonomy path with a dual-path strategy:
+
+1. **Packaged path** — `Path(__file__).parent / "taste-profile-taxonomy.json"` (next to the module itself).
+2. **Repo-relative fallback** — `parents[3] / "data" / "microgenre-classifications" / taste-profile-taxonomy.json"` (for local dev).
+
+`docker/etl.Dockerfile` copies the taxonomy next to the module:
+
+```dockerfile
+COPY data/microgenre-classifications/taste-profile-taxonomy.json ./src/ai/prompts/taste-profile-taxonomy.json
+```
+
+This makes the ETL image self-contained regardless of `/app/data` volume mounts.
+
+## Docker Build Cache and Stale Layers
+
+`docker build` caches `COPY src/ ./src/` — if `src/` contents have not changed on the build host, the layer is reused and the image ships old code.
+
+To force a fresh build:
+
+```bash
+make deploy-etl-force          # sets DOCKER_NO_CACHE=1
+# or
+DOCKER_NO_CACHE=1 make deploy-etl
+```
+
+## Container Smoke Test
+
+Run before deploying to verify the ETL image is self-contained:
+
+```bash
+make etl-smoke-test
+```
+
+Checks:
+1. Taxonomy file exists at `/app/src/ai/prompts/taste-profile-taxonomy.json`
+2. `ai.prompts.microgenre_taxonomy` imports and prints taxonomy version
+3. `etl.tmdb_nightly_etl` full import chain succeeds
+4. `notifications.py` contains `total_microgenres_generated` (microgenre email stats)
+
+After deploying, verify the running VM container:
+
+```bash
+gcloud compute ssh etl-runner-vm --zone=us-central1-a --tunnel-through-iap -- \
+  docker exec etl-runner sh -c 'test -f /app/src/ai/prompts/taste-profile-taxonomy.json && \
+  python -c "import etl.tmdb_nightly_etl; print(\"etl import ok\")" && \
+  grep -q total_microgenres_generated /app/src/etl/notifications.py && echo "✓ all checks passed"'
+```
+
+## Media Manager Rebuild Response
+
+`MediaManagerClient.rebuild_index()` tolerates the current Media Manager response shape.
+It derives `total_documents` from whichever field is present: `total_documents`, `metadata_count`,
+`total_vectors`, `total_records`, or `added_records`.
+
+A future PR should update Media Manager to return canonical `index_name`, `total_documents`, and `duration_seconds`.

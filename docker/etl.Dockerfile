@@ -37,6 +37,9 @@ COPY data/wikidata_tmdb_tms_crossref.json ./data/
 COPY data/itpc/ ./data/itpc/
 COPY data/aliases/ ./data/aliases/
 
+# Microgenre taxonomy packaged next to the module so it is independent of /app/data mounts
+COPY data/microgenre-classifications/taste-profile-taxonomy.json ./src/ai/prompts/taste-profile-taxonomy.json
+
 # Copy entrypoint script
 COPY docker/etl-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

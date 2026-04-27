@@ -81,8 +81,15 @@ echo ""
 # -----------------------------------------------------------------------------
 echo "📦 Building ETL Docker image for linux/amd64..."
 
+DOCKER_BUILD_EXTRA_ARGS=""
+if [ "${DOCKER_NO_CACHE:-0}" = "1" ]; then
+    DOCKER_BUILD_EXTRA_ARGS="--no-cache"
+    echo "   ⚠️  Cache disabled (DOCKER_NO_CACHE=1)"
+fi
+
 docker build \
     --platform linux/amd64 \
+    ${DOCKER_BUILD_EXTRA_ARGS} \
     -f docker/etl.Dockerfile \
     -t "${IMAGE_NAME}:${IMAGE_TAG}" \
     .

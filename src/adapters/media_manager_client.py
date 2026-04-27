@@ -27,6 +27,18 @@ MEDIA_INDEX_NAMES: dict[str, str] = {
 }
 
 
+def _first_int(data: dict[str, Any], *keys: str) -> int:
+    """Return the first truthy integer value found for the given keys, else 0."""
+    for key in keys:
+        val = data.get(key)
+        if val is not None:
+            try:
+                return int(val)
+            except (TypeError, ValueError):
+                continue
+    return 0
+
+
 class InsertDocsResponse(TypedDict):
     queued: int
     skipped: int
@@ -342,10 +354,18 @@ class MediaManagerClient:
             resp.raise_for_status()
             break
         data: dict[str, Any] = resp.json()
+        total_documents = _first_int(
+            data,
+            "total_documents",
+            "metadata_count",
+            "total_vectors",
+            "total_records",
+            "added_records",
+        )
         result = RebuildIndexResponse(
             status=data.get("status", "ok"),
             index_name=index_name,
-            total_documents=data.get("total_documents", 0),
+            total_documents=total_documents,
             duration_seconds=data.get("duration_seconds", 0.0),
         )
         logger.info(

@@ -12,12 +12,14 @@ JsonScalar = str | int | float | bool | None
 JsonValue = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 JsonDict = dict[str, JsonValue]
 
-TAXONOMY_PATH = (
+_PACKAGED_PATH = Path(__file__).resolve().parent / "taste-profile-taxonomy.json"
+_REPO_PATH = (
     Path(__file__).resolve().parents[3]
     / "data"
     / "microgenre-classifications"
     / "taste-profile-taxonomy.json"
 )
+TAXONOMY_PATH = _PACKAGED_PATH if _PACKAGED_PATH.exists() else _REPO_PATH
 EXAMPLE_PRIMARY_IDS = (
     "comedy.sitcom.multicamera",
     "comedy.sitcom.mockumentary",
