@@ -14,6 +14,7 @@ env:
   GCS_BUCKET: mc-redis-etl
   GCS_PATH: redis-search/podcastindex/podcastindex_feeds.db.tgz
   SOURCE_URL: https://public.podcastindex.org/podcastindex_feeds.db.tgz
+  SOURCE_USER_AGENT: MediaCircle-PodcastIndexMirror/1.0 (+https://mediacircle.io; redis-search podcast database mirror)
 
 jobs:
   mirror:
@@ -27,6 +28,7 @@ jobs:
         run: |
           echo "Downloading from $SOURCE_URL ..."
           curl -fSL --retry 3 --retry-delay 10 \
+            --user-agent "$SOURCE_USER_AGENT" \
             -o podcastindex_feeds.db.tgz \
             "$SOURCE_URL"
           ls -lh podcastindex_feeds.db.tgz

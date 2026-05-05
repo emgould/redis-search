@@ -2,10 +2,14 @@
 
 ## Problem
 
-Cloudflare blocks the ETL VM's GCE egress IP (`104.197.234.17`) from
-`public.podcastindex.org` since ~2026-04-18.  Any User-Agent or HTTP client
-produces HTTP 403 from that source IP.  The block is IP/ASN-level and cannot
-be bypassed with header manipulation.
+PodcastIndex rejects generic HTTP clients, including curl's default User-Agent,
+with HTTP 403 from `public.podcastindex.org`.  The mirror workflow must send a
+stable User-Agent that identifies the MediaCircle mirror instead of relying on
+tool defaults.
+
+The ETL VM has also seen Cloudflare blocking from GCE egress, so the ETL should
+continue to read the GCS mirror first and treat the public URL as best-effort
+fallback only.
 
 ## Solution
 
@@ -37,8 +41,15 @@ contains the JSON key for `media-manager@media-circle.iam.gserviceaccount.com`.
 
 ### ETL Download Order
 
-1. `_download_from_gcs` — uses `gcloud storage cp` (available in the ETL container).
+1. `_download_from_gcs` — uses the Google Cloud Storage Python SDK.
 2. `_download_from_public_url` — original `urllib` download; only attempted if GCS fails.
+
+### Public Download Requirements
+
+- GitHub Actions workflow downloads must pass `SOURCE_USER_AGENT` to curl.
+- ETL fallback downloads must keep an explicit User-Agent header.
+- Do not replace the identifying User-Agent with generic values like curl,
+  Python urllib defaults, browser-only strings, or vague bot names.
 
 ### Failure Modes
 
