@@ -28,6 +28,7 @@ import json
 import os
 import sys
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 from google.cloud import storage  # type: ignore[attr-defined]
@@ -38,6 +39,14 @@ from redis.commands.search.index_definition import IndexDefinition, IndexType
 # Load environment
 env_file = os.getenv("ENV_FILE", "config/local.env")
 load_dotenv(env_file)
+
+_project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_project_root / "src"))
+
+from utils.redis_search_index_info import (  # noqa: E402
+    extract_index_prefix,
+    parse_index_schema_fields,
+)
 
 # ETL metadata GCS paths
 GCS_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl")
@@ -88,43 +97,12 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
     try:
         info = await redis.ft(index_name).info()
 
-        # info is already a dict from redis-py
-
-        # Extract prefix from index definition
         prefix = ""
-        if "index_definition" in info:
-            idx_def = info["index_definition"]
-            # idx_def is a flat list: ['key_type', 'JSON', 'prefixes', ['media:'], ...]
-            for j in range(0, len(idx_def), 2):
-                if idx_def[j] == "prefixes":
-                    prefixes = idx_def[j + 1]
-                    if prefixes:
-                        prefix = prefixes[0]
-                    break
+        idx_def = info.get("index_definition")
+        if idx_def is not None:
+            prefix = extract_index_prefix(idx_def)
 
-        # Parse schema fields from attributes
-        # attributes is a list of lists: [['identifier', '$.search_title', 'attribute', 'search_title', 'type', 'TEXT', ...], ...]
-        # Standalone flags (NOSTEM, SORTABLE, UNF, NOINDEX, CASESENSITIVE) appear
-        # without a following value, so we can't blindly step by 2.
-        _STANDALONE_FLAGS = {"SORTABLE", "UNF", "NOSTEM", "NOINDEX", "CASESENSITIVE"}
-        schema_fields = []
-        if "attributes" in info:
-            attrs = info["attributes"]
-            for attr in attrs:
-                field_info: dict[str, str | bool] = {}
-                k = 0
-                while k < len(attr):
-                    token = attr[k]
-                    if token in _STANDALONE_FLAGS:
-                        field_info[token] = True
-                        k += 1
-                    elif k + 1 < len(attr):
-                        field_info[token] = attr[k + 1]
-                        k += 2
-                    else:
-                        field_info[token] = True
-                        k += 1
-                schema_fields.append(field_info)
+        schema_fields = parse_index_schema_fields(info)
 
         # Derive friendly name from redis index name (e.g., idx:media -> media)
         friendly_name = index_name

@@ -45,6 +45,10 @@ _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
 
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
+from utils.redis_search_index_info import (  # noqa: E402
+    extract_index_prefix,
+    parse_index_schema_fields,
+)
 
 INDEX_TO_ETL_JOBS: dict[str, list[str]] = {
     "media": ["tmdb_movie_changes_movie", "tmdb_tv_changes_tv"],
@@ -97,51 +101,12 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
     try:
         info = await redis.ft(index_name).info()
 
-        # Extract prefix from index definition
         prefix = ""
-        if "index_definition" in info:
-            idx_def = info["index_definition"]
-            for j in range(0, len(idx_def), 2):
-                if idx_def[j] == "prefixes":
-                    prefixes = idx_def[j + 1]
-                    if prefixes:
-                        prefix = prefixes[0]
-                    break
+        idx_def = info.get("index_definition")
+        if idx_def is not None:
+            prefix = extract_index_prefix(idx_def)
 
-        # Parse schema fields from attributes
-        # Note: attributes can contain standalone flags (e.g., NOSTEM, SORTABLE)
-        # that are not key-value pairs, so we can't assume strict pairs
-        schema_fields = []
-        if "attributes" in info:
-            attrs = info["attributes"]
-            for attr in attrs:
-                field_info: dict[str, str | bool] = {}
-                flags: list[str] = []
-                k = 0
-                while k < len(attr):
-                    key = attr[k]
-                    # Check if this is a standalone flag (no value follows, or next item is also a key)
-                    is_flag = (
-                        k + 1 >= len(attr)
-                        or (
-                            isinstance(attr[k + 1], str)
-                            and attr[k + 1].isupper()
-                            and attr[k + 1] in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}
-                        )
-                    )
-                    if key in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}:
-                        flags.append(key)
-                        k += 1
-                    elif is_flag and k + 1 >= len(attr):
-                        # Last element is a flag
-                        flags.append(key)
-                        k += 1
-                    else:
-                        field_info[key] = attr[k + 1]
-                        k += 2
-                if flags:
-                    field_info["flags"] = flags
-                schema_fields.append(field_info)
+        schema_fields = parse_index_schema_fields(info)
 
         friendly_name = index_name
         if index_name.startswith("idx:"):
@@ -190,17 +155,16 @@ async def count_keys_by_prefix(redis: Redis, prefix: str) -> int:
     return count
 
 
-def build_schema_from_fields(fields: list[dict]) -> list[Field]:
+def build_schema_from_fields(fields: list[dict[str, str | bool | float]]) -> list[Field]:
     """Reconstruct Redis schema from field definitions."""
     schema: list[Field] = []
     for field in fields:
-        field_type = field.get("type", "").upper()
-        identifier = field.get("identifier", "")
-        attribute = field.get("attribute", identifier)
+        field_type = str(field.get("type", "")).upper()
+        identifier = str(field.get("identifier", ""))
+        attribute = str(field.get("attribute", identifier))
 
-        flags = field.get("flags", [])
-        sortable = "SORTABLE" in flags
-        no_stem = "NOSTEM" in flags
+        sortable = bool(field.get("SORTABLE", False))
+        no_stem = bool(field.get("NOSTEM", False))
         weight = float(field.get("WEIGHT", 1.0)) if "WEIGHT" in field else 1.0
 
         if field_type == "TEXT":
@@ -208,7 +172,8 @@ def build_schema_from_fields(fields: list[dict]) -> list[Field]:
                 TextField(identifier, as_name=attribute, weight=weight, no_stem=no_stem)
             )
         elif field_type == "TAG":
-            schema.append(TagField(identifier, as_name=attribute))
+            separator = str(field["SEPARATOR"]) if "SEPARATOR" in field else ","
+            schema.append(TagField(identifier, as_name=attribute, separator=separator))
         elif field_type == "NUMERIC":
             schema.append(NumericField(identifier, as_name=attribute, sortable=sortable))
 
