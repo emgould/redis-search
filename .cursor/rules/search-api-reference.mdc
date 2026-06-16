@@ -222,10 +222,17 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 | `cast_match` | string | No | any | Cast matching: "any" (OR) or "all" (AND) |
 | `year_min` | int | No | - | Minimum release year |
 | `year_max` | int | No | - | Maximum release year |
+| `release_date_min` | string | No | - | Minimum movie release date (`YYYY-MM-DD`) |
+| `release_date_max` | string | No | - | Maximum movie release date (`YYYY-MM-DD`) |
+| `first_air_date_min` | string | No | - | Minimum TV first air date (`YYYY-MM-DD`) |
+| `first_air_date_max` | string | No | - | Maximum TV first air date (`YYYY-MM-DD`) |
+| `last_air_date_min` | string | No | - | Minimum TV last air date (`YYYY-MM-DD`) |
+| `last_air_date_max` | string | No | - | Maximum TV last air date (`YYYY-MM-DD`) |
 | `rating_min` | float | No | - | Minimum rating (0-10) |
 | `rating_max` | float | No | - | Maximum rating (0-10) |
 | `mc_type` | string | No | - | Filter by type: movie, tv |
 | `ratings_sort` | string | No | popularity | Sort order for ratings results when ratings source is requested with tv/movie. Options: "popularity" (default), "audience_score", "critics_score". Sorts in descending order (highest first). |
+| `media_sort` | string | No | popularity | Sort order for indexed movie/tv results. Options: "popularity", "rating", "year", "rt_audience_score", "rt_critics_score". Explicit non-popularity sorts preserve requested order, including with `q`; RT sorts automatically require the selected RT score to exist. |
 | `raw` | bool | No | false | If true, treat `q` as raw RediSearch syntax (disables source hint parsing) |
 
 *`q` is required for brokered sources (artist, album, video, news). When `sources` is not specified, `q` may include source keywords (e.g., "godfather movie"); see Query Source Hints. The `ratings` source is special: when requested together with `tv` or `movie`, it can be enriched from indexed results even without a query parameter. Indexed sources (tv, movie, person, podcast, author, book) support field-only filtering without a text query.
@@ -286,6 +293,8 @@ Same SSE event format as autocomplete streaming for `/api/search/stream`.
 # Filter-only: Ratings enriched from indexed results (no query needed)
 /api/search?sources=movie,ratings&genre_ids=878&ratings_sort=audience_score
 /api/search?sources=movie,ratings&year_min=2020&rating_min=7&ratings_sort=critics_score
+/api/search?sources=tv&last_air_date_min=2026-01-01&last_air_date_max=2026-12-31&media_sort=rt_audience_score
+/api/search?sources=movie&release_date_min=2026-01-01&release_date_max=2026-12-31&media_sort=rt_critics_score
 ```
 
 ---

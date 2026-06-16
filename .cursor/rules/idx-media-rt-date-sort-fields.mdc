@@ -1,0 +1,104 @@
+# `idx:media` RT Score Sorting And Date Filters
+
+## Purpose
+
+`idx:media` supports native Redis filtering for recent media and native sorting
+by Rotten Tomatoes scores.
+
+The indexed helper fields are:
+
+- `rt_audience_score` — numeric sortable, sourced from existing Redis JSON.
+- `rt_critics_score` — numeric sortable, sourced from existing Redis JSON.
+- `release_yyyymmdd` — numeric range filter, derived from `release_date`.
+- `first_air_yyyymmdd` — numeric range filter, derived from `first_air_date`.
+- `last_air_yyyymmdd` — numeric range filter, derived from `last_air_date`.
+
+Date helper fields are numeric `YYYYMMDD` values. They are not sortable by
+default; the product need is date range filtering plus RT score sorting.
+
+## Required Sequence For Existing Redis Environments
+
+Do not reload media from TMDB for this migration.
+
+1. Patch existing `media:*` JSON docs with derived date fields.
+2. Add the new schema fields to `idx:media` with `FT.ALTER`.
+3. Wait for RediSearch background indexing to finish.
+4. Run direct sanity queries.
+
+Patch first so Redis does not incrementally update the new index attributes
+while a large JSON patch is in progress.
+
+## Local Commands
+
+Dry run:
+
+```bash
+make backfill-media-date-sort-fields
+```
+
+Apply:
+
+```bash
+make backfill-media-date-sort-fields ARGS="--apply"
+```
+
+Limit or type-scope during validation:
+
+```bash
+make backfill-media-date-sort-fields MC_TYPE=tv ARGS="--limit 100"
+make backfill-media-date-sort-fields MC_TYPE=tv ARGS="--apply --limit 100"
+```
+
+The backfill script must not update `modified_at`; these fields are derived
+index helpers, not source metadata changes.
+
+## `FT.ALTER` Commands
+
+Apply once per live Redis environment after the date helper patch:
+
+```bash
+redis-cli -p <port> FT.ALTER idx:media SCHEMA ADD '$.rt_audience_score' AS rt_audience_score NUMERIC SORTABLE
+redis-cli -p <port> FT.ALTER idx:media SCHEMA ADD '$.rt_critics_score' AS rt_critics_score NUMERIC SORTABLE
+redis-cli -p <port> FT.ALTER idx:media SCHEMA ADD '$.release_yyyymmdd' AS release_yyyymmdd NUMERIC
+redis-cli -p <port> FT.ALTER idx:media SCHEMA ADD '$.first_air_yyyymmdd' AS first_air_yyyymmdd NUMERIC
+redis-cli -p <port> FT.ALTER idx:media SCHEMA ADD '$.last_air_yyyymmdd' AS last_air_yyyymmdd NUMERIC
+```
+
+Fresh or rebuilt indexes pick these fields up from `INDEX_CONFIGS["media"]`
+in `web/app.py`; live indexes need the `FT.ALTER` sequence.
+
+## Verification
+
+Wait for indexing to finish:
+
+```bash
+redis-cli -p <port> FT.INFO idx:media
+```
+
+Expected:
+
+- `indexing` is `0`
+- `percent_indexed` is `1`
+- `hash_indexing_failures` is `0`
+
+Sanity queries:
+
+```bash
+redis-cli -p <port> FT.SEARCH idx:media '@mc_type:{tv} @last_air_yyyymmdd:[20250101 +inf] @rt_audience_score:[0 100]' SORTBY rt_audience_score DESC LIMIT 0 10
+redis-cli -p <port> FT.SEARCH idx:media '@mc_type:{movie} @release_yyyymmdd:[20260101 20261231] @rt_critics_score:[0 100]' SORTBY rt_critics_score DESC LIMIT 0 10
+```
+
+API examples:
+
+```bash
+/api/search?sources=tv&last_air_date_min=2026-01-01&last_air_date_max=2026-12-31&media_sort=rt_audience_score
+/api/search?sources=movie&release_date_min=2026-01-01&release_date_max=2026-12-31&media_sort=rt_critics_score
+```
+
+When `media_sort` is `rt_audience_score` or `rt_critics_score`, the search
+path also applies an existence filter for the selected RT score so unrated
+documents do not occupy sorted result slots.
+
+Explicit non-`popularity` `media_sort` values preserve the requested Redis sort
+order, including when a text query is present. Default `popularity` search with
+a text query continues to use the existing media relevance re-ranker.

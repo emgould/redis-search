@@ -2,7 +2,7 @@
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -91,6 +91,8 @@ help:
 	@echo "    make last-etl-date - Show last successful ETL run date per job"
 	@echo "    make etl-media startdate=YYYY-MM-DD - Run movie + TV ETL from a start date"
 	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
+	@echo "    make backfill-media-date-sort-fields - Backfill derived date sort/filter fields (dry run)"
+	@echo "    make backfill-media-date-sort-fields ARGS='--apply' - Write derived date sort/filter fields"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
 	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Backfill media microgenres from JSONL"
@@ -542,6 +544,13 @@ backfill:
 #        make backfill-rt ARGS="--force"
 backfill-rt:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_rt_enrichment.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# Backfill derived numeric date fields used by idx:media date range filters
+# Usage: make backfill-media-date-sort-fields
+#        make backfill-media-date-sort-fields MC_TYPE=tv ARGS="--limit 100"
+#        make backfill-media-date-sort-fields ARGS="--apply"
+backfill-media-date-sort-fields:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_media_date_sort_fields.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
 
 # Backfill missing external_ids from TMDB dedicated endpoint
 # Usage: make backfill-external-ids

@@ -67,10 +67,17 @@ Unified multi-source search with filtering. Supports both text queries and field
 | `cast_match` | string | no | `any` | `any` (OR) or `all` (AND) |
 | `year_min` | int | no | — | Minimum release year |
 | `year_max` | int | no | — | Maximum release year |
+| `release_date_min` | string | no | — | Minimum movie release date (`YYYY-MM-DD`) |
+| `release_date_max` | string | no | — | Maximum movie release date (`YYYY-MM-DD`) |
+| `first_air_date_min` | string | no | — | Minimum TV first air date (`YYYY-MM-DD`) |
+| `first_air_date_max` | string | no | — | Maximum TV first air date (`YYYY-MM-DD`) |
+| `last_air_date_min` | string | no | — | Minimum TV last air date (`YYYY-MM-DD`) |
+| `last_air_date_max` | string | no | — | Maximum TV last air date (`YYYY-MM-DD`) |
 | `rating_min` | float | no | — | Minimum rating (0–10) |
 | `rating_max` | float | no | — | Maximum rating (0–10) |
 | `mc_type` | string | no | — | Filter by: `movie` or `tv` |
 | `ratings_sort` | string | no | `popularity` | Sort for ratings source: `popularity`, `audience_score`, `critics_score` |
+| `media_sort` | string | no | `popularity` | Sort indexed media: `popularity`, `rating`, `year`, `rt_audience_score`, `rt_critics_score`; explicit non-popularity sorts preserve order with `q` |
 | `raw` | bool | no | false | Treat `q` as raw RediSearch syntax |
 | `no_duplicate` | bool | no | false | Exclude exact match from source list |
 | `full` | bool | no | false | Deep ranking mode (250 candidates) |
@@ -336,6 +343,8 @@ All keys are present when values are available, and absent fields are omitted by
 - `origin_country`
 - `original_language`, `original_title`
 - `release_date`, `first_air_date`, `last_air_date`
+- `release_yyyymmdd`, `first_air_yyyymmdd`, `last_air_yyyymmdd`
+- `rt_audience_score`, `rt_critics_score`
 - `us_rating`
 - `watch_providers`
 - `status`, `series_status`

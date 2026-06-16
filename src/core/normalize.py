@@ -32,6 +32,16 @@ _NON_ALNUM_SPACE_RE = re.compile(r"[^a-z0-9\s]")
 _MULTI_SPACE_RE = re.compile(r"\s+")
 
 
+def date_string_to_yyyymmdd(value: str | None) -> int | None:
+    """Convert an ISO-like YYYY-MM-DD date string to an integer for numeric indexing."""
+    if not value:
+        return None
+    try:
+        return int(value[:10].replace("-", ""))
+    except ValueError:
+        return None
+
+
 def compact_title(title: str) -> str:
     """Derive a slug-style compact title for exact collapsed-token matching.
 
@@ -847,8 +857,11 @@ def document_to_redis(doc: SearchDocument) -> dict[str, Any]:
         "keywords": doc.keywords,
         "origin_country": doc.origin_country,
         "release_date": doc.release_date,
+        "release_yyyymmdd": date_string_to_yyyymmdd(doc.release_date),
         "first_air_date": doc.first_air_date,
+        "first_air_yyyymmdd": date_string_to_yyyymmdd(doc.first_air_date),
         "last_air_date": doc.last_air_date,
+        "last_air_yyyymmdd": date_string_to_yyyymmdd(doc.last_air_date),
         "us_rating": doc.us_rating,
         "watch_providers": doc.watch_providers,
         "status": doc.status,

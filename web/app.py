@@ -39,7 +39,7 @@ from core.normalize import (
     resolve_timestamps,
 )
 from core.query_hints import parse_source_hint
-from core.search_queries import RawQueryError, validate_raw_query
+from core.search_queries import RawQueryError, parse_date_param_to_yyyymmdd, validate_raw_query
 from etl.bestseller_author_etl import BestsellerETLStats, run_bestseller_author_etl
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig, JobRunResult
 from etl.etl_runner import ETLConfig, ETLRunner, run_single_etl
@@ -47,6 +47,7 @@ from etl.media_manager_filter import passes_media_manager_filter
 from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
 from etl.tmdb_nightly_etl import ChangesETLStats
 from services.search_service import (
+    MEDIA_SORT_FIELDS,
     MINIMAL_AUTOCOMPLETE_SOURCES,
     MINIMAL_DEFAULT_FIELDS,
     MINIMAL_FIELD_ALLOWLIST,
@@ -75,6 +76,24 @@ PROJECT_ROOT = str(Path(__file__).parent.parent)
 WEB_UI_DISABLED = os.getenv("DISABLE_WEB_UI", "").lower() in ("true", "1", "yes")
 
 GENRE_MAPPING = None
+
+
+def _parse_media_date_filters(
+    release_date_min: str | None,
+    release_date_max: str | None,
+    first_air_date_min: str | None,
+    first_air_date_max: str | None,
+    last_air_date_min: str | None,
+    last_air_date_max: str | None,
+) -> dict[str, int | None]:
+    return {
+        "release_date_min": parse_date_param_to_yyyymmdd(release_date_min),
+        "release_date_max": parse_date_param_to_yyyymmdd(release_date_max),
+        "first_air_date_min": parse_date_param_to_yyyymmdd(first_air_date_min),
+        "first_air_date_max": parse_date_param_to_yyyymmdd(first_air_date_max),
+        "last_air_date_min": parse_date_param_to_yyyymmdd(last_air_date_min),
+        "last_air_date_max": parse_date_param_to_yyyymmdd(last_air_date_max),
+    }
 
 
 def require_web_ui_enabled() -> None:
@@ -699,6 +718,24 @@ async def api_search(
     ),
     year_min: int | None = Query(default=None, description="Minimum release year"),
     year_max: int | None = Query(default=None, description="Maximum release year"),
+    release_date_min: str | None = Query(
+        default=None, description="Minimum movie release date (YYYY-MM-DD)"
+    ),
+    release_date_max: str | None = Query(
+        default=None, description="Maximum movie release date (YYYY-MM-DD)"
+    ),
+    first_air_date_min: str | None = Query(
+        default=None, description="Minimum TV first air date (YYYY-MM-DD)"
+    ),
+    first_air_date_max: str | None = Query(
+        default=None, description="Maximum TV first air date (YYYY-MM-DD)"
+    ),
+    last_air_date_min: str | None = Query(
+        default=None, description="Minimum TV last air date (YYYY-MM-DD)"
+    ),
+    last_air_date_max: str | None = Query(
+        default=None, description="Maximum TV last air date (YYYY-MM-DD)"
+    ),
     rating_min: float | None = Query(
         default=None, ge=0, le=10, description="Minimum rating (0-10)"
     ),
@@ -711,6 +748,10 @@ async def api_search(
         description="Sort order for ratings results when ratings source is requested with tv/movie. "
         "Options: 'popularity' (default), 'audience_score', 'critics_score'. "
         "Sorts in descending order (highest first).",
+    ),
+    media_sort: str = Query(
+        default="popularity",
+        description="Sort order for indexed tv/movie results. Options: popularity, rating, year, rt_audience_score, rt_critics_score. Explicit non-popularity sorts preserve the requested order, including with a text query.",
     ),
     raw: bool = Query(
         default=False,
@@ -752,7 +793,29 @@ async def api_search(
     - /api/search?sources=tv&rating_min=8 - Browse highly-rated TV shows
     """
     # Check if any filters are provided
-    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_date_filters = any(
+        [
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+        ]
+    )
+    has_filters = any(
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            has_date_filters,
+            rating_min,
+            rating_max,
+            media_sort != "popularity",
+            mc_type,
+        ]
+    )
     has_query = q and len(q) >= 2
 
     # Validate match parameters
@@ -841,6 +904,23 @@ async def api_search(
             },
             status_code=400,
         )
+    if media_sort not in MEDIA_SORT_FIELDS:
+        return JSONResponse(
+            content={"error": f"media_sort must be one of: {', '.join(sorted(MEDIA_SORT_FIELDS))}"},
+            status_code=400,
+        )
+
+    try:
+        date_filters = _parse_media_date_filters(
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+        )
+    except ValueError as exc:
+        return JSONResponse(content={"error": str(exc)}, status_code=400)
 
     # Raw mode: validate query syntax before search
     if raw and has_query and q:
@@ -859,10 +939,17 @@ async def api_search(
         cast_match=cast_match,
         year_min=year_min,
         year_max=year_max,
+        release_date_min=date_filters["release_date_min"],
+        release_date_max=date_filters["release_date_max"],
+        first_air_date_min=date_filters["first_air_date_min"],
+        first_air_date_max=date_filters["first_air_date_max"],
+        last_air_date_min=date_filters["last_air_date_min"],
+        last_air_date_max=date_filters["last_air_date_max"],
         rating_min=rating_min,
         rating_max=rating_max,
         mc_type=mc_type,
         ratings_sort=ratings_sort or "popularity",
+        media_sort=media_sort,
         raw=raw,
         no_duplicate=no_duplicate,
         full=full,
@@ -1171,6 +1258,24 @@ async def api_search_stream(
     ),
     year_min: int | None = Query(default=None, description="Minimum release year"),
     year_max: int | None = Query(default=None, description="Maximum release year"),
+    release_date_min: str | None = Query(
+        default=None, description="Minimum movie release date (YYYY-MM-DD)"
+    ),
+    release_date_max: str | None = Query(
+        default=None, description="Maximum movie release date (YYYY-MM-DD)"
+    ),
+    first_air_date_min: str | None = Query(
+        default=None, description="Minimum TV first air date (YYYY-MM-DD)"
+    ),
+    first_air_date_max: str | None = Query(
+        default=None, description="Maximum TV first air date (YYYY-MM-DD)"
+    ),
+    last_air_date_min: str | None = Query(
+        default=None, description="Minimum TV last air date (YYYY-MM-DD)"
+    ),
+    last_air_date_max: str | None = Query(
+        default=None, description="Maximum TV last air date (YYYY-MM-DD)"
+    ),
     rating_min: float | None = Query(
         default=None, ge=0, le=10, description="Minimum rating (0-10)"
     ),
@@ -1181,6 +1286,10 @@ async def api_search_stream(
     ratings_sort: str | None = Query(
         default=None,
         description="Sort order for ratings: 'popularity' (default), 'audience_score', 'critics_score'.",
+    ),
+    media_sort: str = Query(
+        default="popularity",
+        description="Sort order for indexed tv/movie results. Options: popularity, rating, year, rt_audience_score, rt_critics_score. Explicit non-popularity sorts preserve the requested order, including with a text query.",
     ),
     raw: bool = Query(
         default=False,
@@ -1206,7 +1315,29 @@ async def api_search_stream(
     - event: "result" for data, "done" when all sources have completed
     - data: JSON with {source: string, results: array, latency_ms: number}
     """
-    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    has_date_filters = any(
+        [
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+        ]
+    )
+    has_filters = any(
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            has_date_filters,
+            rating_min,
+            rating_max,
+            media_sort != "popularity",
+            mc_type,
+        ]
+    )
     has_query = q and len(q) >= 2
 
     if not has_query and not has_filters:
@@ -1244,6 +1375,31 @@ async def api_search_stream(
     if cast_ids:
         cast_id_list = [cid.strip() for cid in cast_ids.split(",") if cid.strip()]
 
+    if ratings_sort and ratings_sort not in ("popularity", "audience_score", "critics_score"):
+        return JSONResponse(
+            content={
+                "error": "ratings_sort must be one of: 'popularity', 'audience_score', 'critics_score'"
+            },
+            status_code=400,
+        )
+    if media_sort not in MEDIA_SORT_FIELDS:
+        return JSONResponse(
+            content={"error": f"media_sort must be one of: {', '.join(sorted(MEDIA_SORT_FIELDS))}"},
+            status_code=400,
+        )
+
+    try:
+        date_filters = _parse_media_date_filters(
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+        )
+    except ValueError as exc:
+        return JSONResponse(content={"error": str(exc)}, status_code=400)
+
     if raw and has_query and q:
         try:
             validate_raw_query(q)
@@ -1261,10 +1417,17 @@ async def api_search_stream(
             cast_match=cast_match,
             year_min=year_min,
             year_max=year_max,
+            release_date_min=date_filters["release_date_min"],
+            release_date_max=date_filters["release_date_max"],
+            first_air_date_min=date_filters["first_air_date_min"],
+            first_air_date_max=date_filters["first_air_date_max"],
+            last_air_date_min=date_filters["last_air_date_min"],
+            last_air_date_max=date_filters["last_air_date_max"],
             rating_min=rating_min,
             rating_max=rating_max,
             mc_type=mc_type,
             ratings_sort=ratings_sort or "popularity",
+            media_sort=media_sort,
             raw=raw,
             no_duplicate=no_duplicate,
             full=full,
@@ -4783,6 +4946,13 @@ INDEX_CONFIGS = {
             NumericField("$.vote_count", as_name="vote_count", sortable=True),
             NumericField("$.number_of_seasons", as_name="number_of_seasons", sortable=True),
             NumericField("$.revenue", as_name="revenue", sortable=True),
+            # Rotten Tomatoes sortable score fields
+            NumericField("$.rt_audience_score", as_name="rt_audience_score", sortable=True),
+            NumericField("$.rt_critics_score", as_name="rt_critics_score", sortable=True),
+            # Numeric date fields for range filtering (YYYYMMDD)
+            NumericField("$.release_yyyymmdd", as_name="release_yyyymmdd"),
+            NumericField("$.first_air_yyyymmdd", as_name="first_air_yyyymmdd"),
+            NumericField("$.last_air_yyyymmdd", as_name="last_air_yyyymmdd"),
             # Document lifecycle timestamps
             NumericField("$.created_at", as_name="created_at", sortable=True),
             NumericField("$.modified_at", as_name="modified_at", sortable=True),
