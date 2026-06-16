@@ -30,6 +30,42 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
+cleanup_old_secret_versions() {
+    local secret_name="$1"
+    local latest_version
+    local version
+
+    latest_version=$(gcloud secrets versions list "${secret_name}" \
+        --filter="state!=DESTROYED" \
+        --sort-by="~createTime" \
+        --limit=1 \
+        --format="value(name)" \
+        --project="${PROJECT_ID}")
+
+    if [ -z "${latest_version}" ]; then
+        echo "   ⚠️  No active versions found for ${secret_name}; skipping cleanup"
+        return
+    fi
+
+    echo "   Cleaning up older versions for ${secret_name} (keeping version ${latest_version})..."
+
+    while IFS= read -r version; do
+        if [ -z "${version}" ] || [ "${version}" = "${latest_version}" ]; then
+            continue
+        fi
+
+        echo "      Destroying old version ${version}"
+        gcloud secrets versions destroy "${version}" \
+            --secret="${secret_name}" \
+            --project="${PROJECT_ID}" \
+            --quiet
+    done < <(gcloud secrets versions list "${secret_name}" \
+        --filter="state!=DESTROYED" \
+        --sort-by="~createTime" \
+        --format="value(name)" \
+        --project="${PROJECT_ID}")
+}
+
 echo "📋 Project: ${PROJECT_ID}"
 echo "📁 Source:  ${ENV_FILE}"
 echo ""
@@ -70,6 +106,7 @@ else
     gcloud secrets versions add "${API_SECRET_NAME}" \
         --data-file="${API_ENV_FILE}" \
         --project="${PROJECT_ID}"
+    cleanup_old_secret_versions "${API_SECRET_NAME}"
     
     echo "   ✅ API bundle created: ${API_SECRET_NAME}"
 fi
@@ -102,6 +139,7 @@ else
     gcloud secrets versions add "${ETL_SECRET_NAME}" \
         --data-file="${ETL_ENV_FILE}" \
         --project="${PROJECT_ID}"
+    cleanup_old_secret_versions "${ETL_SECRET_NAME}"
     
     echo "   ✅ ETL bundle created: ${ETL_SECRET_NAME}"
 fi
