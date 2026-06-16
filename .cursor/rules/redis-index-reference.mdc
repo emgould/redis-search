@@ -135,8 +135,13 @@ documents as `microgenres: { confidence, microgenre_scores, rationale }`.
 This field is stored JSON only and is not currently part of the RediSearch
 schema.
 
+Rotten Tomatoes score fields are stored on media documents when enrichment
+finds a match. `rt_audience_score` and `rt_critics_score` are indexed as
+sortable numeric fields in `idx:media` for native media ranking.
+
 - Movie documents include:
   - `release_date`
+  - `release_yyyymmdd` (numeric `YYYYMMDD`, indexed for range filters)
   - `runtime`
   - `budget`
   - `revenue`
@@ -146,7 +151,9 @@ schema.
   - `director` object
 - TV documents include:
   - `first_air_date`
+  - `first_air_yyyymmdd` (numeric `YYYYMMDD`, indexed for range filters)
   - `last_air_date`
+  - `last_air_yyyymmdd` (numeric `YYYYMMDD`, indexed for range filters)
   - `status`
   - `series_status`
   - `number_of_seasons`

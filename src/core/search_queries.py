@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from core.iptc import get_search_aliases
 from utils.get_logger import get_logger
@@ -12,6 +13,23 @@ class RawQueryError(ValueError):
 
 # Backward-compatible alias
 RawMediaQueryError = RawQueryError
+
+_DATE_PARAM_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def parse_date_param_to_yyyymmdd(value: str | None) -> int | None:
+    """Parse a YYYY-MM-DD API date parameter into a YYYYMMDD integer."""
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not _DATE_PARAM_RE.fullmatch(normalized):
+        raise ValueError("date parameters must use YYYY-MM-DD format")
+    try:
+        datetime.strptime(normalized, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("date parameters must be valid calendar dates")
+    return int(normalized.replace("-", ""))
+
 
 # Per-index TAG/NUMERIC fields allowed for raw passthrough
 ALLOWED_RAW_MEDIA_FIELDS = frozenset(
@@ -30,6 +48,11 @@ ALLOWED_RAW_MEDIA_FIELDS = frozenset(
         "year",
         "rating",
         "popularity",
+        "rt_audience_score",
+        "rt_critics_score",
+        "release_yyyymmdd",
+        "first_air_yyyymmdd",
+        "last_air_yyyymmdd",
     }
 )
 
@@ -714,8 +737,16 @@ def build_filter_query(
     cast_match: str = "any",
     year_min: int | None = None,
     year_max: int | None = None,
+    release_date_min: int | None = None,
+    release_date_max: int | None = None,
+    first_air_date_min: int | None = None,
+    first_air_date_max: int | None = None,
+    last_air_date_min: int | None = None,
+    last_air_date_max: int | None = None,
     rating_min: float | None = None,
     rating_max: float | None = None,
+    rt_audience_score_min: int | None = None,
+    rt_critics_score_min: int | None = None,
     mc_type: str | None = None,
     include_tag_fields: bool = True,
     raw: bool = False,
@@ -733,8 +764,16 @@ def build_filter_query(
         cast_match: "any" for OR logic (default), "all" for AND logic
         year_min: Minimum release year (inclusive)
         year_max: Maximum release year (inclusive)
+        release_date_min: Minimum movie release date as YYYYMMDD
+        release_date_max: Maximum movie release date as YYYYMMDD
+        first_air_date_min: Minimum TV first air date as YYYYMMDD
+        first_air_date_max: Maximum TV first air date as YYYYMMDD
+        last_air_date_min: Minimum TV last air date as YYYYMMDD
+        last_air_date_max: Maximum TV last air date as YYYYMMDD
         rating_min: Minimum rating 0-10 (inclusive)
         rating_max: Maximum rating 0-10 (inclusive)
+        rt_audience_score_min: Minimum RT audience score (inclusive)
+        rt_critics_score_min: Minimum RT critics score (inclusive)
         mc_type: Filter by media type (movie, tv)
         include_tag_fields: Include TAG field union search (cast_names, director_name, keywords, genres)
         raw: If True, treat q as validated raw RediSearch syntax (passthrough)
@@ -765,7 +804,23 @@ def build_filter_query(
     """
     parts: list[str] = []
     has_filter_params = any(
-        [genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type]
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+            rating_min,
+            rating_max,
+            rt_audience_score_min is not None,
+            rt_critics_score_min is not None,
+            mc_type,
+        ]
     )
 
     # Text query component (with TAG field union when enabled, or raw passthrough)
@@ -809,11 +864,33 @@ def build_filter_query(
         max_val = str(year_max) if year_max is not None else "+inf"
         parts.append(f"@year:[{min_val} {max_val}]")
 
+    # Numeric date range filters (YYYYMMDD)
+    if release_date_min is not None or release_date_max is not None:
+        min_val = str(release_date_min) if release_date_min is not None else "-inf"
+        max_val = str(release_date_max) if release_date_max is not None else "+inf"
+        parts.append(f"@release_yyyymmdd:[{min_val} {max_val}]")
+
+    if first_air_date_min is not None or first_air_date_max is not None:
+        min_val = str(first_air_date_min) if first_air_date_min is not None else "-inf"
+        max_val = str(first_air_date_max) if first_air_date_max is not None else "+inf"
+        parts.append(f"@first_air_yyyymmdd:[{min_val} {max_val}]")
+
+    if last_air_date_min is not None or last_air_date_max is not None:
+        min_val = str(last_air_date_min) if last_air_date_min is not None else "-inf"
+        max_val = str(last_air_date_max) if last_air_date_max is not None else "+inf"
+        parts.append(f"@last_air_yyyymmdd:[{min_val} {max_val}]")
+
     # Rating range filter
     if rating_min is not None or rating_max is not None:
         min_val = str(rating_min) if rating_min is not None else "-inf"
         max_val = str(rating_max) if rating_max is not None else "+inf"
         parts.append(f"@rating:[{min_val} {max_val}]")
+
+    # Rotten Tomatoes existence/minimum-score filters
+    if rt_audience_score_min is not None:
+        parts.append(f"@rt_audience_score:[{rt_audience_score_min} 100]")
+    if rt_critics_score_min is not None:
+        parts.append(f"@rt_critics_score:[{rt_critics_score_min} 100]")
 
     # Media type filter
     if mc_type:

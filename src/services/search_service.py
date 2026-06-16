@@ -60,6 +60,19 @@ StreamEvent = Union[
 
 logger = get_logger(__name__)
 
+MEDIA_SORT_FIELDS: frozenset[str] = frozenset(
+    {
+        "popularity",
+        "rating",
+        "year",
+        "rt_audience_score",
+        "rt_critics_score",
+    }
+)
+RT_MEDIA_SORT_FIELDS: frozenset[str] = frozenset(
+    {"rt_audience_score", "rt_critics_score"}
+)
+
 
 def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
     """
@@ -438,10 +451,15 @@ def _build_media_source_query(query_str: str, media_source: str) -> str:
     return f"({query_str}) {type_filter}"
 
 
-def _parse_media_results(result: object, query: str | None) -> list[dict[str, Any]]:
-    """Parse and rank media results for a single source bucket."""
+def _parse_media_results(
+    result: object,
+    query: str | None,
+    *,
+    preserve_redis_order: bool = False,
+) -> list[dict[str, Any]]:
+    """Parse media results for a single source bucket."""
     parsed_results = [parse_doc(doc) for doc in _extract_docs(result)]
-    if query:
+    if query and not preserve_redis_order:
         return sorted(parsed_results, key=lambda item: _rank_media_result(item, query))
     return parsed_results
 
@@ -783,8 +801,14 @@ MINIMAL_FIELD_ALLOWLIST: frozenset[str] = frozenset(
         "genre_ids",
         "genres",
         "release_date",
+        "release_yyyymmdd",
         "last_aired_date",
+        "last_air_date",
+        "last_air_yyyymmdd",
         "first_air_date",
+        "first_air_yyyymmdd",
+        "rt_audience_score",
+        "rt_critics_score",
         "known_for_department",
         "episode_count",
         "known_for_titles",
@@ -1610,10 +1634,17 @@ async def search(
     cast_match: str = "any",
     year_min: int | None = None,
     year_max: int | None = None,
+    release_date_min: int | None = None,
+    release_date_max: int | None = None,
+    first_air_date_min: int | None = None,
+    first_air_date_max: int | None = None,
+    last_air_date_min: int | None = None,
+    last_air_date_max: int | None = None,
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
+    media_sort: str = "popularity",
     raw: bool = False,
     no_duplicate: bool = False,
     full: bool = False,
@@ -1634,18 +1665,46 @@ async def search(
         cast_match: "any" for OR logic (default), "all" for AND logic
         year_min: Minimum release year (inclusive)
         year_max: Maximum release year (inclusive)
+        release_date_min: Minimum movie release date as YYYYMMDD
+        release_date_max: Maximum movie release date as YYYYMMDD
+        first_air_date_min: Minimum TV first air date as YYYYMMDD
+        first_air_date_max: Maximum TV first air date as YYYYMMDD
+        last_air_date_min: Minimum TV last air date as YYYYMMDD
+        last_air_date_max: Maximum TV last air date as YYYYMMDD
         rating_min: Minimum rating 0-10 (inclusive)
         rating_max: Maximum rating 0-10 (inclusive)
         mc_type: Filter by media type (movie, tv)
         ratings_sort: Sort order for ratings results when ratings source is requested.
                      Options: "popularity" (default), "audience_score", "critics_score".
                      Sorts in descending order (highest first).
+        media_sort: Sort order for indexed media results.
 
     Returns:
         dict with keys for each requested source, each containing list of MCBaseItem-compliant results
     """
     # Check if we have filters or query
-    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    rt_audience_score_min = 0 if media_sort == "rt_audience_score" else None
+    rt_critics_score_min = 0 if media_sort == "rt_critics_score" else None
+    has_filters = any(
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+            rating_min,
+            rating_max,
+            rt_audience_score_min is not None,
+            rt_critics_score_min is not None,
+            media_sort != "popularity",
+            mc_type,
+        ]
+    )
     query_text = q if q is not None and len(q) >= 2 else None
     has_query = query_text is not None
 
@@ -1678,8 +1737,16 @@ async def search(
             cast_match=cast_match,
             year_min=year_min,
             year_max=year_max,
+            release_date_min=release_date_min,
+            release_date_max=release_date_max,
+            first_air_date_min=first_air_date_min,
+            first_air_date_max=first_air_date_max,
+            last_air_date_min=last_air_date_min,
+            last_air_date_max=last_air_date_max,
             rating_min=rating_min,
             rating_max=rating_max,
+            rt_audience_score_min=rt_audience_score_min,
+            rt_critics_score_min=rt_critics_score_min,
             mc_type=mc_type,
             raw=raw,
         )
@@ -1729,7 +1796,11 @@ async def search(
         timed_tasks.append(
             timed_task(
                 "tv_media",
-                repo.search(_build_media_source_query(media_query, "tv"), limit=media_fetch_limit),
+                repo.search(
+                    _build_media_source_query(media_query, "tv"),
+                    limit=media_fetch_limit,
+                    sort_by=media_sort,
+                ),
             )
         )
     if "movie" in requested_sources:
@@ -1737,7 +1808,9 @@ async def search(
             timed_task(
                 "movie_media",
                 repo.search(
-                    _build_media_source_query(media_query, "movie"), limit=media_fetch_limit
+                    _build_media_source_query(media_query, "movie"),
+                    limit=media_fetch_limit,
+                    sort_by=media_sort,
                 ),
             )
         )
@@ -1835,14 +1908,22 @@ async def search(
         tv_media_res = results_map.get("tv_media", empty_result)
         if isinstance(tv_media_res, BaseException):
             tv_media_res = empty_result
-        tv_full = _parse_media_results(tv_media_res, q)
+        tv_full = _parse_media_results(
+            tv_media_res,
+            q,
+            preserve_redis_order=media_sort != "popularity",
+        )
         full_results["tv"] = tv_full
         final_results["tv"] = tv_full[:limit]
     if "movie" in requested_sources:
         movie_media_res = results_map.get("movie_media", empty_result)
         if isinstance(movie_media_res, BaseException):
             movie_media_res = empty_result
-        movie_full = _parse_media_results(movie_media_res, q)
+        movie_full = _parse_media_results(
+            movie_media_res,
+            q,
+            preserve_redis_order=media_sort != "popularity",
+        )
         full_results["movie"] = movie_full
         final_results["movie"] = movie_full[:limit]
 
@@ -2125,10 +2206,17 @@ async def search_stream(
     cast_match: str = "any",
     year_min: int | None = None,
     year_max: int | None = None,
+    release_date_min: int | None = None,
+    release_date_max: int | None = None,
+    first_air_date_min: int | None = None,
+    first_air_date_max: int | None = None,
+    last_air_date_min: int | None = None,
+    last_air_date_max: int | None = None,
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
     ratings_sort: str = "popularity",
+    media_sort: str = "popularity",
     raw: bool = False,
     no_duplicate: bool = False,
     full: bool = False,
@@ -2147,7 +2235,27 @@ async def search_stream(
         source_name may be "tv", "movie", "person", etc.
         Media index yields "tv" and "movie" separately from a single "media" task.
     """
-    has_filters = any([genre_ids, cast_ids, year_min, year_max, rating_min, rating_max, mc_type])
+    rt_audience_score_min = 0 if media_sort == "rt_audience_score" else None
+    rt_critics_score_min = 0 if media_sort == "rt_critics_score" else None
+    has_filters = any(
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+            rating_min,
+            rating_max,
+            rt_audience_score_min is not None,
+            rt_critics_score_min is not None,
+            mc_type,
+        ]
+    )
     query_text = q if q is not None and len(q) >= 2 else None
     has_query = query_text is not None
 
@@ -2171,8 +2279,16 @@ async def search_stream(
             cast_match=cast_match,
             year_min=year_min,
             year_max=year_max,
+            release_date_min=release_date_min,
+            release_date_max=release_date_max,
+            first_air_date_min=first_air_date_min,
+            first_air_date_max=first_air_date_max,
+            last_air_date_min=last_air_date_min,
+            last_air_date_max=last_air_date_max,
             rating_min=rating_min,
             rating_max=rating_max,
+            rt_audience_score_min=rt_audience_score_min,
+            rt_critics_score_min=rt_critics_score_min,
             mc_type=mc_type,
             raw=raw,
         )
@@ -2215,7 +2331,11 @@ async def search_stream(
             asyncio.create_task(
                 timed_task(
                     "tv_media",
-                    repo.search(_build_media_source_query(media_query, "tv"), limit=media_fetch_limit),
+                    repo.search(
+                        _build_media_source_query(media_query, "tv"),
+                        limit=media_fetch_limit,
+                        sort_by=media_sort,
+                    ),
                 )
             )
         ] = "tv_media"
@@ -2225,7 +2345,9 @@ async def search_stream(
                 timed_task(
                     "movie_media",
                     repo.search(
-                        _build_media_source_query(media_query, "movie"), limit=media_fetch_limit
+                        _build_media_source_query(media_query, "movie"),
+                        limit=media_fetch_limit,
+                        sort_by=media_sort,
                     ),
                 )
             )
@@ -2326,7 +2448,11 @@ async def search_stream(
             if name in {"tv_media", "movie_media"}:
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     source_name = "tv" if name == "tv_media" else "movie"
-                    media_parsed_full = _parse_media_results(data, q)
+                    media_parsed_full = _parse_media_results(
+                        data,
+                        q,
+                        preserve_redis_order=media_sort != "popularity",
+                    )
                     streamed_full[source_name] = media_parsed_full
                     media_results = media_parsed_full[:limit]
                     streamed_results[source_name] = media_results
