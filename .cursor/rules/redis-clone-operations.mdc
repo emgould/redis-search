@@ -119,6 +119,12 @@ Always follow this order:
 | `book:` | `idx:book` | ~782k |
 | `author:` | `idx:author` | ~159k |
 
+## FT.INFO introspection (redis-py 8+)
+
+`copy_to_local.py`, `promote_to_dev.py`, and `bulk_clone_prefix.py` rebuild index schemas from live `FT.INFO` before copying documents. With **redis-py 8** (RESP3 wire), `index_definition` is returned as a nested dict (e.g. `{"key_type": "JSON", "prefixes": ["media:"]}`), not the legacy RESP2 flat list. Scripts must not index into `index_definition` by integer position.
+
+Shared parsing lives in `src/utils/redis_search_index_info.py` (`extract_index_prefix`, `parse_index_schema_fields`). Use these helpers for any new tooling that introspects RediSearch indexes.
+
 ## Version Compatibility
 
 Redis Stack versions must match between source and target for DUMP/RESTORE and RDB snapshot compatibility. The scratch, local, and public instances all pin to `redis/redis-stack:7.4.0-v8`.

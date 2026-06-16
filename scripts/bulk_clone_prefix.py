@@ -53,6 +53,10 @@ _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
 
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
+from utils.redis_search_index_info import (  # noqa: E402
+    extract_index_prefix,
+    parse_index_schema_fields,
+)
 
 PREFIX_TO_INDEX: dict[str, str] = {
     "media:": "idx:media",
@@ -164,37 +168,22 @@ async def get_index_schema(redis: Redis, index_name: str) -> IndexSchema | None:
         return None
 
     prefix = ""
-    if "index_definition" in info:
-        idx_def = info["index_definition"]
-        for j in range(0, len(idx_def), 2):
-            if idx_def[j] == "prefixes":
-                prefixes = idx_def[j + 1]
-                if prefixes:
-                    prefix = prefixes[0]
-                break
+    idx_def = info.get("index_definition")
+    if idx_def is not None:
+        prefix = extract_index_prefix(idx_def)
 
     schema_fields: list[dict[str, str | list[str]]] = []
-    if "attributes" in info:
-        for attr in info["attributes"]:
-            field_info: dict[str, str | list[str]] = {}
-            flags: list[str] = []
-            k = 0
-            while k < len(attr):
-                key = attr[k]
-                # Check if this is a standalone flag (no value follows)
-                if key in {"NOSTEM", "SORTABLE", "NOINDEX", "UNF", "CASESENSITIVE"}:
-                    flags.append(key)
-                    k += 1
-                elif k + 1 >= len(attr):
-                    # Last element is a flag
-                    flags.append(key)
-                    k += 1
-                else:
-                    field_info[key] = attr[k + 1]
-                    k += 2
-            if flags:
-                field_info["flags"] = flags
-            schema_fields.append(field_info)
+    for parsed_field in parse_index_schema_fields(info):
+        normalized: dict[str, str | list[str]] = {}
+        flags: list[str] = []
+        for key, value in parsed_field.items():
+            if isinstance(value, bool) and key in {"SORTABLE", "NOSTEM", "NOINDEX", "UNF", "CASESENSITIVE"}:
+                flags.append(key)
+            else:
+                normalized[key] = str(value) if not isinstance(value, list) else value
+        if flags:
+            normalized["flags"] = flags
+        schema_fields.append(normalized)
 
     return IndexSchema(name=index_name, prefix=prefix, fields=schema_fields)
 
