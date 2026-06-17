@@ -95,6 +95,7 @@ help:
 	@echo "    make backfill-media-date-sort-fields ARGS='--apply' - Write derived date sort/filter fields"
 	@echo "    make backfill-major-provider          - Backfill 2026 major-provider media (dry run)"
 	@echo "    make backfill-major-provider ARGS='--apply' - Backfill and write to Redis"
+	@echo "    make backfill-major-provider ARGS='--apply --push-to-mm' - Backfill, write to Redis, and push to Media Manager"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
 	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Backfill media microgenres from JSONL"
@@ -561,8 +562,9 @@ backfill-media-date-sort-fields:
 # Backfill 2026 major-provider media missing from Redis
 # Usage: make backfill-major-provider              (dry run)
 #        make backfill-major-provider ARGS="--apply" (write to Redis)
+#        make backfill-major-provider ARGS="--apply --push-to-mm" (write to Redis and push to Media Manager)
 backfill-major-provider:
-	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_major_provider_media.py $(ARGS)'
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH="$$PWD:$$PWD/src" python scripts/backfill_major_provider_media.py $(ARGS)'
 
 backfill-external-ids:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'

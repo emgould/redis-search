@@ -28,6 +28,7 @@ from typing import Any, Literal, cast
 from redis.asyncio import Redis
 
 from src.adapters.config import load_env
+from src.adapters.media_manager_client import MediaManagerClient
 from src.ai.microgenre_batch import build_microgenre_input_from_document
 from src.ai.microgenre_document import microgenre_result_to_redis, valid_microgenres_value
 from src.ai.prompts.microgenre_classifier import score_microgenres
@@ -243,8 +244,9 @@ async def _flush_batch(
     enrich_semaphore: asyncio.Semaphore,
     microgenre_semaphore: asyncio.Semaphore,
     stats: dict[str, int],
+    mm_client: MediaManagerClient | None,
 ) -> None:
-    """RT-enrich, attach microgenres, resolve timestamps, and pipeline-write a batch."""
+    """RT-enrich, attach microgenres, write Redis, and optionally push to MM."""
 
     async def _enrich_with_backoff(redis_doc: dict[str, Any]) -> None:
         if enrich_from_local(redis_doc):
@@ -354,6 +356,17 @@ async def _flush_batch(
         write_pipe.json().set(key, "$", redis_doc)
     await write_pipe.execute()
 
+    if mm_client is not None:
+        docs = [redis_doc for _key, redis_doc in prepared]
+        response = await mm_client.insert_docs(docs, metadata_only=False)
+        stats["mm_submitted"] += len(docs)
+        stats["mm_queued"] += response["queued"]
+        stats["mm_skipped"] += response["skipped"]
+        mm_errors = response.get("errors", [])
+        if mm_errors:
+            stats["mm_errors"] += len(mm_errors)
+            raise RuntimeError(f"Media Manager insert errors: {mm_errors[:5]}")
+
 
 async def run_backfill(
     data_root: Path,
@@ -361,6 +374,7 @@ async def run_backfill(
     redis_port: int,
     redis_password: str | None,
     apply_updates: bool,
+    push_to_mm: bool,
 ) -> None:
     """Run the 2026 major-provider backfill (Phase A + Phase B)."""
     load_env()
@@ -369,6 +383,7 @@ async def run_backfill(
     logger.info("Loaded %d genres", len(genre_mapping))
 
     redis: Redis | None = None
+    mm_client: MediaManagerClient | None = None
     if apply_updates:
         redis = Redis(
             host=redis_host,
@@ -378,6 +393,11 @@ async def run_backfill(
         )
         await cast(Awaitable[bool], redis.ping())
         logger.info("Connected to Redis at %s:%d", redis_host, redis_port)
+
+        if push_to_mm:
+            mm_client = MediaManagerClient()
+            await mm_client.health_check()
+            logger.info("Media Manager push enabled")
 
     cached_months: dict[str, set[int]] = {"movie": set(), "tv": set()}
     total_candidates = 0
@@ -394,6 +414,10 @@ async def run_backfill(
         "microgenres_skipped_existing": 0,
         "microgenres_generated": 0,
         "microgenres_failed": 0,
+        "mm_submitted": 0,
+        "mm_queued": 0,
+        "mm_skipped": 0,
+        "mm_errors": 0,
     }
 
     async def _collect_and_load(
@@ -440,6 +464,7 @@ async def run_backfill(
                     await _flush_batch(
                         redis, pending, enrich_semaphore,
                         microgenre_semaphore, enrichment_stats,
+                        mm_client,
                     )
                     total_loaded += len(pending)
                     elapsed = time.time() - batch_start
@@ -455,6 +480,7 @@ async def run_backfill(
             await _flush_batch(
                 redis, pending, enrich_semaphore,
                 microgenre_semaphore, enrichment_stats,
+                mm_client,
             )
             total_loaded += len(pending)
             elapsed = time.time() - batch_start
@@ -543,6 +569,8 @@ async def run_backfill(
                     await _collect_and_load(enriched, media_type, genre_mapping)
 
     finally:
+        if mm_client is not None:
+            await mm_client.close()
         if redis is not None:
             await redis.aclose()
 
@@ -558,6 +586,10 @@ async def run_backfill(
     logger.info("  Microgenres generated:  %d", enrichment_stats["microgenres_generated"])
     logger.info("  Microgenres preserved:  %d", enrichment_stats["microgenres_preserved"])
     logger.info("  Microgenres failed:     %d", enrichment_stats["microgenres_failed"])
+    logger.info("  MM submitted:           %d", enrichment_stats["mm_submitted"])
+    logger.info("  MM queued:              %d", enrichment_stats["mm_queued"])
+    logger.info("  MM skipped:             %d", enrichment_stats["mm_skipped"])
+    logger.info("  MM errors:              %d", enrichment_stats["mm_errors"])
     logger.info("  Mode:                %s", "apply" if apply_updates else "dry-run")
 
 
@@ -594,7 +626,15 @@ def main() -> None:
         action="store_true",
         help="Write missing titles to Redis (default: dry run)",
     )
+    parser.add_argument(
+        "--push-to-mm",
+        action="store_true",
+        help="Push newly loaded docs to Media Manager as full inserts",
+    )
     args = parser.parse_args()
+
+    if args.push_to_mm and not args.apply:
+        raise ValueError("--push-to-mm requires --apply")
 
     data_root = Path(args.data_root)
     if not data_root.exists():
@@ -607,6 +647,7 @@ def main() -> None:
             redis_port=args.redis_port,
             redis_password=args.redis_password,
             apply_updates=args.apply,
+            push_to_mm=args.push_to_mm,
         )
     )
 
