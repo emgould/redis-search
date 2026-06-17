@@ -314,7 +314,9 @@ async def copy_index(
             result["success"] = True
             return result
 
-        # Drop index - with or without documents depending on clean flag
+        # Drop index - with or without documents depending on clean flag.
+        # Recreate it after document copy so RediSearch builds once instead of
+        # maintaining the index during large JSON.SET pipelines.
         # clean=False is much faster (no DD flag), but orphan docs may remain
         # clean=True uses DD flag to delete all docs first (slower but exact mirror)
         if clean:
@@ -332,16 +334,7 @@ async def copy_index(
             else:
                 print("      Index did not exist")
 
-        print("      Creating index with schema...")
-        await create_index_from_schema(
-            target,
-            index_info.redis_name,
-            prefix,
-            index_info.schema_fields,
-        )
-        print("      Index created (will re-index as documents are written)")
-
-        print(f"      Copying documents (concurrency={concurrency})...")
+        print(f"      Copying documents with index disabled (concurrency={concurrency})...")
         copied, errors, error_msgs = await copy_documents(
             source, target, prefix, dry_run=False, batch_size=batch_size, concurrency=concurrency
         )
@@ -352,6 +345,19 @@ async def copy_index(
 
         if errors > 0:
             print(f"      ⚠️  {errors} errors during copy")
+            for message in error_msgs[:20]:
+                print(f"         {message}")
+            if len(error_msgs) > 20:
+                print(f"         ... {len(error_msgs) - 20} additional error messages")
+
+        print("      Creating index with schema...")
+        await create_index_from_schema(
+            target,
+            index_info.redis_name,
+            prefix,
+            index_info.schema_fields,
+        )
+        print("      Index created (will re-index copied documents)")
 
         result["success"] = True
 

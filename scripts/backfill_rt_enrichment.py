@@ -48,8 +48,13 @@ load_env()
 from redis.asyncio import Redis  # noqa: E402
 
 from adapters.media_manager_client import MediaManagerClient  # noqa: E402
-from api.rottentomatoes.local_store import get_store  # noqa: E402
-from etl.rt_enrichment import enrich_from_algolia, enrich_from_local  # noqa: E402
+from api.rottentomatoes.local_store import RTContentLookupStore, get_store  # noqa: E402
+from etl.rt_enrichment import (  # noqa: E402
+    enrich_from_algolia,
+    enrich_from_local,
+    enrich_from_local_title_year,
+    rt_record_matches_doc,
+)
 from utils.get_logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
@@ -58,13 +63,12 @@ SCAN_LOG_INTERVAL = 5000
 PROCESS_LOG_INTERVAL = 500
 MM_BATCH_SIZE = 100
 
-RT_PATCH_FIELDS = (
+RT_METADATA_FIELDS = (
     "rt_audience_score",
     "rt_critics_score",
     "rt_vanity",
     "rt_release_year",
     "rt_runtime",
-    "external_ids",
 )
 
 
@@ -85,6 +89,87 @@ def _has_rt(doc: dict[str, Any]) -> bool:
 def _needs_rt(doc: dict[str, Any]) -> bool:
     """Return True when the document is missing RT score data."""
     return doc.get("rt_audience_score") is None and doc.get("rt_critics_score") is None
+
+
+def _rt_vanity(doc: dict[str, Any]) -> str | None:
+    external_ids = doc.get("external_ids")
+    if isinstance(external_ids, dict):
+        rt_id = external_ids.get("rt_id")
+        if isinstance(rt_id, str) and rt_id:
+            for prefix in ("m/", "tv/"):
+                if rt_id.startswith(prefix):
+                    return rt_id[len(prefix):]
+            return rt_id
+
+    rt_vanity = doc.get("rt_vanity")
+    if isinstance(rt_vanity, str) and rt_vanity:
+        return rt_vanity
+    return None
+
+
+def _existing_rt_attachment_record(
+    doc: dict[str, Any],
+    store: RTContentLookupStore,
+) -> dict[str, Any] | None:
+    vanity = _rt_vanity(doc)
+    if vanity is None:
+        return None
+
+    return store.lookup_by_vanity(vanity)
+
+
+def _print_audit_trace(
+    doc: dict[str, Any],
+    record: dict[str, Any] | None,
+    *,
+    matched: bool,
+) -> None:
+    mc_type = str(doc.get("mc_type") or "?")
+    source_id = str(doc.get("source_id") or doc.get("id") or "?")
+    title = str(doc.get("title") or doc.get("search_title") or "?")
+    rt_title = "N/A"
+    rt_id = _rt_vanity(doc) or "N/A"
+    if record is not None:
+        record_title = record.get("title")
+        record_vanity = record.get("vanity")
+        record_object_id = record.get("objectID")
+        rt_title = str(record_title) if record_title is not None else "N/A"
+        rt_id = str(record_vanity or record_object_id or rt_id)
+    status = "matched" if matched else "rejected"
+    print(f"{mc_type} {source_id} {title} ==> {rt_title} : {rt_id} ==> {status}")
+
+
+def _clear_rt_metadata(doc: dict[str, Any]) -> None:
+    for field_name in RT_METADATA_FIELDS:
+        doc.pop(field_name, None)
+
+    external_ids = doc.get("external_ids")
+    if isinstance(external_ids, dict):
+        external_ids.pop("rt_id", None)
+        doc["external_ids"] = external_ids
+
+
+async def _write_rt_patch(redis: Redis, key: str, doc: dict[str, Any], *, clear: bool) -> None:  # type: ignore[type-arg]
+    now_ts = int(datetime.now(UTC).timestamp())
+    write_pipe = redis.pipeline()
+
+    if clear:
+        for field_name in RT_METADATA_FIELDS:
+            write_pipe.execute_command("JSON.DEL", key, f"$.{field_name}")
+        write_pipe.execute_command("JSON.DEL", key, "$.external_ids.rt_id")
+    else:
+        for field_name in RT_METADATA_FIELDS:
+            value = doc.get(field_name)
+            if value is None:
+                write_pipe.execute_command("JSON.DEL", key, f"$.{field_name}")
+            else:
+                write_pipe.json().set(key, f"$.{field_name}", value)
+        external_ids = doc.get("external_ids")
+        if isinstance(external_ids, dict):
+            write_pipe.json().set(key, "$.external_ids", external_ids)
+
+    write_pipe.json().set(key, "$.modified_at", now_ts)
+    await write_pipe.execute()
 
 
 async def _flush_mm_buffer(
@@ -129,6 +214,7 @@ async def backfill(
     algolia_fallback: bool,
     force: bool,
     force_all: bool,
+    audit_existing: bool,
     push_to_mm: bool = False,
 ) -> dict[str, int]:
     stats: dict[str, int] = {
@@ -138,6 +224,10 @@ async def backfill(
         "enriched_algolia": 0,
         "updated": 0,
         "already_has_rt": 0,
+        "audit_valid": 0,
+        "audit_invalid": 0,
+        "audit_repaired": 0,
+        "audit_cleared": 0,
         "no_match": 0,
         "mm_submitted": 0,
         "mm_queued": 0,
@@ -162,9 +252,9 @@ async def backfill(
 
         logger.info(
             "RT backfill start: scan_count=%d limit=%s algolia=%s dry_run=%s "
-            "mc_type=%s force=%s force_all=%s push_to_mm=%s",
+            "mc_type=%s force=%s force_all=%s audit_existing=%s push_to_mm=%s",
             scan_count, limit, algolia_fallback, dry_run,
-            mc_type_filter, force, force_all, push_to_mm,
+            mc_type_filter, force, force_all, audit_existing, push_to_mm,
         )
 
         cursor = 0
@@ -212,6 +302,11 @@ async def backfill(
                 should_force_all_send = force_all and mm_client is not None
                 should_force_send = force and mm_client is not None and had_rt
 
+                if audit_existing:
+                    if had_rt:
+                        page_candidates.append((str(key), doc_raw, had_rt, needs_rt))
+                    continue
+
                 if not needs_rt and not should_force_send and not should_force_all_send:
                     stats["already_has_rt"] += 1
                     continue
@@ -232,8 +327,49 @@ async def backfill(
                 for key, doc, had_rt, needs_rt in chunk:
                     enriched = False
                     should_send_to_mm = False
+                    clear_rt = False
 
-                    if needs_rt:
+                    if audit_existing and had_rt:
+                        existing_record = _existing_rt_attachment_record(doc, store)
+                        existing_valid = (
+                            existing_record is not None
+                            and rt_record_matches_doc(doc, existing_record)
+                        )
+                        if dry_run:
+                            _print_audit_trace(doc, existing_record, matched=existing_valid)
+
+                        if existing_valid:
+                            stats["audit_valid"] += 1
+                            if force_all and mm_client is not None:
+                                should_send_to_mm = True
+                        else:
+                            stats["audit_invalid"] += 1
+                            _clear_rt_metadata(doc)
+                            local_hit = enrich_from_local_title_year(doc, store=store)
+                            if local_hit:
+                                enriched = True
+                                stats["enriched_local"] += 1
+                                stats["audit_repaired"] += 1
+                            elif algolia_fallback:
+                                algolia_hit = await enrich_from_algolia(doc, store=store)
+                                if algolia_hit:
+                                    enriched = True
+                                    stats["enriched_algolia"] += 1
+                                    stats["audit_repaired"] += 1
+
+                            if dry_run and enriched:
+                                repaired_record = None
+                                repaired_vanity = _rt_vanity(doc)
+                                if repaired_vanity is not None:
+                                    repaired_record = store.lookup_by_vanity(repaired_vanity)
+                                _print_audit_trace(doc, repaired_record, matched=True)
+
+                            if not enriched:
+                                clear_rt = True
+                                stats["audit_cleared"] += 1
+                                stats["no_match"] += 1
+
+                    elif needs_rt:
                         local_hit = enrich_from_local(doc, store=store)
                         if local_hit:
                             enriched = True
@@ -244,18 +380,11 @@ async def backfill(
                                 enriched = True
                                 stats["enriched_algolia"] += 1
 
-                    if enriched:
+                    if enriched or clear_rt:
                         if dry_run:
                             stats["updated"] += 1
                         else:
-                            now_ts = int(datetime.now(UTC).timestamp())
-                            write_pipe = redis.pipeline()
-                            for field_name in RT_PATCH_FIELDS:
-                                value = doc.get(field_name)
-                                if value is not None:
-                                    write_pipe.json().set(key, f"$.{field_name}", value)
-                            write_pipe.json().set(key, "$.modified_at", now_ts)
-                            await write_pipe.execute()
+                            await _write_rt_patch(redis, key, doc, clear=clear_rt)
                             stats["updated"] += 1
                         should_send_to_mm = mm_client is not None
                     elif force_all and mm_client is not None or force and mm_client is not None and had_rt:
@@ -339,6 +468,10 @@ def _print_stats(stats: dict[str, int], elapsed: float, dry_run: bool) -> None:
         "scanned",
         "candidates",
         "already_has_rt",
+        "audit_valid",
+        "audit_invalid",
+        "audit_repaired",
+        "audit_cleared",
         "enriched_local",
         "enriched_algolia",
         "no_match",
@@ -406,6 +539,11 @@ async def main() -> None:
         action="store_true",
         help="Push enriched docs to Media Manager (metadata_only mode)",
     )
+    parser.add_argument(
+        "--audit-existing",
+        action="store_true",
+        help="Validate existing RT metadata, repair strict matches, and clear invalid unmatched RT data",
+    )
 
     args = parser.parse_args()
 
@@ -419,6 +557,7 @@ async def main() -> None:
         algolia_fallback=args.algolia_fallback,
         force=args.force,
         force_all=args.force_all,
+        audit_existing=args.audit_existing,
         push_to_mm=args.push_to_mm,
     )
     elapsed = time.time() - start

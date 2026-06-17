@@ -23,7 +23,11 @@ from redis.asyncio import Redis
 from adapters.config import load_env
 from contracts.models import MCSources, MCType
 from core.normalize import SearchDocument, document_to_redis, normalize_document, resolve_timestamps
-from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
+from core.streaming_providers import (
+    MAJOR_PROVIDER_IDS,
+    MAJOR_STREAMING_PROVIDERS,
+    TV_SHOW_CUTOFF_DATE,
+)
 
 
 @dataclass
@@ -505,17 +509,34 @@ class TMDBETLService:
                     skipped_in_file += 1
                     continue
             else:
-                # Movies: keep existing stricter filtering
-                metrics = item.get("metrics", {})
-                popularity = metrics.get("popularity") or item.get("popularity") or 0
-                if popularity < 1:
-                    skipped_in_file += 1
-                    continue
+                # Movies: check for top-12 provider by ID
+                has_major_provider_by_id = False
+                watch_providers = item.get("watch_providers", {})
+                for provider_type in ("flatrate", "buy", "rent"):
+                    for p in watch_providers.get(provider_type, []):
+                        if isinstance(p, dict) and p.get("provider_id") in MAJOR_PROVIDER_IDS:
+                            has_major_provider_by_id = True
+                            break
+                    if has_major_provider_by_id:
+                        break
 
-                vote_count = metrics.get("vote_count") or item.get("vote_count") or 0
-                if vote_count <= 1:
-                    skipped_in_file += 1
-                    continue
+                if not has_major_provider_by_id:
+                    metrics = item.get("metrics", {})
+                    popularity = metrics.get("popularity") or item.get("popularity") or 0
+                    if popularity < 1:
+                        skipped_in_file += 1
+                        continue
+
+                    vote_count = metrics.get("vote_count") or item.get("vote_count") or 0
+                    if vote_count <= 1:
+                        skipped_in_file += 1
+                        continue
+                else:
+                    vote_count = (
+                        item.get("metrics", {}).get("vote_count")
+                        or item.get("vote_count")
+                        or 0
+                    )
 
                 runtime = item.get("runtime") or 0
                 if runtime < 50 and vote_count < 10:
@@ -527,7 +548,6 @@ class TMDBETLService:
                 ten_years_ago = datetime.now() - timedelta(days=365 * 10)
                 if release_year < ten_years_ago.year:
                     is_on_major_platform = False
-                    watch_providers = item.get("watch_providers", {})
                     for provider_type in ["flatrate", "buy", "rent"]:
                         providers = watch_providers.get(provider_type, [])
                         for provider in providers:

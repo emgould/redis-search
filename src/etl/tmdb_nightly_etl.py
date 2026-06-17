@@ -43,7 +43,11 @@ from api.tmdb.core import TMDBService
 from api.tmdb.person import TMDBPersonService
 from contracts.models import MCType
 from core.normalize import document_to_redis, normalize_document, resolve_timestamps
-from core.streaming_providers import MAJOR_STREAMING_PROVIDERS, TV_SHOW_CUTOFF_DATE
+from core.streaming_providers import (
+    MAJOR_PROVIDER_IDS,
+    MAJOR_STREAMING_PROVIDERS,
+    TV_SHOW_CUTOFF_DATE,
+)
 from etl.documentary_filter import is_documentary, is_eligible_documentary
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
@@ -279,6 +283,50 @@ class TMDBChangesETL(TMDBService):
 
         return names
 
+    @staticmethod
+    def _extract_provider_ids(item: dict) -> set[int]:
+        """Extract provider IDs from both raw TMDB and custom provider structures.
+
+        Raw TMDB shape: watch_providers.flatrate/buy/rent[].provider_id
+        Custom shape:   watch_providers.streaming_platform_ids,
+                        watch_providers.on_demand_platform_ids,
+                        watch_providers.streaming_platforms/on_demand_platforms[].provider_id,
+                        watch_providers.primary_provider.provider_id,
+                        watch_providers.primary_provider_id
+        """
+        ids: set[int] = set()
+        watch_providers = item.get("watch_providers") or {}
+
+        # Raw TMDB structure (flatrate / buy / rent)
+        for key in ("flatrate", "buy", "rent"):
+            for p in watch_providers.get(key, []):
+                if isinstance(p, dict) and isinstance(p.get("provider_id"), int):
+                    ids.add(p["provider_id"])
+
+        # Custom structure — direct ID lists
+        for key in ("streaming_platform_ids", "on_demand_platform_ids"):
+            id_list = watch_providers.get(key)
+            if isinstance(id_list, list):
+                for pid in id_list:
+                    if isinstance(pid, int):
+                        ids.add(pid)
+
+        # Custom structure — provider dicts
+        for key in ("streaming_platforms", "on_demand_platforms"):
+            for p in watch_providers.get(key, []):
+                if isinstance(p, dict) and isinstance(p.get("provider_id"), int):
+                    ids.add(p["provider_id"])
+
+        primary = watch_providers.get("primary_provider")
+        if isinstance(primary, dict) and isinstance(primary.get("provider_id"), int):
+            ids.add(primary["provider_id"])
+
+        primary_id = watch_providers.get("primary_provider_id")
+        if isinstance(primary_id, int):
+            ids.add(primary_id)
+
+        return ids
+
     def _passes_media_filter(self, item: dict) -> bool:
         """Check if media item passes quality filters.
 
@@ -314,7 +362,13 @@ class TMDBChangesETL(TMDBService):
 
         # Check for major provider availability (flatrate, buy, or rent)
         provider_names = self._extract_major_provider_names(item)
-        has_major_provider = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
+        has_major_provider_by_name = bool(provider_names & MAJOR_STREAMING_PROVIDERS)
+
+        # ID-based check against provider_map.json (mkt_share_order <= 12)
+        provider_ids = self._extract_provider_ids(item)
+        has_major_provider_by_id = bool(provider_ids & MAJOR_PROVIDER_IDS)
+
+        has_major_provider = has_major_provider_by_name or has_major_provider_by_id
 
         # "In Theaters" counts as available
         is_in_theaters = item.get("streaming_platform") == "In Theaters" or (
@@ -340,17 +394,22 @@ class TMDBChangesETL(TMDBService):
                 )
             return passed_tv_filter
 
-        # Popularity threshold - check both direct field and metrics dict
-        popularity = item.get("popularity", 0) or item.get("metrics", {}).get("popularity", 0)
-        if popularity < 1.0:
-            log_fn(f"Filter reject {item_name}: popularity={popularity}")
-            return False
+        # Titles on a top-12 provider bypass popularity / vote_count gates
+        if not has_major_provider:
+            popularity = item.get("popularity", 0) or item.get("metrics", {}).get("popularity", 0)
+            if popularity < 1.0:
+                log_fn(f"Filter reject {item_name}: popularity={popularity}")
+                return False
 
-        # Vote count threshold - check both direct field and metrics dict
-        vote_count = item.get("vote_count", 0) or item.get("metrics", {}).get("vote_count", 0)
-        if vote_count < 5:
-            log_fn(f"Filter reject {item_name}: vote_count={vote_count}")
-            return False
+            vote_count = item.get("vote_count", 0) or item.get("metrics", {}).get("vote_count", 0)
+            if vote_count < 5:
+                log_fn(f"Filter reject {item_name}: vote_count={vote_count}")
+                return False
+        else:
+            log_fn(
+                f"Filter: {item_name} on major provider (ids={provider_ids & MAJOR_PROVIDER_IDS}), "
+                f"skipping popularity/vote_count gates"
+            )
 
         # For movies: must have runtime
         if media_type == "movie":

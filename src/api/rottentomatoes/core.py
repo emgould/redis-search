@@ -68,15 +68,24 @@ class RottenTomatoesService(BaseAPIClient):
             f"&x-algolia-application-id={ALGOLIA_APP_ID}"
         )
 
-    def _build_search_params(self, query: str, hits_per_page: int = 10) -> str:
+    def _build_search_params(
+        self,
+        query: str,
+        hits_per_page: int = 10,
+        content_type: str | None = None,
+    ) -> str:
         """Build encoded search parameters for Algolia request."""
         encoded_query = quote_plus(query)
         # Note: RT Algolia expects spaces around the equals sign in the filter
         # isEmsSearchable = 1 (encoded as isEmsSearchable%20%3D%201)
+        filter_expr = "isEmsSearchable = 1"
+        if content_type is not None:
+            filter_expr = f"{filter_expr} AND type:{content_type}"
+        encoded_filters = quote_plus(filter_expr)
         return (
             f"analyticsTags=%5B%22header_search%22%5D"
             f"&clickAnalytics=true"
-            f"&filters=isEmsSearchable%20%3D%201"
+            f"&filters={encoded_filters}"
             f"&hitsPerPage={hits_per_page}"
             f"&query={encoded_query}"
         )
@@ -88,6 +97,7 @@ class RottenTomatoesService(BaseAPIClient):
         include_content: bool = True,
         include_people: bool = True,
         hits_per_page: int = 10,
+        content_type: str | None = None,
         **kwargs: Any,
     ) -> AlgoliaMultiQueryResponse:
         """
@@ -103,7 +113,7 @@ class RottenTomatoesService(BaseAPIClient):
         Returns:
             AlgoliaMultiQueryResponse with search results
         """
-        params = self._build_search_params(query, hits_per_page)
+        params = self._build_search_params(query, hits_per_page, content_type)
 
         # Build request payload
         requests: list[dict[str, Any]] = []
@@ -196,12 +206,14 @@ class RottenTomatoesService(BaseAPIClient):
             )
 
         try:
+            content_type = media_type.value if media_type is not None else None
             # Make search request
             response = await self._make_search_request(
                 query=query,
                 include_content=True,
                 include_people=False,
                 hits_per_page=limit,
+                content_type=content_type,
                 **kwargs,
             )
 

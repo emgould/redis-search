@@ -2,7 +2,7 @@
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -93,6 +93,8 @@ help:
 	@echo "    make backfill      - Run media index backfill (ARGS='--force' to re-run all)"
 	@echo "    make backfill-media-date-sort-fields - Backfill derived date sort/filter fields (dry run)"
 	@echo "    make backfill-media-date-sort-fields ARGS='--apply' - Write derived date sort/filter fields"
+	@echo "    make backfill-major-provider          - Backfill 2026 major-provider media (dry run)"
+	@echo "    make backfill-major-provider ARGS='--apply' - Backfill and write to Redis"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
 	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Backfill media microgenres from JSONL"
@@ -556,6 +558,12 @@ backfill-media-date-sort-fields:
 # Usage: make backfill-external-ids
 #        make backfill-external-ids MC_TYPE=movie
 #        make backfill-external-ids ARGS="--dry-run --limit 100"
+# Backfill 2026 major-provider media missing from Redis
+# Usage: make backfill-major-provider              (dry run)
+#        make backfill-major-provider ARGS="--apply" (write to Redis)
+backfill-major-provider:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_major_provider_media.py $(ARGS)'
+
 backfill-external-ids:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
 

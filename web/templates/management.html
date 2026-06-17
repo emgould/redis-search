@@ -2263,9 +2263,15 @@
       const promoteStatus = document.getElementById('promote-status');
       const copyStatusHtml = `
         <div id="copy-status" class="mt-4 hidden">
-          <div class="flex items-center gap-2 text-sm">
-            <span id="copy-indicator" class="animate-spin">⏳</span>
-            <span id="copy-label">Starting copy...</span>
+          <div class="flex items-center justify-between gap-3 text-sm">
+            <div class="flex items-center gap-2">
+              <span id="copy-indicator" class="animate-spin">⏳</span>
+              <span id="copy-label">Starting copy...</span>
+            </div>
+            <button id="btn-cancel-copy-to-local" onclick="cancelCopyToLocal()"
+              class="hidden px-3 py-1 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded font-medium transition-colors disabled:opacity-50">
+              Cancel Copy
+            </button>
           </div>
           <pre id="copy-output" class="mt-2 text-xs bg-surface-950 p-3 rounded-lg max-h-48 overflow-y-auto font-mono whitespace-pre-wrap"></pre>
         </div>
@@ -2277,6 +2283,7 @@
     const indicatorElFresh = document.getElementById('copy-indicator');
     const labelElFresh = document.getElementById('copy-label');
     const outputElFresh = document.getElementById('copy-output');
+    const cancelBtnFresh = document.getElementById('btn-cancel-copy-to-local');
 
     btn.disabled = true;
     icon.textContent = '⏳';
@@ -2286,6 +2293,10 @@
     indicatorElFresh.className = 'animate-spin';
     labelElFresh.textContent = clean ? 'Starting mirror copy (clean)...' : 'Starting copy...';
     outputElFresh.textContent = '';
+    if (cancelBtnFresh) {
+      cancelBtnFresh.classList.remove('hidden');
+      cancelBtnFresh.disabled = false;
+    }
 
     try {
       // Build URL with indices and clean query params
@@ -2321,12 +2332,46 @@
     }
   }
 
+  async function cancelCopyToLocal() {
+    const cancelBtn = document.getElementById('btn-cancel-copy-to-local');
+    const labelEl = document.getElementById('copy-label');
+    const outputEl = document.getElementById('copy-output');
+
+    if (!confirm('Cancel the active copy-to-local task? Local Redis may be left partially copied.')) {
+      return;
+    }
+
+    if (cancelBtn) {
+      cancelBtn.disabled = true;
+    }
+    if (labelEl) {
+      labelEl.textContent = 'Cancelling copy...';
+    }
+
+    try {
+      const res = await fetch('/api/copy-to-local/cancel', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+      pollCopyToLocalStatus();
+    } catch (e) {
+      if (outputEl) {
+        outputEl.textContent += `\nCancel failed: ${e.message}`;
+      }
+      if (cancelBtn) {
+        cancelBtn.disabled = false;
+      }
+    }
+  }
+
   async function pollCopyToLocalStatus() {
     const btn = document.getElementById('btn-copy-to-local');
     const icon = document.getElementById('copy-icon');
     const indicatorEl = document.getElementById('copy-indicator');
     const labelEl = document.getElementById('copy-label');
     const outputEl = document.getElementById('copy-output');
+    const cancelBtn = document.getElementById('btn-cancel-copy-to-local');
 
     try {
       const res = await fetch('/api/copy-to-local-status');
@@ -2336,11 +2381,23 @@
       outputEl.scrollTop = outputEl.scrollHeight;
 
       if (data.running) {
+        if (cancelBtn) {
+          cancelBtn.classList.remove('hidden');
+          cancelBtn.disabled = false;
+        }
         setTimeout(pollCopyToLocalStatus, 1000);
       } else {
+        if (cancelBtn) {
+          cancelBtn.classList.add('hidden');
+          cancelBtn.disabled = false;
+        }
         indicatorEl.className = '';
         icon.classList.remove('animate-spin');
-        if (data.error && !data.output.includes('🎉 Copy complete!')) {
+        if (data.cancelled) {
+          indicatorEl.textContent = '⏹';
+          icon.textContent = '⏹';
+          labelEl.textContent = 'Cancelled';
+        } else if (data.error && !data.output.includes('🎉 Copy complete!')) {
           indicatorEl.textContent = '❌';
           icon.textContent = '❌';
           labelEl.textContent = 'Error';
