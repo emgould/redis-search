@@ -4,6 +4,7 @@ globs:
   - "src/etl/tmdb_nightly_etl.py"
   - "src/services/etl_service.py"
   - "scripts/backfill_theatrical_movies.py"
+  - "scripts/backfill_major_provider_media.py"
   - "scripts/deploy_web_cr.sh"
 alwaysApply: false
 ---
@@ -56,6 +57,35 @@ If a title is available to **stream (flatrate), rent, or buy** from a major prov
 - "In Theaters" (via `streaming_platform` or `primary_provider_type`) counts as available.
 - TV: Returning Series OR recent activity OR has availability.
 - Movies: popularity + vote_count + runtime gates, then require major provider or theatrical.
+
+### 2a. Major-provider bypass for popularity/vote_count (2026-05-13)
+
+Titles available on a top-12 provider (by `mkt_share_order` in `provider_map.json`) bypass the
+`popularity >= 1.0` and `vote_count >= 5` gates. This prevents newly-released content on major
+streaming platforms from being rejected due to low early TMDB engagement.
+
+- `MAJOR_PROVIDER_IDS` built from `provider_map.json` at import time (`streaming_providers.py`).
+  Includes base provider IDs and all package IDs (e.g., Netflix + Netflix Standard with Ads).
+- `_extract_provider_ids()` mirrors `_extract_major_provider_names()` but works with integer IDs.
+- Poster, runtime ≥ 40, and theatrical/availability checks still apply.
+- The bulk loader in `etl_service.py` now applies the same bypass (see 2b below).
+
+### 2b. Bulk loader major-provider alignment (2026-05-13)
+
+`etl_service.py` movie filtering now checks `MAJOR_PROVIDER_IDS` (via `provider_id` in flatrate/buy/rent).
+When a movie is on a top-12 provider, the `popularity < 1` and `vote_count <= 1` gates are skipped.
+Runtime and 10-year-old-title-needs-major-provider rules still apply.
+
+### 2c. Backfill script for 2026 major-provider media (2026-05-13)
+
+`scripts/backfill_major_provider_media.py` re-ingests 2026 titles missed before the bypass was added:
+
+- **Phase A** — scans cached `data/us/movie` and `data/us/tv` files for `2026_*.json`.
+  Titles with poster + major provider (+ runtime >= 40 for movies) that are missing from Redis
+  are normalized and loaded.
+- **Phase B** — for 2026 months without cached files, uses the TMDB Discover API to pull
+  candidates, enriches via `get_media_details`, filters, and loads.
+- `make backfill-major-provider` (dry run) / `make backfill-major-provider ARGS='--apply'`.
 
 ### 3. Theatrical release_dates populated
 

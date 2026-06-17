@@ -9,13 +9,17 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 from dotenv import load_dotenv
 
+from ai.microgenre_batch import build_microgenre_input_from_document
+from ai.microgenre_document import microgenre_result_to_redis, valid_microgenres_value
+from ai.prompts.microgenre_classifier import score_microgenres
 from api.tmdb.core import TMDBService
 from contracts.models import MCType
 from core.normalize import prepare_media_redis_document
+from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 
 # Load env after imports so E402 is satisfied; path setup is via PYTHONPATH in Makefile
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -100,6 +104,36 @@ async def main() -> None:
         sys.exit(2)
 
     key, redis_doc = result
+
+    # RT enrichment
+    if not enrich_from_local(redis_doc):
+        try:
+            await enrich_from_algolia(redis_doc)
+        except Exception as exc:
+            print(f"RT Algolia enrichment failed (non-fatal): {exc}", file=sys.stderr)
+
+    # Microgenre classification
+    doc_media_type = redis_doc.get("mc_type")
+    existing_microgenres = valid_microgenres_value(redis_doc.get("microgenres"))
+    if existing_microgenres is not None:
+        redis_doc["microgenres"] = existing_microgenres
+    elif doc_media_type in ("movie", "tv"):
+        try:
+            classifier_input = build_microgenre_input_from_document(
+                redis_doc,
+                cast(Literal["movie", "tv"], doc_media_type),
+                score_threshold=0.1,
+            )
+            response = await score_microgenres(classifier_input)
+            if response.error is None and response.result is not None:
+                redis_doc["microgenres"] = microgenre_result_to_redis(response.result)
+            else:
+                print(
+                    f"Microgenre classification returned no result: {response.error}",
+                    file=sys.stderr,
+                )
+        except Exception as exc:
+            print(f"Microgenre classification failed (non-fatal): {exc}", file=sys.stderr)
 
     if args.add:
         from redis.asyncio import Redis
