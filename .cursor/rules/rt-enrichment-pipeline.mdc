@@ -4,6 +4,8 @@
 
 RT enrichment stamps five fields onto Redis media documents by matching against a local on-disk RT content index. An optional Algolia live-search fallback is available for backfill scripts only.
 
+Accepted RT matches must pass strict title, media type, and release-year validation before any RT metadata is applied. Do not accept nearest/fuzzy Algolia results or vanity hits from `external_ids.rt_id` unless the resolved RT record still strictly matches the source media document.
+
 ## RT Fields on Redis Document
 
 | Field | Type | Source |
@@ -18,16 +20,16 @@ Additionally, `external_ids.rt_id` (e.g. `m/the_matrix`) and `external_ids.tms_i
 
 ## 3-Tier Matching Strategy
 
-1. **Vanity lookup** (O(1)): If `external_ids.rt_id` exists, strip the `m/` or `tv/` prefix and look up directly in the vanity index.
-2. **Title + year**: Normalize title text and look up in the local title index with optional year filter.
-3. **Algolia fallback** (backfill only): Live search RT Algolia API. Results are cached into the local index for future runs.
+1. **Vanity lookup** (O(1)): If `external_ids.rt_id` exists, strip the `m/` or `tv/` prefix and look up directly in the vanity index. The resolved record must still pass strict title/type/year validation.
+2. **Title + year**: Normalize title text and look up in the local title index with year filtering. Only strict title/type/year matches may be applied.
+3. **Algolia fallback** (backfill only): Live search RT Algolia API with server-side `type:movie` or `type:tv` filtering. Results are cached into the local index for future runs only after strict validation.
 
 ## Key Files
 
 - `src/api/rottentomatoes/local_store.py` — Local on-disk RT content index with title and vanity lookups.
 - `src/etl/rt_enrichment.py` — Enrichment module: `enrich_redis_doc()` (sync, ETL), `enrich_from_local()`, `enrich_from_algolia()` (async).
 - `src/etl/tmdb_nightly_etl.py` — ETL integration: calls `enrich_redis_doc()` after `document_to_redis()`, local-only (no Algolia).
-- `scripts/backfill_rt_enrichment.py` — Standalone backfill with `--algolia-fallback` and `--force` flags.
+- `scripts/backfill_rt_enrichment.py` — Standalone backfill with missing-data enrichment and `--audit-existing` remediation.
 - `src/core/normalize.py` — `SearchDocument` dataclass and `document_to_redis()` carry the RT fields.
 
 ## Local RT Data
@@ -42,7 +44,32 @@ Additionally, `external_ids.rt_id` (e.g. `m/the_matrix`) and `external_ids.tms_i
 - `make backfill-rt ARGS="--algolia-fallback"` — With Algolia fallback.
 - `make backfill-rt ARGS="--dry-run"` — Discovery only.
 - `make backfill-rt MC_TYPE=movie` — Filter to movies only.
-- `make backfill-rt ARGS="--force"` — Re-enrich docs that already have RT data.
+- `make backfill-rt ARGS="--audit-existing --dry-run"` — Audit existing RT metadata without writing.
+- `make backfill-rt ARGS="--audit-existing --algolia-fallback --push-to-mm"` — Repair or clear invalid existing RT metadata and propagate metadata changes.
+- `make backfill-rt ARGS="--force"` — With `--push-to-mm`, send docs that already have RT data even when no Redis patch is needed.
+
+## Existing Bad Data Remediation
+
+Use `--audit-existing` when the goal is to fix documents that already have incorrect RT metadata. This mode scans RT-bearing documents, validates the current RT attachment with the same strict title/type/year matcher, and then:
+
+- leaves valid RT metadata unchanged,
+- attempts strict local title/year re-enrichment for invalid attachments,
+- optionally attempts strict Algolia re-enrichment when `--algolia-fallback` is set,
+- clears RT fields and `external_ids.rt_id` when no strict match exists,
+- pushes repaired or cleared metadata to Media Manager when `--push-to-mm` is set.
+
+Run audit dry-runs before writes:
+
+```bash
+make backfill-rt MC_TYPE=tv ARGS="--audit-existing --dry-run"
+make backfill-rt MC_TYPE=tv ARGS="--audit-existing --algolia-fallback --dry-run"
+```
+
+Apply with Media Manager propagation only after reviewing dry-run counts:
+
+```bash
+make backfill-rt MC_TYPE=tv ARGS="--audit-existing --algolia-fallback --push-to-mm"
+```
 
 ## ETL Integration
 

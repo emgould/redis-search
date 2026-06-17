@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -324,6 +325,8 @@ _task_status = {"running": False, "output": "", "error": ""}
 # Track promote task status (separate from ETL task)
 _promote_status = {"running": False, "output": "", "error": ""}
 _copy_to_local_status = {"running": False, "output": "", "error": ""}
+_copy_to_local_process: subprocess.Popen[str] | None = None
+_copy_to_local_lock = threading.Lock()
 
 # Track ETL task status
 _etl_status = {"running": False, "output": "", "error": ""}
@@ -1874,8 +1877,8 @@ async def promote_status(_: None = Depends(require_api_key)):
 
 def run_copy_to_local_task(indices: list[str] | None = None, clean: bool = False):
     """Run copy from public to local Redis in background."""
-    global _copy_to_local_status
-    _copy_to_local_status = {"running": True, "output": "", "error": ""}
+    global _copy_to_local_process, _copy_to_local_status
+    _copy_to_local_status = {"running": True, "output": "", "error": "", "cancelled": False}
 
     try:
         # Set up environment
@@ -1902,7 +1905,10 @@ def run_copy_to_local_task(indices: list[str] | None = None, clean: bool = False
             text=True,
             env=env,
             cwd=PROJECT_ROOT,
+            start_new_session=True,
         )
+        with _copy_to_local_lock:
+            _copy_to_local_process = process
 
         output_lines = []
         assert process.stdout is not None
@@ -1920,7 +1926,7 @@ def run_copy_to_local_task(indices: list[str] | None = None, clean: bool = False
             _copy_to_local_status["output"] = "".join(output_lines)
 
         # Only treat as error if process actually failed (non-zero exit code)
-        if process.returncode != 0:
+        if process.returncode != 0 and not _copy_to_local_status.get("cancelled"):
             _copy_to_local_status["error"] = (
                 stderr or f"Process exited with code {process.returncode}"
             )
@@ -1928,6 +1934,9 @@ def run_copy_to_local_task(indices: list[str] | None = None, clean: bool = False
     except Exception as e:
         _copy_to_local_status["error"] = str(e)
     finally:
+        with _copy_to_local_lock:
+            if _copy_to_local_process is not None and _copy_to_local_process.poll() is not None:
+                _copy_to_local_process = None
         _copy_to_local_status["running"] = False
 
 
@@ -2020,6 +2029,38 @@ async def copy_to_local(
 async def copy_to_local_status(_: None = Depends(require_api_key)):
     """Get status of copy to local background task."""
     return JSONResponse(content=_copy_to_local_status)
+
+
+@app.post("/api/copy-to-local/cancel")
+async def cancel_copy_to_local(_: None = Depends(require_api_key)):
+    """Cancel the active copy-to-local subprocess."""
+    global _copy_to_local_process
+
+    with _copy_to_local_lock:
+        process = _copy_to_local_process
+
+    if process is None or process.poll() is not None:
+        _copy_to_local_status["running"] = False
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "error": "No copy task is currently running"},
+        )
+
+    _copy_to_local_status["cancelled"] = True
+    _copy_to_local_status["error"] = "Copy cancelled by user"
+
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
+    return JSONResponse(content={"success": True, "message": "Copy cancellation requested"})
 
 
 def run_etl_task(
