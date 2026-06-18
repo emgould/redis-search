@@ -304,6 +304,13 @@ Same SSE event format as autocomplete streaming for `/api/search/stream`.
 /api/search?sources=movie&original_language_exclude=en&media_sort=rt_audience_score
 /api/search?sources=movie&original_language_include=ko,ja,fr&media_sort=rt_audience_score
 /api/search?sources=movie&origin_country_exclude=us,gb,ca&media_sort=rt_audience_score
+
+# Foreign-language genre browse sorted by RT audience score
+/api/search?sources=movie&original_language_exclude=en&genre_ids=35&media_sort=rt_audience_score       # Comedy
+/api/search?sources=movie&original_language_exclude=en&genre_ids=18&media_sort=rt_audience_score       # Drama
+/api/search?sources=movie&original_language_exclude=en&genre_ids=28,12&genre_match=any&media_sort=rt_audience_score   # Action or Adventure
+/api/search?sources=movie&original_language_exclude=en&genre_ids=53&media_sort=rt_audience_score       # Thriller
+/api/search?sources=movie&original_language_exclude=en&genre_ids=9648,99&genre_match=all&media_sort=rt_audience_score  # Mystery Documentary
 ```
 
 ---
