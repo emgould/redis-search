@@ -231,6 +231,10 @@ GET /api/search?q={query}&sources={sources}&limit={limit}
 | `rating_min` | float | No | - | Minimum rating (0-10) |
 | `rating_max` | float | No | - | Maximum rating (0-10) |
 | `mc_type` | string | No | - | Filter by type: movie, tv |
+| `original_language_include` | string | No | - | Comma-separated ISO original language codes to include (e.g., `ko,ja,fr`) |
+| `original_language_exclude` | string | No | - | Comma-separated ISO original language codes to exclude (e.g., `en` for foreign-language media) |
+| `origin_country_include` | string | No | - | Comma-separated ISO origin country codes to include (e.g., `kr,jp,fr`) |
+| `origin_country_exclude` | string | No | - | Comma-separated ISO origin country codes to exclude (e.g., `us,gb,ca`) |
 | `ratings_sort` | string | No | popularity | Sort order for ratings results when ratings source is requested with tv/movie. Options: "popularity" (default), "audience_score", "critics_score". Sorts in descending order (highest first). |
 | `media_sort` | string | No | popularity | Sort order for indexed movie/tv results. Options: "popularity", "rating", "year", "rt_audience_score", "rt_critics_score". Explicit non-popularity sorts preserve requested order, including with `q`; RT sorts automatically require the selected RT score to exist. |
 | `raw` | bool | No | false | If true, treat `q` as raw RediSearch syntax (disables source hint parsing) |
@@ -295,6 +299,11 @@ Same SSE event format as autocomplete streaming for `/api/search/stream`.
 /api/search?sources=movie,ratings&year_min=2020&rating_min=7&ratings_sort=critics_score
 /api/search?sources=tv&last_air_date_min=2026-01-01&last_air_date_max=2026-12-31&media_sort=rt_audience_score
 /api/search?sources=movie&release_date_min=2026-01-01&release_date_max=2026-12-31&media_sort=rt_critics_score
+
+# Foreign-language / origin-country filtering
+/api/search?sources=movie&original_language_exclude=en&media_sort=rt_audience_score
+/api/search?sources=movie&original_language_include=ko,ja,fr&media_sort=rt_audience_score
+/api/search?sources=movie&origin_country_exclude=us,gb,ca&media_sort=rt_audience_score
 ```
 
 ---
