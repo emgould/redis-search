@@ -86,6 +86,9 @@ Runtime and 10-year-old-title-needs-major-provider rules still apply.
 - **Phase B** — for 2026 months without cached files, uses the TMDB Discover API to pull
   candidates, enriches via `get_media_details`, filters, and loads.
 - `make backfill-major-provider` (dry run) / `make backfill-major-provider ARGS='--apply'`.
+- Use `make backfill-major-provider ARGS='--apply --push-to-mm'` when loaded media must also
+  be inserted into Media Manager. Major-provider backfill records are new media docs, so
+  Media Manager insertion uses full insert mode rather than `metadata_only`.
 
 ### 3. Theatrical release_dates populated
 
