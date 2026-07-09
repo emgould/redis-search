@@ -1,0 +1,122 @@
+---
+description: Public Lists discovery index (idx:public_lists) - runtime-owned MediaCircle read model, write API contract, search modes, and promotion guardrails
+globs: ["src/core/public_lists.py", "src/core/public_list_queries.py", "src/services/public_list_service.py", "web/routes/public_lists.py"]
+alwaysApply: false
+---
+
+# Public Lists Discovery Index (`idx:public_lists`)
+
+## Ownership Model — READ THIS FIRST
+
+`idx:public_lists` (prefix `public_list:`) is a **runtime-owned** read model.
+
+- Canonical data lives in MediaCircle Firestore (`circles/{listId}` + items).
+- Documents are written by the MediaCircle backend projection pipeline via the
+  authenticated write API below — never by ETL, never by promotion tooling.
+- Each environment (local/dev) owns its own corpus. The rebuild path is the
+  MediaCircle public-list backfill, **not** `promote_to_dev.py` /
+  `copy_to_local.py` / `bulk_clone_prefix.py`.
+
+### Promotion / copy guardrails
+
+- `scripts/promote_to_dev.py` and `scripts/copy_to_local.py` skip runtime-owned
+  indices by default and require `--include-runtime-owned` (destructive) to force.
+- `scripts/bulk_clone_prefix.py` refuses `public_list:` outright.
+- `/api/promote/indices` and `/api/copy-to-local/indices` return
+  `runtime_owned: true` metadata; the management UI renders those rows disabled
+  with a "runtime-owned" badge and excludes them from select-all.
+- The registry is `RUNTIME_OWNED_INDEXES` / `RUNTIME_OWNED_PREFIXES` in
+  `src/core/public_lists.py`. Add future runtime-owned indices there.
+
+## Document Contract
+
+Key: `public_list:{listId}`. Payload built by `public_list_to_redis_doc()` from a
+`PublicListUpsertRequest`:
+
+- Identity: `list_id`, `name`, `description`, `image`, `circle_type`,
+  `visibility`, `circle_mode`
+- Owner: `owner_id`, `owner_username` (normalized tag),
+  `owner_username_display`, `owner_display_name`, `owner_photo_url`,
+  `is_mediacircle_owner` ("true"/"false" tag)
+- Derived search text: `search_title`, `title_compact`, `description_text`,
+  `item_titles_text`
+- Topics (from MediaCircle LLM classification): `topic_keywords[]` (tags),
+  `topic_labels[]` (tags), `topic_summary` (text),
+  `llm_classification_version`
+- Items: `items[]` (full), `item_mc_ids[]`, `item_titles[]`,
+  `item_title_compacts[]`, `item_types[]`, `item_count`
+- Metrics (computed by MediaCircle projection, stored verbatim):
+  `followers_count`, `engagement_score`, `engagement_score_version`,
+  `vote_count`, `net_vote_score`, `super_up_count`
+- Timestamps: `created_at` (preserved on update), `discovery_updated_at`,
+  `modified_at`
+
+## API Endpoints (`web/routes/public_lists.py`)
+
+### `GET /api/public-lists/search` (public)
+
+| Param | Description |
+|-------|-------------|
+| `q` | Free text over name/description/topic summary/item titles. `@name` routes to owner search. |
+| `owner_username` | Owner username filter (prefix for >3 chars, exact otherwise) |
+| `owner_id` | Exact owner id filter (deep links) |
+| `topic` | Topic keyword/label tag filter OR-ed with free text |
+| `item_mc_id` | Exact contained-item mc_id ("lists containing The Godfather") |
+| `item_title` | Contained-item title fallback (compact tag OR text) |
+| `sort` | `relevance` (default), `followers`, `engagement`, `recent`, `created` |
+| `limit` / `offset` | Pagination (limit 1–50); response `total` is full match count |
+
+**System-list rule:** MediaCircle system-owned Lists (no follow paradigm) appear
+in text/topic/title results but are excluded from `followers` and `engagement`
+sorts (`-@is_mediacircle_owner:{true}`).
+
+Browse mode (no filters) sorts by `discovery_updated_at` desc.
+
+### `GET /api/public-lists/{list_id}` (public)
+
+Returns the full Redis document, 404 when missing.
+
+### Write endpoints (X-API-Key required)
+
+- `PUT /api/public-lists/{list_id}` — upsert (path must match payload `list_id`)
+- `DELETE /api/public-lists/{list_id}` — delete
+- `POST /api/public-lists/index` — create `idx:public_lists` if missing
+
+Auth: `require_public_list_write_key` in `web/auth.py`. Key source:
+`PUBLIC_LISTS_API_KEY` env (falls back to `ETL_API_KEY`). Local dev bypass only
+when `ENVIRONMENT=local` and not in Cloud Run. MediaCircle Firebase functions
+send the key from GCP Secret Manager.
+
+## Indexed Fields
+
+- TEXT: `search_title` (w5, nostem), `description_text` (w2), `topic_summary`
+  (w2), `item_titles_text` (nostem), `title_compact` (nostem),
+  `owner_display_name`
+- TAG: `list_id`, `owner_id`, `owner_username`, `is_mediacircle_owner`,
+  `circle_type`, `visibility`, `circle_mode`, `topic_keywords[*]`,
+  `topic_labels[*]`, `item_mc_ids[*]`, `item_title_compacts[*]`, `item_types[*]`
+- NUMERIC sortable: `followers_count`, `engagement_score`, `vote_count`,
+  `net_vote_score`, `super_up_count`, `item_count`, `created_at`,
+  `discovery_updated_at`, `modified_at`
+
+Index is registered in `INDEX_CONFIGS` (`web/app.py`) with
+`"runtime_owned": True`, so `/api/index/public_lists` create/delete and the
+admin index-info page work like other indices.
+
+## Tests
+
+- `src/core/tests/test_public_lists.py` — hermetic: document normalization,
+  schema coverage, query builders, sort validation, runtime-owned registry.
+- `web/tests/test_public_lists_api.py` — hermetic FastAPI TestClient: write
+  auth (reject/accept/fallback), public reads, validation.
+- `src/services/tests/test_public_list_service.py` — integration (skips
+  without local Redis on 6380): index lifecycle, CRUD, all search modes,
+  sorts + system-list exclusion, pagination. Uses uniquely-tagged seed docs
+  cleaned up after each test, so it is safe against a shared local corpus.
+
+Run: `PYTHONPATH=src pytest src/core/tests/test_public_lists.py web/tests/test_public_lists_api.py src/services/tests/test_public_list_service.py`
+
+## Related
+
+- MediaCircle side (projection worker, callable, backfill) is documented in the
+  mediacircle repo: `.cursor/rules/PUBLIC_LIST_DISCOVERY.mdc`.

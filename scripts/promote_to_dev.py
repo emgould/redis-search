@@ -43,6 +43,7 @@ load_dotenv(env_file)
 _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
 
+from core.public_lists import RUNTIME_OWNED_INDEXES  # noqa: E402
 from utils.redis_search_index_info import (  # noqa: E402
     extract_index_prefix,
     parse_index_schema_fields,
@@ -64,6 +65,10 @@ class IndexInfo:
     num_docs: int
     index_memory_bytes: int
     schema_fields: list[dict[str, str | bool]]
+    # Runtime-owned indices (e.g. idx:public_lists) are written by the
+    # MediaCircle backend per environment and are excluded from promotion
+    # by default. Rebuild path is the MediaCircle backfill, not promotion.
+    runtime_owned: bool = False
 
 
 async def get_redis_connection(
@@ -113,6 +118,7 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
             name=friendly_name,
             redis_name=index_name,
             prefix=prefix,
+            runtime_owned=index_name in RUNTIME_OWNED_INDEXES,
             num_docs=int(info.get("num_docs", 0)),
             index_memory_bytes=int(
                 float(info.get("inverted_sz_mb", 0)) * 1024 * 1024
@@ -440,6 +446,7 @@ async def main(
     indices_to_promote: list[str] | None = None,
     list_only: bool = False,
     output_json: bool = False,
+    include_runtime_owned: bool = False,
 ) -> int:
     """
     Main promote function.
@@ -449,6 +456,9 @@ async def main(
         indices_to_promote: List of index names to promote (None = all)
         list_only: Just list available indices
         output_json: Output JSON format (for API integration)
+        include_runtime_owned: Allow promoting runtime-owned indices
+            (dangerous: complete replacement destroys the environment-local
+            corpus written by the MediaCircle backend)
 
     Returns exit code (0 = success, 1 = error).
     """
@@ -546,6 +556,25 @@ async def main(
 
         available_indices = filtered
 
+    # Exclude runtime-owned indices (e.g. public lists) unless explicitly
+    # opted in. Promotion is a complete replacement, so copying a
+    # runtime-owned index between environments would destroy documents
+    # written by the MediaCircle backend in the target environment.
+    runtime_owned = [i for i in available_indices if i.runtime_owned]
+    if runtime_owned and not include_runtime_owned:
+        skipped_names = ", ".join(i.redis_name for i in runtime_owned)
+        print(f"🛡️  Skipping runtime-owned indices: {skipped_names}")
+        print("   These are written by the MediaCircle backend per environment.")
+        print("   Rebuild them with the MediaCircle backfill, not promotion.")
+        print("   (Use --include-runtime-owned to force. This is destructive.)")
+        print()
+        available_indices = [i for i in available_indices if not i.runtime_owned]
+    elif runtime_owned and include_runtime_owned:
+        forced_names = ", ".join(i.redis_name for i in runtime_owned)
+        print(f"⚠️  WARNING: promoting runtime-owned indices: {forced_names}")
+        print("   Target-environment documents written by MediaCircle will be replaced.")
+        print()
+
     if not available_indices:
         print("❌ No indices to promote")
         await local_redis.aclose()
@@ -628,6 +657,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Output JSON format (for API integration)",
     )
+    parser.add_argument(
+        "--include-runtime-owned",
+        action="store_true",
+        help="Allow promoting runtime-owned indices (e.g. public lists). "
+        "Destructive: replaces documents written by the MediaCircle backend "
+        "in the target environment.",
+    )
 
     args = parser.parse_args()
 
@@ -637,6 +673,7 @@ if __name__ == "__main__":
             indices_to_promote=args.indices,
             list_only=args.list,
             output_json=args.json,
+            include_runtime_owned=args.include_runtime_owned,
         )
     )
     sys.exit(exit_code)

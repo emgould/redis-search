@@ -24,6 +24,11 @@ The application uses RediSearch (Redis Stack) with JSON documents for full-text 
 | `idx:podcasts` | `podcast:` | PodcastIndex | Podcasts |
 | `idx:book` | `book:` | OpenLibrary | Books |
 | `idx:author` | `author:` | OpenLibrary + Wikidata | Authors |
+| `idx:public_lists` | `public_list:` | MediaCircle backend (runtime-owned) | Public List discovery — see `idx-public-lists.mdc` |
+
+`idx:public_lists` is runtime-owned: documents are written by the MediaCircle
+projection pipeline, never by ETL, and the prefix is excluded from
+promote/copy/clone tooling by default. Full contract in `idx-public-lists.mdc`.
 
 ---
 
