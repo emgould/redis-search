@@ -1505,39 +1505,6 @@
           </div>
         </div>
 
-        <!-- Public Lists search tester -->
-        <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700 mt-4">
-          <p class="text-sm text-surface-400 mb-3">
-            Search Tester — <code class="bg-surface-900 px-1 rounded">/api/public-lists/search</code>
-            (free text, <code class="bg-surface-900 px-1 rounded">@username</code>, topic, or contained title)
-          </p>
-          <div class="flex flex-wrap gap-2 mb-3">
-            <input type="text" id="public-lists-search-q"
-              placeholder='e.g. documentary, @username, or "The Godfather"'
-              onkeydown="if (event.key === 'Enter') runPublicListsSearch()"
-              class="flex-1 min-w-64 px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 placeholder-surface-500 focus:outline-none focus:border-brand-500">
-            <select id="public-lists-search-mode"
-              class="px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 focus:outline-none focus:border-brand-500">
-              <option value="q">Free text / @username</option>
-              <option value="topic">Topic</option>
-              <option value="item_title">Contained title</option>
-            </select>
-            <select id="public-lists-search-sort"
-              class="px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 focus:outline-none focus:border-brand-500">
-              <option value="relevance">Sort: relevance</option>
-              <option value="followers">Sort: followers</option>
-              <option value="engagement">Sort: engagement</option>
-              <option value="recent">Sort: recent</option>
-              <option value="created">Sort: created</option>
-            </select>
-            <button onclick="runPublicListsSearch()" id="btn-public-lists-search"
-              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
-              🔍 Search
-            </button>
-          </div>
-          <div id="public-lists-search-status" class="text-sm text-surface-500 mb-2 hidden"></div>
-          <div id="public-lists-search-results" class="space-y-2 max-h-80 overflow-y-auto"></div>
-        </div>
       </div>
 
       <!-- Index Operation Status -->
@@ -2604,73 +2571,6 @@
     } finally {
       btnDelete.disabled = false;
       btnCreate.disabled = false;
-    }
-  }
-
-  // ============================================================
-  // Public Lists Search Tester
-  // ============================================================
-
-  async function runPublicListsSearch() {
-    const q = document.getElementById('public-lists-search-q').value.trim();
-    const mode = document.getElementById('public-lists-search-mode').value;
-    const sort = document.getElementById('public-lists-search-sort').value;
-    const statusEl = document.getElementById('public-lists-search-status');
-    const resultsEl = document.getElementById('public-lists-search-results');
-    const btn = document.getElementById('btn-public-lists-search');
-
-    btn.disabled = true;
-    statusEl.classList.remove('hidden');
-    statusEl.textContent = 'Searching...';
-    resultsEl.innerHTML = '';
-
-    try {
-      const params = new URLSearchParams({ sort, limit: '10' });
-      if (q) params.set(mode, q);
-
-      const res = await fetch(`/api/public-lists/search?${params.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        statusEl.textContent = `Error: ${data.error || res.status}`;
-        return;
-      }
-
-      statusEl.textContent = `${data.total} match(es) • sort=${data.sort} • query=${data.query}`;
-
-      if (!data.results.length) {
-        resultsEl.innerHTML = '<p class="text-sm text-surface-500">No public lists found. If the index is empty, run the MediaCircle backfill.</p>';
-        return;
-      }
-
-      for (const doc of data.results) {
-        const div = document.createElement('div');
-        div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
-        const owner = doc.owner_username_display || doc.owner_display_name || doc.owner_id || 'unknown';
-        const topics = (doc.topic_keywords || []).join(', ');
-        const itemTitles = (doc.item_titles || []).slice(0, 5).join(' • ');
-        div.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-medium text-surface-200">${doc.name || doc.list_id}</span>
-            <span class="text-xs text-surface-500">@${owner}</span>
-          </div>
-          <div class="text-xs text-surface-400 mt-1">
-            <span class="text-brand-400">${doc.item_count || 0} items</span>
-            <span class="mx-2">•</span>
-            <span>${doc.followers_count || 0} followers</span>
-            <span class="mx-2">•</span>
-            <span>engagement ${doc.engagement_score || 0}</span>
-            ${doc.is_mediacircle_owner === 'true' ? '<span class="mx-2">•</span><span class="text-amber-400">MediaCircle</span>' : ''}
-          </div>
-          ${topics ? `<div class="text-xs text-surface-500 mt-1">Topics: ${topics}</div>` : ''}
-          ${itemTitles ? `<div class="text-xs text-surface-500 mt-1">${itemTitles}</div>` : ''}
-        `;
-        resultsEl.appendChild(div);
-      }
-    } catch (e) {
-      statusEl.textContent = 'Failed: ' + e.message;
-    } finally {
-      btn.disabled = false;
     }
   }
 

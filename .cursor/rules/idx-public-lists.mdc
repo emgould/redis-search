@@ -70,6 +70,15 @@ Browse mode (no filters) sorts by `discovery_updated_at` desc.
 
 Returns the full Redis document, 404 when missing.
 
+### Unified search integration (Search tab)
+
+`list` is a valid source for `GET /api/search` and `GET /api/search/stream`
+(`sources=list`), wired through `services/search_service.py` alongside the
+other indexed sources. The Search tab exposes a "📋 Lists" filter chip and
+renders list result cards (`renderPublicListItem` in `web/templates/home.html`).
+Text queries search name/description/topics/item titles; filter-only searches
+return a freshness-ordered browse.
+
 ### Write endpoints (X-API-Key required)
 
 - `PUT /api/public-lists/{list_id}` — upsert (path must match payload `list_id`)
@@ -105,8 +114,9 @@ like other indices.
   auth (reject/accept/fallback), public reads, validation.
 - `src/services/tests/test_public_list_service.py` — integration (skips
   without local Redis on 6380): index lifecycle, CRUD, all search modes,
-  sorts + system-list exclusion, pagination. Uses uniquely-tagged seed docs
-  cleaned up after each test, so it is safe against a shared local corpus.
+  sorts + system-list exclusion, pagination, and the unified `/api/search`
+  `list` source. Uses uniquely-tagged seed docs cleaned up after each test,
+  so it is safe against a shared local corpus.
 
 Run: `PYTHONPATH=src pytest src/core/tests/test_public_lists.py web/tests/test_public_lists_api.py src/services/tests/test_public_list_service.py`
 

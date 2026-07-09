@@ -716,7 +716,7 @@ async def api_search(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, artist, album, video, news, ratings. "
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
@@ -806,7 +806,7 @@ async def api_search(
     mc_id, mc_type, mc_subtype, source, source_id, links, images, metrics, etc.
 
     Sources are divided into two categories:
-    - Indexed (RediSearch): tv, movie, person, podcast, author, book
+    - Indexed (RediSearch): tv, movie, person, podcast, author, book, list
     - Brokered (Redis-cached APIs): artist, album, video, news, ratings
 
     Field filters (genre_ids, year_min/max, rating_min/max, mc_type) only apply to
@@ -1280,7 +1280,7 @@ async def api_search_stream(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, artist, album, video, news, ratings. "
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),

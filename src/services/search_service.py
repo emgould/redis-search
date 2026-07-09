@@ -42,6 +42,7 @@ from core.search_queries import (
     normalize_query_separators,
     strip_query_apostrophes,
 )
+from services.public_list_service import search_public_lists
 from utils.get_logger import get_logger
 from utils.normalize import normalize
 from utils.soft_comparison import (
@@ -1594,6 +1595,7 @@ VALID_SOURCES = {
     "podcast",
     "author",
     "book",
+    "list",
     # Brokered via Redis-cached API calls
     "artist",
     "album",
@@ -1835,6 +1837,12 @@ async def search(
         timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=limit)))
     if "book" in requested_sources:
         timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=limit)))
+    if "list" in requested_sources:
+        # Public Lists index: text queries search name/description/topics/item
+        # titles; filter-only searches fall back to freshness-ordered browse.
+        timed_tasks.append(
+            timed_task("list", search_public_lists(q=query_text, limit=limit))
+        )
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
@@ -1996,6 +2004,16 @@ async def search(
             parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
         full_results["book"] = parsed_books
         final_results["book"] = parsed_books[:limit]
+
+    # Process public list results (already parsed dicts from the list service)
+    if "list" in results_map:
+        list_res = results_map["list"]
+        list_results: list[dict] = []
+        if list_res and not isinstance(list_res, BaseException) and isinstance(list_res, dict):
+            raw_lists = list_res.get("results", [])
+            if isinstance(raw_lists, list):
+                list_results = raw_lists[:limit]
+        final_results["list"] = list_results
 
     # Process news results (API)
     if "news" in results_map:
@@ -2398,6 +2416,12 @@ async def search_stream(
         tasks_dict[
             asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=limit)))
         ] = "book"
+    if "list" in requested_sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("list", search_public_lists(q=query_text, limit=limit))
+            )
+        ] = "list"
 
     # Brokered sources - apply timeout
     if query_text is not None and not raw:
@@ -2553,6 +2577,14 @@ async def search_stream(
                     parsed_results = book_full[:limit]
                 else:
                     parsed_results = []
+
+            elif name == "list":
+                # Public list service returns already-parsed dicts
+                parsed_results = []
+                if data and not isinstance(data, BaseException) and isinstance(data, dict):
+                    raw_lists = data.get("results", [])
+                    if isinstance(raw_lists, list):
+                        parsed_results = raw_lists[:limit]
 
             elif name in ("news", "video", "artist", "album"):
                 parsed_results = []

@@ -36,6 +36,7 @@ from services.public_list_service import (
     search_public_lists,
     upsert_public_list,
 )
+from services.search_service import search as unified_search
 
 pytestmark = pytest.mark.integration
 
@@ -427,6 +428,24 @@ async def _test_system_in_text_search_body(redis: Redis, corpus: _Corpus) -> Non
         q=f"Staff Picks {corpus.run_id}", redis=redis
     )
     assert corpus.system_list_id in _ids(payload)
+
+
+# =============================================================================
+# Unified search integration (/api/search "list" source)
+# =============================================================================
+
+
+def test_unified_search_returns_public_lists() -> None:
+    asyncio.run(_run_with_corpus(_test_unified_search_body))
+
+
+async def _test_unified_search_body(redis: Redis, corpus: _Corpus) -> None:  # type: ignore[type-arg]
+    # The Search tab hits the unified search() with a "list" source; public
+    # lists must come back under the "list" key like any other source.
+    payload = await unified_search(q=f"Mob Cinema {corpus.run_id}", sources={"list"})
+    assert "list" in payload
+    ids = [doc["list_id"] for doc in payload["list"]]
+    assert corpus.crime_list_id in ids
 
 
 # =============================================================================
