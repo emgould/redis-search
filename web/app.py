@@ -384,11 +384,9 @@ _changes_job_live_stats: dict[str, Any] = {}
 async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     current_env = RedisManager.get_current_env()
     return templates.TemplateResponse(
-        "home.html",
-        {
-            "request": request,
-            "current_env": current_env.value,
-        },
+        request=request,
+        name="home.html",
+        context={"current_env": current_env.value},
     )
 
 
@@ -413,9 +411,9 @@ async def etl_page(
         pass
 
     return templates.TemplateResponse(
-        "etl.html",
-        {
-            "request": request,
+        request=request,
+        name="etl.html",
+        context={
             "current_env": current_env.value,
             "redis_connected": redis_connected,
             "cloud_run_available": bool(os.getenv("CLOUD_RUN_ETL_URL", "")),
@@ -1541,7 +1539,9 @@ async def autocomplete_test(
 ):
     results = await autocomplete(q) if q else []
     return templates.TemplateResponse(
-        "autocomplete.html", {"request": request, "query": q, "results": results}
+        request=request,
+        name="autocomplete.html",
+        context={"query": q, "results": results},
     )
 
 
@@ -1560,9 +1560,9 @@ async def management(
     # Return page immediately - stats will be fetched async via JS
     # This makes the page load instantly instead of waiting for Redis queries
     return templates.TemplateResponse(
-        "management.html",
-        {
-            "request": request,
+        request=request,
+        name="management.html",
+        context={
             "current_env": current_env.value,
             "local_status": {"connected": False, "error": "Loading..."},
             "public_status": {"connected": False, "error": "Loading..."},
@@ -5293,4 +5293,8 @@ async def index_info(request: Request, _ui: None = Depends(require_web_ui_enable
     except Exception as e:
         info = {"error": str(e)}
 
-    return templates.TemplateResponse("admin_index.html", {"request": request, "info": info})
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_index.html",
+        context={"info": info},
+    )
