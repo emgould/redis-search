@@ -97,6 +97,13 @@ def _parse_media_date_filters(
     }
 
 
+def _parse_csv_filter(value: str | None) -> list[str] | None:
+    if value is None:
+        return None
+    parsed = [item.strip().lower() for item in value.split(",") if item.strip()]
+    return parsed or None
+
+
 def require_web_ui_enabled() -> None:
     """
     FastAPI dependency that blocks access when web UI is disabled.
@@ -746,6 +753,22 @@ async def api_search(
         default=None, ge=0, le=10, description="Maximum rating (0-10)"
     ),
     mc_type: str | None = Query(default=None, description="Filter by media type: movie, tv"),
+    original_language_include: str | None = Query(
+        default=None,
+        description="Comma-separated ISO original language codes to include (e.g., ko,ja,fr)",
+    ),
+    original_language_exclude: str | None = Query(
+        default=None,
+        description="Comma-separated ISO original language codes to exclude (e.g., en for foreign-language media)",
+    ),
+    origin_country_include: str | None = Query(
+        default=None,
+        description="Comma-separated ISO origin country codes to include (e.g., kr,jp,fr)",
+    ),
+    origin_country_exclude: str | None = Query(
+        default=None,
+        description="Comma-separated ISO origin country codes to exclude (e.g., us,gb,ca)",
+    ),
     ratings_sort: str | None = Query(
         default=None,
         description="Sort order for ratings results when ratings source is requested with tv/movie. "
@@ -817,6 +840,10 @@ async def api_search(
             rating_max,
             media_sort != "popularity",
             mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
         ]
     )
     has_query = q and len(q) >= 2
@@ -951,6 +978,10 @@ async def api_search(
         rating_min=rating_min,
         rating_max=rating_max,
         mc_type=mc_type,
+        original_language_include=_parse_csv_filter(original_language_include),
+        original_language_exclude=_parse_csv_filter(original_language_exclude),
+        origin_country_include=_parse_csv_filter(origin_country_include),
+        origin_country_exclude=_parse_csv_filter(origin_country_exclude),
         ratings_sort=ratings_sort or "popularity",
         media_sort=media_sort,
         raw=raw,
@@ -1286,6 +1317,22 @@ async def api_search_stream(
         default=None, ge=0, le=10, description="Maximum rating (0-10)"
     ),
     mc_type: str | None = Query(default=None, description="Filter by media type: movie, tv"),
+    original_language_include: str | None = Query(
+        default=None,
+        description="Comma-separated ISO original language codes to include (e.g., ko,ja,fr)",
+    ),
+    original_language_exclude: str | None = Query(
+        default=None,
+        description="Comma-separated ISO original language codes to exclude (e.g., en for foreign-language media)",
+    ),
+    origin_country_include: str | None = Query(
+        default=None,
+        description="Comma-separated ISO origin country codes to include (e.g., kr,jp,fr)",
+    ),
+    origin_country_exclude: str | None = Query(
+        default=None,
+        description="Comma-separated ISO origin country codes to exclude (e.g., us,gb,ca)",
+    ),
     ratings_sort: str | None = Query(
         default=None,
         description="Sort order for ratings: 'popularity' (default), 'audience_score', 'critics_score'.",
@@ -1339,6 +1386,10 @@ async def api_search_stream(
             rating_max,
             media_sort != "popularity",
             mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
         ]
     )
     has_query = q and len(q) >= 2
@@ -1429,6 +1480,10 @@ async def api_search_stream(
             rating_min=rating_min,
             rating_max=rating_max,
             mc_type=mc_type,
+            original_language_include=_parse_csv_filter(original_language_include),
+            original_language_exclude=_parse_csv_filter(original_language_exclude),
+            origin_country_include=_parse_csv_filter(origin_country_include),
+            origin_country_exclude=_parse_csv_filter(origin_country_exclude),
             ratings_sort=ratings_sort or "popularity",
             media_sort=media_sort,
             raw=raw,

@@ -1643,6 +1643,10 @@ async def search(
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
+    original_language_include: list[str] | None = None,
+    original_language_exclude: list[str] | None = None,
+    origin_country_include: list[str] | None = None,
+    origin_country_exclude: list[str] | None = None,
     ratings_sort: str = "popularity",
     media_sort: str = "popularity",
     raw: bool = False,
@@ -1703,6 +1707,10 @@ async def search(
             rt_critics_score_min is not None,
             media_sort != "popularity",
             mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
         ]
     )
     query_text = q if q is not None and len(q) >= 2 else None
@@ -1748,6 +1756,10 @@ async def search(
             rt_audience_score_min=rt_audience_score_min,
             rt_critics_score_min=rt_critics_score_min,
             mc_type=mc_type,
+            original_language_include=original_language_include,
+            original_language_exclude=original_language_exclude,
+            origin_country_include=origin_country_include,
+            origin_country_exclude=origin_country_exclude,
             raw=raw,
         )
     elif query_text is not None:
@@ -2215,6 +2227,10 @@ async def search_stream(
     rating_min: float | None = None,
     rating_max: float | None = None,
     mc_type: str | None = None,
+    original_language_include: list[str] | None = None,
+    original_language_exclude: list[str] | None = None,
+    origin_country_include: list[str] | None = None,
+    origin_country_exclude: list[str] | None = None,
     ratings_sort: str = "popularity",
     media_sort: str = "popularity",
     raw: bool = False,
@@ -2254,6 +2270,10 @@ async def search_stream(
             rt_audience_score_min is not None,
             rt_critics_score_min is not None,
             mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
         ]
     )
     query_text = q if q is not None and len(q) >= 2 else None
@@ -2290,6 +2310,10 @@ async def search_stream(
             rt_audience_score_min=rt_audience_score_min,
             rt_critics_score_min=rt_critics_score_min,
             mc_type=mc_type,
+            original_language_include=original_language_include,
+            original_language_exclude=original_language_exclude,
+            origin_country_include=origin_country_include,
+            origin_country_exclude=origin_country_exclude,
             raw=raw,
         )
     elif query_text is not None:

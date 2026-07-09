@@ -147,20 +147,38 @@ class SearchService {
    * });
    */
   async search(
-    query: string,
+    query = "",
     options?: {
       sources?: SearchSource[];
       limit?: number;
+      genreIds?: number[];
+      genreMatch?: "any" | "all";
+      originalLanguageInclude?: string[];
+      originalLanguageExclude?: string[];
+      originCountryInclude?: string[];
+      originCountryExclude?: string[];
+      mediaSort?: "popularity" | "rating" | "year" | "rt_audience_score" | "rt_critics_score";
     }
   ): Promise<SearchResponse> {
-    if (!query || query.length < 2) {
+    const hasFilters = Boolean(
+      options?.genreIds?.length ||
+        options?.originalLanguageInclude?.length ||
+        options?.originalLanguageExclude?.length ||
+        options?.originCountryInclude?.length ||
+        options?.originCountryExclude?.length ||
+        options?.mediaSort,
+    );
+    if ((!query || query.length < 2) && !hasFilters) {
       return this.emptyResponse();
     }
 
     this.cancelPendingRequests();
     this.abortController = new AbortController();
 
-    const params = new URLSearchParams({ q: query });
+    const params = new URLSearchParams();
+    if (query) {
+      params.append("q", query);
+    }
     
     if (options?.sources && options.sources.length > 0) {
       params.append("sources", options.sources.join(","));
@@ -168,6 +186,28 @@ class SearchService {
     
     if (options?.limit) {
       params.append("limit", String(options.limit));
+    }
+
+    if (options?.genreIds?.length) {
+      params.append("genre_ids", options.genreIds.join(","));
+    }
+    if (options?.genreMatch) {
+      params.append("genre_match", options.genreMatch);
+    }
+    if (options?.originalLanguageInclude?.length) {
+      params.append("original_language_include", options.originalLanguageInclude.join(","));
+    }
+    if (options?.originalLanguageExclude?.length) {
+      params.append("original_language_exclude", options.originalLanguageExclude.join(","));
+    }
+    if (options?.originCountryInclude?.length) {
+      params.append("origin_country_include", options.originCountryInclude.join(","));
+    }
+    if (options?.originCountryExclude?.length) {
+      params.append("origin_country_exclude", options.originCountryExclude.join(","));
+    }
+    if (options?.mediaSort) {
+      params.append("media_sort", options.mediaSort);
     }
 
     const response = await fetch(
@@ -204,6 +244,27 @@ class SearchService {
 }
 
 export const searchService = new SearchService();
+```
+
+Filtered media browse uses the same `/api/search` endpoint without requiring a text query. Use TMDB genre IDs with `genreMatch: "any"` for OR behavior and `genreMatch: "all"` when every genre must be present.
+
+```typescript
+const foreignComedy = await searchService.search("", {
+  sources: ["movie"],
+  genreIds: [35],
+  originalLanguageExclude: ["en"],
+  mediaSort: "rt_audience_score",
+  limit: 10,
+});
+
+const mysteryDocumentaries = await searchService.search("", {
+  sources: ["movie"],
+  genreIds: [9648, 99],
+  genreMatch: "all",
+  originalLanguageExclude: ["en"],
+  mediaSort: "rt_audience_score",
+  limit: 10,
+});
 ```
 
 ---

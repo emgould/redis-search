@@ -45,6 +45,8 @@ ALLOWED_RAW_MEDIA_FIELDS = frozenset(
         "mc_subtype",
         "source",
         "origin_country",
+        "original_language",
+        "spoken_languages",
         "year",
         "rating",
         "popularity",
@@ -748,6 +750,10 @@ def build_filter_query(
     rt_audience_score_min: int | None = None,
     rt_critics_score_min: int | None = None,
     mc_type: str | None = None,
+    original_language_include: list[str] | None = None,
+    original_language_exclude: list[str] | None = None,
+    origin_country_include: list[str] | None = None,
+    origin_country_exclude: list[str] | None = None,
     include_tag_fields: bool = True,
     raw: bool = False,
 ) -> str:
@@ -775,6 +781,10 @@ def build_filter_query(
         rt_audience_score_min: Minimum RT audience score (inclusive)
         rt_critics_score_min: Minimum RT critics score (inclusive)
         mc_type: Filter by media type (movie, tv)
+        original_language_include: Original language codes to include (OR)
+        original_language_exclude: Original language codes to exclude (OR)
+        origin_country_include: Origin country codes to include (OR)
+        origin_country_exclude: Origin country codes to exclude (OR)
         include_tag_fields: Include TAG field union search (cast_names, director_name, keywords, genres)
         raw: If True, treat q as validated raw RediSearch syntax (passthrough)
 
@@ -820,6 +830,10 @@ def build_filter_query(
             rt_audience_score_min is not None,
             rt_critics_score_min is not None,
             mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
         ]
     )
 
@@ -896,8 +910,34 @@ def build_filter_query(
     if mc_type:
         parts.append(f"@mc_type:{{{mc_type}}}")
 
+    def _tag_values_clause(field_name: str, values: list[str], *, exclude: bool = False) -> str:
+        normalized_values = [
+            re.sub(r"[^a-z0-9_-]+", "_", value.strip().lower()).strip("_")
+            for value in values
+            if value.strip()
+        ]
+        value_filter = "|".join(value for value in normalized_values if value)
+        prefix = "-" if exclude else ""
+        return f"{prefix}@{field_name}:{{{value_filter}}}"
+
+    # Language/country filters. Use original_language for "foreign language"
+    # discovery because spoken_languages is not consistently populated.
+    if original_language_include:
+        parts.append(_tag_values_clause("original_language", original_language_include))
+    if original_language_exclude:
+        parts.append(
+            _tag_values_clause("original_language", original_language_exclude, exclude=True)
+        )
+    if origin_country_include:
+        parts.append(_tag_values_clause("origin_country", origin_country_include))
+    if origin_country_exclude:
+        parts.append(_tag_values_clause("origin_country", origin_country_exclude, exclude=True))
+
     # If no filters at all, return match-all
     if not parts:
         return "*"
+
+    if all(part.startswith("-") for part in parts):
+        parts.insert(0, "*")
 
     return " ".join(parts)
