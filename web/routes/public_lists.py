@@ -3,7 +3,7 @@ Public List discovery API routes.
 
 Read endpoints are public (all indexed content is public by
 definition). Write endpoints are guarded by the public-list shared
-secret because this index is runtime-owned by the MediaCircle backend
+secret because documents are written by the MediaCircle backend
 projection pipeline.
 """
 

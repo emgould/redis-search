@@ -403,7 +403,7 @@ class RedisRepository:
             book_num_docs = 0
             book_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
-        # Public lists index (runtime-owned by the MediaCircle backend) —
+        # Public lists index (sourced from the MediaCircle backend) —
         # may not exist yet in every environment, so failure means 0 docs.
         public_lists_index_stats: dict = {"num_docs": 0, "index_memory_bytes": 0}
         public_lists_num_docs = 0

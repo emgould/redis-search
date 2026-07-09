@@ -1458,20 +1458,18 @@
         </div>
       </div>
 
-      <!-- Public Lists Index (runtime-owned by the MediaCircle backend) -->
-      <div class="bg-surface-800/50 rounded-lg p-4 border border-amber-500/30 mb-4">
+      <!-- Public Lists Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h3 class="font-semibold text-lg text-surface-200">
               Index: <span class="text-brand-400">public_lists</span>
-              <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">runtime-owned</span>
             </h3>
             <p class="text-sm text-surface-500">
               idx:public_lists • Prefix: public_list:*
             </p>
-            <p class="text-xs text-amber-400/80 mt-1">
-              Documents are written by the MediaCircle backend projection pipeline.
-              Excluded from Promote/Copy. Rebuild with
+            <p class="text-xs text-surface-500 mt-1">
+              Sourced from MediaCircle Firestore via the projection pipeline; rebuild with
               <code class="bg-surface-900 px-1 rounded">make backfill-public-list-discovery-*</code>
               in the mediacircle repo.
             </p>
@@ -1644,7 +1642,7 @@
           <p id="stat-public-list-keys" class="text-2xl font-bold text-amber-400">
             ...
           </p>
-          <p class="text-xs text-surface-500">public_list:* (runtime-owned)</p>
+          <p class="text-xs text-surface-500">public_list:*</p>
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1734,7 +1732,7 @@
           bookIndexMemoryEl.textContent = formatMB(data.book_index_stats.index_memory_bytes || 0);
         }
 
-        // Update public lists index stats (runtime-owned)
+        // Update public lists index stats
         const publicListsNumDocsEl = document.getElementById('stat-public-lists-num-docs');
         if (publicListsNumDocsEl) {
           publicListsNumDocsEl.textContent = formatNumber(data.public_lists_num_docs || 0);
@@ -2091,26 +2089,18 @@
         return;
       }
 
-      // Build checkboxes for each index. Runtime-owned indices (e.g. public
-      // lists) are written by the MediaCircle backend per environment and are
-      // not selectable for promotion; rebuild them via the MediaCircle backfill.
+      // Build checkboxes for each index
       promoteAvailableIndices.forEach((idx, i) => {
-        const runtimeOwned = !!idx.runtime_owned;
         const div = document.createElement('div');
-        div.className = runtimeOwned
-          ? 'bg-surface-800/30 rounded-lg p-3 border border-surface-700 opacity-60'
-          : 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
+        div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
         div.innerHTML = `
-          <label class="flex items-start gap-3 ${runtimeOwned ? 'cursor-not-allowed' : 'cursor-pointer'}">
+          <label class="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" id="promote-idx-${i}" data-index-name="${idx.name}"
-              ${runtimeOwned ? 'disabled' : ''}
               onchange="updatePromoteButtonState()"
-              class="w-4 h-4 mt-1 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500 disabled:opacity-40">
+              class="w-4 h-4 mt-1 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
             <div class="flex-1">
               <div class="flex items-center justify-between">
-                <span class="font-medium text-surface-200">${idx.name}
-                  ${runtimeOwned ? '<span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">runtime-owned</span>' : ''}
-                </span>
+                <span class="font-medium text-surface-200">${idx.name}</span>
                 <span class="text-xs text-surface-500">${idx.redis_name}</span>
               </div>
               <div class="text-xs text-surface-400 mt-1">
@@ -2118,7 +2108,6 @@
                 <span class="mx-2">•</span>
                 <span class="text-brand-400 font-medium">${idx.num_docs.toLocaleString()} documents</span>
               </div>
-              ${runtimeOwned ? '<div class="text-xs text-amber-400/80 mt-1">Written by the MediaCircle backend per environment. Rebuild via MediaCircle backfill, not promotion.</div>' : ''}
             </div>
           </label>
         `;
@@ -2141,10 +2130,7 @@
 
   function toggleAllPromoteIndices() {
     const selectAll = document.getElementById('promote-select-all').checked;
-    promoteAvailableIndices.forEach((idx, i) => {
-      // Runtime-owned indices stay unselected: promotion would replace
-      // documents written by the MediaCircle backend in dev.
-      if (idx.runtime_owned) return;
+    promoteAvailableIndices.forEach((_, i) => {
       document.getElementById(`promote-idx-${i}`).checked = selectAll;
     });
     updatePromoteButtonState();
@@ -2158,10 +2144,9 @@
       ? `🚀 Promote ${selectedCount} ${selectedCount === 1 ? 'Index' : 'Indices'}`
       : '🚀 Promote Selected';
 
-    // Update select all checkbox (relative to selectable indices only)
-    const selectableCount = promoteAvailableIndices.filter(idx => !idx.runtime_owned).length;
+    // Update select all checkbox
     const selectAllEl = document.getElementById('promote-select-all');
-    selectAllEl.checked = selectedCount === selectableCount && selectedCount > 0;
+    selectAllEl.checked = selectedCount === promoteAvailableIndices.length && selectedCount > 0;
   }
 
   function getSelectedPromoteIndices() {
@@ -2311,21 +2296,13 @@
       `;
 
       copyAvailableIndices.forEach(idx => {
-        // Runtime-owned indices (e.g. public lists) are written by the
-        // MediaCircle backend per environment and are not selectable here;
-        // rebuild them via the MediaCircle backfill.
-        const runtimeOwned = !!idx.runtime_owned;
         const div = document.createElement('div');
-        div.className = runtimeOwned
-          ? 'flex items-center justify-between py-2 opacity-60'
-          : 'flex items-center justify-between py-2';
+        div.className = 'flex items-center justify-between py-2';
         div.innerHTML = `
-          <label class="flex items-center gap-2 ${runtimeOwned ? 'cursor-not-allowed' : 'cursor-pointer'}">
+          <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="copy-index" value="${idx.name}" onchange="updateCopyRunButton()"
-              ${runtimeOwned ? 'disabled' : ''}
-              class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500 disabled:opacity-40">
+              class="w-4 h-4 rounded bg-surface-800 border-surface-600 text-amber-500 focus:ring-amber-500">
             <span class="font-medium">${idx.name}</span>
-            ${runtimeOwned ? '<span class="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">runtime-owned</span>' : ''}
           </label>
           <span class="text-sm text-surface-400">${idx.num_docs.toLocaleString()} docs</span>
         `;
@@ -2353,7 +2330,7 @@
 
   function toggleCopySelectAll() {
     const selectAll = document.getElementById('copy-select-all');
-    const checkboxes = document.querySelectorAll('input[name="copy-index"]:not(:disabled)');
+    const checkboxes = document.querySelectorAll('input[name="copy-index"]');
     checkboxes.forEach(cb => cb.checked = selectAll.checked);
     updateCopyRunButton();
   }

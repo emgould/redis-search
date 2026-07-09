@@ -1,32 +1,26 @@
 ---
-description: Public Lists discovery index (idx:public_lists) - runtime-owned MediaCircle read model, write API contract, search modes, and promotion guardrails
+description: Public Lists discovery index (idx:public_lists) - MediaCircle-sourced read model, write API contract, and search modes
 globs: ["src/core/public_lists.py", "src/core/public_list_queries.py", "src/services/public_list_service.py", "web/routes/public_lists.py"]
 alwaysApply: false
 ---
 
 # Public Lists Discovery Index (`idx:public_lists`)
 
-## Ownership Model — READ THIS FIRST
+## Data Sourcing and Environment Migration
 
-`idx:public_lists` (prefix `public_list:`) is a **runtime-owned** read model.
+`idx:public_lists` (prefix `public_list:`) holds MediaCircle public List
+discovery documents.
 
 - Canonical data lives in MediaCircle Firestore (`circles/{listId}` + items).
 - Documents are written by the MediaCircle backend projection pipeline via the
-  authenticated write API below — never by ETL, never by promotion tooling.
-- Each environment (local/dev) owns its own corpus. The rebuild path is the
-  MediaCircle public-list backfill, **not** `promote_to_dev.py` /
-  `copy_to_local.py` / `bulk_clone_prefix.py`.
-
-### Promotion / copy guardrails
-
-- `scripts/promote_to_dev.py` and `scripts/copy_to_local.py` skip runtime-owned
-  indices by default and require `--include-runtime-owned` (destructive) to force.
-- `scripts/bulk_clone_prefix.py` refuses `public_list:` outright.
-- `/api/promote/indices` and `/api/copy-to-local/indices` return
-  `runtime_owned: true` metadata; the management UI renders those rows disabled
-  with a "runtime-owned" badge and excludes them from select-all.
-- The registry is `RUNTIME_OWNED_INDEXES` / `RUNTIME_OWNED_PREFIXES` in
-  `src/core/public_lists.py`. Add future runtime-owned indices there.
+  authenticated write API below, and can be rebuilt from Firestore with the
+  MediaCircle backfill (`make backfill-public-list-discovery-*` in the
+  mediacircle repo) — the same pattern as other indices sourced from
+  upstream APIs via ETL.
+- The index participates fully in the standard environment-migration tooling:
+  `scripts/promote_to_dev.py`, `scripts/copy_to_local.py`, and
+  `scripts/bulk_clone_prefix.py` (mapped as `public_list:` →
+  `idx:public_lists`), plus the management UI Promote/Copy modals.
 
 ## Document Contract
 
@@ -99,14 +93,14 @@ send the key from GCP Secret Manager.
   `net_vote_score`, `super_up_count`, `item_count`, `created_at`,
   `discovery_updated_at`, `modified_at`
 
-Index is registered in `INDEX_CONFIGS` (`web/app.py`) with
-`"runtime_owned": True`, so `/api/index/public_lists` create/delete and the
-admin index-info page work like other indices.
+Index is registered in `INDEX_CONFIGS` (`web/app.py`), so
+`/api/index/public_lists` create/delete and the admin index-info page work
+like other indices.
 
 ## Tests
 
 - `src/core/tests/test_public_lists.py` — hermetic: document normalization,
-  schema coverage, query builders, sort validation, runtime-owned registry.
+  schema coverage, query builders, and sort validation.
 - `web/tests/test_public_lists_api.py` — hermetic FastAPI TestClient: write
   auth (reject/accept/fallback), public reads, validation.
 - `src/services/tests/test_public_list_service.py` — integration (skips

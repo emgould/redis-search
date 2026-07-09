@@ -52,7 +52,6 @@ load_dotenv(env_file)
 _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
 
-from core.public_lists import RUNTIME_OWNED_PREFIXES  # noqa: E402
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
 from utils.redis_search_index_info import (  # noqa: E402
     extract_index_prefix,
@@ -65,6 +64,7 @@ PREFIX_TO_INDEX: dict[str, str] = {
     "podcast:": "idx:podcasts",
     "book:": "idx:book",
     "author:": "idx:author",
+    "public_list:": "idx:public_lists",
 }
 
 INDEX_TO_ETL_JOBS: dict[str, list[str]] = {
@@ -510,16 +510,6 @@ async def main(
     """Run the bulk prefix clone."""
     if prefixes == ["all"]:
         prefixes = list(PREFIX_TO_INDEX.keys())
-
-    # Runtime-owned prefixes (e.g. public_list:) are written by the
-    # MediaCircle backend per environment and must never be cloned between
-    # environments. Rebuild them with the MediaCircle backfill instead.
-    blocked = [p for p in prefixes if p in RUNTIME_OWNED_PREFIXES]
-    if blocked:
-        print(f"ERROR: runtime-owned prefixes cannot be cloned: {', '.join(blocked)}")
-        print("These documents are environment-owned by the MediaCircle backend.")
-        print("Rebuild them with the MediaCircle public-list backfill.")
-        return 1
 
     target_cfg = TARGETS[target_name]
     target_host = str(target_cfg["host"])

@@ -15,10 +15,7 @@ from core.public_list_queries import (
     resolve_sort,
 )
 from core.public_lists import (
-    PUBLIC_LIST_INDEX,
     PUBLIC_LIST_PREFIX,
-    RUNTIME_OWNED_INDEXES,
-    RUNTIME_OWNED_PREFIXES,
     PublicListItem,
     PublicListUpsertRequest,
     public_list_index_schema,
@@ -123,10 +120,6 @@ class TestPublicListDocument:
             "created_at",
         }
         assert expected.issubset(field_names)
-
-    def test_runtime_owned_registry(self):
-        assert PUBLIC_LIST_INDEX in RUNTIME_OWNED_INDEXES
-        assert PUBLIC_LIST_PREFIX in RUNTIME_OWNED_PREFIXES
 
 
 class TestResolveSort:

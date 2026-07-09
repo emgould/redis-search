@@ -44,7 +44,6 @@ load_dotenv(env_file)
 _project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_project_root / "src"))
 
-from core.public_lists import RUNTIME_OWNED_INDEXES  # noqa: E402
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig  # noqa: E402
 from utils.redis_search_index_info import (  # noqa: E402
     extract_index_prefix,
@@ -69,10 +68,6 @@ class IndexInfo:
     num_docs: int
     index_memory_bytes: int
     schema_fields: list[dict]
-    # Runtime-owned indices (e.g. idx:public_lists) are written by the
-    # MediaCircle backend per environment and are excluded from copy
-    # by default. Rebuild path is the MediaCircle backfill, not copy.
-    runtime_owned: bool = False
 
 
 async def get_redis_connection(
@@ -121,7 +116,6 @@ async def get_index_info(redis: Redis, index_name: str) -> IndexInfo | None:
             name=friendly_name,
             redis_name=index_name,
             prefix=prefix,
-            runtime_owned=index_name in RUNTIME_OWNED_INDEXES,
             num_docs=int(info.get("num_docs", 0)),
             index_memory_bytes=int(
                 float(info.get("inverted_sz_mb", 0)) * 1024 * 1024
@@ -470,7 +464,6 @@ async def main(
     batch_size: int = 1000,
     concurrency: int = 10,
     clean: bool = False,
-    include_runtime_owned: bool = False,
 ) -> int:
     """
     Main copy function.
@@ -483,9 +476,6 @@ async def main(
         batch_size: Documents per pipeline batch (env: COPY_TO_LOCAL_BATCH_SIZE)
         concurrency: Number of concurrent batch operations (default 10)
         clean: Delete all target documents before copy (slower but exact mirror)
-        include_runtime_owned: Allow copying runtime-owned indices
-            (dangerous: complete replacement destroys the local corpus
-            written by the MediaCircle backend)
 
     Returns exit code (0 = success, 1 = error).
     """
@@ -586,25 +576,6 @@ async def main(
 
         available_indices = filtered
 
-    # Exclude runtime-owned indices (e.g. public lists) unless explicitly
-    # opted in. Copy is a complete replacement, so pulling a runtime-owned
-    # index from dev would destroy documents written into local Redis by a
-    # local MediaCircle backend.
-    runtime_owned = [i for i in available_indices if i.runtime_owned]
-    if runtime_owned and not include_runtime_owned:
-        skipped_names = ", ".join(i.redis_name for i in runtime_owned)
-        print(f"🛡️  Skipping runtime-owned indices: {skipped_names}")
-        print("   These are written by the MediaCircle backend per environment.")
-        print("   Rebuild them with the MediaCircle backfill, not copy-to-local.")
-        print("   (Use --include-runtime-owned to force. This is destructive.)")
-        print()
-        available_indices = [i for i in available_indices if not i.runtime_owned]
-    elif runtime_owned and include_runtime_owned:
-        forced_names = ", ".join(i.redis_name for i in runtime_owned)
-        print(f"⚠️  WARNING: copying runtime-owned indices: {forced_names}")
-        print("   Local documents written by MediaCircle will be replaced.")
-        print()
-
     if not available_indices:
         print("❌ No indices to copy")
         await public_redis.aclose()
@@ -704,13 +675,6 @@ if __name__ == "__main__":
         action="store_true",
         help="Delete all target documents before copy (slower but exact mirror, removes orphans)",
     )
-    parser.add_argument(
-        "--include-runtime-owned",
-        action="store_true",
-        help="Allow copying runtime-owned indices (e.g. public lists). "
-        "Destructive: replaces documents written by the MediaCircle backend "
-        "in local Redis.",
-    )
 
     args = parser.parse_args()
 
@@ -723,7 +687,6 @@ if __name__ == "__main__":
             batch_size=args.batch_size,
             concurrency=args.concurrency,
             clean=args.clean,
-            include_runtime_owned=args.include_runtime_owned,
         )
     )
     sys.exit(exit_code)

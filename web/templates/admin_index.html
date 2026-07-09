@@ -10,7 +10,6 @@
       <a href="/admin/index_info?index={{ idx.name }}"
         class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors {% if idx.name == index_name %}bg-brand-500/20 border-brand-500 text-brand-300{% else %}bg-surface-800 border-surface-700 text-surface-300 hover:border-surface-500{% endif %}">
         {{ idx.name }}
-        {% if idx.runtime_owned %}<span class="ml-1 text-xs text-amber-400">runtime-owned</span>{% endif %}
       </a>
       {% endfor %}
     </div>

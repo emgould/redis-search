@@ -2,7 +2,7 @@
 Public List discovery service.
 
 Owns index lifecycle, CRUD, and search execution for
-``idx:public_lists``. Documents are runtime-owned by the MediaCircle
+``idx:public_lists``. Documents are sourced from the MediaCircle
 projection pipeline; this service never fabricates content fields.
 """
 

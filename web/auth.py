@@ -52,7 +52,7 @@ def verify_public_list_write_key(x_api_key: str | None) -> bool:
     """
     Verify the shared secret for public-list index writes.
 
-    The public List index is runtime-owned by the MediaCircle backend, so
+    Public List documents are written by the MediaCircle backend, so
     writes require the dedicated PUBLIC_LISTS_API_KEY (falling back to
     ETL_API_KEY when a dedicated key is not configured).
 

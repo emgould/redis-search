@@ -4,12 +4,14 @@ Public List index document contract.
 Defines the Redis JSON document shape, index schema, and normalization
 for MediaCircle public List discovery documents.
 
-Ownership model:
+Data sourcing:
 - MediaCircle (Firestore) is the canonical source of truth for public
-  Lists. This index is a *runtime-owned* read model: documents are
-  written by the MediaCircle backend projection pipeline via the
-  authenticated public-lists write API, never by ETL or promotion
-  tooling. See ``RUNTIME_OWNED_INDEXES`` and the promotion guardrails.
+  Lists. Documents are written by the MediaCircle backend projection
+  pipeline via the authenticated public-lists write API (and rebuildable
+  with the MediaCircle backfill), the same way other indices are sourced
+  from their upstream APIs via ETL.
+- Like every other index, ``idx:public_lists`` participates fully in the
+  promote-to-dev / copy-to-local / clone environment-migration tooling.
 """
 
 import time
@@ -23,13 +25,6 @@ from core.normalize import compact_title, normalize_search_title
 
 PUBLIC_LIST_PREFIX = "public_list:"
 PUBLIC_LIST_INDEX = "idx:public_lists"
-
-# Indexes owned by a runtime backend (MediaCircle) rather than local ETL.
-# Promotion / copy tooling must exclude these by default because a
-# complete-replacement copy from another environment would destroy the
-# environment-local corpus.
-RUNTIME_OWNED_INDEXES = frozenset({PUBLIC_LIST_INDEX})
-RUNTIME_OWNED_PREFIXES = frozenset({PUBLIC_LIST_PREFIX})
 
 
 def public_list_key(list_id: str) -> str:

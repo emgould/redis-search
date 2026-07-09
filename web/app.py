@@ -42,7 +42,6 @@ from core.normalize import (
 from core.public_lists import (
     PUBLIC_LIST_INDEX,
     PUBLIC_LIST_PREFIX,
-    RUNTIME_OWNED_INDEXES,
     public_list_index_schema,
 )
 from core.query_hints import parse_source_hint
@@ -260,7 +259,7 @@ app.add_middleware(
 # Include OpenLibrary ETL routes
 app.include_router(openlibrary_etl_router)
 
-# Public List discovery routes (runtime-owned index written by MediaCircle)
+# Public List discovery routes (documents written by the MediaCircle backend)
 app.include_router(public_lists_router)
 
 templates = Jinja2Templates(directory="web/templates")
@@ -1817,15 +1816,6 @@ async def list_available_indices(_: None = Depends(require_api_key)):
 
         # Parse JSON output
         indices = json.loads(result.stdout)
-
-        # Flag runtime-owned indices (e.g. public lists) so the UI can
-        # exclude them from default promote selections.
-        for idx in indices:
-            redis_name = idx.get("redis_name") or idx.get("name") or ""
-            if not str(redis_name).startswith("idx:"):
-                redis_name = f"idx:{redis_name}"
-            idx["runtime_owned"] = redis_name in RUNTIME_OWNED_INDEXES
-
         return JSONResponse(
             content={
                 "success": True,
@@ -2050,9 +2040,6 @@ async def list_copy_to_local_indices(_: None = Depends(require_api_key)):
                         "name": friendly_name,
                         "redis_name": idx_name,
                         "num_docs": num_docs,
-                        # Runtime-owned indices (e.g. public lists) must not be
-                        # copied between environments by default.
-                        "runtime_owned": idx_name in RUNTIME_OWNED_INDEXES,
                     }
                 )
             except Exception:
@@ -5195,9 +5182,8 @@ INDEX_CONFIGS = {
     "public_lists": {
         "redis_name": PUBLIC_LIST_INDEX,
         "prefix": PUBLIC_LIST_PREFIX,
-        # Runtime-owned: documents are written by the MediaCircle backend
-        # projection pipeline, never by local ETL or promotion tooling.
-        "runtime_owned": True,
+        # Documents are written by the MediaCircle backend projection
+        # pipeline (rebuildable via the MediaCircle backfill).
         "schema": public_list_index_schema(),
     },
 }
@@ -5310,11 +5296,7 @@ async def index_info(
             "index_name": index,
             "redis_index_name": redis_index_name,
             "available_indexes": [
-                {
-                    "name": name,
-                    "redis_name": config["redis_name"],
-                    "runtime_owned": bool(config.get("runtime_owned")),
-                }
+                {"name": name, "redis_name": config["redis_name"]}
                 for name, config in INDEX_CONFIGS.items()
             ],
         },
