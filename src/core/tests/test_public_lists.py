@@ -58,6 +58,7 @@ class TestPublicListDocument:
         doc = public_list_to_redis_doc(_request())
 
         assert doc["list_id"] == "public_best_documentary"
+        assert doc["mc_type"] == "public_list"
         assert doc["search_title"] == "Top Movie Documentaries"
         assert doc["title_compact"] == "topmoviedocumentaries"
         assert doc["owner_username"] == "docfan99"
@@ -103,6 +104,7 @@ class TestPublicListDocument:
         field_names = {f.as_name for f in public_list_index_schema()}
         expected = {
             "search_title",
+            "mc_type",
             "description_text",
             "topic_summary",
             "item_titles_text",

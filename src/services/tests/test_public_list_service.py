@@ -23,6 +23,7 @@ from uuid import uuid4
 import pytest
 from redis.asyncio import Redis
 
+from adapters.redis_manager import RedisEnvironment, RedisManager
 from core.public_lists import (
     PUBLIC_LIST_INDEX,
     PublicListItem,
@@ -36,7 +37,11 @@ from services.public_list_service import (
     search_public_lists,
     upsert_public_list,
 )
-from services.search_service import search as unified_search
+from services.search_service import (
+    autocomplete,
+    autocomplete_stream,
+    search as unified_search,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -201,6 +206,7 @@ async def _test_index_lifecycle_and_schema() -> None:
                     field_names.add(attr[i + 1])
         expected = {
             "search_title",
+            "mc_type",
             "owner_username",
             "owner_id",
             "is_mediacircle_owner",
@@ -230,6 +236,7 @@ async def _test_crud_body(redis: Redis, corpus: _Corpus) -> None:  # type: ignor
     doc = await get_public_list(corpus.doc_list_id, redis=redis)
     assert doc is not None
     assert doc["name"] == f"Top Movie Documentaries {corpus.run_id}"
+    assert doc["mc_type"] == "public_list"
     assert doc["item_count"] == 2
     created_at = doc["created_at"]
 
@@ -446,6 +453,54 @@ async def _test_unified_search_body(redis: Redis, corpus: _Corpus) -> None:  # t
     assert "list" in payload
     ids = [doc["list_id"] for doc in payload["list"]]
     assert corpus.crime_list_id in ids
+    for doc in payload["list"]:
+        assert doc["mc_type"] == "public_list"
+
+
+def test_autocomplete_returns_public_lists() -> None:
+    asyncio.run(_run_with_corpus(_test_autocomplete_body))
+
+
+async def _test_autocomplete_body(redis: Redis, corpus: _Corpus) -> None:  # type: ignore[type-arg]
+    RedisManager.set_current_env(RedisEnvironment.LOCAL)
+    payload = await autocomplete(
+        q=f"Mob Cinema {corpus.run_id}",
+        sources={"list"},
+    )
+
+    assert "list" in payload
+    assert payload["movie"] == []
+    ids = [doc["list_id"] for doc in payload["list"]]
+    assert corpus.crime_list_id in ids
+    for doc in payload["list"]:
+        assert doc["mc_type"] == "public_list"
+
+
+def test_autocomplete_stream_returns_public_lists() -> None:
+    asyncio.run(_run_with_corpus(_test_autocomplete_stream_body))
+
+
+async def _test_autocomplete_stream_body(redis: Redis, corpus: _Corpus) -> None:  # type: ignore[type-arg]
+    RedisManager.set_current_env(RedisEnvironment.LOCAL)
+    events = [
+        event
+        async for event in autocomplete_stream(
+            q=f"Mob Cinema {corpus.run_id}",
+            sources={"list"},
+        )
+    ]
+    list_events = [
+        event
+        for event in events
+        if len(event) == 3 and event[0] == "list"
+    ]
+
+    assert list_events
+    docs = list_events[0][1]
+    ids = [doc["list_id"] for doc in docs]
+    assert corpus.crime_list_id in ids
+    for doc in docs:
+        assert doc["mc_type"] == "public_list"
 
 
 # =============================================================================

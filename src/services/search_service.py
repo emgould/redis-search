@@ -688,7 +688,7 @@ def build_authors_autocomplete_query(q: str) -> str:
 
 # Indexed sources only; brokered APIs are never called from JSON autocomplete.
 _AUTOCOMPLETE_INDEXED_SOURCES: frozenset[str] = frozenset(
-    {"tv", "movie", "person", "podcast", "author", "book"}
+    {"tv", "movie", "person", "podcast", "author", "book", "list"}
 )
 _AUTOCOMPLETE_LIMIT = 10
 _AUTOCOMPLETE_RESPONSE_KEYS: tuple[str, ...] = (
@@ -698,6 +698,7 @@ _AUTOCOMPLETE_RESPONSE_KEYS: tuple[str, ...] = (
     "podcast",
     "author",
     "book",
+    "list",
     "news",
     "video",
     "ratings",
@@ -729,6 +730,7 @@ async def autocomplete(
             "podcast",
             "author",
             "book",
+            "list",
             "news",
             "video",
             "ratings",
@@ -1371,7 +1373,7 @@ async def autocomplete_stream(
     Args:
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
-                 Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
+                 Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album
         raw: If True, treat q as raw RediSearch syntax for indexed sources (validated, raises on error)
 
     Yields:
@@ -1384,6 +1386,7 @@ async def autocomplete_stream(
         "podcast",
         "author",
         "book",
+        "list",
         "news",
         "video",
         "ratings",
@@ -1462,6 +1465,12 @@ async def autocomplete_stream(
                 timed_task("book", repo.search_books(books_query, limit=ac_limit))
             )
         ] = "book"
+    if "list" in sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("list", search_public_lists(q=q.strip(), limit=ac_limit))
+            )
+        ] = "list"
 
     # External/brokered APIs (news, video, ratings, artist, album) are excluded
     # from autocomplete stream to avoid excessive API calls during typing.
@@ -1546,6 +1555,18 @@ async def autocomplete_stream(
                     book_full = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))
                     streamed_full["book"] = book_full
                     parsed_results = book_full[:ac_limit]
+
+            elif name == "list":
+                if data and not isinstance(data, BaseException):
+                    results = data.get("results") if isinstance(data, dict) else None
+                    if isinstance(results, list):
+                        list_full = [
+                            item
+                            for item in results
+                            if isinstance(item, dict)
+                        ]
+                        streamed_full["list"] = list_full
+                        parsed_results = list_full[:ac_limit]
 
             elif name in ("news", "video", "ratings", "artist", "album"):
                 if (

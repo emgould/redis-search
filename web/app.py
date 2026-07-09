@@ -426,7 +426,7 @@ async def api_autocomplete(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
     raw: bool = Query(
@@ -474,7 +474,7 @@ async def api_autocomplete_stream(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
     raw: bool = Query(

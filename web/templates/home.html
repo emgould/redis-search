@@ -1332,7 +1332,7 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderResultItem(item, index, query) {
-    // Public Lists (idx:public_lists) carry a list_id instead of an mc_type
+    // Public Lists (idx:public_lists, mc_type "public_list") are routed by list_id
     if (item.list_id) {
       return renderPublicListItem(item, index, query);
     }

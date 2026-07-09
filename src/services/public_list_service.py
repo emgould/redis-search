@@ -35,6 +35,40 @@ MAX_PAGE_SIZE = 50
 DEFAULT_PAGE_SIZE = 20
 
 
+def _index_attribute_names(attributes: object) -> set[str]:
+    """Extract RediSearch field aliases from an FT.INFO attributes payload."""
+    names: set[str] = set()
+    if not isinstance(attributes, list):
+        return names
+    for attr in attributes:
+        if not isinstance(attr, list):
+            continue
+        for index, token in enumerate(attr):
+            if token == "attribute" and index + 1 < len(attr):
+                field_name = attr[index + 1]
+                if isinstance(field_name, str):
+                    names.add(field_name)
+    return names
+
+
+async def _ensure_public_list_schema_fields(client: Redis) -> None:
+    """Add schema fields introduced after the original index was created."""
+    info = await client.ft(PUBLIC_LIST_INDEX).info()
+    field_names = _index_attribute_names(info.get("attributes"))
+    if "mc_type" not in field_names:
+        await client.execute_command(
+            "FT.ALTER",
+            PUBLIC_LIST_INDEX,
+            "SCHEMA",
+            "ADD",
+            "$.mc_type",
+            "AS",
+            "mc_type",
+            "TAG",
+        )
+        logger.info(f"Added mc_type field to {PUBLIC_LIST_INDEX}")
+
+
 async def ensure_public_list_index(redis: Redis | None = None) -> bool:
     """Create ``idx:public_lists`` if missing. Returns True when created."""
     client = redis if redis is not None else get_redis()
@@ -49,6 +83,7 @@ async def ensure_public_list_index(redis: Redis | None = None) -> bool:
         return True
     except Exception as exc:  # noqa: BLE001 - redis raises generic ResponseError
         if "Index already exists" in str(exc):
+            await _ensure_public_list_schema_fields(client)
             return False
         raise
 

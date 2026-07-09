@@ -27,7 +27,7 @@ discovery documents.
 Key: `public_list:{listId}`. Payload built by `public_list_to_redis_doc()` from a
 `PublicListUpsertRequest`:
 
-- Identity: `list_id`, `name`, `description`, `image`, `circle_type`,
+- Identity: `list_id`, `mc_type` (`public_list`), `name`, `description`, `image`, `circle_type`,
   `visibility`, `circle_mode`
 - Owner: `owner_id`, `owner_username` (normalized tag),
   `owner_username_display`, `owner_display_name`, `owner_photo_url`,
@@ -62,7 +62,7 @@ Key: `public_list:{listId}`. Payload built by `public_list_to_redis_doc()` from 
 
 **System-list rule:** MediaCircle system-owned Lists (no follow paradigm) appear
 in text/topic/title results but are excluded from `followers` and `engagement`
-sorts (`-@is_mediacircle_owner:{true}`).
+sorts using the positive user-owned filter (`@is_mediacircle_owner:{false}`).
 
 Browse mode (no filters) sorts by `discovery_updated_at` desc.
 
@@ -72,12 +72,14 @@ Returns the full Redis document, 404 when missing.
 
 ### Unified search integration (Search tab)
 
-`list` is a valid source for `GET /api/search` and `GET /api/search/stream`
-(`sources=list`), wired through `services/search_service.py` alongside the
-other indexed sources. The Search tab exposes a "📋 Lists" filter chip and
-renders list result cards (`renderPublicListItem` in `web/templates/home.html`).
-Text queries search name/description/topics/item titles; filter-only searches
-return a freshness-ordered browse.
+`list` is a valid indexed source for `GET /api/search`,
+`GET /api/search/stream`, `GET /api/autocomplete`, and
+`GET /api/autocomplete/stream` (`sources=list`), wired through
+`services/search_service.py` alongside the other indexed sources. The Search tab
+exposes a "📋 Lists" filter chip and renders list result cards
+(`renderPublicListItem` in `web/templates/home.html`). Text queries search
+name/description/topics/item titles; filter-only searches return a
+freshness-ordered browse.
 
 ### Write endpoints (X-API-Key required)
 
@@ -95,7 +97,7 @@ send the key from GCP Secret Manager.
 - TEXT: `search_title` (w5, nostem), `description_text` (w2), `topic_summary`
   (w2), `item_titles_text` (nostem), `title_compact` (nostem),
   `owner_display_name`
-- TAG: `list_id`, `owner_id`, `owner_username`, `is_mediacircle_owner`,
+- TAG: `list_id`, `mc_type`, `owner_id`, `owner_username`, `is_mediacircle_owner`,
   `circle_type`, `visibility`, `circle_mode`, `topic_keywords[*]`,
   `topic_labels[*]`, `item_mc_ids[*]`, `item_title_compacts[*]`, `item_types[*]`
 - NUMERIC sortable: `followers_count`, `engagement_score`, `vote_count`,
@@ -105,6 +107,29 @@ send the key from GCP Secret Manager.
 Index is registered in `INDEX_CONFIGS` (`web/app.py`), so
 `/api/index/public_lists` create/delete and the admin index-info page work
 like other indices.
+`ensure_public_list_index()` also applies additive schema migrations with
+`FT.ALTER`; currently this backfills the `mc_type` TAG field on existing
+indexes created before list documents adopted `mc_type: public_list`.
+
+## Deployment / Rollout Order
+
+The web service is deployed to Cloud Run (`redis-search-api-dev`) with
+`make deploy-web`. Its environment is the `redis-search-dev-etl-env` secret,
+which `secrets-setup` (a `deploy-web` dependency) re-uploads from
+`config/etl.dev.env`.
+
+1. Add `PUBLIC_LISTS_API_KEY=<shared key>` to `config/etl.dev.env` before
+   deploying; the same value must be stored in the MediaCircle GCP Secret
+   Manager secret its Firebase functions read. Until a dedicated key exists,
+   writes fall back to `ETL_API_KEY`.
+2. `make deploy-web` (prompts once to confirm the secrets upload).
+3. `POST /api/public-lists/index` with the key. Creates `idx:public_lists`
+   on a fresh environment, or applies the additive `FT.ALTER` migrations
+   (e.g. `mc_type`) on an existing index.
+4. Run the MediaCircle discovery backfill. Required even when the index
+   already had documents: docs written before a schema addition lack the new
+   JSON field (e.g. `$.mc_type`) and will not match its tag queries until
+   re-written.
 
 ## Tests
 
@@ -114,9 +139,9 @@ like other indices.
   auth (reject/accept/fallback), public reads, validation.
 - `src/services/tests/test_public_list_service.py` — integration (skips
   without local Redis on 6380): index lifecycle, CRUD, all search modes,
-  sorts + system-list exclusion, pagination, and the unified `/api/search`
-  `list` source. Uses uniquely-tagged seed docs cleaned up after each test,
-  so it is safe against a shared local corpus.
+  sorts + system-list exclusion, pagination, and the unified `/api/search` plus
+  `/api/autocomplete` `list` source. Uses uniquely-tagged seed docs cleaned up
+  after each test, so it is safe against a shared local corpus.
 
 Run: `PYTHONPATH=src pytest src/core/tests/test_public_lists.py web/tests/test_public_lists_api.py src/services/tests/test_public_list_service.py`
 

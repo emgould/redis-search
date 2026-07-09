@@ -110,6 +110,7 @@ def public_list_to_redis_doc(
 
     return {
         "list_id": request.list_id,
+        "mc_type": "public_list",
         "name": request.name,
         "search_title": normalize_search_title(request.name),
         "title_compact": compact_title(request.name),
@@ -169,6 +170,7 @@ def public_list_index_schema() -> tuple[Field, ...]:
         TextField("$.owner_display_name", as_name="owner_display_name", weight=1.0),
         # Exact-match tags
         TagField("$.list_id", as_name="list_id"),
+        TagField("$.mc_type", as_name="mc_type"),
         TagField("$.owner_id", as_name="owner_id"),
         TagField("$.owner_username", as_name="owner_username"),
         TagField("$.is_mediacircle_owner", as_name="is_mediacircle_owner"),
