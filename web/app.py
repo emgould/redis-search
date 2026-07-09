@@ -5276,10 +5276,19 @@ async def create_index(index_name: str):
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
-async def index_info(request: Request, _ui: None = Depends(require_web_ui_enabled)):
+async def index_info(
+    request: Request,
+    index: str = Query(default="media", description="Index name (INDEX_CONFIGS key)"),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     redis = get_redis()
+
+    if index not in INDEX_CONFIGS:
+        index = "media"
+    redis_index_name = str(INDEX_CONFIGS[index]["redis_name"])
+
     try:
-        raw = await redis.ft("idx:media").info()
+        raw = await redis.ft(redis_index_name).info()
         info = {}
         if isinstance(raw, list):
             for i in range(0, len(raw), 2):
@@ -5296,5 +5305,17 @@ async def index_info(request: Request, _ui: None = Depends(require_web_ui_enable
     return templates.TemplateResponse(
         request=request,
         name="admin_index.html",
-        context={"info": info},
+        context={
+            "info": info,
+            "index_name": index,
+            "redis_index_name": redis_index_name,
+            "available_indexes": [
+                {
+                    "name": name,
+                    "redis_name": config["redis_name"],
+                    "runtime_owned": bool(config.get("runtime_owned")),
+                }
+                for name, config in INDEX_CONFIGS.items()
+            ],
+        },
     )

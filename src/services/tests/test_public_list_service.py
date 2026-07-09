@@ -386,6 +386,22 @@ async def _test_sort_engagement_body(redis: Redis, corpus: _Corpus) -> None:  # 
     assert _ids(payload) == [corpus.crime_list_id, corpus.doc_list_id]
 
 
+def test_browse_mode_popularity_sort_without_filters() -> None:
+    asyncio.run(_run_with_corpus(_test_browse_popularity_sort_body))
+
+
+async def _test_browse_popularity_sort_body(redis: Redis, corpus: _Corpus) -> None:  # type: ignore[type-arg]
+    # Regression: followers/engagement sort with NO other filters must build
+    # a valid standalone query (`* -@tag:{...}` is rejected by Redis 7.4).
+    payload = await search_public_lists(sort="followers", limit=50, redis=redis)
+    ids = _ids(payload)
+    assert corpus.system_list_id not in ids
+    assert corpus.crime_list_id in ids
+    assert corpus.doc_list_id in ids
+    # Seeded user lists must be ordered by followers desc relative to each other
+    assert ids.index(corpus.crime_list_id) < ids.index(corpus.doc_list_id)
+
+
 def test_sort_by_recent_includes_system_lists() -> None:
     asyncio.run(_run_with_corpus(_test_sort_recent_body))
 

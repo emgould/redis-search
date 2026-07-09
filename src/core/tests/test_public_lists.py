@@ -189,11 +189,11 @@ class TestBuildPublicListQuery:
 
     def test_exclude_system_owned(self):
         query = build_public_list_query(q="documentary", exclude_system_owned=True)
-        assert "-@is_mediacircle_owner:{true}" in query
+        assert "@is_mediacircle_owner:{false}" in query
 
-    def test_exclude_system_owned_alone_prepends_match_all(self):
+    def test_exclude_system_owned_alone_is_valid_standalone_query(self):
         query = build_public_list_query(exclude_system_owned=True)
-        assert query == "* -@is_mediacircle_owner:{true}"
+        assert query == "@is_mediacircle_owner:{false}"
 
     def test_combined_filters_are_anded(self):
         query = build_public_list_query(q="crime", owner_id="user_1")

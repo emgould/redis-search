@@ -1458,6 +1458,90 @@
         </div>
       </div>
 
+      <!-- Public Lists Index (runtime-owned by the MediaCircle backend) -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-amber-500/30 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">public_lists</span>
+              <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">runtime-owned</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:public_lists • Prefix: public_list:*
+            </p>
+            <p class="text-xs text-amber-400/80 mt-1">
+              Documents are written by the MediaCircle backend projection pipeline.
+              Excluded from Promote/Copy. Rebuild with
+              <code class="bg-surface-900 px-1 rounded">make backfill-public-list-discovery-*</code>
+              in the mediacircle repo.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('public_lists')"
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-public_lists">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('public_lists')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-public_lists">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Index Stats - values loaded async via JavaScript -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-public-lists-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-public-lists-index-memory" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+
+        <!-- Public Lists search tester -->
+        <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700 mt-4">
+          <p class="text-sm text-surface-400 mb-3">
+            Search Tester — <code class="bg-surface-900 px-1 rounded">/api/public-lists/search</code>
+            (free text, <code class="bg-surface-900 px-1 rounded">@username</code>, topic, or contained title)
+          </p>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <input type="text" id="public-lists-search-q"
+              placeholder='e.g. documentary, @username, or "The Godfather"'
+              onkeydown="if (event.key === 'Enter') runPublicListsSearch()"
+              class="flex-1 min-w-64 px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 placeholder-surface-500 focus:outline-none focus:border-brand-500">
+            <select id="public-lists-search-mode"
+              class="px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 focus:outline-none focus:border-brand-500">
+              <option value="q">Free text / @username</option>
+              <option value="topic">Topic</option>
+              <option value="item_title">Contained title</option>
+            </select>
+            <select id="public-lists-search-sort"
+              class="px-3 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-surface-200 focus:outline-none focus:border-brand-500">
+              <option value="relevance">Sort: relevance</option>
+              <option value="followers">Sort: followers</option>
+              <option value="engagement">Sort: engagement</option>
+              <option value="recent">Sort: recent</option>
+              <option value="created">Sort: created</option>
+            </select>
+            <button onclick="runPublicListsSearch()" id="btn-public-lists-search"
+              class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
+              🔍 Search
+            </button>
+          </div>
+          <div id="public-lists-search-status" class="text-sm text-surface-500 mb-2 hidden"></div>
+          <div id="public-lists-search-results" class="space-y-2 max-h-80 overflow-y-auto"></div>
+        </div>
+      </div>
+
       <!-- Index Operation Status -->
       <div id="index-status" class="hidden">
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1648,6 +1732,16 @@
         const bookIndexMemoryEl = document.getElementById('stat-book-index-memory');
         if (bookIndexMemoryEl && data.book_index_stats) {
           bookIndexMemoryEl.textContent = formatMB(data.book_index_stats.index_memory_bytes || 0);
+        }
+
+        // Update public lists index stats (runtime-owned)
+        const publicListsNumDocsEl = document.getElementById('stat-public-lists-num-docs');
+        if (publicListsNumDocsEl) {
+          publicListsNumDocsEl.textContent = formatNumber(data.public_lists_num_docs || 0);
+        }
+        const publicListsIndexMemoryEl = document.getElementById('stat-public-lists-index-memory');
+        if (publicListsIndexMemoryEl && data.public_lists_index_stats) {
+          publicListsIndexMemoryEl.textContent = formatMB(data.public_lists_index_stats.index_memory_bytes || 0);
         }
 
         // Update overall Redis memory stats
@@ -2533,6 +2627,73 @@
     } finally {
       btnDelete.disabled = false;
       btnCreate.disabled = false;
+    }
+  }
+
+  // ============================================================
+  // Public Lists Search Tester
+  // ============================================================
+
+  async function runPublicListsSearch() {
+    const q = document.getElementById('public-lists-search-q').value.trim();
+    const mode = document.getElementById('public-lists-search-mode').value;
+    const sort = document.getElementById('public-lists-search-sort').value;
+    const statusEl = document.getElementById('public-lists-search-status');
+    const resultsEl = document.getElementById('public-lists-search-results');
+    const btn = document.getElementById('btn-public-lists-search');
+
+    btn.disabled = true;
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Searching...';
+    resultsEl.innerHTML = '';
+
+    try {
+      const params = new URLSearchParams({ sort, limit: '10' });
+      if (q) params.set(mode, q);
+
+      const res = await fetch(`/api/public-lists/search?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        statusEl.textContent = `Error: ${data.error || res.status}`;
+        return;
+      }
+
+      statusEl.textContent = `${data.total} match(es) • sort=${data.sort} • query=${data.query}`;
+
+      if (!data.results.length) {
+        resultsEl.innerHTML = '<p class="text-sm text-surface-500">No public lists found. If the index is empty, run the MediaCircle backfill.</p>';
+        return;
+      }
+
+      for (const doc of data.results) {
+        const div = document.createElement('div');
+        div.className = 'bg-surface-800/50 rounded-lg p-3 border border-surface-700';
+        const owner = doc.owner_username_display || doc.owner_display_name || doc.owner_id || 'unknown';
+        const topics = (doc.topic_keywords || []).join(', ');
+        const itemTitles = (doc.item_titles || []).slice(0, 5).join(' • ');
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-surface-200">${doc.name || doc.list_id}</span>
+            <span class="text-xs text-surface-500">@${owner}</span>
+          </div>
+          <div class="text-xs text-surface-400 mt-1">
+            <span class="text-brand-400">${doc.item_count || 0} items</span>
+            <span class="mx-2">•</span>
+            <span>${doc.followers_count || 0} followers</span>
+            <span class="mx-2">•</span>
+            <span>engagement ${doc.engagement_score || 0}</span>
+            ${doc.is_mediacircle_owner === 'true' ? '<span class="mx-2">•</span><span class="text-amber-400">MediaCircle</span>' : ''}
+          </div>
+          ${topics ? `<div class="text-xs text-surface-500 mt-1">Topics: ${topics}</div>` : ''}
+          ${itemTitles ? `<div class="text-xs text-surface-500 mt-1">${itemTitles}</div>` : ''}
+        `;
+        resultsEl.appendChild(div);
+      }
+    } catch (e) {
+      statusEl.textContent = 'Failed: ' + e.message;
+    } finally {
+      btn.disabled = false;
     }
   }
 

@@ -152,10 +152,11 @@ def build_public_list_query(
             parts.append("(" + " | ".join(f"({clause})" for clause in clauses) + ")")
 
     if exclude_system_owned:
-        parts.append("-@is_mediacircle_owner:{true}")
+        # Positive tag filter: every projected document stores the flag as
+        # "true"/"false", and `@field:{false}` stays valid RediSearch syntax
+        # even as the only clause (unlike `* -@field:{true}`).
+        parts.append("@is_mediacircle_owner:{false}")
 
     if not parts:
         return "*"
-    if all(part.startswith("-") for part in parts):
-        parts.insert(0, "*")
     return " ".join(parts)
