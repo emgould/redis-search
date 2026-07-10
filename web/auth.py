@@ -48,6 +48,45 @@ def require_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> 
         raise HTTPException(status_code=401, detail="Unauthorized: X-API-Key header required")
 
 
+def verify_public_list_write_key(x_api_key: str | None) -> bool:
+    """
+    Verify the shared secret for public-list index writes.
+
+    Public List documents are written by the MediaCircle backend, so
+    writes require the dedicated PUBLIC_LISTS_API_KEY (falling back to
+    ETL_API_KEY when a dedicated key is not configured).
+
+    Authorization is granted if:
+    1. Valid X-API-Key header matching PUBLIC_LISTS_API_KEY (or ETL_API_KEY)
+    2. Running locally (ENVIRONMENT=local, not in Cloud Run)
+    """
+    expected_key = os.getenv("PUBLIC_LISTS_API_KEY") or os.getenv("ETL_API_KEY")
+    if expected_key and x_api_key == expected_key:
+        return True
+
+    # If running in Cloud Run, auth is REQUIRED (no bypass)
+    if os.getenv("K_SERVICE"):
+        return False
+
+    # Local development: only skip auth if explicitly set to "local"
+    return os.getenv("ENVIRONMENT") == "local"
+
+
+def require_public_list_write_key(
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> None:
+    """
+    FastAPI dependency guarding public-list index write endpoints.
+
+    Raises HTTPException 401 if not authorized.
+    """
+    if not verify_public_list_write_key(x_api_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: X-API-Key header required for public-list writes",
+        )
+
+
 def verify_etl_auth(
     x_cloudscheduler_jobname: str | None = None,
     x_api_key: str | None = None,

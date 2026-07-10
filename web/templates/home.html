@@ -196,6 +196,10 @@ Shows{% endblock %} {% block body %}
                    border-surface-600 text-surface-400 hover:border-rose-500 hover:text-rose-400">
             🍅 Ratings
           </button>
+          <button data-filter="list" onclick="toggleFilter('list')" class="filter-btn px-3 py-1.5 rounded-full text-sm border transition-all duration-200
+                   border-surface-600 text-surface-400 hover:border-teal-500 hover:text-teal-400">
+            📋 Lists
+          </button>
         </div>
 
         <p id="filter-hint" class="text-center text-xs text-surface-500 mt-2">
@@ -1101,6 +1105,16 @@ Shows{% endblock %} {% block body %}
             });
           }
         }
+        if (results.list && results.list.length > 0) {
+          categories.push({
+            key: "list",
+            label: "📋 Public Lists",
+            items: results.list,
+            topPopularity: parseFloat(results.list[0]?.followers_count) || 0,
+            color: "teal",
+            tier: 1,  // Media tier
+          });
+        }
         if (results.news && results.news.length > 0) {
           categories.push({
             key: "news",
@@ -1318,6 +1332,11 @@ Shows{% endblock %} {% block body %}
   }
 
   function renderResultItem(item, index, query) {
+    // Public Lists (idx:public_lists, mc_type "public_list") are routed by list_id
+    if (item.list_id) {
+      return renderPublicListItem(item, index, query);
+    }
+
     const title = item.search_title || "Unknown";
     const year = formatYear(item);
     const poster = getPosterUrl(item);
@@ -1567,6 +1586,57 @@ Shows{% endblock %} {% block body %}
                 <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
+            </div>
+        </div>
+    `;
+  }
+
+  function renderPublicListItem(item, index, query) {
+    const name = item.name || item.search_title || "Unknown List";
+    const image = item.image || "";
+    const owner = item.owner_username_display || item.owner_display_name || item.owner_id || "";
+    const isMediaCircle = item.is_mediacircle_owner === "true";
+    const itemCount = item.item_count || 0;
+    const followers = item.followers_count || 0;
+    const engagement = item.engagement_score || 0;
+    const description = item.description || "";
+    const topics = (item.topic_keywords || []).slice(0, 4).join(", ");
+    const sampleTitles = (item.item_titles || []).slice(0, 4).join(" • ");
+
+    let descSnippet = "";
+    if (description) {
+      descSnippet = description.length > 80 ? description.substring(0, 80).trim() + "..." : description;
+    }
+
+    return `
+        <div class="group flex gap-4 p-3 hover:bg-surface-800/50 cursor-pointer transition-colors border-b border-surface-800/50 last:border-b-0"
+             data-media-id="${item.list_id}"
+             data-mc-type="public_list"
+             style="animation-delay: ${index * 30}ms">
+            <!-- List Cover -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-surface-800">
+                ${image
+        ? `<img src="${image}" alt="${name}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-surface-600 text-xl\\'>📋</div>'">`
+        : `<div class="w-full h-full flex items-center justify-center text-surface-600 text-xl">📋</div>`
+      }
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <h4 class="font-medium text-surface-200 truncate">${name}</h4>
+                    ${isMediaCircle ? '<span class="px-1.5 py-0.5 rounded text-xs bg-brand-500/20 text-brand-300 border border-brand-500/30 flex-shrink-0">MediaCircle</span>' : ''}
+                </div>
+                <div class="text-xs text-surface-400 mt-0.5 truncate">
+                    ${owner ? `<span>@${owner}</span><span class="mx-1.5">•</span>` : ''}
+                    <span class="text-teal-400">${itemCount} items</span>
+                    <span class="mx-1.5">•</span>
+                    <span>${followers.toLocaleString()} followers</span>
+                    ${engagement ? `<span class="mx-1.5">•</span><span>engagement ${engagement}</span>` : ''}
+                </div>
+                ${descSnippet ? `<p class="text-xs text-surface-500 mt-1 truncate">${descSnippet}</p>` : ''}
+                ${sampleTitles ? `<p class="text-xs text-surface-500 mt-0.5 truncate">${sampleTitles}</p>` : ''}
+                ${topics ? `<p class="text-xs text-teal-500/70 mt-0.5 truncate">Topics: ${topics}</p>` : ''}
             </div>
         </div>
     `;

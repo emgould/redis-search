@@ -1458,6 +1458,55 @@
         </div>
       </div>
 
+      <!-- Public Lists Index -->
+      <div class="bg-surface-800/50 rounded-lg p-4 border border-surface-700 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="font-semibold text-lg text-surface-200">
+              Index: <span class="text-brand-400">public_lists</span>
+            </h3>
+            <p class="text-sm text-surface-500">
+              idx:public_lists • Prefix: public_list:*
+            </p>
+            <p class="text-xs text-surface-500 mt-1">
+              Sourced from MediaCircle Firestore via the projection pipeline; rebuild with
+              <code class="bg-surface-900 px-1 rounded">make backfill-public-list-discovery-*</code>
+              in the mediacircle repo.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="deleteIndex('public_lists')"
+              class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-red-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-delete-index-public_lists">
+              🗑️ Delete Index
+            </button>
+            <button onclick="createIndex('public_lists')"
+              class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50"
+              id="btn-create-index-public_lists">
+              ➕ Create Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Index Stats - values loaded async via JavaScript -->
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Indexed Documents</p>
+            <p id="stat-public-lists-num-docs" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+
+          <div class="bg-surface-900/50 rounded-lg p-4 border border-surface-700">
+            <p class="text-sm text-surface-400 mb-1">Index Memory Usage</p>
+            <p id="stat-public-lists-index-memory" class="text-3xl font-bold text-brand-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Index Operation Status -->
       <div id="index-status" class="hidden">
         <div class="bg-surface-800 rounded-lg p-4">
@@ -1556,6 +1605,14 @@
         </div>
 
         <div class="bg-surface-800 rounded-lg p-4">
+          <p class="text-sm text-surface-400 mb-1">Public List Keys</p>
+          <p id="stat-public-list-keys" class="text-2xl font-bold text-amber-400">
+            ...
+          </p>
+          <p class="text-xs text-surface-500">public_list:*</p>
+        </div>
+
+        <div class="bg-surface-800 rounded-lg p-4">
           <p class="text-sm text-surface-400 mb-1">API Cache Keys</p>
           <p id="stat-api-cache" class="text-2xl font-bold text-yellow-400">
             ...
@@ -1642,6 +1699,16 @@
           bookIndexMemoryEl.textContent = formatMB(data.book_index_stats.index_memory_bytes || 0);
         }
 
+        // Update public lists index stats
+        const publicListsNumDocsEl = document.getElementById('stat-public-lists-num-docs');
+        if (publicListsNumDocsEl) {
+          publicListsNumDocsEl.textContent = formatNumber(data.public_lists_num_docs || 0);
+        }
+        const publicListsIndexMemoryEl = document.getElementById('stat-public-lists-index-memory');
+        if (publicListsIndexMemoryEl && data.public_lists_index_stats) {
+          publicListsIndexMemoryEl.textContent = formatMB(data.public_lists_index_stats.index_memory_bytes || 0);
+        }
+
         // Update overall Redis memory stats
         document.getElementById('stat-memory-used').textContent = formatMB(data.memory_used);
 
@@ -1684,6 +1751,10 @@
         const bookKeysEl = document.getElementById('stat-book-keys');
         if (bookKeysEl) {
           bookKeysEl.textContent = formatNumber(data.cache_breakdown.book || 0);
+        }
+        const publicListKeysEl = document.getElementById('stat-public-list-keys');
+        if (publicListKeysEl) {
+          publicListKeysEl.textContent = formatNumber(data.cache_breakdown.public_list || 0);
         }
         const apiCacheEl = document.getElementById('stat-api-cache');
         if (apiCacheEl) {

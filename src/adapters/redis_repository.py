@@ -2,6 +2,8 @@ from typing import Any
 
 from redis.commands.search.query import Query
 
+from core.public_lists import PUBLIC_LIST_INDEX
+
 from .redis_client import get_redis
 
 _SOURCE_INDEX_ATTR: dict[str, str] = {
@@ -22,6 +24,7 @@ class RedisRepository:
         self.podcasts_idx = self.redis.ft("idx:podcasts")
         self.author_idx = self.redis.ft("idx:author")
         self.book_idx = self.redis.ft("idx:book")
+        self.public_lists_idx = self.redis.ft(PUBLIC_LIST_INDEX)
 
     async def search(
         self,
@@ -400,9 +403,30 @@ class RedisRepository:
             book_num_docs = 0
             book_index_stats = {"num_docs": 0, "index_memory_bytes": 0}
 
+        # Public lists index (sourced from the MediaCircle backend) —
+        # may not exist yet in every environment, so failure means 0 docs.
+        public_lists_index_stats: dict = {"num_docs": 0, "index_memory_bytes": 0}
+        public_lists_num_docs = 0
+        try:
+            public_lists_info = await self.public_lists_idx.info()
+            public_lists_num_docs = int(public_lists_info.get("num_docs", 0))
+            public_lists_index_stats = {
+                "num_docs": public_lists_num_docs,
+                "index_memory_bytes": int(
+                    float(public_lists_info.get("inverted_sz_mb", 0)) * 1024 * 1024
+                ),
+            }
+        except Exception:
+            public_lists_num_docs = 0
+
         # Index doc counts for key breakdown (fast, no SCAN needed)
         total_index_keys = (
-            num_docs + people_num_docs + podcasts_num_docs + author_num_docs + book_num_docs
+            num_docs
+            + people_num_docs
+            + podcasts_num_docs
+            + author_num_docs
+            + book_num_docs
+            + public_lists_num_docs
         )
         # API cache keys = everything in Redis that isn't an index document
         api_cache_keys = max(0, dbsize - total_index_keys)
@@ -413,6 +437,7 @@ class RedisRepository:
             "podcast": podcasts_num_docs,
             "author": author_num_docs,
             "book": book_num_docs,
+            "public_list": public_lists_num_docs,
             "api_cache": api_cache_keys,
         }
 
@@ -434,6 +459,8 @@ class RedisRepository:
             "author_index_stats": author_index_stats,
             "book_num_docs": book_num_docs,
             "book_index_stats": book_index_stats,
+            "public_lists_num_docs": public_lists_num_docs,
+            "public_lists_index_stats": public_lists_index_stats,
             "cache_breakdown": cache_breakdown,
             "maxmemory": maxmemory,
             "maxmemory_policy": maxmemory_policy,

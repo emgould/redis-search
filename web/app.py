@@ -39,6 +39,11 @@ from core.normalize import (
     prepare_media_redis_document,
     resolve_timestamps,
 )
+from core.public_lists import (
+    PUBLIC_LIST_INDEX,
+    PUBLIC_LIST_PREFIX,
+    public_list_index_schema,
+)
 from core.query_hints import parse_source_hint
 from core.search_queries import RawQueryError, parse_date_param_to_yyyymmdd, validate_raw_query
 from etl.bestseller_author_etl import BestsellerETLStats, run_bestseller_author_etl
@@ -69,6 +74,7 @@ from services.search_service import (
 )
 from utils.genre_mapping import get_genre_mapping_with_fallback
 from web.routes.openlibrary_etl import router as openlibrary_etl_router
+from web.routes.public_lists import router as public_lists_router
 
 # Project root directory for subprocess cwd
 PROJECT_ROOT = str(Path(__file__).parent.parent)
@@ -253,6 +259,9 @@ app.add_middleware(
 # Include OpenLibrary ETL routes
 app.include_router(openlibrary_etl_router)
 
+# Public List discovery routes (documents written by the MediaCircle backend)
+app.include_router(public_lists_router)
+
 templates = Jinja2Templates(directory="web/templates")
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
@@ -374,11 +383,9 @@ _changes_job_live_stats: dict[str, Any] = {}
 async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     current_env = RedisManager.get_current_env()
     return templates.TemplateResponse(
-        "home.html",
-        {
-            "request": request,
-            "current_env": current_env.value,
-        },
+        request=request,
+        name="home.html",
+        context={"current_env": current_env.value},
     )
 
 
@@ -403,9 +410,9 @@ async def etl_page(
         pass
 
     return templates.TemplateResponse(
-        "etl.html",
-        {
-            "request": request,
+        request=request,
+        name="etl.html",
+        context={
             "current_env": current_env.value,
             "redis_connected": redis_connected,
             "cloud_run_available": bool(os.getenv("CLOUD_RUN_ETL_URL", "")),
@@ -419,7 +426,7 @@ async def api_autocomplete(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
     raw: bool = Query(
@@ -467,7 +474,7 @@ async def api_autocomplete_stream(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album. "
         "If not provided, searches all sources.",
     ),
     raw: bool = Query(
@@ -709,7 +716,7 @@ async def api_search(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, artist, album, video, news, ratings. "
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
@@ -799,7 +806,7 @@ async def api_search(
     mc_id, mc_type, mc_subtype, source, source_id, links, images, metrics, etc.
 
     Sources are divided into two categories:
-    - Indexed (RediSearch): tv, movie, person, podcast, author, book
+    - Indexed (RediSearch): tv, movie, person, podcast, author, book, list
     - Brokered (Redis-cached APIs): artist, album, video, news, ratings
 
     Field filters (genre_ids, year_min/max, rating_min/max, mc_type) only apply to
@@ -1273,7 +1280,7 @@ async def api_search_stream(
     sources: str | None = Query(
         default=None,
         description="Comma-separated list of sources to search. "
-        "Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings. "
+        "Valid sources: tv, movie, person, podcast, author, book, list, artist, album, video, news, ratings. "
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
@@ -1531,7 +1538,9 @@ async def autocomplete_test(
 ):
     results = await autocomplete(q) if q else []
     return templates.TemplateResponse(
-        "autocomplete.html", {"request": request, "query": q, "results": results}
+        request=request,
+        name="autocomplete.html",
+        context={"query": q, "results": results},
     )
 
 
@@ -1550,9 +1559,9 @@ async def management(
     # Return page immediately - stats will be fetched async via JS
     # This makes the page load instantly instead of waiting for Redis queries
     return templates.TemplateResponse(
-        "management.html",
-        {
-            "request": request,
+        request=request,
+        name="management.html",
+        context={
             "current_env": current_env.value,
             "local_status": {"connected": False, "error": "Loading..."},
             "public_status": {"connected": False, "error": "Loading..."},
@@ -1658,6 +1667,8 @@ async def redis_stats():
                 "author_index_stats": stats.get("author_index_stats", {}),
                 "book_num_docs": stats.get("book_num_docs", 0),
                 "book_index_stats": stats.get("book_index_stats", {}),
+                "public_lists_num_docs": stats.get("public_lists_num_docs", 0),
+                "public_lists_index_stats": stats.get("public_lists_index_stats", {}),
             }
         )
     except Exception as e:
@@ -5168,6 +5179,13 @@ INDEX_CONFIGS = {
             NumericField("$.modified_at", as_name="modified_at", sortable=True),
         ),
     },
+    "public_lists": {
+        "redis_name": PUBLIC_LIST_INDEX,
+        "prefix": PUBLIC_LIST_PREFIX,
+        # Documents are written by the MediaCircle backend projection
+        # pipeline (rebuildable via the MediaCircle backfill).
+        "schema": public_list_index_schema(),
+    },
 }
 
 
@@ -5244,10 +5262,19 @@ async def create_index(index_name: str):
 
 
 @app.get("/admin/index_info", response_class=HTMLResponse)
-async def index_info(request: Request, _ui: None = Depends(require_web_ui_enabled)):
+async def index_info(
+    request: Request,
+    index: str = Query(default="media", description="Index name (INDEX_CONFIGS key)"),
+    _ui: None = Depends(require_web_ui_enabled),
+):
     redis = get_redis()
+
+    if index not in INDEX_CONFIGS:
+        index = "media"
+    redis_index_name = str(INDEX_CONFIGS[index]["redis_name"])
+
     try:
-        raw = await redis.ft("idx:media").info()
+        raw = await redis.ft(redis_index_name).info()
         info = {}
         if isinstance(raw, list):
             for i in range(0, len(raw), 2):
@@ -5261,4 +5288,16 @@ async def index_info(request: Request, _ui: None = Depends(require_web_ui_enable
     except Exception as e:
         info = {"error": str(e)}
 
-    return templates.TemplateResponse("admin_index.html", {"request": request, "info": info})
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_index.html",
+        context={
+            "info": info,
+            "index_name": index,
+            "redis_index_name": redis_index_name,
+            "available_indexes": [
+                {"name": name, "redis_name": config["redis_name"]}
+                for name, config in INDEX_CONFIGS.items()
+            ],
+        },
+    )

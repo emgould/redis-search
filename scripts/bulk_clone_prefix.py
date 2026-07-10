@@ -64,6 +64,7 @@ PREFIX_TO_INDEX: dict[str, str] = {
     "podcast:": "idx:podcasts",
     "book:": "idx:book",
     "author:": "idx:author",
+    "public_list:": "idx:public_lists",
 }
 
 INDEX_TO_ETL_JOBS: dict[str, list[str]] = {

@@ -42,6 +42,7 @@ from core.search_queries import (
     normalize_query_separators,
     strip_query_apostrophes,
 )
+from services.public_list_service import search_public_lists
 from utils.get_logger import get_logger
 from utils.normalize import normalize
 from utils.soft_comparison import (
@@ -687,7 +688,7 @@ def build_authors_autocomplete_query(q: str) -> str:
 
 # Indexed sources only; brokered APIs are never called from JSON autocomplete.
 _AUTOCOMPLETE_INDEXED_SOURCES: frozenset[str] = frozenset(
-    {"tv", "movie", "person", "podcast", "author", "book"}
+    {"tv", "movie", "person", "podcast", "author", "book", "list"}
 )
 _AUTOCOMPLETE_LIMIT = 10
 _AUTOCOMPLETE_RESPONSE_KEYS: tuple[str, ...] = (
@@ -697,6 +698,7 @@ _AUTOCOMPLETE_RESPONSE_KEYS: tuple[str, ...] = (
     "podcast",
     "author",
     "book",
+    "list",
     "news",
     "video",
     "ratings",
@@ -728,6 +730,7 @@ async def autocomplete(
             "podcast",
             "author",
             "book",
+            "list",
             "news",
             "video",
             "ratings",
@@ -1370,7 +1373,7 @@ async def autocomplete_stream(
     Args:
         q: Search query string
         sources: Optional set of sources to search. If None, searches all sources.
-                 Valid sources: tv, movie, person, podcast, author, book, news, video, ratings, artist, album
+                 Valid sources: tv, movie, person, podcast, author, book, list, news, video, ratings, artist, album
         raw: If True, treat q as raw RediSearch syntax for indexed sources (validated, raises on error)
 
     Yields:
@@ -1383,6 +1386,7 @@ async def autocomplete_stream(
         "podcast",
         "author",
         "book",
+        "list",
         "news",
         "video",
         "ratings",
@@ -1461,6 +1465,12 @@ async def autocomplete_stream(
                 timed_task("book", repo.search_books(books_query, limit=ac_limit))
             )
         ] = "book"
+    if "list" in sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("list", search_public_lists(q=q.strip(), limit=ac_limit))
+            )
+        ] = "list"
 
     # External/brokered APIs (news, video, ratings, artist, album) are excluded
     # from autocomplete stream to avoid excessive API calls during typing.
@@ -1546,6 +1556,18 @@ async def autocomplete_stream(
                     streamed_full["book"] = book_full
                     parsed_results = book_full[:ac_limit]
 
+            elif name == "list":
+                if data and not isinstance(data, BaseException):
+                    results = data.get("results") if isinstance(data, dict) else None
+                    if isinstance(results, list):
+                        list_full = [
+                            item
+                            for item in results
+                            if isinstance(item, dict)
+                        ]
+                        streamed_full["list"] = list_full
+                        parsed_results = list_full[:ac_limit]
+
             elif name in ("news", "video", "ratings", "artist", "album"):
                 if (
                     data
@@ -1594,6 +1616,7 @@ VALID_SOURCES = {
     "podcast",
     "author",
     "book",
+    "list",
     # Brokered via Redis-cached API calls
     "artist",
     "album",
@@ -1835,6 +1858,12 @@ async def search(
         timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=limit)))
     if "book" in requested_sources:
         timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=limit)))
+    if "list" in requested_sources:
+        # Public Lists index: text queries search name/description/topics/item
+        # titles; filter-only searches fall back to freshness-ordered browse.
+        timed_tasks.append(
+            timed_task("list", search_public_lists(q=query_text, limit=limit))
+        )
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
@@ -1996,6 +2025,16 @@ async def search(
             parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
         full_results["book"] = parsed_books
         final_results["book"] = parsed_books[:limit]
+
+    # Process public list results (already parsed dicts from the list service)
+    if "list" in results_map:
+        list_res = results_map["list"]
+        list_results: list[dict] = []
+        if list_res and not isinstance(list_res, BaseException) and isinstance(list_res, dict):
+            raw_lists = list_res.get("results", [])
+            if isinstance(raw_lists, list):
+                list_results = raw_lists[:limit]
+        final_results["list"] = list_results
 
     # Process news results (API)
     if "news" in results_map:
@@ -2398,6 +2437,12 @@ async def search_stream(
         tasks_dict[
             asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=limit)))
         ] = "book"
+    if "list" in requested_sources:
+        tasks_dict[
+            asyncio.create_task(
+                timed_task("list", search_public_lists(q=query_text, limit=limit))
+            )
+        ] = "list"
 
     # Brokered sources - apply timeout
     if query_text is not None and not raw:
@@ -2553,6 +2598,14 @@ async def search_stream(
                     parsed_results = book_full[:limit]
                 else:
                     parsed_results = []
+
+            elif name == "list":
+                # Public list service returns already-parsed dicts
+                parsed_results = []
+                if data and not isinstance(data, BaseException) and isinstance(data, dict):
+                    raw_lists = data.get("results", [])
+                    if isinstance(raw_lists, list):
+                        parsed_results = raw_lists[:limit]
 
             elif name in ("news", "video", "artist", "album"):
                 parsed_results = []
