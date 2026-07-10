@@ -88,6 +88,18 @@ async def ensure_public_list_index(redis: Redis | None = None) -> bool:
         raise
 
 
+_index_ensured = False
+
+
+async def _ensure_index_once(client: Redis) -> None:
+    """Create/migrate the index on this process's first write, then memoize."""
+    global _index_ensured  # noqa: PLW0603 - process-level memo
+    if _index_ensured:
+        return
+    await ensure_public_list_index(client)
+    _index_ensured = True
+
+
 async def get_public_list(
     list_id: str, redis: Redis | None = None
 ) -> dict[str, object] | None:
@@ -112,6 +124,7 @@ async def upsert_public_list(
     request provides one explicitly.
     """
     client = redis if redis is not None else get_redis()
+    await _ensure_index_once(client)
     existing = await get_public_list(request.list_id, redis=client)
     doc = cast(dict[str, object], public_list_to_redis_doc(request, existing=existing))
     await client.execute_command(

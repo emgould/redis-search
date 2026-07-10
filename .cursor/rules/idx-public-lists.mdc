@@ -123,13 +123,50 @@ which `secrets-setup` (a `deploy-web` dependency) re-uploads from
    Manager secret its Firebase functions read. Until a dedicated key exists,
    writes fall back to `ETL_API_KEY`.
 2. `make deploy-web` (prompts once to confirm the secrets upload).
-3. `POST /api/public-lists/index` with the key. Creates `idx:public_lists`
-   on a fresh environment, or applies the additive `FT.ALTER` migrations
-   (e.g. `mc_type`) on an existing index.
-4. Run the MediaCircle discovery backfill. Required even when the index
-   already had documents: docs written before a schema addition lack the new
-   JSON field (e.g. `$.mc_type`) and will not match its tag queries until
-   re-written.
+3. Populate dev by either path:
+   - **MediaCircle discovery backfill** against dev. No manual index
+     provisioning is needed: the first authenticated write in a process
+     runs `ensure_public_list_index()` (create on fresh environments,
+     additive `FT.ALTER` migrations on existing ones, then memoized). The
+     backfill is also required when the index already had documents: docs
+     written before a schema addition lack the new JSON field (e.g.
+     `$.mc_type`) and will not match its tag queries until re-written.
+   - **Selective promote of the local corpus**
+     (`scripts/promote_to_dev.py --indices public_lists` or the management
+     Promote modal). Full replacement: drops the dev index with its
+     documents and copies the local Lists and index schema.
+
+`POST /api/public-lists/index` remains available to provision or migrate
+the index explicitly without writing a document (e.g. so searches return
+empty results instead of 503 before the first write), but it is optional.
+
+## Data Safety of Index Instantiation Paths
+
+Unlike every other index, dev is the canonical write target for
+`public_list:*` (MediaCircle projection → dev), not local. Data-safety of
+each path that touches the index:
+
+- `POST /api/public-lists/index` and `POST /api/index/public_lists` —
+  `FT.CREATE` only; never touches documents. Docs already present under the
+  `public_list:` prefix are picked up by the background scan, so
+  index-after-documents ordering is safe. Idempotent.
+- `DELETE /api/index/public_lists` — drops the index with
+  `delete_documents=False`; documents survive and are reindexed on
+  re-create.
+- Schema changes — additive `FT.ALTER` via `ensure_public_list_index()`.
+  Never drop-and-recreate for a schema addition.
+- `scripts/promote_to_dev.py` / management Promote modal — full
+  replacement by design: drops the target index with
+  `delete_documents=True` (deletes all dev `public_list:*` docs) and
+  copies the local corpus. Valid as a deliberate, selective deployment
+  path; once MediaCircle projection writes are live on dev, promoting
+  `public_lists` supersedes them with the local corpus until the next
+  projection write or backfill.
+- `scripts/copy_to_local.py` — destructive only to the local copy (safe for
+  dev).
+- Recovery: Lists always rebuild from Firestore via the MediaCircle
+  backfill; `upsert_public_list` preserves `created_at`. A wipe still
+  leaves discovery empty until the backfill completes.
 
 ## Tests
 
