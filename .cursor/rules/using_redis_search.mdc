@@ -1,6 +1,6 @@
 ---
 description: Client-facing API endpoint contracts, Redis index payload schemas, and response shapes
-globs: ["web/app.py", "src/core/normalize.py", "src/services/search_service.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py", "web/templates/home.html", "web/static/js/search-controller.js"]
+globs: ["web/app.py", "src/core/normalize.py", "src/services/search_service.py", "src/services/person_etl_service.py", "src/etl/*.py", "src/api/*/bulk/*.py", "scripts/build_redis_index.py", "web/templates/home.html", "web/templates/details.html", "web/static/js/search-controller.js"]
 alwaysApply: false
 ---
 
@@ -550,6 +550,16 @@ All keys are present when values are available, and absent fields are omitted by
 `search_title`, `title`, `author_search`, `author`, `description`, `subjects_search`, `mc_type`, `source`, `openlibrary_key`, `primary_isbn13`, `primary_isbn10`, `author_olid`, `cover_available`, `author_normalized`, `subjects`, `first_publish_year`, `ratings_average`, `ratings_count`, `readinglog_count`, `number_of_pages`, `popularity_score`, `edition_count`.
 
 ## `POST /api/details` — Detail Lookup Endpoint
+
+### Web UI
+
+`GET /details` serves a small lookup page (nav: **Details**) that posts to `/api/details`.
+
+- Enter `mc_id` (required); `mc_type` is inferred from common prefixes (`tmdb_movie_`, `tmdb_tv_`, `tmdb_person_` / `person_`, `podcast_`, `book_`, `author_`) and can be overridden.
+- Optional toggles: `force`, and `rss_details` when `mc_type=podcast`.
+- Author lookups send `mc_type=person` + `mc_subtype=author`.
+- Prefill via query string: `/details?mc_id=tmdb_tv_279884&mc_type=tv` (auto-runs lookup when `mc_id` is present).
+- Response panel includes the same client-side “Filter by property name…” control used in the Search JSON modal.
 
 ### Scalar vs Batch
 
