@@ -389,6 +389,17 @@ async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     )
 
 
+@app.get("/details", response_class=HTMLResponse)
+async def details_page(request: Request, _ui: None = Depends(require_web_ui_enabled)):
+    """UI to look up a document by mc_id via POST /api/details."""
+    current_env = RedisManager.get_current_env()
+    return templates.TemplateResponse(
+        request=request,
+        name="details.html",
+        context={"current_env": current_env.value},
+    )
+
+
 @app.get("/etl", response_class=HTMLResponse)
 async def etl_page(
     request: Request,

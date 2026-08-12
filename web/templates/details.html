@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}Details Lookup - Redis Search{% endblock %}
+{% block body %}
+<div class="min-h-full">
+  <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">Details Lookup</h1>
+        <p class="text-surface-400 text-sm mt-1">
+          Resolve a document by <code class="text-surface-300">mc_id</code> via
+          <code class="text-surface-300">POST /api/details</code>
+        </p>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-surface-500">
+        <span
+          class="w-1.5 h-1.5 rounded-full {% if current_env == 'local' %}bg-green-500{% else %}bg-blue-500{% endif %}"></span>
+        <span>{{ current_env | capitalize }} Redis</span>
+      </div>
+    </div>
+
+    <section class="bg-surface-900 rounded-xl border border-surface-800 p-6 space-y-4">
+      <form id="details-form" class="space-y-4" onsubmit="return false;">
+        <div>
+          <label for="mc-id-input" class="block text-sm text-surface-300 mb-1.5">mc_id</label>
+          <input id="mc-id-input" type="text" autocomplete="off" spellcheck="false"
+            placeholder="e.g. tmdb_tv_279884"
+            class="w-full px-3 py-2.5 rounded-lg bg-surface-950 border border-surface-700 text-white placeholder:text-surface-500 focus:outline-none focus:border-brand-500 font-mono text-sm" />
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label for="mc-type-select" class="block text-sm text-surface-300 mb-1.5">mc_type</label>
+            <select id="mc-type-select"
+              class="w-full px-3 py-2.5 rounded-lg bg-surface-950 border border-surface-700 text-white focus:outline-none focus:border-brand-500 text-sm">
+              <option value="movie">movie</option>
+              <option value="tv">tv</option>
+              <option value="person">person</option>
+              <option value="podcast">podcast</option>
+              <option value="book">book</option>
+              <option value="author">author</option>
+            </select>
+            <p id="type-hint" class="text-xs text-surface-500 mt-1.5">Inferred from mc_id when possible</p>
+          </div>
+
+          <div class="flex flex-col justify-end gap-3 pb-0.5">
+            <label class="inline-flex items-center gap-2 text-sm text-surface-300 cursor-pointer">
+              <input id="force-toggle" type="checkbox"
+                class="rounded border-surface-600 bg-surface-950 text-brand-500 focus:ring-brand-500" />
+              force (live upstream fetch)
+            </label>
+            <label id="rss-row" class="inline-flex items-center gap-2 text-sm text-surface-300 cursor-pointer hidden">
+              <input id="rss-toggle" type="checkbox"
+                class="rounded border-surface-600 bg-surface-950 text-brand-500 focus:ring-brand-500" />
+              rss_details (podcast episodes)
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-1">
+          <button id="lookup-btn" type="button"
+            class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Lookup
+          </button>
+          <button id="clear-btn" type="button"
+            class="px-3 py-2 rounded-lg border border-surface-700 text-surface-300 hover:text-white hover:border-surface-500 text-sm transition-colors">
+            Clear
+          </button>
+          <span id="status-text" class="text-sm text-surface-500"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="result-section" class="bg-surface-900 rounded-xl border border-surface-800 overflow-hidden hidden">
+      <div class="px-4 py-3 border-b border-surface-800 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-white">Response</p>
+          <p id="request-line" class="text-xs text-surface-500 font-mono truncate mt-0.5"></p>
+        </div>
+        <button id="copy-btn" type="button"
+          class="shrink-0 px-3 py-1.5 rounded-lg border border-surface-700 text-surface-300 hover:text-white hover:border-surface-500 text-xs transition-colors">
+          Copy JSON
+        </button>
+      </div>
+      <div class="px-4 pt-3 pb-2 border-b border-surface-800">
+        <input id="property-filter" type="text" placeholder="Filter by property name…"
+          class="w-full px-3 py-1.5 text-sm rounded-lg bg-surface-950 border border-surface-700 text-surface-200 placeholder-surface-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 font-mono">
+      </div>
+      <pre id="result-json"
+        class="p-4 text-xs font-mono text-surface-200 overflow-auto max-h-[70vh] whitespace-pre-wrap break-words"></pre>
+    </section>
+  </main>
+</div>
+
+<script>
+  const mcIdInput = document.getElementById("mc-id-input");
+  const mcTypeSelect = document.getElementById("mc-type-select");
+  const forceToggle = document.getElementById("force-toggle");
+  const rssToggle = document.getElementById("rss-toggle");
+  const rssRow = document.getElementById("rss-row");
+  const typeHint = document.getElementById("type-hint");
+  const lookupBtn = document.getElementById("lookup-btn");
+  const clearBtn = document.getElementById("clear-btn");
+  const statusText = document.getElementById("status-text");
+  const resultSection = document.getElementById("result-section");
+  const resultJson = document.getElementById("result-json");
+  const requestLine = document.getElementById("request-line");
+  const copyBtn = document.getElementById("copy-btn");
+  const propertyFilter = document.getElementById("property-filter");
+
+  let lastJsonText = "";
+  let typeManuallySet = false;
+
+  function applyPropertyFilter(query) {
+    if (!lastJsonText) {
+      resultJson.textContent = "";
+      return;
+    }
+    if (!query) {
+      resultJson.textContent = lastJsonText;
+      return;
+    }
+    try {
+      const obj = JSON.parse(lastJsonText);
+      if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+        const lower = query.toLowerCase();
+        const filtered = {};
+        for (const [k, v] of Object.entries(obj)) {
+          if (k.toLowerCase().includes(lower)) filtered[k] = v;
+        }
+        resultJson.textContent = JSON.stringify(filtered, null, 2);
+        return;
+      }
+    } catch (_err) {
+      /* keep full text */
+    }
+    resultJson.textContent = lastJsonText;
+  }
+
+  function inferType(mcId) {
+    const id = (mcId || "").trim().toLowerCase();
+    if (!id) return null;
+    if (id.startsWith("tmdb_movie_") || id.startsWith("media:tmdb_movie_")) return "movie";
+    if (id.startsWith("tmdb_tv_") || id.startsWith("media:tmdb_tv_")) return "tv";
+    if (
+      id.startsWith("tmdb_person_") ||
+      id.startsWith("person_") ||
+      id.startsWith("media:tmdb_person_")
+    ) {
+      return "person";
+    }
+    if (id.startsWith("podcast_") || id.startsWith("podcastindex_podcast_")) return "podcast";
+    if (id.startsWith("book_") || id.startsWith("openlibrary_")) return "book";
+    if (id.startsWith("author_") || id.includes("_author_")) return "author";
+    return null;
+  }
+
+  function syncRssVisibility() {
+    const isPodcast = mcTypeSelect.value === "podcast";
+    rssRow.classList.toggle("hidden", !isPodcast);
+    if (!isPodcast) rssToggle.checked = false;
+  }
+
+  function applyInference() {
+    if (typeManuallySet) {
+      typeHint.textContent = "Manual mc_type selection";
+      syncRssVisibility();
+      return;
+    }
+    const inferred = inferType(mcIdInput.value);
+    if (inferred) {
+      mcTypeSelect.value = inferred;
+      typeHint.textContent = `Inferred mc_type=${inferred}`;
+    } else {
+      typeHint.textContent = "Could not infer type — select mc_type manually";
+    }
+    syncRssVisibility();
+  }
+
+  function buildDetailsParams(mcId) {
+    const params = new URLSearchParams();
+    const selectedType = mcTypeSelect.value;
+
+    if (selectedType === "author") {
+      params.set("mc_id", mcId);
+      params.set("mc_type", "person");
+      params.set("mc_subtype", "author");
+    } else {
+      params.set("mc_id", mcId);
+      params.set("mc_type", selectedType);
+    }
+
+    if (forceToggle.checked) params.set("force", "true");
+    if (selectedType === "podcast" && rssToggle.checked) {
+      params.set("rss_details", "true");
+    }
+    return params;
+  }
+
+  function normalizeMcId(raw) {
+    let id = (raw || "").trim();
+    for (const prefix of ["media:", "person:", "podcast:", "book:", "author:"]) {
+      if (id.toLowerCase().startsWith(prefix)) {
+        id = id.slice(prefix.length);
+        break;
+      }
+    }
+    return id;
+  }
+
+  async function lookupDetails() {
+    const mcId = normalizeMcId(mcIdInput.value);
+    if (!mcId) {
+      statusText.textContent = "Enter an mc_id";
+      statusText.className = "text-sm text-amber-400";
+      return;
+    }
+
+    const params = buildDetailsParams(mcId);
+    const url = `/api/details?${params.toString()}`;
+    requestLine.textContent = `POST ${url}`;
+    statusText.textContent = "Loading…";
+    statusText.className = "text-sm text-surface-400";
+    lookupBtn.disabled = true;
+    resultSection.classList.remove("hidden");
+
+    try {
+      const resp = await fetch(url, { method: "POST" });
+      const data = await resp.json();
+      lastJsonText = JSON.stringify(data, null, 2);
+      applyPropertyFilter(propertyFilter.value.trim());
+
+      if (resp.ok) {
+        statusText.textContent = `${resp.status} OK`;
+        statusText.className = "text-sm text-green-400";
+      } else {
+        statusText.textContent = `${resp.status} ${data.error || "Error"}`;
+        statusText.className = "text-sm text-red-400";
+      }
+    } catch (err) {
+      lastJsonText = JSON.stringify({ error: String(err) }, null, 2);
+      applyPropertyFilter(propertyFilter.value.trim());
+      statusText.textContent = "Request failed";
+      statusText.className = "text-sm text-red-400";
+    } finally {
+      lookupBtn.disabled = false;
+    }
+  }
+
+  propertyFilter.addEventListener("input", (e) => {
+    applyPropertyFilter(e.target.value.trim());
+  });
+
+  mcIdInput.addEventListener("input", applyInference);
+  mcTypeSelect.addEventListener("change", () => {
+    typeManuallySet = true;
+    typeHint.textContent = "Manual mc_type selection";
+    syncRssVisibility();
+  });
+
+  lookupBtn.addEventListener("click", lookupDetails);
+  mcIdInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      lookupDetails();
+    }
+  });
+
+  clearBtn.addEventListener("click", () => {
+    mcIdInput.value = "";
+    mcTypeSelect.value = "movie";
+    forceToggle.checked = false;
+    rssToggle.checked = false;
+    typeManuallySet = false;
+    lastJsonText = "";
+    propertyFilter.value = "";
+    resultJson.textContent = "";
+    requestLine.textContent = "";
+    resultSection.classList.add("hidden");
+    statusText.textContent = "";
+    statusText.className = "text-sm text-surface-500";
+    applyInference();
+    mcIdInput.focus();
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    const text = resultJson.textContent || "";
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = "Copied";
+      setTimeout(() => {
+        copyBtn.textContent = "Copy JSON";
+      }, 1200);
+    } catch (_err) {
+      copyBtn.textContent = "Copy failed";
+      setTimeout(() => {
+        copyBtn.textContent = "Copy JSON";
+      }, 1200);
+    }
+  });
+
+  // Prefill from ?mc_id=&mc_type= query params
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefillId = urlParams.get("mc_id");
+  const prefillType = urlParams.get("mc_type");
+  if (prefillId) mcIdInput.value = prefillId;
+  if (prefillType) {
+    const allowed = new Set(["movie", "tv", "person", "podcast", "book", "author"]);
+    if (allowed.has(prefillType)) {
+      mcTypeSelect.value = prefillType;
+      typeManuallySet = true;
+    }
+  }
+  applyInference();
+  if (prefillId) lookupDetails();
+</script>
+{% endblock %}
