@@ -1,0 +1,95 @@
+---
+description: Microgenre coverage invariant — ETL retry and Redis gap-fill backfill
+globs: ["src/etl/tmdb_nightly_etl.py", "scripts/backfill_microgenres.py", "scripts/backfill_major_provider_media.py", "src/ai/microgenre_*.py", "Makefile"]
+alwaysApply: false
+---
+
+# Microgenre Coverage
+
+## Invariant
+
+Redis `media:*` movie/tv documents that are **gap-fill eligible** should have a
+valid compact `microgenres` object:
+
+```json
+{ "confidence": 0.9, "microgenre_scores": { "...": 0.8 }, "rationale": "..." }
+```
+
+`null` / missing on an eligible title is a gap to heal, not a steady state.
+
+Gap-fill eligibility (backfill `missing` mode only):
+
+1. Document already has a Rotten Tomatoes score (`rt_audience_score` or
+   `rt_critics_score`), **or**
+2. `release_date` (movie) / `first_air_date` (tv) is within the last **3 years**
+
+Nightly ETL still classifies titles it writes regardless of this backfill gate.
+
+## Nightly ETL
+
+`tmdb_nightly_etl._attach_microgenres`:
+
+1. If the existing Redis doc already has **valid** microgenres → preserve them.
+2. Otherwise (new insert **or** existing doc with null/missing) → classify via
+   OpenAI **`gpt-5.6-terra`** with **date-gated web_search**
+   (`enable_web_search=None` → on when release/first-air ≥ `WEB_SEARCH_CUTOFF_DATE`
+   / 2025-06-01).
+3. If OpenAI fails with an API/empty error (429, billing, timeout, etc.),
+   `score_microgenres` falls back once to Cerebras `gpt-oss-120b` (no web_search).
+4. Classifier failures remain fail-open (doc still writes; gap can be healed by
+   backfill or a later ETL update).
+
+Do **not** skip classification solely because an existing Redis key is present.
+Requires both `OPENAI_API_KEY` and `CEREBRAS_API_KEY` in the ETL runtime for
+fallback coverage.
+
+## Defaults (summary)
+
+| Path | LLM | Web search |
+|------|-----|------------|
+| Gap-fill backfill (`--mode missing`) | Cerebras `gpt-oss-120b` (default) | Off (opt-in `--web-search` only with `--llm openai`) |
+| Nightly ETL / major-provider attach | OpenAI `gpt-5.6-terra` | Date-gated (≥ 2025-06-01); Cerebras fallback on API failure |
+
+## Gap-fill backfill
+
+`scripts/backfill_microgenres.py` (Make: `backfill-microgenres`):
+
+| Mode | Behavior |
+|------|----------|
+| `missing` (default) | SCAN `media:*`, find movie/tv with null/missing microgenres **and** (RT score **or** release/first-air within last 3 years), live-classify, write Redis, push Media Manager with `metadata_only=True` |
+| `sidecar` | Apply precomputed JSONL classifications only (optional MM metadata push) |
+
+### Dev usage
+
+```bash
+# IAP tunnel on 6381 required for REDIS=dev
+make backfill-microgenres REDIS=dev ARGS='--limit 50'
+make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50'
+make backfill-microgenres REDIS=dev
+make backfill-microgenres REDIS=dev ARGS='--no-push-to-mm'
+make backfill-microgenres REDIS=dev ARGS='--finalize --limit 20'
+make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run'
+```
+
+Default missing-mode concurrency is **150** (same as `microgenre-batch`, cap 175). Overnight ETL still uses its own lower `MICROGENRE_ETL_CONCURRENCY`.
+
+Cerebras microgenre calls pass `no_cache=True` on the shared AI RedisCache — title-unique prompts do not benefit from caching, and high concurrency previously exhausted the async Redis pool (`Too many connections`).
+
+Classifier LLM (`--llm`):
+
+| Value | Model | Path |
+|-------|-------|------|
+| `cerebras` (default) | `gpt-oss-120b` | Chat completions; requires `CEREBRAS_API_KEY`; no web_search |
+| `openai` | `gpt-5.6-terra` | Responses API; optional `--web-search` |
+
+Web search is **off by default** for gap-fill (`--web-search` to opt in / restore the post-2025-06-01 date gate). Redis docs already carry overview/genres/keywords; OpenAI web_search is expensive at catalog scale. `--web-search` cannot be combined with `--llm cerebras`.
+
+Dry-run in `missing` mode reports true Redis gaps (candidate count + sample
+`mc_id`s). It does **not** mean “sidecar rows already applied.”
+
+### Media Manager
+
+Successful Redis updates push the updated document via
+`MediaManagerClient.insert_docs(..., metadata_only=True)` so FAISS metadata
+picks up `microgenres` without re-embedding. Requires `MEDIA_MANAGER_API_URL`.
+Use `--finalize` to drain the queue and call finalize-publish after the run.

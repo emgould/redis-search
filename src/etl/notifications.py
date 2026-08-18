@@ -77,10 +77,9 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
         "  MICROGENRE LLM CLASSIFICATION",
         f"{'─' * 60}",
         f"  New Entries:             {format_number(metadata.total_new_entries)}",
-        f"  New Entries Classified:  {format_number(metadata.total_microgenres_generated)}",
-        f"  New Entry Failures:      {format_number(metadata.total_microgenres_failed)}",
+        f"  Classified (new/retry):  {format_number(metadata.total_microgenres_generated)}",
+        f"  Classification Failures: {format_number(metadata.total_microgenres_failed)}",
         f"  Existing Preserved:      {format_number(metadata.total_microgenres_preserved)}",
-        f"  Existing Not Classified: {format_number(metadata.total_microgenres_skipped_existing)}",
         "",
         f"{'─' * 60}",
         "  MEDIA MANAGER",
@@ -112,7 +111,7 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
             if job.new_entries or job.microgenres_generated or job.microgenres_failed:
                 detail += (
                     f" | New: {format_number(job.new_entries)}"
-                    f" | New Microgenres: {format_number(job.microgenres_generated)} ok"
+                    f" | Microgenres: {format_number(job.microgenres_generated)} ok"
                     f"/{format_number(job.microgenres_failed)} failed"
                 )
             lines.append(detail)

@@ -16,7 +16,7 @@ from ai.prompts.microgenre_taxonomy import (
     JsonDict,
     JsonValue,
 )
-from ai.providers.models import OpenAIModels
+from ai.providers.models import CerebrasModels, OpenAIModels
 from ai.providers.openai import AIResponse, OpenAIProvider
 from utils.get_logger import get_logger
 
@@ -30,7 +30,8 @@ PROMPT_HASH = hashlib.sha256(
         score_threshold="{score_threshold}",
     ).encode("utf-8")
 ).hexdigest()
-DEFAULT_MODEL = OpenAIModels.GPT_5_5.value
+DEFAULT_MODEL: str = OpenAIModels.GPT_5_6_TERRA
+DEFAULT_CEREBRAS_MODEL: str = CerebrasModels.GPT_OSS
 SUMMARY_MAX_CHARS = 4_000
 ENRICHMENT_MAX_CHARS = 8_000
 LLM_TIMEOUT_SECONDS = 45
@@ -38,8 +39,7 @@ LLM_MAX_TOKENS = 5_000
 LLM_TEMPERATURE = 1.0
 DEFAULT_SCORE_THRESHOLD = 0.1
 
-_provider: OpenAIProvider | None = None
-
+MicroGenreProvider = Literal["openai", "cerebras"]
 MicroGenreFailureType = Literal[
     "api_error",
     "empty_response",
@@ -53,17 +53,32 @@ MicroGenreUnknownReason = Literal[
     "conflicting_evidence",
 ]
 
+_providers: dict[tuple[MicroGenreProvider, str], OpenAIProvider] = {}
 
-def _get_provider() -> OpenAIProvider:
-    """Lazily construct the dedicated OpenAI provider for micro-genre classification."""
-    global _provider
-    if _provider is None:
-        _provider = OpenAIProvider(
-            provider="openai",
-            model=DEFAULT_MODEL,
-            verbose=False,
-        )
-    return _provider
+
+def _default_model_for(provider: MicroGenreProvider) -> str:
+    if provider == "cerebras":
+        return DEFAULT_CEREBRAS_MODEL
+    return DEFAULT_MODEL
+
+
+def _get_provider(
+    provider: MicroGenreProvider = "openai",
+    model: str | None = None,
+) -> OpenAIProvider:
+    """Lazily construct (and cache) the micro-genre classification provider."""
+    resolved_model = model or _default_model_for(provider)
+    cache_key = (provider, resolved_model)
+    existing = _providers.get(cache_key)
+    if existing is not None:
+        return existing
+    created = OpenAIProvider(
+        provider=provider,
+        model=resolved_model,
+        verbose=False,
+    )
+    _providers[cache_key] = created
+    return created
 
 
 class MicroGenreClassifyInput(BaseModel):
@@ -84,7 +99,7 @@ class MicroGenreClassifyInput(BaseModel):
         description="Deterministic enrichment text fetched by the caller.",
     )
     enable_web_search: bool = Field(
-        default=True,
+        default=False,
         description="Whether the OpenAI Responses web_search tool should be enabled.",
     )
     score_threshold: float = Field(
@@ -125,32 +140,137 @@ class MicroGenreClassifyResponse(BaseModel):
 
 async def score_microgenres(
     input_data: MicroGenreClassifyInput,
+    *,
+    provider: MicroGenreProvider = "openai",
+    model: str | None = None,
 ) -> MicroGenreClassifyResponse:
-    """Score a title against every canonical taste-profile micro-genre."""
+    """Score a title against every canonical taste-profile micro-genre.
+
+    ``provider="openai"`` uses the Responses API path (optional web_search).
+    On OpenAI API/empty failures (429, billing, timeouts, etc.) the call falls
+    back once to Cerebras ``gpt-oss-120b``.
+
+    ``provider="cerebras"`` uses chat completions only (no OpenAI attempt).
+    """
     prompt = MICROGENRE_SCORER_PROMPT.format(
         taxonomy_block=TAXONOMY_BLOCK,
         title_context=_format_title_context(input_data),
         score_threshold=input_data.score_threshold,
     )
+    enable_web_search = input_data.enable_web_search
+    if provider == "cerebras" and enable_web_search:
+        logger.warning(
+            "web_search is not supported for provider=%s; continuing without it",
+            provider,
+        )
+        enable_web_search = False
 
     t0 = time.time()
-    response: AIResponse = await _get_provider().prompt_execute_with_web_search(
-        prompt,
-        temperature=LLM_TEMPERATURE,
-        timeout=LLM_TIMEOUT_SECONDS,
-        max_tokens=LLM_MAX_TOKENS,
-        search_context_size="medium",
-        enable_web_search=input_data.enable_web_search,
-        prompt_cache_key=f"mgc:{PROMPT_HASH[:32]}",
+    primary = await _score_with_provider(
+        prompt=prompt,
+        score_threshold=input_data.score_threshold,
+        provider=provider,
+        model=model,
+        enable_web_search=enable_web_search,
+    )
+    if primary.result is not None or provider != "openai":
+        primary.execution_time = time.time() - t0
+        return primary
+
+    if primary.error_type not in ("api_error", "empty_response"):
+        # Contract/JSON failures stay on the OpenAI attempt; do not burn Cerebras.
+        primary.execution_time = time.time() - t0
+        return primary
+
+    logger.warning(
+        "OpenAI microgenre classify failed (%s: %s); falling back to Cerebras %s",
+        primary.error_type,
+        primary.error,
+        DEFAULT_CEREBRAS_MODEL,
+    )
+    fallback = await _score_with_provider(
+        prompt=prompt,
+        score_threshold=input_data.score_threshold,
+        provider="cerebras",
+        model=None,
+        enable_web_search=False,
     )
     execution_time = time.time() - t0
+    if fallback.result is not None:
+        fallback.execution_time = execution_time
+        return fallback
 
+    fallback_error_type = fallback.error_type
+    if fallback_error_type is None:
+        fallback_error_type = "api_error"
+    return _failure_response(
+        text=fallback.text or primary.text,
+        error_type=fallback_error_type,
+        error=(f"OpenAI failed ({primary.error}); Cerebras fallback failed ({fallback.error})"),
+        error_detail=(
+            f"primary={primary.error_detail or primary.error}; "
+            f"fallback={fallback.error_detail or fallback.error}"
+        ),
+        execution_time=execution_time,
+    )
+
+
+async def _score_with_provider(
+    *,
+    prompt: str,
+    score_threshold: float,
+    provider: MicroGenreProvider,
+    model: str | None,
+    enable_web_search: bool,
+) -> MicroGenreClassifyResponse:
+    llm = _get_provider(provider=provider, model=model)
+    t0 = time.time()
+    if provider == "cerebras":
+        # Title-unique prompts have near-zero cache hit rate; at backfill
+        # concurrency the AI RedisCache read/lock path exhausts the pool.
+        response = await llm.prompt_execute(
+            prompt,
+            temperature=LLM_TEMPERATURE,
+            timeout=LLM_TIMEOUT_SECONDS,
+            max_tokens=LLM_MAX_TOKENS,
+            no_cache=True,
+        )
+    else:
+        response = await llm.prompt_execute_with_web_search(
+            prompt,
+            temperature=LLM_TEMPERATURE,
+            timeout=LLM_TIMEOUT_SECONDS,
+            max_tokens=LLM_MAX_TOKENS,
+            search_context_size="medium",
+            enable_web_search=enable_web_search,
+            prompt_cache_key=f"mgc:{PROMPT_HASH[:32]}",
+        )
+    execution_time = time.time() - t0
+    return _response_to_classify_result(
+        response=response,
+        provider=provider,
+        score_threshold=score_threshold,
+        execution_time=execution_time,
+    )
+
+
+def _response_to_classify_result(
+    *,
+    response: AIResponse | None,
+    provider: MicroGenreProvider,
+    score_threshold: float,
+    execution_time: float,
+) -> MicroGenreClassifyResponse:
     if response is None or response.error:
         return _failure_response(
             text=response.text if response and response.text else "",
             error_type="api_error",
-            error=response.error if response else "OpenAI provider returned no response.",
-            error_detail=response.error if response else "No response object returned by OpenAI provider.",
+            error=response.error if response else f"{provider} provider returned no response.",
+            error_detail=(
+                response.error
+                if response
+                else f"No response object returned by {provider} provider."
+            ),
             execution_time=execution_time,
         )
 
@@ -158,7 +278,7 @@ async def score_microgenres(
         return _failure_response(
             text="",
             error_type="empty_response",
-            error="OpenAI returned an empty response.",
+            error=f"{provider} returned an empty response.",
             error_detail="The provider response completed without text content.",
             execution_time=execution_time,
         )
@@ -170,11 +290,11 @@ async def score_microgenres(
             text=response.text,
             error_type="invalid_json",
             error="Model returned non-JSON output.",
-            error_detail="The Responses API call succeeded, but the model output was not parseable JSON.",
+            error_detail="The LLM call succeeded, but the model output was not parseable JSON.",
             execution_time=execution_time,
         )
 
-    result, error = _build_result(parsed, input_data.score_threshold)
+    result, error = _build_result(parsed, score_threshold)
     if error is not None:
         logger.debug("Micro-genre classifier returned invalid contract response: %s", error)
         return _failure_response(
@@ -384,6 +504,7 @@ def _clamp_confidence(value: JsonValue | object) -> float:
 
 
 if __name__ == "__main__":
+
     async def _test() -> None:
         print("\n=== Micro-Genre Classifier Test ===\n")
         print("Enter: title | year | tv|movie | summary")
