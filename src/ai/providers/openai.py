@@ -284,7 +284,11 @@ class OpenAIProvider:
 
                 await asyncio.sleep(sleep_time)
                 result: AIResponse = await self.prompt_execute(
-                    input_data, retries - 1, timeout, **kwargs
+                    input_data,
+                    retries - 1,
+                    timeout,
+                    no_cache=self.provider == "cerebras",
+                    **kwargs,
                 )
                 return result
             else:

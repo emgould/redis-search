@@ -77,7 +77,7 @@ RECENT_RELEASE_YEARS = 3
 
 
 @dataclass
-class SidecarStats:
+class BackfillStats:
     scanned_rows: int = 0
     successful_rows: int = 0
     skipped_error_rows: int = 0
@@ -316,8 +316,8 @@ def load_sidecar_rows(
     paths: list[Path],
     mc_type: str,
     limit: int | None,
-) -> tuple[list[MicroGenreBatchSidecarRecord], SidecarStats]:
-    stats = SidecarStats()
+) -> tuple[list[MicroGenreBatchSidecarRecord], BackfillStats]:
+    stats = BackfillStats()
     rows: list[MicroGenreBatchSidecarRecord] = []
     selected_types = _selected_types(mc_type)
 
@@ -352,7 +352,7 @@ def load_sidecar_rows(
 async def _flush_mm_batch(
     mm_client: MediaManagerClient | None,
     docs: list[dict[str, Any]],
-    stats: SidecarStats | MissingStats,
+    stats: BackfillStats | MissingStats,
     dry_run: bool,
 ) -> None:
     if mm_client is None or not docs:
@@ -387,14 +387,14 @@ async def _flush_mm_batch(
             logger.warning("Media Manager batch failed: %s", exc)
 
 
-async def backfill_from_sidecar(
+async def backfill_rows(
     redis: Redis,  # type: ignore[type-arg]
     rows: list[MicroGenreBatchSidecarRecord],
-    stats: SidecarStats,
+    stats: BackfillStats,
     dry_run: bool,
     force: bool,
-    push_to_mm: bool,
-) -> SidecarStats:
+    push_to_mm: bool = False,
+) -> BackfillStats:
     now_ts = int(datetime.now(UTC).timestamp())
     mm_client: MediaManagerClient | None = None
     if push_to_mm and os.getenv("MEDIA_MANAGER_API_URL"):
@@ -736,6 +736,14 @@ async def run(args: argparse.Namespace) -> int:
         raise SystemExit("CEREBRAS_API_KEY is required when --llm cerebras")
     if args.mode == "missing" and llm_provider == "openai" and not os.getenv("OPENAI_API_KEY"):
         raise SystemExit("OPENAI_API_KEY is required when --llm openai")
+    if (
+        not args.dry_run
+        and args.push_to_mm
+        and not os.getenv("MEDIA_MANAGER_API_URL")
+    ):
+        raise SystemExit(
+            "MEDIA_MANAGER_API_URL is required unless --no-push-to-mm is specified"
+        )
 
     redis = Redis(
         host=args.redis_host,
@@ -765,7 +773,7 @@ async def run(args: argparse.Namespace) -> int:
                 stats.skipped_error_rows,
             )
             if rows:
-                stats = await backfill_from_sidecar(
+                stats = await backfill_rows(
                     redis,
                     rows,
                     stats,
@@ -773,7 +781,13 @@ async def run(args: argparse.Namespace) -> int:
                     args.force,
                     args.push_to_mm,
                 )
-            await _maybe_finalize(args.push_to_mm, args.dry_run, args.finalize)
+            if stats.mm_errors == 0:
+                await _maybe_finalize(args.push_to_mm, args.dry_run, args.finalize)
+            elif args.finalize:
+                logger.error(
+                    "Skipping finalize-publish because %d Media Manager errors occurred",
+                    stats.mm_errors,
+                )
             elapsed = time.time() - start
             logger.info("=" * 60)
             logger.info("Microgenre Sidecar Backfill Summary")
@@ -789,7 +803,7 @@ async def run(args: argparse.Namespace) -> int:
             logger.info("  MM filtered:        %d", stats.mm_filtered)
             logger.info("  MM errors:          %d", stats.mm_errors)
             logger.info("  Duration:           %.2fs", elapsed)
-            return 0 if stats.malformed_rows == 0 else 1
+            return 0 if stats.malformed_rows == 0 and stats.mm_errors == 0 else 1
 
         candidates, stats = await collect_missing_docs(redis, args.mc_type, args.force, args.limit)
         logger.info(
@@ -816,7 +830,13 @@ async def run(args: argparse.Namespace) -> int:
             args.web_search,
             llm_provider,
         )
-        await _maybe_finalize(args.push_to_mm, args.dry_run, args.finalize)
+        if stats.mm_errors == 0:
+            await _maybe_finalize(args.push_to_mm, args.dry_run, args.finalize)
+        elif args.finalize:
+            logger.error(
+                "Skipping finalize-publish because %d Media Manager errors occurred",
+                stats.mm_errors,
+            )
         elapsed = time.time() - start
 
         logger.info("=" * 60)
@@ -836,7 +856,7 @@ async def run(args: argparse.Namespace) -> int:
         logger.info("  MM filtered:        %d", stats.mm_filtered)
         logger.info("  MM errors:          %d", stats.mm_errors)
         logger.info("  Duration:           %.2fs", elapsed)
-        return 0 if stats.failed == 0 else 1
+        return 0 if stats.failed == 0 and stats.mm_errors == 0 else 1
     finally:
         await redis.aclose()
 

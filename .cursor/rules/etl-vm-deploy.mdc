@@ -28,17 +28,38 @@ COPY data/microgenre-classifications/taste-profile-taxonomy.json ./src/ai/prompt
 
 This makes the ETL image self-contained regardless of `/app/data` volume mounts.
 
-## Docker Build Cache and Stale Layers
+## Docker Build Cache
 
-`docker build` caches `COPY src/ ./src/` — if `src/` contents have not changed on the build host, the layer is reused and the image ships old code.
-
-To force a fresh build:
+Normal deployment is:
 
 ```bash
-make deploy-etl-force          # sets DOCKER_NO_CACHE=1
+make deploy-etl
+```
+
+Docker invalidates `COPY src/ ./src/` when source content changes. Use the
+no-cache variant only when diagnosing a suspected stale or corrupt local build
+cache:
+
+```bash
+make deploy-etl-force
 # or
 DOCKER_NO_CACHE=1 make deploy-etl
 ```
+
+## Runtime AI Credentials
+
+The VM deployment copies `config/etl.dev.env` to the VM, sources it in the
+deployment shell, and must explicitly pass AI credentials through `docker run`.
+The cron entrypoint must then preserve them in `/app/.env`.
+
+Required for microgenre classification:
+
+- `OPENAI_API_KEY` — default ETL classifier (`gpt-5.6-terra`)
+- `OPENAI_ORGANIZATION` — optional OpenAI organization
+- `CEREBRAS_API_KEY` — ETL fallback (`gpt-oss-120b`)
+
+Keep `scripts/deploy_etl_vm.sh`, `docker/etl-entrypoint.sh`, and
+`docker/vm-compose.yml` aligned when adding runtime environment variables.
 
 ## Container Smoke Test
 
@@ -60,6 +81,7 @@ After deploying, verify the running VM container:
 gcloud compute ssh etl-runner-vm --zone=us-central1-a --tunnel-through-iap -- \
   docker exec etl-runner sh -c 'test -f /app/src/ai/prompts/taste-profile-taxonomy.json && \
   python -c "import etl.tmdb_nightly_etl; print(\"etl import ok\")" && \
+  test -n "$OPENAI_API_KEY" && test -n "$CEREBRAS_API_KEY" && \
   grep -q total_microgenres_generated /app/src/etl/notifications.py && echo "✓ all checks passed"'
 ```
 
