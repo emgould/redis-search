@@ -38,6 +38,7 @@ LLM_TIMEOUT_SECONDS = 45
 LLM_MAX_TOKENS = 5_000
 LLM_TEMPERATURE = 1.0
 DEFAULT_SCORE_THRESHOLD = 0.1
+MODEL_OUTPUT_MAX_ATTEMPTS = 3
 
 MicroGenreProvider = Literal["openai", "cerebras"]
 MicroGenreFailureType = Literal[
@@ -166,7 +167,7 @@ async def score_microgenres(
         enable_web_search = False
 
     t0 = time.time()
-    primary = await _score_with_provider(
+    primary = await _score_with_output_retries(
         prompt=prompt,
         score_threshold=input_data.score_threshold,
         provider=provider,
@@ -188,7 +189,7 @@ async def score_microgenres(
         primary.error,
         DEFAULT_CEREBRAS_MODEL,
     )
-    fallback = await _score_with_provider(
+    fallback = await _score_with_output_retries(
         prompt=prompt,
         score_threshold=input_data.score_threshold,
         provider="cerebras",
@@ -213,6 +214,42 @@ async def score_microgenres(
         ),
         execution_time=execution_time,
     )
+
+
+async def _score_with_output_retries(
+    *,
+    prompt: str,
+    score_threshold: float,
+    provider: MicroGenreProvider,
+    model: str | None,
+    enable_web_search: bool,
+) -> MicroGenreClassifyResponse:
+    """Retry malformed JSON/contract responses for either LLM provider."""
+    response: MicroGenreClassifyResponse | None = None
+    for attempt in range(1, MODEL_OUTPUT_MAX_ATTEMPTS + 1):
+        response = await _score_with_provider(
+            prompt=prompt,
+            score_threshold=score_threshold,
+            provider=provider,
+            model=model,
+            enable_web_search=enable_web_search,
+        )
+        if response.result is not None:
+            return response
+        if response.error_type not in ("invalid_json", "invalid_contract"):
+            return response
+        if attempt < MODEL_OUTPUT_MAX_ATTEMPTS:
+            logger.warning(
+                "%s microgenre output failed validation (%s; attempt %d/%d); retrying",
+                provider,
+                response.error_type,
+                attempt,
+                MODEL_OUTPUT_MAX_ATTEMPTS,
+            )
+
+    if response is None:
+        raise RuntimeError("Microgenre output retry loop produced no response")
+    return response
 
 
 async def _score_with_provider(
@@ -262,10 +299,18 @@ def _response_to_classify_result(
     execution_time: float,
 ) -> MicroGenreClassifyResponse:
     if response is None or response.error:
+        error = response.error if response else f"{provider} provider returned no response."
+        error_type: MicroGenreFailureType = "api_error"
+        if response is not None and response.error:
+            normalized_error = response.error.lower()
+            if "valid json" in normalized_error or "parsing response" in normalized_error:
+                error_type = "invalid_json"
+            elif "no output text" in normalized_error or "empty response" in normalized_error:
+                error_type = "empty_response"
         return _failure_response(
             text=response.text if response and response.text else "",
-            error_type="api_error",
-            error=response.error if response else f"{provider} provider returned no response.",
+            error_type=error_type,
+            error=error,
             error_detail=(
                 response.error
                 if response

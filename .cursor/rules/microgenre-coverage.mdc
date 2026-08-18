@@ -36,7 +36,9 @@ Nightly ETL still classifies titles it writes regardless of this backfill gate.
    / 2025-06-01).
 3. If OpenAI fails with an API/empty error (429, billing, timeout, etc.),
    `score_microgenres` falls back once to Cerebras `gpt-oss-120b` (no web_search).
-4. Classifier failures remain fail-open (doc still writes; gap can be healed by
+4. Both OpenAI and Cerebras retry malformed JSON or invalid classifier-contract
+   responses twice (three total model-output attempts).
+5. Classifier failures remain fail-open (doc still writes; gap can be healed by
    backfill or a later ETL update).
 
 Do **not** skip classification solely because an existing Redis key is present.
