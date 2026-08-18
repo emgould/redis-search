@@ -171,6 +171,9 @@ gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap --command=
         -e REDIS_PASSWORD=\${REDIS_PASSWORD} \\
         -e TMDB_READ_TOKEN=\${TMDB_READ_TOKEN} \\
         -e TMDB_API_KEY=\${TMDB_API_KEY} \\
+        -e OPENAI_API_KEY=\${OPENAI_API_KEY} \\
+        -e OPENAI_ORGANIZATION=\${OPENAI_ORGANIZATION} \\
+        -e CEREBRAS_API_KEY=\${CEREBRAS_API_KEY} \\
         -e GCS_BUCKET=\${GCS_BUCKET} \\
         -e GCS_ETL_PREFIX=\${GCS_ETL_PREFIX} \\
         -e ETL_CONFIG_PATH=/app/config/etl_jobs.yaml \\
