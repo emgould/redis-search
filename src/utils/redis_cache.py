@@ -819,9 +819,14 @@ class RedisCache:
 
         def decorator(func):
             async def inner1(*args, **kwargs):
-                skipCacheRead = kwargs.pop("no_cache", False)
+                no_cache = bool(kwargs.pop("no_cache", False))
 
-                if DISABLE_CACHE or instance.disableCache:
+                if DISABLE_CACHE or instance.disableCache or no_cache:
+                    # Drop cache-control kwargs so they never reach the wrapped fn.
+                    kwargs.pop("no_cache_update", None)
+                    kwargs.pop("expiry", None)
+                    kwargs.pop("mutable", None)
+                    kwargs.pop("shared", None)
                     return await func(*args, **kwargs)
 
                 cache_key = instance.get_cache_key(
@@ -878,11 +883,10 @@ class RedisCache:
                         raise
 
                 # ---- Phase 1: Cache read ----
-                if not skipCacheRead:
-                    cachedEntry = await instance.read(cache_key, noExpiration, mutable)
-                    if cachedEntry is not None:
-                        instance.logging.debug(f"Cache hit: {cache_key}")
-                        return cachedEntry.data
+                cachedEntry = await instance.read(cache_key, noExpiration, mutable)
+                if cachedEntry is not None:
+                    instance.logging.debug(f"Cache hit: {cache_key}")
+                    return cachedEntry.data
 
                 # ---- Phase 2: Cache miss — coalescing via advisory lock ----
                 storage_key = instance._full_key(cache_key)

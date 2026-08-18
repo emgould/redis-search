@@ -10,4 +10,4 @@ class CerebrasModels(StrEnum):
 
 
 class OpenAIModels(StrEnum):
-    GPT_5_5 = "gpt-5.5"
+    GPT_5_6_TERRA = "gpt-5.6-terra"

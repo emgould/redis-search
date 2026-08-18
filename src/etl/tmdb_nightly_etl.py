@@ -726,17 +726,18 @@ class TMDBChangesETL(TMDBService):
                 redis_doc: dict[str, Any],
                 existing_doc: dict[str, Any] | None,
             ) -> None:
-                """Attach compact microgenre metadata, failing open on classifier errors."""
+                """Attach compact microgenre metadata, failing open on classifier errors.
+
+                Preserves valid existing microgenres. Retries classification when the
+                existing Redis doc is missing/null microgenres (including prior
+                fail-open inserts).
+                """
                 existing_microgenres = valid_microgenres_value(
                     existing_doc.get("microgenres") if existing_doc else None
                 )
                 if existing_microgenres is not None:
                     redis_doc["microgenres"] = existing_microgenres
                     stats.microgenres_preserved += 1
-                    return
-
-                if existing_doc is not None:
-                    stats.microgenres_skipped_existing += 1
                     return
 
                 current_microgenres = valid_microgenres_value(redis_doc.get("microgenres"))
@@ -755,8 +756,13 @@ class TMDBChangesETL(TMDBService):
                             redis_doc,
                             cast(Literal["movie", "tv"], doc_media_type),
                             score_threshold=0.1,
+                            # ETL: OpenAI terra with date-gated web_search (see WEB_SEARCH_CUTOFF_DATE).
+                            enable_web_search=None,
                         )
-                        response = await score_microgenres(classifier_input)
+                        response = await score_microgenres(
+                            classifier_input,
+                            provider="openai",
+                        )
                     except Exception as exc:
                         stats.microgenres_failed += 1
                         logger.warning(

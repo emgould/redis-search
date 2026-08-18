@@ -194,13 +194,20 @@ def build_microgenre_input_from_document(
     media_doc: JsonDict,
     media_type: Literal["tv", "movie"],
     score_threshold: float,
+    enable_web_search: bool | None = None,
 ) -> MicroGenreClassifyInput:
-    """Build scorer input from the Redis media document shape."""
+    """Build scorer input from the Redis media document shape.
+
+    When ``enable_web_search`` is None, web search follows the date cutoff
+    (``WEB_SEARCH_CUTOFF_DATE``). Pass True/False to force.
+    """
     title = _optional_str_value(media_doc.get("title") or media_doc.get("search_title"))
     if title is None:
         title = _optional_str_value(media_doc.get("mc_id") or media_doc.get("id")) or "Unknown"
     first_air_date = _optional_str_value(media_doc.get("first_air_date"))
     release_date = _optional_str_value(media_doc.get("release_date"))
+    if enable_web_search is None:
+        enable_web_search = _should_enable_web_search(media_type, first_air_date, release_date)
 
     return MicroGenreClassifyInput(
         title=title,
@@ -214,7 +221,7 @@ def build_microgenre_input_from_document(
         tmdb_id=_tmdb_id_from_doc(media_doc),
         id_imdb=_imdb_id_from_doc(media_doc),
         enrichment_text=None,
-        enable_web_search=_should_enable_web_search(media_type, first_air_date, release_date),
+        enable_web_search=enable_web_search,
         score_threshold=score_threshold,
     )
 

@@ -273,16 +273,13 @@ async def _flush_batch(
         redis_doc: dict[str, Any],
         existing_doc: dict[str, Any] | None,
     ) -> None:
+        """Preserve valid microgenres; classify when missing/null (including retries)."""
         existing_microgenres = valid_microgenres_value(
             existing_doc.get("microgenres") if existing_doc else None
         )
         if existing_microgenres is not None:
             redis_doc["microgenres"] = existing_microgenres
             stats["microgenres_preserved"] += 1
-            return
-
-        if existing_doc is not None:
-            stats["microgenres_skipped_existing"] += 1
             return
 
         current_microgenres = valid_microgenres_value(redis_doc.get("microgenres"))
@@ -301,8 +298,13 @@ async def _flush_batch(
                     redis_doc,
                     cast(Literal["movie", "tv"], doc_media_type),
                     score_threshold=0.1,
+                    # Same policy as nightly ETL: OpenAI terra + date-gated web_search.
+                    enable_web_search=None,
                 )
-                response = await score_microgenres(classifier_input)
+                response = await score_microgenres(
+                    classifier_input,
+                    provider="openai",
+                )
             except Exception as exc:
                 stats["microgenres_failed"] += 1
                 logger.warning(

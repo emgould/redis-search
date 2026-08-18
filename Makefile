@@ -98,8 +98,11 @@ help:
 	@echo "    make backfill-major-provider ARGS='--apply --push-to-mm' - Backfill, write to Redis, and push to Media Manager"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
-	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Backfill media microgenres from JSONL"
-	@echo "    make backfill-microgenres REDIS=dev ARGS='--dry-run --limit 100' - Backfill public/dev Redis microgenres"
+	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Scan Redis for missing microgenres (dry run)"
+	@echo "    make backfill-microgenres REDIS=dev ARGS='--dry-run --limit 100' - Scan public/dev Redis for missing microgenres"
+	@echo "    make backfill-microgenres REDIS=dev ARGS='--limit 50' - Classify missing microgenres via Cerebras gpt-oss-120b (default), write Redis, MM metadata_only"
+	@echo "    make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50' - Same using OpenAI gpt-5.6-terra"
+	@echo "    make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run' - Apply JSONL sidecar classifications only"
 	@echo "    make microgenre-batch REDIS=local ARGS='--media-type movie --take 10 --dry-run' - Batch classify from Redis media docs"
 	@echo "    MICROGENRE_PYTHON='python' can override the default pyenv Python for microgenre targets"
 	@echo ""
@@ -569,11 +572,16 @@ backfill-major-provider:
 backfill-external-ids:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
 
-# Backfill compact microgenre metadata from JSONL sidecars into media:* docs
-# Usage: make backfill-microgenres REDIS=local
-#        make backfill-microgenres REDIS=dev MC_TYPE=movie
-#        make backfill-microgenres REDIS=local ARGS="--dry-run --limit 100"
-#        make backfill-microgenres REDIS=dev ARGS="--force"
+# Fill missing media:* microgenres (default) or apply JSONL sidecars (--mode sidecar).
+# Default missing mode classifies via LLM, writes Redis, and pushes MM metadata_only.
+# Usage: make backfill-microgenres REDIS=local ARGS="--dry-run --limit 100"
+#        make backfill-microgenres REDIS=dev ARGS="--limit 50"
+#        make backfill-microgenres REDIS=dev ARGS="--llm openai --limit 50"
+#        make backfill-microgenres REDIS=dev MC_TYPE=tv
+#        make backfill-microgenres REDIS=dev ARGS="--mode sidecar --dry-run"
+#        make backfill-microgenres REDIS=dev ARGS="--no-push-to-mm"
+#        make backfill-microgenres REDIS=dev ARGS="--finalize --limit 20"
+# Default missing-mode concurrency matches microgenre-batch (150).
 backfill-microgenres:
 	@bash -c '$(MICROGENRE_REDIS_ENV) && $(MICROGENRE_PYTHON) scripts/backfill_microgenres.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
 
