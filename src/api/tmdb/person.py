@@ -4,6 +4,7 @@ Handles person details, credits, and search operations.
 """
 
 import asyncio
+from typing import Any
 
 from api.tmdb.core import TMDBService
 from api.tmdb.models import (
@@ -16,7 +17,9 @@ from api.tmdb.models import (
     MCTvItem,
 )
 from api.tmdb.tmdb_models import (
+    TMDBPersonCombinedCreditsResponse,
     TMDBPersonDetailsResult,
+    TMDBPersonMovieCastCredit,
     TMDBPersonMovieCreditsResponse,
     TMDBPersonTvCastCredit,
     TMDBPersonTvCreditsResponse,
@@ -26,6 +29,12 @@ from api.tmdb.tmdb_models import (
 from utils.get_logger import get_logger
 
 logger = get_logger(__name__)
+
+# Cap credit ID arrays stored on person Redis docs for search filmography hydrate.
+PERSON_CREDIT_ID_CAP = 50
+
+# Movie cast threshold used by get_person_movie_credits (reuse for combined_credits).
+_MOVIE_CREDIT_MIN_POPULARITY = 0.5
 
 
 # Only filter out shows with extremely low popularity
@@ -65,6 +74,56 @@ def credit_filter_for_tv_shows(shows: list[TMDBPersonTvCastCredit]) -> list[TMDB
 
         filtered_shows.append(show)
     return filtered_shows
+
+
+def split_combined_cast(
+    cast_items: list[dict[str, Any]],
+) -> tuple[list[TMDBPersonMovieCastCredit], list[TMDBPersonTvCastCredit]]:
+    """Split combined_credits cast entries into typed movie/TV cast models."""
+    movies: list[TMDBPersonMovieCastCredit] = []
+    tv_shows: list[TMDBPersonTvCastCredit] = []
+    for item in cast_items:
+        media_type = item.get("media_type")
+        try:
+            if media_type == "movie":
+                movies.append(TMDBPersonMovieCastCredit.model_validate(item))
+            elif media_type == "tv":
+                tv_shows.append(TMDBPersonTvCastCredit.model_validate(item))
+        except Exception as e:
+            logger.debug(f"Skipping combined credit parse failure ({media_type}): {e}")
+    return movies, tv_shows
+
+
+def build_person_credit_id_lists(
+    movie_cast: list[TMDBPersonMovieCastCredit],
+    tv_cast: list[TMDBPersonTvCastCredit],
+    *,
+    limit: int = PERSON_CREDIT_ID_CAP,
+) -> tuple[list[str], list[str]]:
+    """Filter, popularity-sort, and cap cast credits into Redis person ID lists.
+
+    Movies reuse the movie-credits popularity floor and require a poster.
+    TV applies ``credit_filter_for_tv_shows`` and also requires a poster.
+    """
+    filtered_movies = [
+        m
+        for m in movie_cast
+        if m.id is not None
+        and (m.popularity or 0) >= _MOVIE_CREDIT_MIN_POPULARITY
+        and bool(m.poster_path)
+    ]
+    filtered_movies.sort(key=lambda m: float(m.popularity or 0), reverse=True)
+
+    filtered_tv = [
+        show
+        for show in credit_filter_for_tv_shows(tv_cast)
+        if show.id is not None and bool(show.poster_path)
+    ]
+    filtered_tv.sort(key=lambda s: float(s.popularity or 0), reverse=True)
+
+    movie_ids = [str(m.id) for m in filtered_movies[:limit] if m.id is not None]
+    tv_ids = [str(s.id) for s in filtered_tv[:limit]]
+    return movie_ids, tv_ids
 
 
 class TMDBPersonService(TMDBService):
@@ -400,6 +459,26 @@ class TMDBPersonService(TMDBService):
         )
 
         return person_item
+
+    async def get_person_combined_credits(
+        self, person_id: int, *, limit: int = PERSON_CREDIT_ID_CAP
+) -> tuple[list[str], list[str]] | None:
+        """Fetch combined movie+TV cast credits and return capped ID lists.
+
+        Hits ``/person/{id}/combined_credits`` once. Returns
+        ``(movie_credit_ids, tv_credit_ids)`` as popularity-sorted string IDs,
+        or ``None`` when TMDB returns no response.
+        """
+        endpoint = f"person/{person_id}/combined_credits"
+        params = {"language": "en-US"}
+
+        data = await self._make_request(endpoint, params)
+        if not data:
+            return None
+
+        combined = TMDBPersonCombinedCreditsResponse.model_validate(data)
+        movie_cast, tv_cast = split_combined_cast(combined.cast)
+        return build_person_credit_id_lists(movie_cast, tv_cast, limit=limit)
 
     async def get_person_movie_credits(self, person_id: int) -> MCPersonCreditsResult:
         """Get movie credits for a person.

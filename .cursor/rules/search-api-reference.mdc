@@ -265,12 +265,20 @@ Same SSE event format as autocomplete streaming for `/api/search/stream`.
 - When `tv` and/or `movie` are requested, Redis is queried per media source bucket, not as one shared mixed media pool.
 - `limit` applies per requested source (`tv`, `movie`, etc.), not across a combined movie+tv candidate set.
 - Each media bucket is then re-ranked in Python so exact title matches beat looser keyword / cast / genre matches within that source.
+- JSON search dispatches person and media Redis queries concurrently; a successful person-credit hydrate replaces the media buckets after those results are assembled, avoiding a sequential preflight on ordinary searches.
+
+**Person exact-match filmography rewrite:**
+- When `q` is an exact person name match (tier 0–1), `person` is in the requested sources, and the person Redis doc carries `movie_credit_ids` / `tv_credit_ids`, the `tv` and `movie` buckets are replaced by a catalog-only `JSON.MGET` of those credit IDs (sorted by Redis popularity). Unindexed credits are dropped.
+- This path is Redis-only (no live TMDB). Credit IDs are written offline by person ETL / `make backfill-person-credit-ids`.
+- Does **not** apply under `raw`, media filters (`cast_ids`, genres, years, etc.), or `/api/autocomplete/minimal` (Lite).
+- Stream paths await the person task before emitting `tv`/`movie` so clients never see TAG cast hits flash then get replaced.
 
 **Example:**
 ```
 /api/search?q=beatles
 /api/search?q=beatles&sources=artist,album&limit=20
 /api/search?q=matrix&sources=tv,movie,ratings
+/api/search?q=Matthew+McConaughey   # person exact match → filmography MGET for tv/movie
 
 # Field-only filtering (no text query)
 /api/search?sources=movie&genre_ids=878&year_min=2020
