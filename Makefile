@@ -2,7 +2,7 @@
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -98,6 +98,8 @@ help:
 	@echo "    make backfill-major-provider ARGS='--apply --push-to-mm' - Backfill, write to Redis, and push to Media Manager"
 	@echo "    make backfill-external-ids           - Backfill missing external_ids from TMDB"
 	@echo "    make backfill-external-ids MC_TYPE=movie - Backfill movie external_ids only"
+	@echo "    make backfill-person-credit-ids REDIS=local ARGS='--dry-run' - Scan local people missing filmography IDs"
+	@echo "    make backfill-person-credit-ids REDIS=dev - Write movie_credit_ids/tv_credit_ids on public Redis (needs tunnel)"
 	@echo "    make backfill-microgenres REDIS=local ARGS='--dry-run --limit 100' - Scan Redis for missing microgenres (dry run)"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--dry-run --limit 100' - Scan public/dev Redis for missing microgenres"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--limit 50' - Classify missing microgenres via Cerebras gpt-oss-120b (default), write Redis, MM metadata_only"
@@ -571,6 +573,14 @@ backfill-major-provider:
 
 backfill-external-ids:
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/backfill_external_ids.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# Backfill movie_credit_ids / tv_credit_ids on person:* docs from TMDB combined_credits.
+# Usage: make backfill-person-credit-ids REDIS=local ARGS="--dry-run"
+#        make backfill-person-credit-ids REDIS=dev ARGS="--limit 100"
+#        make backfill-person-credit-ids REDIS=dev
+#        make backfill-person-credit-ids REDIS=dev ARGS="--person-id 10297"
+backfill-person-credit-ids:
+	@bash -c 'source venv/bin/activate && $(MICROGENRE_REDIS_ENV) && PYTHONPATH="$$PWD:$$PWD/src" python scripts/backfill_person_credit_ids.py $(ARGS)'
 
 # Fill missing media:* microgenres (default) or apply JSONL sidecars (--mode sidecar).
 # Default missing mode classifies via LLM, writes Redis, and pushes MM metadata_only.

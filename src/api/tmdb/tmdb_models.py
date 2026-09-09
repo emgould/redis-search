@@ -320,6 +320,7 @@ class TMDBCastMember(BaseModelWithMethods):
 class TMDBWatchProvider(MCBaseItem):
     """Model for TMDB watch provider data."""
 
+    mc_id: str = ""
     provider_id: int
     provider_name: str
     logo_path: str | None = None
@@ -338,6 +339,7 @@ class TMDBWatchProvider(MCBaseItem):
 class TMDBProvidersResponse(MCBaseItem):
     """Model for TMDB providers list AzPI response (watch/providers/tv or watch/providers/movie)."""
 
+    mc_id: str = ""
     list_type: Literal["tv", "movie"]
     results: list[TMDBWatchProvider] = Field(default_factory=list)
     mc_type: MCType = MCType.PROVIDERS_LIST
@@ -542,3 +544,16 @@ class TMDBPersonTvCreditsResponse(BaseModelWithMethods):
     cast: list[TMDBPersonTvCastCredit] = Field(default_factory=list)
     crew: list[TMDBPersonTvCrewCredit] = Field(default_factory=list)
     id: int
+
+
+class TMDBPersonCombinedCreditsResponse(BaseModelWithMethods):
+    """Model for TMDB combined credits (/person/{id}/combined_credits).
+
+    Cast/crew items are kept as raw dicts because each entry is either a movie
+    or TV credit discriminated by ``media_type``. Callers split and validate
+    into ``TMDBPersonMovieCastCredit`` / ``TMDBPersonTvCastCredit``.
+    """
+
+    cast: list[dict[str, Any]] = Field(default_factory=list)
+    crew: list[dict[str, Any]] = Field(default_factory=list)
+    id: int | None = None
