@@ -510,6 +510,13 @@ test-podcasts-related-to-tv:
 	@if [ -z "$(MC_ID)" ]; then echo "ERROR: MC_ID is required. Usage: make test-podcasts-related-to-tv MC_ID=<tv_mc_id> [LIMIT=N]"; exit 1; fi
 	@bash -c 'source venv/bin/activate && PYTHONPATH=src:$$PWD python scripts/test_podcasts_related_to_tv.py $(MC_ID) $(if $(LIMIT),--limit $(LIMIT),) $(if $(HOST),--host $(HOST),) $(if $(TITLES),--titles-only,)'
 
+# Acceptance for person exact-match filmography rewrite.
+# Requires local Redis (config/local.env) and the web app (default http://localhost:9001).
+# Usage: make test-person-credit-filmography
+#        make test-person-credit-filmography PERSON_ID=10297 LIMIT=10 HOST=http://localhost:9001
+test-person-credit-filmography:
+	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && PYTHONPATH=src:$$PWD python scripts/test_person_credit_filmography.py $(if $(PERSON_ID),--person-id $(PERSON_ID),) $(if $(LIMIT),--limit $(LIMIT),) $(if $(HOST),--host $(HOST),)'
+
 # Fetch TMDB media details for a single title
 # Usage: make get-media-details-tv ID=12345
 #        make get-media-details-movie ID=67890

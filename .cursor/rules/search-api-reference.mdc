@@ -270,6 +270,7 @@ Same SSE event format as autocomplete streaming for `/api/search/stream`.
 **Person exact-match filmography rewrite:**
 - When `q` is an exact person name match (tier 0–1), `person` is in the requested sources, and the person Redis doc carries `movie_credit_ids` / `tv_credit_ids`, the `tv` and `movie` buckets are replaced by a catalog-only `JSON.MGET` of those credit IDs (sorted by Redis popularity). Unindexed credits are dropped.
 - This path is Redis-only (no live TMDB). Credit IDs are written offline by person ETL / `make backfill-person-credit-ids`.
+- Acceptance against local Redis and the web app: `make test-person-credit-filmography` (`scripts/test_person_credit_filmography.py`).
 - Does **not** apply under `raw`, media filters (`cast_ids`, genres, years, etc.), or `/api/autocomplete/minimal` (Lite).
 - Stream paths await the person task before emitting `tv`/`movie` so clients never see TAG cast hits flash then get replaced.
 
