@@ -219,7 +219,7 @@ class PersonETLService:
         semaphore = asyncio.Semaphore(self.config.api_concurrency)
 
         async def enrich_person(person: dict[str, Any]) -> dict[str, Any] | None:
-            """Enrich a single person with TMDB details."""
+            """Enrich a single person with TMDB details and credit ID lists."""
             async with semaphore:
                 try:
                     person_id = person.get("id")
@@ -227,11 +227,23 @@ class PersonETLService:
                         return None
 
                     details = await self.tmdb_service.get_person_details(person_id)
-                    if details:
-                        # Convert MCPersonItem to dict for storage
-                        result: dict[str, Any] = details.to_dict()
-                        return result
-                    return None
+                    if not details:
+                        return None
+
+                    result: dict[str, Any] = details.to_dict()
+                    try:
+                        credit_ids = await self.tmdb_service.get_person_combined_credits(
+                            int(person_id)
+                        )
+                        if credit_ids is not None:
+                            movie_ids, tv_ids = credit_ids
+                            result["movie_credit_ids"] = movie_ids
+                            result["tv_credit_ids"] = tv_ids
+                    except Exception as credit_err:
+                        stats.extract_errors.append(
+                            f"Error fetching credits for person {person_id}: {credit_err}"
+                        )
+                    return result
                 except Exception as e:
                     stats.extract_errors.append(f"Error enriching person {person.get('id')}: {e}")
                     return None
@@ -431,6 +443,13 @@ class PersonETLService:
             else:
                 redis_doc["known_for_titles"] = []
 
+            movie_credit_ids = person.get("movie_credit_ids")
+            if isinstance(movie_credit_ids, list):
+                redis_doc["movie_credit_ids"] = [str(cid) for cid in movie_credit_ids if cid]
+            tv_credit_ids = person.get("tv_credit_ids")
+            if isinstance(tv_credit_ids, list):
+                redis_doc["tv_credit_ids"] = [str(cid) for cid in tv_credit_ids if cid]
+
             prepared.append((key, redis_doc))
             stats.documents_loaded += 1
 
@@ -477,6 +496,17 @@ class PersonETLService:
             ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
             redis_doc["created_at"] = ca
             redis_doc["modified_at"] = ma
+            # Preserve filmography IDs when the enriched payload omitted them
+            # (e.g. loading an older enriched_person_*.json after a credit backfill).
+            if existing_dict is not None:
+                if "movie_credit_ids" not in redis_doc and isinstance(
+                    existing_dict.get("movie_credit_ids"), list
+                ):
+                    redis_doc["movie_credit_ids"] = existing_dict["movie_credit_ids"]
+                if "tv_credit_ids" not in redis_doc and isinstance(
+                    existing_dict.get("tv_credit_ids"), list
+                ):
+                    redis_doc["tv_credit_ids"] = existing_dict["tv_credit_ids"]
             write_pipe.json().set(key, "$", redis_doc)
         await write_pipe.execute()
 

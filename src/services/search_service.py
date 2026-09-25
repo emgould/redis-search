@@ -3,9 +3,9 @@ import json
 import re
 import time
 import urllib.parse
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal, Union
+from typing import Any, Literal, Union, cast
 
 import aiohttp
 from pydantic import BaseModel
@@ -434,6 +434,127 @@ def parse_doc(doc):
                 result["source_id"] = match.group(1)
 
     return result
+
+
+def _credit_rewrite_eligible(
+    *,
+    has_query: bool,
+    raw: bool,
+    has_filters: bool,
+    requested_sources: set[str],
+) -> bool:
+    """True when person exact-match filmography rewrite may replace tv/movie."""
+    return (
+        has_query
+        and not raw
+        and not has_filters
+        and "person" in requested_sources
+        and ("tv" in requested_sources or "movie" in requested_sources)
+    )
+
+
+def _normalize_credit_id_list(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        if item is None:
+            continue
+        value = str(item).strip()
+        if value:
+            out.append(value)
+    return out
+
+
+def _select_exact_person_with_credits(
+    people: list[dict[str, Any]], query: str
+) -> dict[str, Any] | None:
+    """Return the top-ranked exact person match that carries credit ID arrays."""
+    for person in people:
+        if not is_exact_match(query, person, "person"):
+            continue
+        movie_ids = person.get("movie_credit_ids")
+        tv_ids = person.get("tv_credit_ids")
+        if isinstance(movie_ids, list) and isinstance(tv_ids, list) and (movie_ids or tv_ids):
+            return person
+    return None
+
+
+async def _hydrate_credit_media(
+    credit_ids: list[str],
+    media_type: Literal["movie", "tv"],
+    limit: int,
+) -> list[dict[str, Any]] | None:
+    """MGET Redis media docs for credit IDs; drop misses; sort by popularity."""
+    if not credit_ids or limit <= 0:
+        return []
+
+    redis = get_redis()
+    keys = [f"media:tmdb_{media_type}_{cid}" for cid in credit_ids]
+    try:
+        raw_docs = await cast(Awaitable[list[object]], redis.json().mget(keys, "$"))
+    except Exception as e:
+        logger.warning("JSON.MGET credit hydrate failed for %s: %s", media_type, e)
+        return None
+
+    docs: list[dict[str, Any]] = []
+    for raw, cid in zip(raw_docs, credit_ids, strict=True):
+        doc: dict[str, Any] | None = None
+        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+            doc = raw[0]
+        elif isinstance(raw, dict):
+            doc = raw
+        if doc is None:
+            continue
+        mc_id = str(doc.get("mc_id") or f"tmdb_{media_type}_{cid}")
+        merged = {**doc, "id": mc_id, "mc_id": mc_id, "mc_type": media_type}
+        # Display title: prefer original title field over search_title (same as parse_doc)
+        if merged.get("title"):
+            merged["search_title"] = merged["title"]
+        docs.append(merged)
+
+    docs.sort(key=lambda d: float(d.get("popularity") or 0), reverse=True)
+    return docs[:limit]
+
+
+async def _apply_person_credit_rewrite(
+    *,
+    final_results: dict[str, Any],
+    full_results: dict[str, list[dict[str, Any]]],
+    query: str,
+    limit: int,
+    requested_sources: set[str],
+    person: dict[str, Any] | None = None,
+) -> bool:
+    """Replace tv/movie buckets from person credit IDs. Returns True if applied."""
+    people = full_results.get("person") or final_results.get("person") or []
+    match = person if person is not None else _select_exact_person_with_credits(people, query)
+    if match is None:
+        return False
+
+    movie_ids = _normalize_credit_id_list(match.get("movie_credit_ids"))
+    tv_ids = _normalize_credit_id_list(match.get("tv_credit_ids"))
+
+    hydrate_tasks: list[Any] = []
+    labels: list[str] = []
+    if "movie" in requested_sources:
+        hydrate_tasks.append(_hydrate_credit_media(movie_ids, "movie", limit))
+        labels.append("movie")
+    if "tv" in requested_sources:
+        hydrate_tasks.append(_hydrate_credit_media(tv_ids, "tv", limit))
+        labels.append("tv")
+    if not hydrate_tasks:
+        return False
+
+    hydrated = await asyncio.gather(*hydrate_tasks)
+    if any(docs is None for docs in hydrated):
+        return False
+    for label, docs in zip(labels, hydrated, strict=True):
+        if docs is None:
+            return False
+        full_results[label] = docs
+        final_results[label] = docs[:limit]
+    return True
 
 
 def _extract_docs(result: object) -> list[object]:
@@ -1422,7 +1543,37 @@ async def autocomplete_stream(
     # exact-match resolution align with batch search.
     ac_limit = _AUTOCOMPLETE_LIMIT
     ac_media_limit = 250 if full else max(ac_limit * 5, 50)
-    if "tv" in sources:
+
+    credit_eligible = _credit_rewrite_eligible(
+        has_query=True,
+        raw=raw,
+        has_filters=False,
+        requested_sources=sources,
+    )
+    person_full_early: list[dict[str, Any]] = []
+    credit_person: dict[str, Any] | None = None
+    person_elapsed_early = 0.0
+    if credit_eligible and "person" in sources:
+        _, person_data, person_elapsed_early = await timed_task(
+            "person", repo.search_people(people_query, limit=ac_limit * 2)
+        )
+        if person_data and not isinstance(person_data, BaseException) and hasattr(
+            person_data, "docs"
+        ):
+            parsed_all = [parse_doc(doc) for doc in _extract_docs(person_data)]
+            filtered = [
+                p
+                for p in parsed_all
+                if is_person_autocomplete_match(
+                    q, p.get("search_title", "") or p.get("name", "")
+                )
+            ]
+            person_full_early = sorted(filtered, key=lambda p: _rank_person_result(p, q))
+            credit_person = _select_exact_person_with_credits(person_full_early, q)
+
+    skip_media_tag = credit_person is not None
+
+    if "tv" in sources and not skip_media_tag:
         tasks_dict[
             asyncio.create_task(
                 timed_task(
@@ -1431,16 +1582,18 @@ async def autocomplete_stream(
                 )
             )
         ] = "tv_media"
-    if "movie" in sources:
+    if "movie" in sources and not skip_media_tag:
         tasks_dict[
             asyncio.create_task(
                 timed_task(
                     "movie_media",
-                    repo.search(_build_media_source_query(media_query, "movie"), limit=ac_media_limit),
+                    repo.search(
+                        _build_media_source_query(media_query, "movie"), limit=ac_media_limit
+                    ),
                 )
             )
         ] = "movie_media"
-    if "person" in sources:
+    if "person" in sources and not credit_eligible:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
         tasks_dict[
             asyncio.create_task(
@@ -1476,16 +1629,84 @@ async def autocomplete_stream(
     # from autocomplete stream to avoid excessive API calls during typing.
     # They are only fetched on the /api/search endpoint (Enter key).
 
-    # If no tasks, return early
-    if not tasks_dict:
-        return
-
     total_start = time.perf_counter()
     timing_parts: list[str] = []
     streamed_results: dict[str, list[dict[str, Any]]] = {}
     streamed_full: dict[str, list[dict[str, Any]]] = {}
 
-    # Yield results as they complete (fastest first)
+    # Emit person + credit filmography before TAG media so streams never flash
+    # Agent-Elvis-only TAG hits then replace with True Detective filmography.
+    if credit_eligible and "person" in sources:
+        timing_parts.append(f"person={person_elapsed_early:.0f}ms")
+        streamed_full["person"] = person_full_early
+        person_slice = person_full_early[:ac_limit]
+        person_exact = _iter_exact_matches("person", person_full_early, q)
+        if no_duplicate and person_exact:
+            person_slice = _filter_exact_items(person_slice, person_exact)
+        streamed_results["person"] = person_slice
+        if person_slice:
+            yield ("person", person_slice, person_elapsed_early)
+        for item in person_exact:
+            yield ("exact_match", item)
+
+    if credit_person is not None:
+        hydrate_start = time.perf_counter()
+        final_results: dict[str, Any] = {}
+        full_results: dict[str, list[dict[str, Any]]] = {"person": person_full_early}
+        rewrite_applied = await _apply_person_credit_rewrite(
+            final_results=final_results,
+            full_results=full_results,
+            query=q,
+            limit=ac_limit,
+            requested_sources=sources,
+            person=credit_person,
+        )
+        hydrate_elapsed = (time.perf_counter() - hydrate_start) * 1000
+        timing_parts.append(f"credit_hydrate={hydrate_elapsed:.0f}ms")
+        if rewrite_applied:
+            for source_name in ("tv", "movie"):
+                if source_name not in sources:
+                    continue
+                docs = full_results.get(source_name) or []
+                streamed_full[source_name] = docs
+                sliced = docs[:ac_limit]
+                streamed_results[source_name] = sliced
+                if sliced:
+                    yield (source_name, sliced, hydrate_elapsed)
+                for item in _iter_exact_matches(source_name, docs, q):
+                    yield ("exact_match", item)
+        else:
+            # Redis MGET failure must preserve the existing TAG fallback.
+            for source_name in ("tv", "movie"):
+                if source_name not in sources:
+                    continue
+                tasks_dict[
+                    asyncio.create_task(
+                        timed_task(
+                            f"{source_name}_media",
+                            repo.search(
+                                _build_media_source_query(media_query, source_name),
+                                limit=ac_media_limit,
+                            ),
+                        )
+                    )
+                ] = f"{source_name}_media"
+
+    if not tasks_dict:
+        total_elapsed = (time.perf_counter() - total_start) * 1000
+        final_exact = _pick_exact_match(streamed_full, q)
+        if final_exact is not None:
+            yield ("exact_match_final", final_exact)
+        all_exact = _collect_exact_matches(streamed_full, q, hero=final_exact)
+        if all_exact:
+            yield ("exact_matches_final", all_exact)
+        logger.info(
+            f"Autocomplete stream '{q}' latency: total={total_elapsed:.0f}ms | "
+            f"{' | '.join(timing_parts)}"
+        )
+        return
+
+    # Yield remaining results as they complete (fastest first)
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
         try:
             result = await completed_task
@@ -1827,6 +2048,17 @@ async def search(
     # full=True bumps to 250 so low-popularity exact matches aren't missed.
     _base = 250 if full else max(limit * 5, 50)
     media_fetch_limit = _base if has_query else limit * 2
+
+    # Person results remain concurrent with media and brokered sources. The
+    # filmography rewrite is applied after all indexed results are parsed, so
+    # ordinary searches do not incur an extra sequential Redis round trip.
+    credit_eligible = _credit_rewrite_eligible(
+        has_query=has_query,
+        raw=raw,
+        has_filters=has_filters,
+        requested_sources=requested_sources,
+    )
+
     if "tv" in requested_sources:
         timed_tasks.append(
             timed_task(
@@ -1988,6 +2220,16 @@ async def search(
             person_full = parsed_people
         full_results["person"] = person_full
         final_results["person"] = person_full[:limit]
+
+    # Person exact-match filmography rewrite (catalog-only MGET)
+    if credit_eligible and query_text is not None:
+        await _apply_person_credit_rewrite(
+            final_results=final_results,
+            full_results=full_results,
+            query=query_text,
+            limit=limit,
+            requested_sources=requested_sources,
+        )
 
     # Process podcast results with re-ranking when query is present
     if "podcast" in results_map:
@@ -2389,7 +2631,39 @@ async def search_stream(
     # aren't pushed out by popularity-sorted keyword/cast/genre matches.
     _stream_base = 250 if full else max(limit * 5, 50)
     media_fetch_limit = _stream_base if has_query else limit * 2
-    if "tv" in requested_sources:
+
+    credit_eligible = _credit_rewrite_eligible(
+        has_query=has_query,
+        raw=raw,
+        has_filters=has_filters,
+        requested_sources=requested_sources,
+    )
+    person_full_early: list[dict[str, Any]] = []
+    credit_person: dict[str, Any] | None = None
+    person_elapsed_early = 0.0
+    if credit_eligible and query_text is not None:
+        _, person_data, person_elapsed_early = await timed_task(
+            "person", repo.search_people(people_query, limit=limit * 2)
+        )
+        if person_data and not isinstance(person_data, BaseException) and hasattr(
+            person_data, "docs"
+        ):
+            parsed_people = [parse_doc(doc) for doc in _extract_docs(person_data)]
+            filtered_people = [
+                p
+                for p in parsed_people
+                if is_person_autocomplete_match(
+                    query_text, p.get("search_title", "") or p.get("name", "")
+                )
+            ]
+            person_full_early = sorted(
+                filtered_people, key=lambda p: _rank_person_result(p, query_text)
+            )
+            credit_person = _select_exact_person_with_credits(person_full_early, query_text)
+
+    skip_media_tag = credit_person is not None
+
+    if "tv" in requested_sources and not skip_media_tag:
         tasks_dict[
             asyncio.create_task(
                 timed_task(
@@ -2402,7 +2676,7 @@ async def search_stream(
                 )
             )
         ] = "tv_media"
-    if "movie" in requested_sources:
+    if "movie" in requested_sources and not skip_media_tag:
         tasks_dict[
             asyncio.create_task(
                 timed_task(
@@ -2415,7 +2689,7 @@ async def search_stream(
                 )
             )
         ] = "movie_media"
-    if "person" in requested_sources:
+    if "person" in requested_sources and not credit_eligible:
         tasks_dict[
             asyncio.create_task(
                 timed_task("person", repo.search_people(people_query, limit=limit * 2))
@@ -2497,13 +2771,82 @@ async def search_stream(
                 )
             ] = "album"
 
-    if not tasks_dict:
-        return
-
     total_start = time.perf_counter()
     timing_parts: list[str] = []
     streamed_results: dict[str, list[dict[str, Any]]] = {}
     streamed_full: dict[str, list[dict[str, Any]]] = {}
+
+    if credit_eligible and "person" in requested_sources:
+        timing_parts.append(f"person={person_elapsed_early:.0f}ms")
+        streamed_full["person"] = person_full_early
+        person_slice = person_full_early[:limit]
+        person_exact = _iter_exact_matches("person", person_full_early, query_text)
+        if no_duplicate and person_exact:
+            person_slice = _filter_exact_items(person_slice, person_exact)
+        streamed_results["person"] = person_slice
+        if person_slice:
+            yield ("person", person_slice, person_elapsed_early)
+        for item in person_exact:
+            yield ("exact_match", item)
+
+    if credit_person is not None and query_text is not None:
+        hydrate_start = time.perf_counter()
+        final_results: dict[str, Any] = {}
+        full_results: dict[str, list[dict[str, Any]]] = {"person": person_full_early}
+        rewrite_applied = await _apply_person_credit_rewrite(
+            final_results=final_results,
+            full_results=full_results,
+            query=query_text,
+            limit=limit,
+            requested_sources=requested_sources,
+            person=credit_person,
+        )
+        hydrate_elapsed = (time.perf_counter() - hydrate_start) * 1000
+        timing_parts.append(f"credit_hydrate={hydrate_elapsed:.0f}ms")
+        if rewrite_applied:
+            for source_name in ("tv", "movie"):
+                if source_name not in requested_sources:
+                    continue
+                docs = full_results.get(source_name) or []
+                streamed_full[source_name] = docs
+                sliced = docs[:limit]
+                streamed_results[source_name] = sliced
+                if sliced:
+                    yield (source_name, sliced, hydrate_elapsed)
+                for item in _iter_exact_matches(source_name, docs, query_text):
+                    yield ("exact_match", item)
+        else:
+            # Redis MGET failure must preserve the existing TAG fallback.
+            for source_name in ("tv", "movie"):
+                if source_name not in requested_sources:
+                    continue
+                tasks_dict[
+                    asyncio.create_task(
+                        timed_task(
+                            f"{source_name}_media",
+                            repo.search(
+                                _build_media_source_query(media_query, source_name),
+                                limit=media_fetch_limit,
+                                sort_by=media_sort,
+                            ),
+                        )
+                    )
+                ] = f"{source_name}_media"
+
+    if not tasks_dict:
+        total_elapsed = (time.perf_counter() - total_start) * 1000
+        q_for_exact = q if has_query else None
+        final_exact = _pick_exact_match(streamed_full, q_for_exact)
+        if final_exact is not None:
+            yield ("exact_match_final", final_exact)
+        all_exact = _collect_exact_matches(streamed_full, q_for_exact, hero=final_exact)
+        if all_exact:
+            yield ("exact_matches_final", all_exact)
+        logger.info(
+            f"Search stream '{q}' latency: total={total_elapsed:.0f}ms | "
+            f"{' | '.join(timing_parts)}"
+        )
+        return
 
     for completed_task in asyncio.as_completed(tasks_dict.keys()):
         try:

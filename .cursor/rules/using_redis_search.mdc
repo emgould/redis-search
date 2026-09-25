@@ -471,11 +471,16 @@ All keys are present when values are available, and absent fields are omitted by
   - `place_of_birth`
   - `age`, `is_deceased`
   - `known_for_titles` (top known-for works)
+  - `movie_credit_ids` / `tv_credit_ids` (payload-only string TMDB id lists, popularity-sorted, capped at 50; used by search filmography rewrite — **not** RediSearch-indexed)
 - `mc_type`/`mc_subtype` are used to separate person archetypes (actor/director/writer/etc.).
 
 ### Indexed fields for people
 
 `search_title`, `also_known_as`, `mc_type`, `mc_subtype`, `source`, `popularity`, `created_at`, `modified_at`.
+
+### Person exact-match filmography (search)
+
+When `/api/search` or `/api/autocomplete` gets an exact person name match and the person doc has credit ID arrays, `tv`/`movie` are hydrated via `JSON.MGET` of `media:tmdb_{movie|tv}_{id}` (catalog-only). Request path never calls TMDB for this. Backfill: `make backfill-person-credit-ids REDIS=local|dev`.
 
 ## `idx:podcasts` (`podcast:`)
 
