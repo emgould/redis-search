@@ -54,6 +54,8 @@ services:
       - SENDGRID_USERNAME=${SENDGRID_USERNAME}
       - SENDGRID_PASSWORD=${SENDGRID_PASSWORD}
       - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL}
+      - FLIXPATROL_USERNAME=${FLIXPATROL_USERNAME}
+      - FLIXPATROL_API_KEY=${FLIXPATROL_API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcs-key.json
     volumes:
       - ${GCS_CREDENTIALS_PATH:-/dev/null}:/app/credentials/gcs-key.json:ro

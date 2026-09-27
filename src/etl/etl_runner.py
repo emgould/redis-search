@@ -154,11 +154,13 @@ def _get_etl_functions() -> dict[str, Any]:
     """Get registry of available ETL functions with lazy imports."""
     # Lazy import to avoid circular import when running bestseller_author_etl as __main__
     from etl.bestseller_author_etl import run_bestseller_author_etl
+    from etl.flixpatrol_nightly_etl import run_flixpatrol_nightly_etl
 
     return {
         "tmdb_nightly_etl": run_nightly_etl,
         "pi_nightly_etl": run_pi_nightly_etl,
         "bestseller_author_etl": run_bestseller_author_etl,
+        "flixpatrol_nightly_etl": run_flixpatrol_nightly_etl,
     }
 
 
@@ -291,6 +293,15 @@ class ETLRunner:
                     verbose=params.verbose,
                     max_batches=params.max_batches,
                 )
+            elif job.target == "flixpatrol_nightly_etl":
+                stats = await etl_func(
+                    media_type="flixpatrol",
+                    redis_host=self.config.redis_host,
+                    redis_port=self.config.redis_port,
+                    redis_password=self.config.redis_password,
+                    verbose=params.verbose,
+                    max_batches=params.max_batches,
+                )
             else:
                 # TMDB ETL - validate media_type
                 if params.media_type not in ("tv", "movie", "person"):
@@ -298,11 +309,7 @@ class ETLRunner:
 
                 # Cast media_type to the literal type
                 media_type_literal: Literal["tv", "movie", "person"] = params.media_type  # type: ignore[assignment]
-                mm_client = (
-                    media_manager_client
-                    if params.media_type in ("movie", "tv")
-                    else None
-                )
+                mm_client = media_manager_client if params.media_type in ("movie", "tv") else None
                 stats = await etl_func(
                     media_type=media_type_literal,
                     start_date=start_date,
@@ -420,9 +427,7 @@ class ETLRunner:
         print(f"  Media Manager: {'enabled' if mm_client else 'disabled'}")
         print()
 
-        job_timeout = int(
-            os.getenv("ETL_JOB_TIMEOUT_SECONDS", str(DEFAULT_JOB_TIMEOUT_SECONDS))
-        )
+        job_timeout = int(os.getenv("ETL_JOB_TIMEOUT_SECONDS", str(DEFAULT_JOB_TIMEOUT_SECONDS)))
 
         # Run each job sequentially
         for job in enabled_jobs:
@@ -452,9 +457,7 @@ class ETLRunner:
                     )
                 except TimeoutError:
                     completed_at = datetime.now()
-                    logger.error(
-                        "Job %s timed out after %d seconds", job_name, job_timeout
-                    )
+                    logger.error("Job %s timed out after %d seconds", job_name, job_timeout)
                     result = JobRunResult(
                         job_name=job_name,
                         media_type=params.media_type,
@@ -469,9 +472,7 @@ class ETLRunner:
                         errors=[f"Timed out after {job_timeout}s"],
                     )
                     if self._run_metadata:
-                        self._run_metadata.add_log(
-                            f"TIMEOUT {job_name} after {job_timeout}s"
-                        )
+                        self._run_metadata.add_log(f"TIMEOUT {job_name} after {job_timeout}s")
 
                 # Track result
                 self._run_metadata.job_results.append(result)
@@ -557,11 +558,13 @@ class ETLRunner:
                     try:
                         logger.info("Rebuilding Media Manager index '%s'...", index_name)
                         r = await mm_client.rebuild_index(index_name)
-                        self._run_metadata.mm_indexes_rebuilt.append({
-                            "index_name": r["index_name"],
-                            "total_documents": r["total_documents"],
-                            "duration_seconds": r["duration_seconds"],
-                        })
+                        self._run_metadata.mm_indexes_rebuilt.append(
+                            {
+                                "index_name": r["index_name"],
+                                "total_documents": r["total_documents"],
+                                "duration_seconds": r["duration_seconds"],
+                            }
+                        )
                         self._run_metadata.add_log(
                             f"Index '{r['index_name']}' rebuilt: "
                             f"{r['total_documents']} docs in {r['duration_seconds']:.1f}s"
@@ -569,7 +572,9 @@ class ETLRunner:
                     except Exception as e:
                         logger.error("Media Manager index '%s' rebuild failed: %s", index_name, e)
                         self._run_metadata.mm_rebuild_errors.append(f"{index_name}: {e}")
-                        self._run_metadata.add_log(f"Media Manager index '{index_name}' rebuild error: {e}")
+                        self._run_metadata.add_log(
+                            f"Media Manager index '{index_name}' rebuild error: {e}"
+                        )
             else:
                 logger.warning("Skipping index rebuild — queue not fully drained")
                 self._run_metadata.add_log("Skipping index rebuild — queue not fully drained")
@@ -736,7 +741,9 @@ class ETLRunner:
                 end_date=end_date,
             )
 
-            return await self.run_job(job_config, params, start_date, end_date, media_manager_client=mm_client)
+            return await self.run_job(
+                job_config, params, start_date, end_date, media_manager_client=mm_client
+            )
         finally:
             if mm_client:
                 await mm_client.close()

@@ -5,9 +5,9 @@ Follows Pydantic 2.0 patterns with full type safety.
 
 from typing import Any
 
-from contracts.models import MCBaseItem, MCSources, MCType
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from contracts.models import MCBaseItem, MCSources, MCType
 from utils.pydantic_tools import BaseModelWithMethods
 
 
@@ -72,3 +72,44 @@ class FlixPatrolParsedData(BaseModel):
     date: str
     shows: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     movies: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+
+
+class FlixPatrolHistoryRecord(BaseModel):
+    """One stored chart row for a title, company, and date range."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    date_type: int
+    date_from: str
+    date_to: str
+    ranking: int
+    ranking_last: int | None = Field(default=None, alias="rankingLast")
+    value: int | None = None
+    value_last: int | None = Field(default=None, alias="valueLast")
+    value_total: int | None = Field(default=None, alias="valueTotal")
+    value_change: str | None = Field(default=None, alias="valueChange")
+    days: int | None = None
+    days_total: int | None = Field(default=None, alias="daysTotal")
+
+
+class FlixPatrolHistory(BaseModel):
+    """Historical FlixPatrol peaks and chart records stored on a media document."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    peak_total: int | None = None
+    peak_rank: int | None = None
+    max_days: int | None = None
+    last_date: str | None = None
+    start_date: str | None = None
+    records: list[FlixPatrolHistoryRecord] = Field(default_factory=list)
+
+
+class FlixPatrolTitleFile(BaseModel):
+    """One title file written by the historical rankings transformer."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    mc_id: str
+    title: str
+    data: FlixPatrolHistory

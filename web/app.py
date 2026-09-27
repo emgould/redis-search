@@ -67,6 +67,7 @@ from services.search_service import (
     get_cast_names,
     get_details,
     get_details_batch,
+    get_flixpatrol_batch,
     reset_repo,
     resolve,
     search,
@@ -1255,7 +1256,9 @@ async def api_tmdb_details(
             mc_data: dict[str, Any] = (
                 details.model_dump(mode="json")
                 if hasattr(details, "model_dump")
-                else dict(details) if isinstance(details, dict) else {"data": details}
+                else dict(details)
+                if isinstance(details, dict)
+                else {"data": details}
             )
             mc_data["_tmdb_live"] = True
             mc_items.append(mc_data)
@@ -1271,7 +1274,9 @@ async def api_tmdb_details(
         mc_data = (
             details.model_dump(mode="json")
             if hasattr(details, "model_dump")
-            else dict(details) if isinstance(details, dict) else {"data": details}
+            else dict(details)
+            if isinstance(details, dict)
+            else {"data": details}
         )
         item_dict: dict[str, Any] = dict(mc_data)
         item_dict["_media_type"] = media_type_enum.value
@@ -3131,26 +3136,21 @@ async def get_podcasts_related_to_tv(
         return JSONResponse(status_code=500, content={"error": f"Redis read failed: {e}"})
 
     if not isinstance(media_doc, dict):
-        return JSONResponse(
-            status_code=404, content={"error": f"TV show not found: {mc_id}"}
-        )
+        return JSONResponse(status_code=404, content={"error": f"TV show not found: {mc_id}"})
 
     if media_doc.get("mc_type") != "tv":
         return JSONResponse(
             status_code=400,
             content={
                 "error": (
-                    f"mc_id {mc_id!r} is not a tv show "
-                    f"(mc_type={media_doc.get('mc_type')!r})"
+                    f"mc_id {mc_id!r} is not a tv show (mc_type={media_doc.get('mc_type')!r})"
                 )
             },
         )
 
     title = media_doc.get("title") or media_doc.get("search_title") or ""
     if not isinstance(title, str) or not title.strip():
-        return JSONResponse(
-            status_code=404, content={"error": f"TV show {mc_id} has no title"}
-        )
+        return JSONResponse(status_code=404, content={"error": f"TV show {mc_id} has no title"})
 
     itunes_params: dict[str, str | int] = {
         "term": f"{title.strip()} tv show",
@@ -3428,6 +3428,57 @@ async def api_get_details(
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+@app.post("/api/flixpatrol")
+async def api_get_flixpatrol(
+    mc_id: str | None = Query(default=None),
+    mc_ids: str | None = Query(default=None, description="Comma-separated mc_ids for batch lookup"),
+    mc_type: str = Query(...),
+    mc_subtype: str | None = Query(default=None),
+):
+    """Return stored historical FlixPatrol data for one or more media documents.
+
+    Reads the full history from Redis key ``flixpatrol:{mc_id}`` (not the abridged
+    ``flixpatrol`` field on the media document). Does not call FlixPatrol live or return
+    the full media document. Missing sidecar returns ``flixpatrol: null``.
+    """
+    id_list: list[str] = []
+    is_batch = mc_ids is not None
+
+    if mc_ids:
+        id_list = [mid.strip() for mid in mc_ids.split(",") if mid.strip()]
+    elif mc_id:
+        id_list = [mc_id]
+
+    if not id_list:
+        return JSONResponse(status_code=400, content={"error": "mc_id or mc_ids is required"})
+
+    if mc_type.lower() not in ("movie", "tv"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "mc_type must be movie or tv"},
+        )
+
+    try:
+        results = await get_flixpatrol_batch(
+            mc_ids=id_list,
+            mc_type=mc_type,
+            mc_subtype=mc_subtype,
+        )
+        if is_batch:
+            return JSONResponse(content=results)
+
+        single = results[0]
+        if single.get("error"):
+            status_code = int(single.get("status_code", 500))
+            return JSONResponse(
+                status_code=status_code,
+                content={"error": single["error"], "mc_id": single.get("mc_id")},
+            )
+        return JSONResponse(content=single)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.post("/api/tmdb/add-to-redis")
 async def api_add_tmdb_to_redis(
     tmdb_id: int = Query(..., gt=0, description="TMDB numeric ID"),
@@ -3584,9 +3635,7 @@ async def api_openlibrary_search(
 
 @app.post("/api/openlibrary/add-to-redis")
 async def api_add_openlibrary_to_redis(
-    openlibrary_key: str = Query(
-        ..., description="OpenLibrary work key, e.g. /works/OL12345W"
-    ),
+    openlibrary_key: str = Query(..., description="OpenLibrary work key, e.g. /works/OL12345W"),
 ) -> JSONResponse:
     """Fetch an OpenLibrary work, build a Redis doc, and insert/update ``idx:book``."""
     service = OpenLibrarySearchService()
@@ -4238,7 +4287,9 @@ async def trigger_changes_job(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
     verbose: bool = Query(False, description="Enable verbose logging"),
-    max_batches: int = Query(0, ge=0, description="Max batches (0=unlimited, each batch ≈ 20 items)"),
+    max_batches: int = Query(
+        0, ge=0, description="Max batches (0=unlimited, each batch ≈ 20 items)"
+    ),
     _: None = Depends(require_api_key),
 ):
     """
@@ -4472,17 +4523,18 @@ _SSH_NOISE = re.compile(
 def _ssh_run(remote_cmd: str, timeout: int = 45) -> tuple[str, int]:
     """Run a command on the ETL VM via gcloud SSH and return cleaned output."""
     cmd: list[str] = [
-        "gcloud", "compute", "ssh", _ETL_VM_NAME,
+        "gcloud",
+        "compute",
+        "ssh",
+        _ETL_VM_NAME,
         f"--zone={_ETL_VM_ZONE}",
         "--tunnel-through-iap",
-        "--", remote_cmd,
+        "--",
+        remote_cmd,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     raw = (result.stdout or "") + (result.stderr or "")
-    cleaned = "\n".join(
-        line for line in raw.splitlines()
-        if not _SSH_NOISE.search(line)
-    )
+    cleaned = "\n".join(line for line in raw.splitlines() if not _SSH_NOISE.search(line))
     return cleaned.strip(), result.returncode
 
 
@@ -4524,7 +4576,9 @@ async def list_etl_vm_log_dates(
 @app.get("/api/etl/vm/logs")
 async def get_etl_vm_logs(
     date: str | None = Query(None, description="Log date YYYY-MM-DD, defaults to today"),
-    since_line: int = Query(0, ge=0, description="Return lines after this 0-based offset (for tailing)"),
+    since_line: int = Query(
+        0, ge=0, description="Return lines after this 0-based offset (for tailing)"
+    ),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """Fetch a specific day's ETL log file from the VM.
@@ -4608,7 +4662,10 @@ async def get_etl_vm_status(
         stdout, stderr, rc = await asyncio.to_thread(
             _gcloud_run,
             [
-                "compute", "instances", "describe", _ETL_VM_NAME,
+                "compute",
+                "instances",
+                "describe",
+                _ETL_VM_NAME,
                 f"--zone={_ETL_VM_ZONE}",
                 "--format=json(name,status,machineType,lastStartTimestamp,zone)",
             ],
@@ -4624,14 +4681,16 @@ async def get_etl_vm_status(
         if "/" in machine_type:
             machine_type = machine_type.rsplit("/", 1)[-1]
 
-        return JSONResponse(content={
-            "success": True,
-            "name": info.get("name", _ETL_VM_NAME),
-            "status": info.get("status", "UNKNOWN"),
-            "machine_type": machine_type,
-            "last_start": info.get("lastStartTimestamp"),
-            "zone": _ETL_VM_ZONE,
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "name": info.get("name", _ETL_VM_NAME),
+                "status": info.get("status", "UNKNOWN"),
+                "machine_type": machine_type,
+                "last_start": info.get("lastStartTimestamp"),
+                "zone": _ETL_VM_ZONE,
+            }
+        )
     except subprocess.TimeoutExpired:
         return JSONResponse(
             status_code=504,
@@ -4734,17 +4793,19 @@ async def trigger_finalize_publish(
 
     try:
         resp = await client.finalize_publish()
-        return JSONResponse(content={
-            "success": True,
-            "status": resp["status"],
-            "movies_added": resp["movies_added"],
-            "tv_added": resp["tv_added"],
-            "movies_updated": resp["movies_updated"],
-            "tv_updated": resp["tv_updated"],
-            "readers_recycled": resp["readers_recycled"],
-            "metadata_only_updated": resp.get("metadata_only_updated", 0),
-            "total_errors": resp.get("total_errors", 0),
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "status": resp["status"],
+                "movies_added": resp["movies_added"],
+                "tv_added": resp["tv_added"],
+                "movies_updated": resp["movies_updated"],
+                "tv_updated": resp["tv_updated"],
+                "readers_recycled": resp["readers_recycled"],
+                "metadata_only_updated": resp.get("metadata_only_updated", 0),
+                "total_errors": resp.get("total_errors", 0),
+            }
+        )
     except Exception as e:
         return JSONResponse(
             status_code=502,
@@ -4760,7 +4821,7 @@ async def trigger_vm_finalize_publish(
 ) -> JSONResponse:
     """Run finalize-publish on the ETL VM via SSH (uses the VM's MM connection)."""
     remote_cmd = (
-        "docker exec etl-runner python -c \""
+        'docker exec etl-runner python -c "'
         "import asyncio\n"
         "import json\n"
         "from adapters.media_manager_client import MediaManagerClient\n"
@@ -4773,7 +4834,7 @@ async def trigger_vm_finalize_publish(
         "    print(json.dumps(r))\n"
         "\n"
         "asyncio.run(run())\n"
-        "\""
+        '"'
     )
     try:
         output, rc = await asyncio.to_thread(_ssh_run, remote_cmd, 600)
@@ -4787,17 +4848,19 @@ async def trigger_vm_finalize_publish(
         except Exception:
             data = {"raw_output": output}
 
-        return JSONResponse(content={
-            "success": True,
-            "status": data.get("status", "ok"),
-            "movies_added": data.get("movies_added", 0),
-            "tv_added": data.get("tv_added", 0),
-            "movies_updated": data.get("movies_updated", 0),
-            "tv_updated": data.get("tv_updated", 0),
-            "readers_recycled": data.get("readers_recycled", False),
-            "metadata_only_updated": data.get("metadata_only_updated", 0),
-            "total_errors": data.get("total_errors", 0),
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "status": data.get("status", "ok"),
+                "movies_added": data.get("movies_added", 0),
+                "tv_added": data.get("tv_added", 0),
+                "movies_updated": data.get("movies_updated", 0),
+                "tv_updated": data.get("tv_updated", 0),
+                "readers_recycled": data.get("readers_recycled", False),
+                "metadata_only_updated": data.get("metadata_only_updated", 0),
+                "total_errors": data.get("total_errors", 0),
+            }
+        )
     except subprocess.TimeoutExpired:
         return JSONResponse(
             status_code=504,
@@ -4855,13 +4918,13 @@ async def trigger_etl_on_vm(
 
     remote_cmd = (
         "docker exec -d etl-runner bash -c '"
-        'LOG_DIR=/var/log/etl && mkdir -p $LOG_DIR && '
-        'LOG_FILE=$LOG_DIR/etl-$(date +%Y-%m-%d).log && '
-        'echo \"=== Manual ETL Run Started: $(date -u) ===\"'
-        ' | tee -a $LOG_FILE > /proc/1/fd/1 && '
-        f'python -m etl.run_nightly_etl{etl_args} 2>&1'
-        ' | tee -a $LOG_FILE > /proc/1/fd/1 && '
-        'echo \"=== Manual ETL Run Finished: $(date -u) ===\"'
+        "LOG_DIR=/var/log/etl && mkdir -p $LOG_DIR && "
+        "LOG_FILE=$LOG_DIR/etl-$(date +%Y-%m-%d).log && "
+        'echo "=== Manual ETL Run Started: $(date -u) ==="'
+        " | tee -a $LOG_FILE > /proc/1/fd/1 && "
+        f"python -m etl.run_nightly_etl{etl_args} 2>&1"
+        " | tee -a $LOG_FILE > /proc/1/fd/1 && "
+        'echo "=== Manual ETL Run Finished: $(date -u) ==="'
         " | tee -a $LOG_FILE > /proc/1/fd/1'"
     )
 
@@ -4874,10 +4937,12 @@ async def trigger_etl_on_vm(
             )
 
         label = f"job={job}" if job else "full ETL"
-        return JSONResponse(content={
-            "success": True,
-            "message": f"ETL dispatched to {_ETL_VM_NAME} ({label}). Monitor via VM Logs.",
-        })
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"ETL dispatched to {_ETL_VM_NAME} ({label}). Monitor via VM Logs.",
+            }
+        )
     except subprocess.TimeoutExpired:
         return JSONResponse(
             status_code=504,

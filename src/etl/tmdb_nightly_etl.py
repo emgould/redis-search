@@ -49,6 +49,11 @@ from core.streaming_providers import (
     TV_SHOW_CUTOFF_DATE,
 )
 from etl.documentary_filter import is_documentary, is_eligible_documentary
+from etl.flixpatrol_payload import (
+    attach_flixpatrol,
+    flixpatrol_sidecar_key,
+    flixpatrol_titles_dir,
+)
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 from utils.get_logger import get_logger
@@ -371,9 +376,10 @@ class TMDBChangesETL(TMDBService):
         has_major_provider = has_major_provider_by_name or has_major_provider_by_id
 
         # "In Theaters" counts as available
-        is_in_theaters = item.get("streaming_platform") == "In Theaters" or (
-            item.get("watch_providers") or {}
-        ).get("primary_provider_type") == "in theater"
+        is_in_theaters = (
+            item.get("streaming_platform") == "In Theaters"
+            or (item.get("watch_providers") or {}).get("primary_provider_type") == "in theater"
+        )
 
         has_availability = has_major_provider or is_in_theaters
 
@@ -694,10 +700,9 @@ class TMDBChangesETL(TMDBService):
             # Load items
             load_start = time.time()
             batch_size = 100
+            flixpatrol_titles = flixpatrol_titles_dir()
             enrich_semaphore = asyncio.Semaphore(20)
-            microgenre_concurrency = max(
-                1, int(os.getenv("MICROGENRE_ETL_CONCURRENCY", "3"))
-            )
+            microgenre_concurrency = max(1, int(os.getenv("MICROGENRE_ETL_CONCURRENCY", "3")))
             microgenre_semaphore = asyncio.Semaphore(microgenre_concurrency)
 
             async def _enrich_with_backoff(redis_doc: dict[str, Any]) -> None:
@@ -812,9 +817,7 @@ class TMDBChangesETL(TMDBService):
                         stats.load_phase.errors.append(f"{item.get('id')}: {e}")
 
                 if prepared and media_type != "person":
-                    await asyncio.gather(
-                        *[_enrich_with_backoff(doc) for _, doc in prepared]
-                    )
+                    await asyncio.gather(*[_enrich_with_backoff(doc) for _, doc in prepared])
 
                 if prepared:
                     now_ts = int(datetime.now(UTC).timestamp())
@@ -845,6 +848,18 @@ class TMDBChangesETL(TMDBService):
                         redis_doc["created_at"] = ca
                         redis_doc["modified_at"] = ma
                         redis_doc["_source"] = src
+                        if media_type != "person":
+                            sidecar_full = attach_flixpatrol(
+                                redis_doc, existing_dict, flixpatrol_titles
+                            )
+                            if sidecar_full is not None:
+                                mc_id_val = redis_doc.get("mc_id")
+                                if isinstance(mc_id_val, str) and mc_id_val:
+                                    write_pipe.json().set(
+                                        flixpatrol_sidecar_key(mc_id_val),
+                                        "$",
+                                        sidecar_full,
+                                    )
                         write_pipe.json().set(key, "$", redis_doc)
                         stats.load_phase.items_success += 1
                     await write_pipe.execute()
@@ -860,9 +875,7 @@ class TMDBChangesETL(TMDBService):
                         while len(mm_buffer) >= mm_batch_size:
                             mm_batch = mm_buffer[:mm_batch_size]
                             mm_buffer = mm_buffer[mm_batch_size:]
-                            await self._send_mm_batch(
-                                media_manager_client, mm_batch, stats
-                            )
+                            await self._send_mm_batch(media_manager_client, mm_batch, stats)
 
                 batch_time = time.time() - batch_start
                 items_per_sec = len(batch) / batch_time if batch_time > 0 else 0
