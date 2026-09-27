@@ -58,6 +58,13 @@ Required for microgenre classification:
 - `OPENAI_ORGANIZATION` — optional OpenAI organization
 - `CEREBRAS_API_KEY` — ETL fallback (`gpt-oss-120b`)
 
+Required for the Wednesday FlixPatrol job:
+
+- `FLIXPATROL_USERNAME`
+- `FLIXPATROL_API_KEY`
+
+Both must be present in `config/etl.dev.env`. `scripts/deploy_etl_vm.sh` passes them into the container, and `docker/etl-entrypoint.sh` writes them into `/app/.env` for cron.
+
 Keep `scripts/deploy_etl_vm.sh`, `docker/etl-entrypoint.sh`, and
 `docker/vm-compose.yml` aligned when adding runtime environment variables.
 

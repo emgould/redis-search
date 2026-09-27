@@ -187,6 +187,8 @@ gcloud compute ssh "${VM_NAME}" --zone="${ZONE}" --tunnel-through-iap --command=
         -e MEDIA_MANAGER_INTERNAL_TOKEN=\${MEDIA_MANAGER_INTERNAL_TOKEN} \\
         -e PODCASTINDEX_API_KEY=\${PODCASTINDEX_API_KEY} \\
         -e PODCASTINDEX_API_SECRET=\${PODCASTINDEX_API_SECRET} \\
+        -e FLIXPATROL_USERNAME=\${FLIXPATROL_USERNAME} \\
+        -e FLIXPATROL_API_KEY=\${FLIXPATROL_API_KEY} \\
         ${IMAGE_NAME}:${IMAGE_TAG} \\
         cron
     

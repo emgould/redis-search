@@ -1,0 +1,80 @@
+---
+description: United States FlixPatrol v2 historical rankings backfill, weekly maintenance, and Redis payload
+globs: src/api/subapi/flixpatrol/*.py,src/etl/flixpatrol*.py,config/etl_jobs.yaml
+alwaysApply: false
+---
+
+# FlixPatrol US historical rankings (redis-search)
+
+## Scope
+
+Historical chart storage lives in this repository under `src/api/subapi/flixpatrol/`.
+The HTML top10 scraper in `core.py` is unchanged. Rankings use the authenticated
+v2 API via `client.py` and `history.py`.
+
+## Backfill
+
+```bash
+make backfill-flixpatrol ENV=dev
+make backfill-flixpatrol ENV=dev write=1
+make backfill-flixpatrol ENV=dev start=2025-01-01 end=2025-01-31 write=1
+make backfill-flixpatrol ENV=dev ARGS="--transform-only"
+```
+
+`ENV=dev` loads `config/etl.dev.env` and points Redis at `localhost:6381` (IAP tunnel). `write=1`
+stamps `$.flixpatrol` from `data/flixpatrol/us-titles` via `etl.flixpatrol_payload`.
+
+Direct module invocation (same repo, `PYTHONPATH=src` set by Make):
+
+```bash
+python -m api.subapi.flixpatrol.history
+python -m api.subapi.flixpatrol.history --start 2025-01-01 --end 2025-01-31
+python -m api.subapi.flixpatrol.history --transform-only
+```
+
+- Optional `--start` and `--end` are inclusive calendar dates. Default: January 2021
+  through today.
+- Each month uses `date[type][eq]=4`, full calendar month bounds, and
+  `country[eq]=cnt_iMUHNbZvnNHK5YdhgwtOoP4u`. No title, company, or rank filter.
+- Pagination follows `links.next` only. Do not send `page`.
+- Complete files: `data/flixpatrol/us-monthly/YYYY-MM.json` only after the last page.
+- Closed months are not refetched. The open month may refresh.
+- Each HTTP GET is cached with prefix `flixpatrol` and method prefix
+  `rankings_request`. The cache key is the full URL (including `starting_after[id]`).
+  Closed periods: one year TTL. Open period: 24 hours. Do not change the prefix to bust cache.
+
+## Weekly maintenance
+
+- `run_nightly_flixpatrol` in `history.py` runs on Wednesday only.
+- Uses `date[type][eq]=3` for missing completed Monday–Sunday US weeks through the
+  previous Sunday. First run stores only the latest completed week.
+- Week files: `data/flixpatrol/us-weekly/YYYY-MM-DD.json` (Monday date).
+- Nightly ETL job `flixpatrol_weekly` in `config/etl_jobs.yaml` calls
+  `flixpatrol_nightly_etl`, then stamps Redis from title files.
+- The ETL container receives `FLIXPATROL_USERNAME` and `FLIXPATROL_API_KEY`
+  from `config/etl.dev.env` through `scripts/deploy_etl_vm.sh` and
+  `docker/etl-entrypoint.sh`.
+
+## Title transformer
+
+- `transform_flixpatrol_rankings` writes `data/flixpatrol/us-titles/{mc_id}.json`.
+- Rankings `type=1` with `/movie/` → `tmdb_movie_{tmdbId}`. `type=2` with `/tv/` →
+  `tmdb_tv_{tmdbId}`. Skip rows with missing `tmdbId` or link/type mismatch.
+- `peak_total` is max `valueTotal`, not a sum. Weekly and monthly rows stay separate records.
+
+## API
+
+- `POST /api/flixpatrol` with `mc_type=movie|tv` and `mc_id` or comma-separated `mc_ids`.
+- Response shape: `{ "mc_id": "...", "flixpatrol": { ... } | null }`.
+- Batch responses are a JSON array in request order.
+- Missing Redis document: single request returns HTTP 404; batch items include
+  `{ "mc_id", "error", "status_code": 404 }`.
+- Missing stored history on an existing document: HTTP 200 with `"flixpatrol": null`.
+- Does not call FlixPatrol live and does not return the full media document.
+
+## Redis
+
+- Payload field `flixpatrol` on `idx:media` documents (not indexed).
+- TMDB nightly load copies an existing block forward; title files under
+  `data/flixpatrol/us-titles` or `FLIXPATROL_TITLES_DIR` replace it when present.
+- Bulk stamp: `PYTHONPATH=src python -m etl.flixpatrol_payload` with Redis env vars.

@@ -2,7 +2,7 @@
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -105,6 +105,9 @@ help:
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--limit 50' - Classify missing microgenres via Cerebras gpt-oss-120b (default), write Redis, MM metadata_only"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50' - Same using OpenAI gpt-5.6-terra"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run' - Apply JSONL sidecar classifications only"
+	@echo "    make backfill-flixpatrol ENV=dev              - US monthly chart pull + title files (no Redis write)"
+	@echo "    make backfill-flixpatrol ENV=dev write=1      - Same, then stamp \$$.flixpatrol on existing media docs"
+	@echo "    make backfill-flixpatrol ENV=dev start=2025-01-01 end=2025-01-31 write=1"
 	@echo "    make microgenre-batch REDIS=local ARGS='--media-type movie --take 10 --dry-run' - Batch classify from Redis media docs"
 	@echo "    MICROGENRE_PYTHON='python' can override the default pyenv Python for microgenre targets"
 	@echo ""
@@ -458,6 +461,14 @@ else echo "ERROR: REDIS=local|dev is required"; exit 1; fi; \
 set +a
 endef
 
+define FLIXPATROL_ENV
+set -a && \
+if [ "$(ENV)" = "local" ]; then source config/local.env; \
+elif [ "$(ENV)" = "dev" ]; then source config/etl.dev.env; export REDIS_HOST=localhost; export REDIS_PORT=6381; \
+else echo "ERROR: ENV=local|dev is required (e.g. make backfill-flixpatrol ENV=dev)"; exit 1; fi; \
+set +a
+endef
+
 cache-version-get:
 	@bash -c '$(CACHE_REDIS_ENV) && python -c "from utils.redis_cache import get_cache_version; print(get_cache_version(\"$(PREFIX)\"))"'
 
@@ -601,6 +612,24 @@ backfill-person-credit-ids:
 # Default missing-mode concurrency matches microgenre-batch (150).
 backfill-microgenres:
 	@bash -c '$(MICROGENRE_REDIS_ENV) && $(MICROGENRE_PYTHON) scripts/backfill_microgenres.py $(if $(MC_TYPE),--mc-type $(MC_TYPE),) $(ARGS)'
+
+# US FlixPatrol v2 monthly backfill (optional inclusive start/end) and title-file transform.
+# write=1 runs etl.flixpatrol_payload to set $.flixpatrol on existing media:* keys (requires IAP tunnel for ENV=dev).
+# Usage: make backfill-flixpatrol ENV=dev
+#        make backfill-flixpatrol ENV=dev write=1
+#        make backfill-flixpatrol ENV=local start=2025-01-01 end=2025-01-31
+#        make backfill-flixpatrol ENV=dev ARGS="--transform-only"
+backfill-flixpatrol:
+	@bash -c 'source venv/bin/activate && $(FLIXPATROL_ENV) && \
+		FLIX_ARGS="$(ARGS)"; \
+		[ -n "$(start)" ] && FLIX_ARGS="$$FLIX_ARGS --start $(start)"; \
+		[ -n "$(end)" ] && FLIX_ARGS="$$FLIX_ARGS --end $(end)"; \
+		python -m api.subapi.flixpatrol.history $$FLIX_ARGS; \
+		if [ "$(write)" = "1" ]; then \
+			export FLIXPATROL_TITLES_DIR="$${FLIXPATROL_TITLES_DIR:-$$PWD/data/flixpatrol/us-titles}"; \
+			echo "Stamping Redis from $$FLIXPATROL_TITLES_DIR ..."; \
+			python -m etl.flixpatrol_payload; \
+		fi'
 
 # Batch classify Redis media docs into microgenre JSONL sidecars
 # Usage: make microgenre-batch REDIS=local ARGS="--media-type movie --take 10 --dry-run"

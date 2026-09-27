@@ -70,9 +70,7 @@ MEDIA_SORT_FIELDS: frozenset[str] = frozenset(
         "rt_critics_score",
     }
 )
-RT_MEDIA_SORT_FIELDS: frozenset[str] = frozenset(
-    {"rt_audience_score", "rt_critics_score"}
-)
+RT_MEDIA_SORT_FIELDS: frozenset[str] = frozenset({"rt_audience_score", "rt_critics_score"})
 
 
 def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
@@ -894,6 +892,7 @@ async def autocomplete(
         out[key] = merged.get(key, []) if key in indexed else []
     return out
 
+
 # ---------------------------------------------------------------------------
 # Lightweight / projected autocomplete
 # ---------------------------------------------------------------------------
@@ -1132,7 +1131,9 @@ async def resolve(
         if full:
             if source in ("tv", "movie"):
                 tasks.append(
-                    timed_task(source, repo.search(src_query, limit=fetch_limit, sort_by="popularity"))
+                    timed_task(
+                        source, repo.search(src_query, limit=fetch_limit, sort_by="popularity")
+                    )
                 )
             else:
                 coro = repo.search_projected(
@@ -1251,9 +1252,7 @@ async def resolve(
                         )
                     )
             fuzzy_results = await asyncio.gather(*fuzzy_tasks, return_exceptions=True)
-            query_norm = " ".join(
-                w for w in normalize(q).split() if w not in STOPWORDS
-            )
+            query_norm = " ".join(w for w in normalize(q).split() if w not in STOPWORDS)
             for item in fuzzy_results:
                 if isinstance(item, BaseException):
                     continue
@@ -1270,9 +1269,7 @@ async def resolve(
                 for doc in fparsed:
                     doc["source"] = fname
                     title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
-                    title_norm = " ".join(
-                        w for w in normalize(title).split() if w not in STOPWORDS
-                    )
+                    title_norm = " ".join(w for w in normalize(title).split() if w not in STOPWORDS)
                     dist = _levenshtein_distance(query_norm, title_norm)
                     tc = str(doc.get("title_compact") or "")
                     if tc:
@@ -1333,9 +1330,7 @@ async def resolve(
                         )
                     )
             suggest_results = await asyncio.gather(*suggest_tasks, return_exceptions=True)
-            suggest_norm = " ".join(
-                w for w in normalize(suggestion).split() if w not in STOPWORDS
-            )
+            suggest_norm = " ".join(w for w in normalize(suggestion).split() if w not in STOPWORDS)
             for item in suggest_results:
                 if isinstance(item, BaseException):
                     continue
@@ -1352,9 +1347,7 @@ async def resolve(
                 for doc in sparsed:
                     doc["source"] = sname
                     title = doc.get("search_title") or doc.get("title") or doc.get("name") or ""
-                    title_norm = " ".join(
-                        w for w in normalize(title).split() if w not in STOPWORDS
-                    )
+                    title_norm = " ".join(w for w in normalize(title).split() if w not in STOPWORDS)
                     dist = _levenshtein_distance(suggest_norm, title_norm)
                     popularity = float(doc.get("popularity") or 0)
                     doc["_rank"] = (dist, -popularity)
@@ -1557,16 +1550,16 @@ async def autocomplete_stream(
         _, person_data, person_elapsed_early = await timed_task(
             "person", repo.search_people(people_query, limit=ac_limit * 2)
         )
-        if person_data and not isinstance(person_data, BaseException) and hasattr(
-            person_data, "docs"
+        if (
+            person_data
+            and not isinstance(person_data, BaseException)
+            and hasattr(person_data, "docs")
         ):
             parsed_all = [parse_doc(doc) for doc in _extract_docs(person_data)]
             filtered = [
                 p
                 for p in parsed_all
-                if is_person_autocomplete_match(
-                    q, p.get("search_title", "") or p.get("name", "")
-                )
+                if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
             ]
             person_full_early = sorted(filtered, key=lambda p: _rank_person_result(p, q))
             credit_person = _select_exact_person_with_credits(person_full_early, q)
@@ -1614,9 +1607,7 @@ async def autocomplete_stream(
         ] = "author"
     if "book" in sources:
         tasks_dict[
-            asyncio.create_task(
-                timed_task("book", repo.search_books(books_query, limit=ac_limit))
-            )
+            asyncio.create_task(timed_task("book", repo.search_books(books_query, limit=ac_limit)))
         ] = "book"
     if "list" in sources:
         tasks_dict[
@@ -1781,11 +1772,7 @@ async def autocomplete_stream(
                 if data and not isinstance(data, BaseException):
                     results = data.get("results") if isinstance(data, dict) else None
                     if isinstance(results, list):
-                        list_full = [
-                            item
-                            for item in results
-                            if isinstance(item, dict)
-                        ]
+                        list_full = [item for item in results if isinstance(item, dict)]
                         streamed_full["list"] = list_full
                         parsed_results = list_full[:ac_limit]
 
@@ -2093,9 +2080,7 @@ async def search(
     if "list" in requested_sources:
         # Public Lists index: text queries search name/description/topics/item
         # titles; filter-only searches fall back to freshness-ordered browse.
-        timed_tasks.append(
-            timed_task("list", search_public_lists(q=query_text, limit=limit))
-        )
+        timed_tasks.append(timed_task("list", search_public_lists(q=query_text, limit=limit)))
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
@@ -2213,9 +2198,7 @@ async def search(
                 for p in parsed_people
                 if is_person_autocomplete_match(q, p.get("search_title", "") or p.get("name", ""))
             ]
-            person_full = sorted(
-                filtered_people, key=lambda p: _rank_person_result(p, q)
-            )
+            person_full = sorted(filtered_people, key=lambda p: _rank_person_result(p, q))
         else:
             person_full = parsed_people
         full_results["person"] = person_full
@@ -2645,8 +2628,10 @@ async def search_stream(
         _, person_data, person_elapsed_early = await timed_task(
             "person", repo.search_people(people_query, limit=limit * 2)
         )
-        if person_data and not isinstance(person_data, BaseException) and hasattr(
-            person_data, "docs"
+        if (
+            person_data
+            and not isinstance(person_data, BaseException)
+            and hasattr(person_data, "docs")
         ):
             parsed_people = [parse_doc(doc) for doc in _extract_docs(person_data)]
             filtered_people = [
@@ -2713,9 +2698,7 @@ async def search_stream(
         ] = "book"
     if "list" in requested_sources:
         tasks_dict[
-            asyncio.create_task(
-                timed_task("list", search_public_lists(q=query_text, limit=limit))
-            )
+            asyncio.create_task(timed_task("list", search_public_lists(q=query_text, limit=limit)))
         ] = "list"
 
     # Brokered sources - apply timeout
@@ -2843,8 +2826,7 @@ async def search_stream(
         if all_exact:
             yield ("exact_matches_final", all_exact)
         logger.info(
-            f"Search stream '{q}' latency: total={total_elapsed:.0f}ms | "
-            f"{' | '.join(timing_parts)}"
+            f"Search stream '{q}' latency: total={total_elapsed:.0f}ms | {' | '.join(timing_parts)}"
         )
         return
 
@@ -2888,9 +2870,7 @@ async def search_stream(
                                 q, p.get("search_title", "") or p.get("name", "")
                             )
                         ]
-                        person_full = sorted(
-                            filtered, key=lambda p: _rank_person_result(p, q)
-                        )
+                        person_full = sorted(filtered, key=lambda p: _rank_person_result(p, q))
                     else:
                         person_full = parsed_all
                     streamed_full["person"] = person_full
@@ -2900,9 +2880,7 @@ async def search_stream(
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if q:
-                        podcast_full = sorted(
-                            parsed_all, key=lambda p: _rank_podcast_result(p, q)
-                        )
+                        podcast_full = sorted(parsed_all, key=lambda p: _rank_podcast_result(p, q))
                     else:
                         podcast_full = parsed_all
                     streamed_full["podcast"] = podcast_full
@@ -2932,9 +2910,7 @@ async def search_stream(
                 if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                     parsed_all = [parse_doc(doc) for doc in data.docs]
                     if q:
-                        book_full = sorted(
-                            parsed_all, key=lambda b: _rank_book_result(b, q)
-                        )
+                        book_full = sorted(parsed_all, key=lambda b: _rank_book_result(b, q))
                     else:
                         book_full = parsed_all
                     streamed_full["book"] = book_full
@@ -3106,7 +3082,9 @@ class DetailsRequest(BaseModel):
     mc_type: str  # "tv", "movie", or "person"
     mc_subtype: str | None = None
     rss_details: bool = False  # For podcasts: fetch and parse RSS feed episodes
-    force: bool = False  # When True, fetch live data from upstream API (e.g. TMDB credits for person)
+    force: bool = (
+        False  # When True, fetch live data from upstream API (e.g. TMDB credits for person)
+    )
 
     @property
     def resolved_source_id(self) -> str | None:
@@ -3352,7 +3330,7 @@ async def get_details_batch(
 
     # Index-only fast path: single MGET
     try:
-        raw_docs: list[object] = await redis.json().mget(keys, "$")  # type: ignore[misc]
+        raw_docs = await cast(Awaitable[list[object]], redis.json().mget(keys, "$"))
     except Exception as e:
         logger.warning("JSON.MGET failed, falling back to individual lookups: %s", e)
         requests = [
@@ -3385,6 +3363,70 @@ async def get_details_batch(
                 pass
         out.append(result)
 
+    return out
+
+
+def _unwrap_redis_json_doc(raw: object) -> dict[str, Any] | None:
+    if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+        return cast(dict[str, Any], raw[0])
+    if isinstance(raw, dict):
+        return cast(dict[str, Any], raw)
+    return None
+
+
+async def get_flixpatrol_batch(
+    mc_ids: list[str],
+    mc_type: str,
+    mc_subtype: str | None = None,
+) -> list[dict[str, Any]]:
+    """Read stored ``flixpatrol`` payloads from Redis media documents only.
+
+    Does not call FlixPatrol or TMDB. Missing documents return an error object;
+    documents without history return ``flixpatrol: null``.
+    """
+    mt_lower = mc_type.lower()
+    if mt_lower not in ("movie", "tv"):
+        return [
+            {
+                "mc_id": mid,
+                "error": "mc_type must be movie or tv",
+                "status_code": 400,
+            }
+            for mid in mc_ids
+        ]
+
+    redis = get_redis()
+    prefix = _key_prefix_for(mc_type, mc_subtype)
+    keys = [f"{prefix}{mid}" for mid in mc_ids]
+
+    try:
+        raw_docs: list[object] = await redis.json().mget(keys, "$")  # type: ignore[misc]
+    except Exception as exc:
+        logger.warning("JSON.MGET failed for FlixPatrol lookup: %s", exc)
+        return [
+            {
+                "mc_id": mid,
+                "error": str(exc),
+                "status_code": 500,
+            }
+            for mid in mc_ids
+        ]
+
+    out: list[dict[str, Any]] = []
+    for mid, raw in zip(mc_ids, raw_docs, strict=True):
+        doc = _unwrap_redis_json_doc(raw)
+        if doc is None:
+            out.append(
+                {
+                    "mc_id": mid,
+                    "error": "Not found in index",
+                    "status_code": 404,
+                }
+            )
+            continue
+        flixpatrol_raw = doc.get("flixpatrol")
+        flixpatrol = flixpatrol_raw if isinstance(flixpatrol_raw, dict) else None
+        out.append({"mc_id": mid, "flixpatrol": flixpatrol})
     return out
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Canonical production deploy for this branch.
-# Deploys Cloud Run search API + ETL VM, then backfills person filmography IDs
-# on public Redis so exact-match search can rewrite tv/movie from credits.
+# Deploys the Cloud Run search API and the ETL VM, then stamps historical
+# US FlixPatrol data onto existing public Redis media documents.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,7 +10,7 @@ cd "$ROOT"
 make deploy-web
 make deploy-etl
 
-# Existing person:* docs need movie_credit_ids / tv_credit_ids.
-# Requires IAP tunnel (make tunnel) and TMDB_READ_TOKEN from config/etl.dev.env.
-# Override with BACKFILL_ARGS, e.g. BACKFILL_ARGS="--limit 100" or "--dry-run".
-make backfill-person-credit-ids REDIS=dev ARGS="${BACKFILL_ARGS:-}"
+# Requires FLIXPATROL_USERNAME and FLIXPATROL_API_KEY in config/etl.dev.env,
+# plus an IAP tunnel (make tunnel) because ENV=dev writes through localhost:6381.
+# Override with BACKFILL_ARGS, e.g. BACKFILL_ARGS="--start 2025-01-01 --end 2025-01-31".
+make backfill-flixpatrol ENV=dev write=1 ARGS="${BACKFILL_ARGS:-}"
