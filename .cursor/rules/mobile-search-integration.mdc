@@ -22,6 +22,7 @@ const API_BASE_URL = "https://redis-search-api-dev-wabm4u2pza-uc.a.run.app";
 | `/api/autocomplete` | GET | Fast autocomplete for type-ahead search |
 | `/api/autocomplete/stream` | GET | SSE streaming autocomplete (results arrive as available) |
 | `/api/search` | GET | Full search with source filtering |
+| `/api/flixpatrol` | POST | Full stored FlixPatrol history for one or more movie/TV documents |
 | `/health` | GET | Health check endpoint |
 
 ---
@@ -63,6 +64,11 @@ Key points:
 - Exact-match items have `cast` restructured from `string[]` to `ExactMatchCastEntry[]`.
 - SSE streams emit `result`, `exact_match`, and `done` event types.
 - `/api/details` returns enriched types (`MediaDetailResponse`, `PersonDetailResponse`, etc.) with additional live-API data.
+- Search results and `/api/details` may include a payload-only `flixpatrol` summary.
+  Its `records` array contains only the earliest and latest stored chart rows.
+- Use `POST /api/flixpatrol` when the client needs the complete FlixPatrol history.
+  This endpoint returns `{ mc_id, flixpatrol }` and supports either `mc_id` or
+  comma-separated `mc_ids`, with required `mc_type=movie|tv`.
 
 See `src/contracts/` for the complete field-level documentation.
 
