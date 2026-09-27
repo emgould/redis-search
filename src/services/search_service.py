@@ -3379,10 +3379,11 @@ async def get_flixpatrol_batch(
     mc_type: str,
     mc_subtype: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Read stored ``flixpatrol`` payloads from Redis media documents only.
+    """Read full FlixPatrol history from ``flixpatrol:{mc_id}`` sidecar keys.
 
-    Does not call FlixPatrol or TMDB. Missing documents return an error object;
-    documents without history return ``flixpatrol: null``.
+    Media document existence is checked via ``media:{mc_id}``. Does not call FlixPatrol
+    or TMDB. Missing media documents return an error object; missing sidecar returns
+    ``flixpatrol: null``.
     """
     mt_lower = mc_type.lower()
     if mt_lower not in ("movie", "tv"):
@@ -3397,10 +3398,16 @@ async def get_flixpatrol_batch(
 
     redis = get_redis()
     prefix = _key_prefix_for(mc_type, mc_subtype)
-    keys = [f"{prefix}{mid}" for mid in mc_ids]
+    media_keys = [f"{prefix}{mid}" for mid in mc_ids]
+    sidecar_keys = [f"flixpatrol:{mid}" for mid in mc_ids]
 
     try:
-        raw_docs: list[object] = await redis.json().mget(keys, "$")  # type: ignore[misc]
+        raw_media: list[object] = await cast(
+            Awaitable[list[object]], redis.json().mget(media_keys, "$")
+        )
+        raw_sidecars: list[object] = await cast(
+            Awaitable[list[object]], redis.json().mget(sidecar_keys, "$")
+        )
     except Exception as exc:
         logger.warning("JSON.MGET failed for FlixPatrol lookup: %s", exc)
         return [
@@ -3413,8 +3420,10 @@ async def get_flixpatrol_batch(
         ]
 
     out: list[dict[str, Any]] = []
-    for mid, raw in zip(mc_ids, raw_docs, strict=True):
-        doc = _unwrap_redis_json_doc(raw)
+    for mid, raw_media_doc, raw_sidecar in zip(
+        mc_ids, raw_media, raw_sidecars, strict=True
+    ):
+        doc = _unwrap_redis_json_doc(raw_media_doc)
         if doc is None:
             out.append(
                 {
@@ -3424,8 +3433,8 @@ async def get_flixpatrol_batch(
                 }
             )
             continue
-        flixpatrol_raw = doc.get("flixpatrol")
-        flixpatrol = flixpatrol_raw if isinstance(flixpatrol_raw, dict) else None
+        sidecar_doc = _unwrap_redis_json_doc(raw_sidecar)
+        flixpatrol = sidecar_doc if isinstance(sidecar_doc, dict) else None
         out.append({"mc_id": mid, "flixpatrol": flixpatrol})
     return out
 

@@ -463,7 +463,7 @@ endef
 
 define FLIXPATROL_ENV
 set -a && \
-if [ "$(ENV)" = "local" ]; then source config/local.env; \
+if [ "$(ENV)" = "local" ]; then source config/etl.dev.env; source config/local.env; \
 elif [ "$(ENV)" = "dev" ]; then source config/etl.dev.env; export REDIS_HOST=localhost; export REDIS_PORT=6381; \
 else echo "ERROR: ENV=local|dev is required (e.g. make backfill-flixpatrol ENV=dev)"; exit 1; fi; \
 set +a
@@ -624,7 +624,7 @@ backfill-flixpatrol:
 		FLIX_ARGS="$(ARGS)"; \
 		[ -n "$(start)" ] && FLIX_ARGS="$$FLIX_ARGS --start $(start)"; \
 		[ -n "$(end)" ] && FLIX_ARGS="$$FLIX_ARGS --end $(end)"; \
-		python -m api.subapi.flixpatrol.history $$FLIX_ARGS; \
+		python -m api.subapi.flixpatrol.history $$FLIX_ARGS && \
 		if [ "$(write)" = "1" ]; then \
 			export FLIXPATROL_TITLES_DIR="$${FLIXPATROL_TITLES_DIR:-$$PWD/data/flixpatrol/us-titles}"; \
 			echo "Stamping Redis from $$FLIXPATROL_TITLES_DIR ..."; \

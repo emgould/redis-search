@@ -362,8 +362,10 @@ All keys are present when values are available, and absent fields are omitted by
 - `spoken_languages`
 - `microgenres`: compact AI classification object when available:
   `{ confidence, microgenre_scores, rationale }`
-- `flixpatrol`: historical United States chart object when applied from title files.
-  Payload only. Shape: `{ peak_total, peak_rank, max_days, last_date, start_date, records }`.
+- `flixpatrol`: historical United States chart summary on the media document (payload only).
+  Shape: `{ peak_total, peak_rank, max_days, last_date, start_date, records }` where
+  `records` is abridged to the first and last chart rows. Full history lives at Redis key
+  `flixpatrol:{mc_id}` and is returned by `POST /api/flixpatrol` only.
   `peak_total` is the maximum `valueTotal` across records, not a sum.
 - `created_at`, `modified_at`, `_source`
 - optional: `also_known_as` when populated
@@ -394,7 +396,9 @@ All keys are present when values are available, and absent fields are omitted by
 
 `microgenres` is stored in Redis JSON but is not indexed by RediSearch. Consumers can read it from full document fetches and change feeds, but cannot filter on microgenre IDs until a future schema migration adds explicit indexed fields.
 
-`flixpatrol` is also payload only. The TMDB nightly load preserves an existing block and replaces it when `data/flixpatrol/us-titles/{mc_id}.json` exists or `FLIXPATROL_TITLES_DIR` is set. See [flixpatrol-us-history.mdc](flixpatrol-us-history.mdc).
+`flixpatrol` is payload only on `idx:media`. The TMDB nightly load preserves an existing
+abridged block and replaces it (and the `flixpatrol:{mc_id}` sidecar) when a title file
+exists. See [flixpatrol-us-history.mdc](flixpatrol-us-history.mdc).
 
 ### Example documents
 

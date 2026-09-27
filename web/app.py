@@ -3437,8 +3437,9 @@ async def api_get_flixpatrol(
 ):
     """Return stored historical FlixPatrol data for one or more media documents.
 
-    Reads the Redis payload field ``flixpatrol`` only. Does not call FlixPatrol live
-    or return the full media document. Missing history returns ``flixpatrol: null``.
+    Reads the full history from Redis key ``flixpatrol:{mc_id}`` (not the abridged
+    ``flixpatrol`` field on the media document). Does not call FlixPatrol live or return
+    the full media document. Missing sidecar returns ``flixpatrol: null``.
     """
     id_list: list[str] = []
     is_batch = mc_ids is not None

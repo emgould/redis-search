@@ -21,8 +21,7 @@ make backfill-flixpatrol ENV=dev start=2025-01-01 end=2025-01-31 write=1
 make backfill-flixpatrol ENV=dev ARGS="--transform-only"
 ```
 
-`ENV=dev` loads `config/etl.dev.env` and points Redis at `localhost:6381` (IAP tunnel). `write=1`
-stamps `$.flixpatrol` from `data/flixpatrol/us-titles` via `etl.flixpatrol_payload`.
+`ENV=dev` loads `config/etl.dev.env` and points Redis at `localhost:6381` (IAP tunnel). `ENV=local` loads the FlixPatrol credentials from `config/etl.dev.env`, then applies Redis settings from `config/local.env`. `write=1` stamps `$.flixpatrol` only after the history fetch succeeds.
 
 Direct module invocation (same repo, `PYTHONPATH=src` set by Make):
 
@@ -69,12 +68,20 @@ python -m api.subapi.flixpatrol.history --transform-only
 - Batch responses are a JSON array in request order.
 - Missing Redis document: single request returns HTTP 404; batch items include
   `{ "mc_id", "error", "status_code": 404 }`.
-- Missing stored history on an existing document: HTTP 200 with `"flixpatrol": null`.
+- Missing stored history on an existing document: HTTP 200 with `"flixpatrol": null`
+  (media doc exists but `flixpatrol:{mc_id}` sidecar is absent).
+- Returns the **full** history object from the sidecar key, including every `records` row.
 - Does not call FlixPatrol live and does not return the full media document.
 
 ## Redis
 
-- Payload field `flixpatrol` on `idx:media` documents (not indexed).
-- TMDB nightly load copies an existing block forward; title files under
-  `data/flixpatrol/us-titles` or `FLIXPATROL_TITLES_DIR` replace it when present.
-- Bulk stamp: `PYTHONPATH=src python -m etl.flixpatrol_payload` with Redis env vars.
+- `media:{mc_id}` field `flixpatrol` (not indexed): summary fields plus `records` abridged
+  to the first and last chart rows only (search/details payload size control).
+- `flixpatrol:{mc_id}` JSON key: complete history object with all `records` (not in
+  `idx:media`). Only `POST /api/flixpatrol` reads this key.
+- TMDB nightly load copies an existing media `flixpatrol` block forward without rewriting
+  the sidecar; title files under `data/flixpatrol/us-titles` or `FLIXPATROL_TITLES_DIR`
+  replace the abridged media field and refresh the sidecar when present.
+- Bulk stamp: `PYTHONPATH=src python -m etl.flixpatrol_payload` writes both keys.
+  Re-run `make backfill-flixpatrol ... write=1` to shrink documents that still carry
+  full `records` on the media doc from an earlier stamp.

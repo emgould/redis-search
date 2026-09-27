@@ -49,7 +49,11 @@ from core.streaming_providers import (
     TV_SHOW_CUTOFF_DATE,
 )
 from etl.documentary_filter import is_documentary, is_eligible_documentary
-from etl.flixpatrol_payload import attach_flixpatrol, flixpatrol_titles_dir
+from etl.flixpatrol_payload import (
+    attach_flixpatrol,
+    flixpatrol_sidecar_key,
+    flixpatrol_titles_dir,
+)
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 from utils.get_logger import get_logger
@@ -845,7 +849,17 @@ class TMDBChangesETL(TMDBService):
                         redis_doc["modified_at"] = ma
                         redis_doc["_source"] = src
                         if media_type != "person":
-                            attach_flixpatrol(redis_doc, existing_dict, flixpatrol_titles)
+                            sidecar_full = attach_flixpatrol(
+                                redis_doc, existing_dict, flixpatrol_titles
+                            )
+                            if sidecar_full is not None:
+                                mc_id_val = redis_doc.get("mc_id")
+                                if isinstance(mc_id_val, str) and mc_id_val:
+                                    write_pipe.json().set(
+                                        flixpatrol_sidecar_key(mc_id_val),
+                                        "$",
+                                        sidecar_full,
+                                    )
                         write_pipe.json().set(key, "$", redis_doc)
                         stats.load_phase.items_success += 1
                     await write_pipe.execute()

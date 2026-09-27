@@ -122,16 +122,27 @@ class TestFlixPatrolEndpoint:
 
 class TestFlixPatrolBatchService:
     @pytest.mark.asyncio
-    async def test_reads_flixpatrol_from_redis(
+    async def test_reads_full_history_from_sidecar(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        json_module = MagicMock()
-        json_module.mget = AsyncMock(
-            return_value=[
-                [{"mc_id": "tmdb_movie_1", "flixpatrol": {"peak_total": 100}}],
+        full_history = {
+            "peak_total": 100,
+            "records": [{"ranking": 1}, {"ranking": 2}, {"ranking": 3}],
+        }
+
+        async def mget(keys: list[str], _path: str) -> list[object]:
+            if keys[0].startswith("media:"):
+                return [
+                    [{"mc_id": "tmdb_movie_1"}],
+                    [None],
+                ]
+            return [
+                [full_history],
                 [None],
             ]
-        )
+
+        json_module = MagicMock()
+        json_module.mget = AsyncMock(side_effect=mget)
         redis = MagicMock()
         redis.json.return_value = json_module
         monkeypatch.setattr(search_service, "get_redis", lambda: redis)
@@ -142,7 +153,25 @@ class TestFlixPatrolBatchService:
         )
         assert results[0] == {
             "mc_id": "tmdb_movie_1",
-            "flixpatrol": {"peak_total": 100},
+            "flixpatrol": full_history,
         }
         assert results[1]["mc_id"] == "tmdb_movie_2"
         assert results[1]["status_code"] == 404
+
+    @pytest.mark.asyncio
+    async def test_media_without_sidecar_returns_null(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def mget(keys: list[str], _path: str) -> list[object]:
+            if keys[0].startswith("media:"):
+                return [[{"mc_id": "tmdb_movie_1", "flixpatrol": {"peak_total": 1}}]]
+            return [[None]]
+
+        json_module = MagicMock()
+        json_module.mget = AsyncMock(side_effect=mget)
+        redis = MagicMock()
+        redis.json.return_value = json_module
+        monkeypatch.setattr(search_service, "get_redis", lambda: redis)
+
+        results = await search_service.get_flixpatrol_batch(["tmdb_movie_1"], "movie")
+        assert results[0] == {"mc_id": "tmdb_movie_1", "flixpatrol": None}
