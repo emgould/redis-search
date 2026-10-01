@@ -1,8 +1,9 @@
 # Set PYTHONPATH globally to include src/ directory for all make commands
 export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
+MM_PROXY_PORT ?= 8099
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol push-flixpatrol-to-mm microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -630,6 +631,22 @@ backfill-flixpatrol:
 			echo "Stamping Redis from $$FLIXPATROL_TITLES_DIR ..."; \
 			python -m etl.flixpatrol_payload; \
 		fi'
+
+# Push existing FlixPatrol-enriched media docs to Media Manager metadata-only.
+# Finalize is the default; use ARGS="--dry-run" or ARGS="--no-finalize".
+# Usage: make push-flixpatrol-to-mm ENV=local
+#        make push-flixpatrol-to-mm ENV=dev ARGS="--dry-run --limit 20"
+push-flixpatrol-to-mm:
+	@bash -c 'source venv/bin/activate && $(FLIXPATROL_ENV) && \
+		if [ "$(ENV)" = "dev" ]; then \
+			if ! curl -fsS --max-time 5 http://127.0.0.1:$(MM_PROXY_PORT)/health >/dev/null; then \
+				echo "ERROR: Start the authenticated Media Manager proxy first:"; \
+				echo "  gcloud run services proxy media-manager-etl-development --project=media-circle --region=us-central1 --port=$(MM_PROXY_PORT)"; \
+				exit 1; \
+			fi; \
+			export MEDIA_MANAGER_API_URL="http://127.0.0.1:$(MM_PROXY_PORT)"; \
+		fi; \
+		PYTHONPATH=src:$$PWD python scripts/push_flixpatrol_to_media_manager.py $(ARGS)'
 
 # Batch classify Redis media docs into microgenre JSONL sidecars
 # Usage: make microgenre-batch REDIS=local ARGS="--media-type movie --take 10 --dry-run"

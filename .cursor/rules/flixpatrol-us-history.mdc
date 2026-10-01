@@ -85,3 +85,28 @@ python -m api.subapi.flixpatrol.history --transform-only
 - Bulk stamp: `PYTHONPATH=src python -m etl.flixpatrol_payload` writes both keys.
   Re-run `make backfill-flixpatrol ... write=1` to shrink documents that still carry
   full `records` on the media doc from an earlier stamp.
+
+## Media Manager propagation
+
+The Redis backfill does not automatically enqueue the updated documents in Media
+Manager. To propagate existing FlixPatrol metadata without rerunning the fetch:
+
+```bash
+make push-flixpatrol-to-mm ENV=local
+make push-flixpatrol-to-mm ENV=dev
+make push-flixpatrol-to-mm ENV=local ARGS="--dry-run --limit 20"
+```
+
+The command scans `media:*`, selects documents with a `flixpatrol` object, applies
+the normal Media Manager eligibility filter, and submits eligible documents in
+`metadata_only=True` batches. Finalization is enabled by default; use
+`ARGS="--no-finalize"` to queue without publishing. `ENV=dev` requires the Redis
+IAP tunnel and an authenticated Media Manager proxy running on port 8099:
+
+```bash
+gcloud run services proxy media-manager-etl-development \
+  --project=media-circle --region=us-central1 --port=8099
+```
+
+The Make target verifies that proxy and overrides the protected Cloud Run URL
+with `http://127.0.0.1:8099`. `ENV=local` uses the local Media Manager URL.
