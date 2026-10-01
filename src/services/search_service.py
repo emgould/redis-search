@@ -24,6 +24,7 @@ from core.iptc import expand_query_string, get_search_aliases
 from core.ranking import (
     EXACT_MATCH_SOURCE_PRIORITY,
     is_exact_match,
+    media_titles_match_exactly,
     score_book_result,
     score_media_result,
     score_person_result,
@@ -226,20 +227,24 @@ def _effective_date_yyyymm(source: str, item: dict[str, Any]) -> int:
 
 def _exact_match_media_sort_key(
     candidate: tuple[str, dict[str, Any]],
-) -> tuple[int, int, float, int]:
+    query: str,
+) -> tuple[int, int, int, float, int]:
     """Sort key for media exact-match candidates.
 
     Ordering (all via ``min()``):
-      1. Viable first                   (has providers or in theatrical window)
-      2. Most recent ``YYYYMM`` first   (negate for ascending min)
-      3. Highest popularity first        (negate for ascending min)
-      4. Movie before TV                 (lower source-priority index)
+      1. Same-word title before a space-collapsed compact match
+      2. Viable first                   (has providers or in theatrical window)
+      3. Most recent ``YYYYMM`` first   (negate for ascending min)
+      4. Highest popularity first        (negate for ascending min)
+      5. Movie before TV                 (lower source-priority index)
     """
     source, item = candidate
+    tightness = 0 if media_titles_match_exactly(query, item) else 1
     viable = 0 if (_has_watch_providers(item) or _in_theatrical_window(item)) else 1
     yyyymm = _effective_date_yyyymm(source, item)
     popularity = float(item.get("popularity") or 0)
     return (
+        tightness,
         viable,
         -yyyymm,
         -popularity,
@@ -253,7 +258,8 @@ def _pick_exact_match(
     """
     Pick the single best exact match from search results.
 
-    Media candidates are filtered (viable filter), then sorted by effective-date
+    A same-word title beats a space-collapsed compact match. Remaining media
+    candidates are filtered (viable filter), then sorted by effective-date
     YYYYMM descending, popularity descending, movie-before-tv.
     Non-media sources fall back to static cross-source priority.
     """
@@ -269,6 +275,15 @@ def _pick_exact_match(
                 media_exact_candidates.append((source, item))
 
     if media_exact_candidates:
+        best_tightness = min(
+            0 if media_titles_match_exactly(q, item) else 1
+            for _, item in media_exact_candidates
+        )
+        media_exact_candidates = [
+            pair
+            for pair in media_exact_candidates
+            if (0 if media_titles_match_exactly(q, pair[1]) else 1) == best_tightness
+        ]
         if len(media_exact_candidates) > 1:
             viable = [
                 (s, item)
@@ -280,7 +295,7 @@ def _pick_exact_match(
 
         _, best_media_item = min(
             media_exact_candidates,
-            key=_exact_match_media_sort_key,
+            key=lambda pair: _exact_match_media_sort_key(pair, q),
         )
         return _normalize_exact_match_cast(best_media_item)
 
@@ -301,8 +316,9 @@ def _collect_exact_matches(
 ) -> list[dict[str, Any]]:
     """Return all exact-match items across sources, ranked.
 
-    Media items are sorted by effective-date YYYYMM descending, then popularity
-    descending, then movie-before-tv.  Non-media items follow the static
+    Media items are sorted by same-word title before a collapsed compact match,
+    then effective-date YYYYMM descending, then popularity descending, then
+    movie-before-tv.  Non-media items follow the static
     ``EXACT_MATCH_SOURCE_PRIORITY`` order.
 
     When *hero* is provided its ``mc_id`` is guaranteed to be at index 0
@@ -325,7 +341,7 @@ def _collect_exact_matches(
             media_candidates.append((source, item))
 
     if media_candidates:
-        media_candidates.sort(key=_exact_match_media_sort_key)
+        media_candidates.sort(key=lambda pair: _exact_match_media_sort_key(pair, q))
         collected.extend(_normalize_exact_match_cast(item) for _, item in media_candidates)
 
     for source in EXACT_MATCH_SOURCE_PRIORITY:
@@ -1197,7 +1213,7 @@ async def resolve(
         rank: tuple[float, ...] = m.pop("_rank", (999, 9999, 0.0))
         src = m.get("source", "")
         if src in ("movie", "tv"):
-            return _exact_match_media_sort_key((src, m))
+            return _exact_match_media_sort_key((src, m), q)
         return rank
 
     matches.sort(key=_resolve_sort_key)
