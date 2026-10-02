@@ -304,6 +304,8 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 **Ranking:** `score_media_result()` compares compact forms at tier 1 (exact) and tiers 11/13 (substring/prefix). `_rerank_results()` also promotes compact matches for `/api/autocomplete/minimal`. Fuzzy near-miss scoring in `/api/resolve` considers compact Levenshtein distance when `title_compact` is available.
 
+**Exact match:** a same-word title outranks a space-collapsed compact hit. `"VisionQuest"` is a tighter match for `VisionQuest` than for `Vision Quest`. Compact equality still qualifies as an exact-match candidate and still ranks in the result list; it loses the hero pick when a same-word title is present.
+
 **Backfill:** Existing `media:*` documents must be populated via `scripts/backfill_title_compact.py`. The `--alter-index` flag issues `FT.ALTER` to add the field to the live `idx:media` index. New documents get the field automatically via `document_to_redis()`.
 
 **Verification:** Run `python scripts/verify_title_compact.py` (loads `ENV_FILE` / `config/local.env` by default). Use `--redis` to ping Redis, check `FT.INFO idx:media` for `title_compact`, and sample `JSON.GET` on a `media:*` key.
@@ -312,10 +314,11 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 - JSON search/autocomplete responses expose both `exact_match` (single hero pick) and `exact_matches` (all qualifying items, ranked array including the hero pick).
 - For media (`movie`/`tv`), when multiple exact matches exist:
-  1. **Viable filter:** candidates without watch providers are eliminated — unless they are movies in their theatrical window (~6 months) or unless no candidates survive the filter.
-  2. **Sort by effective date (YYYYMM) descending:** `release_date` for movies, `last_air_date` for TV, rounded to year-month. Most recent month-bucket wins.
-  3. **Within same YYYYMM:** higher `popularity` wins.
-  4. **Within same YYYYMM and popularity:** movie before TV.
+  1. **Same-word title first:** case and punctuation are ignored, spaces are not. A space-collapsed compact match is kept, and it loses to a same-word title.
+  2. **Viable filter:** within that tightness, candidates without watch providers are eliminated — unless they are movies in their theatrical window (~6 months) or unless no candidates survive the filter.
+  3. **Sort by effective date (YYYYMM) descending:** `release_date` for movies, `last_air_date` for TV, rounded to year-month. Most recent month-bucket wins.
+  4. **Within same YYYYMM:** higher `popularity` wins.
+  5. **Within same YYYYMM and popularity:** movie before TV.
 - Non-media exact matches fall back to the static source-priority ordering (`person > podcast > book > author`).
 - Stream responses emit provisional `exact_match` events during the search, then an authoritative `exact_match_final` event and an `exact_matches_final` event (full ranked array) at stream completion.
 

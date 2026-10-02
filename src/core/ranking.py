@@ -501,6 +501,42 @@ EXACT_MATCH_SOURCE_PRIORITY: tuple[str, ...] = (
 )
 
 
+def _words_for_exact_title(value: str) -> str:
+    """Lowercase and drop punctuation, keeping spaces as word boundaries.
+
+    ``"It's Complicated"`` and ``"Its Complicated"`` both become
+    ``"its complicated"``. ``"VisionQuest"`` stays one word and does not
+    equal ``"Vision Quest"``.
+    """
+    words: list[str] = []
+    current: list[str] = []
+    for char in value.lower():
+        if char.isalnum():
+            current.append(char)
+        elif current:
+            words.append("".join(current))
+            current = []
+    if current:
+        words.append("".join(current))
+    return " ".join(words)
+
+
+def media_titles_match_exactly(query: str, doc: dict[str, Any]) -> bool:
+    """Return True when the query and media title are the same words.
+
+    Case and punctuation are ignored. Spaces are not. ``"VisionQuest"``
+    matches ``VisionQuest`` and does not match ``Vision Quest``. The
+    collapsed form remains a lower-scoring compact hit.
+    """
+    title_raw = (doc.get("search_title") or doc.get("title") or "").strip()
+    if not title_raw:
+        return False
+    query_clean = query.strip()
+    if query_clean.lower() == title_raw.lower():
+        return True
+    return _words_for_exact_title(query_clean) == _words_for_exact_title(title_raw)
+
+
 def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
     """
     Return True if doc is an exact match for the query (tier 0-1 title/name match).
@@ -509,7 +545,8 @@ def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
     a known entity (e.g., "the godfather" -> movie "The Godfather").
 
     Definition of exact:
-    - Media (tv, movie): tier 0-1 (exact title raw/normalized)
+    - Media (tv, movie): tier 0-1, including a space-collapsed compact title.
+      Same-word matches outrank collapsed matches when one hero is chosen.
     - Person: tier 0-1 (exact name)
     - Book: tier 0-1 (exact title)
     - Podcast: tier 0-1 (exact title raw/normalized)
