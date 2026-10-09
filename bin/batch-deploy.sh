@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Canonical production deploy for this branch.
-# Search ranking runs in the Cloud Run API. ETL and Redis data are unchanged.
+# The movie runtime gate runs inside the ETL VM container (3 AM Eastern cron).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-make deploy-web
+make deploy-etl

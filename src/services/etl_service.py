@@ -538,8 +538,16 @@ class TMDBETLService:
                         or 0
                     )
 
-                runtime = item.get("runtime") or 0
-                if runtime < 50 and vote_count < 10:
+                raw_runtime = item.get("runtime")
+                runtime_missing = (
+                    not isinstance(raw_runtime, (int, float)) or raw_runtime <= 0
+                )
+                runtime = raw_runtime if isinstance(raw_runtime, (int, float)) else 0
+                # Missing runtime is normal on a new major-provider release.
+                # A known short with few votes is still excluded.
+                if not (has_major_provider_by_id and runtime_missing) and (
+                    runtime < 50 and vote_count < 10
+                ):
                     skipped_in_file += 1
                     continue
 

@@ -110,7 +110,9 @@ def _passes_backfill_filter(item: dict[str, Any], media_type: str) -> bool:
     """Lightweight filter for backfill candidates.
 
     Requires poster + major provider. Documentaries route through existing
-    documentary eligibility checks. Movies require runtime >= 40.
+    documentary eligibility checks. Movies with a known runtime under 40
+    minutes are excluded. A missing runtime does not exclude a major-provider
+    movie.
     """
     if not item.get("poster_path"):
         return False
@@ -127,8 +129,8 @@ def _passes_backfill_filter(item: dict[str, Any], media_type: str) -> bool:
         return False
 
     if media_type == "movie":
-        runtime = item.get("runtime") or 0
-        if runtime < 40:
+        raw_runtime = item.get("runtime")
+        if isinstance(raw_runtime, (int, float)) and 0 < raw_runtime < 40:
             return False
 
     return True

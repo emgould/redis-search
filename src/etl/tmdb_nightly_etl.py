@@ -417,10 +417,21 @@ class TMDBChangesETL(TMDBService):
                 f"skipping popularity/vote_count gates"
             )
 
-        # For movies: must have runtime
+        # Movies with a known runtime under 40 minutes are shorts.
+        # A missing runtime (null or 0) does not reject a major-provider title;
+        # TMDB often leaves runtime unset on new releases.
         if media_type == "movie":
-            runtime = item.get("runtime") or 0
-            if runtime < 40:
+            raw_runtime = item.get("runtime")
+            runtime_missing = not isinstance(raw_runtime, (int, float)) or raw_runtime <= 0
+            if has_major_provider and runtime_missing:
+                log_fn(
+                    f"Filter: {item_name} on major provider, runtime missing, "
+                    "skipping runtime gate"
+                )
+            elif runtime_missing or (
+                isinstance(raw_runtime, (int, float)) and raw_runtime < 40
+            ):
+                log_fn(f"Filter reject {item_name}: runtime={raw_runtime}")
                 return False
 
         # Check release info (raw TMDB release_dates structure)
