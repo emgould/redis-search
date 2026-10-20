@@ -131,7 +131,11 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
             ]
         )
         if metadata.mm_queue_drained is not None:
-            drain_status = "✓ drained" if metadata.mm_queue_drained else f"✗ {metadata.mm_queue_drain_error or 'failed'}"
+            drain_status = (
+                "✓ drained"
+                if metadata.mm_queue_drained
+                else f"✗ {metadata.mm_queue_drain_error or 'failed'}"
+            )
             lines.append(f"  Queue Drain:      {drain_status}")
         if metadata.mm_indexes_rebuilt:
             for idx in metadata.mm_indexes_rebuilt:
@@ -180,7 +184,7 @@ def build_summary_text(metadata: "ETLRunMetadata") -> str:
             f"{'─' * 60}",
             "  LINKS",
             f"{'─' * 60}",
-            f"  GCS Metadata: gs://mc-redis-etl/redis-search/etl/runs/{metadata.run_date}/",
+            f"  GCS Metadata: gs://mc-redis-etl-dev/redis-search/etl/runs/{metadata.run_date}/",
             "",
             f"{'=' * 60}",
             "  This is an automated message from the Redis Search ETL",
@@ -197,20 +201,20 @@ def _mm_step_html(ok: bool | None, label: str, detail: str = "") -> str:
         return (
             f'<span style="display:inline-block;padding:4px 10px;border-radius:4px;'
             f'font-size:12px;font-weight:600;background:rgba(34,197,94,0.2);color:#4ade80">'
-            f'{label} ✓</span>'
-            f'{f" <span style=&quot;font-size:11px;color:#9ca3af&quot;>{detail}</span>" if detail else ""}'
+            f"{label} ✓</span>"
+            f"{f' <span style=&quot;font-size:11px;color:#9ca3af&quot;>{detail}</span>' if detail else ''}"
         )
     if ok is False:
         return (
             f'<span style="display:inline-block;padding:4px 10px;border-radius:4px;'
             f'font-size:12px;font-weight:600;background:rgba(239,68,68,0.2);color:#f87171">'
-            f'{label} ✗</span>'
-            f'{f" <span style=&quot;font-size:11px;color:#f87171&quot;>{detail}</span>" if detail else ""}'
+            f"{label} ✗</span>"
+            f"{f' <span style=&quot;font-size:11px;color:#f87171&quot;>{detail}</span>' if detail else ''}"
         )
     return (
         f'<span style="display:inline-block;padding:4px 10px;border-radius:4px;'
         f'font-size:12px;font-weight:600;background:rgba(107,114,128,0.2);color:#6b7280">'
-        f'{label} —</span>'
+        f"{label} —</span>"
     )
 
 
@@ -220,7 +224,11 @@ def _build_mm_pipeline_html(metadata: "ETLRunMetadata") -> str:
     has_sent = metadata.total_mm_docs_sent > 0
 
     steps = [_mm_step_html(health_ok, "Health")]
-    steps.append(_mm_step_html(has_sent if has_sent else None, f"Sent {format_number(metadata.total_mm_docs_sent)}"))
+    steps.append(
+        _mm_step_html(
+            has_sent if has_sent else None, f"Sent {format_number(metadata.total_mm_docs_sent)}"
+        )
+    )
 
     if metadata.mm_queue_drained is not None:
         steps.append(_mm_step_html(metadata.mm_queue_drained, "Queue Drain"))
@@ -230,10 +238,16 @@ def _build_mm_pipeline_html(metadata: "ETLRunMetadata") -> str:
     if has_rebuild:
         steps.append(_mm_step_html(rebuild_ok, "Rebuild"))
 
-    finalize_ok = metadata.mm_finalize_publish is not None and "status" in metadata.mm_finalize_publish
-    has_finalize = metadata.mm_finalize_publish is not None or metadata.mm_finalize_error is not None
+    finalize_ok = (
+        metadata.mm_finalize_publish is not None and "status" in metadata.mm_finalize_publish
+    )
+    has_finalize = (
+        metadata.mm_finalize_publish is not None or metadata.mm_finalize_error is not None
+    )
     if has_finalize:
-        steps.append(_mm_step_html(finalize_ok if not metadata.mm_finalize_error else False, "Finalize"))
+        steps.append(
+            _mm_step_html(finalize_ok if not metadata.mm_finalize_error else False, "Finalize")
+        )
 
     steps_html = " &nbsp; ".join(steps)
 
@@ -253,9 +267,9 @@ def _build_mm_pipeline_html(metadata: "ETLRunMetadata") -> str:
         detail_rows.append(
             f'<tr><td style="padding:4px 8px;color:#9ca3af;font-size:12px">Finalize Publish</td>'
             f'<td style="padding:4px 8px;font-size:12px">'
-            f'movies +{fp.get("movies_added", 0)}/~{fp.get("movies_updated", 0)}, '
-            f'tv +{fp.get("tv_added", 0)}/~{fp.get("tv_updated", 0)}, '
-            f'recycled={fp.get("readers_recycled", 0)}</td></tr>'
+            f"movies +{fp.get('movies_added', 0)}/~{fp.get('movies_updated', 0)}, "
+            f"tv +{fp.get('tv_added', 0)}/~{fp.get('tv_updated', 0)}, "
+            f"recycled={fp.get('readers_recycled', 0)}</td></tr>"
         )
     if metadata.mm_finalize_error:
         detail_rows.append(
@@ -267,15 +281,15 @@ def _build_mm_pipeline_html(metadata: "ETLRunMetadata") -> str:
     if detail_rows:
         details_table = (
             '<table style="width:100%;border-collapse:collapse;margin-top:10px">'
-            f'<tbody>{"".join(detail_rows)}</tbody></table>'
+            f"<tbody>{''.join(detail_rows)}</tbody></table>"
         )
 
     return (
         '<div style="padding:20px;border-top:1px solid #374151">'
         '<h2 style="margin:0 0 12px;font-size:16px;color:#9ca3af">Media Manager Pipeline</h2>'
         f'<div style="display:flex;flex-wrap:wrap;gap:8px">{steps_html}</div>'
-        f'{details_table}'
-        '</div>'
+        f"{details_table}"
+        "</div>"
     )
 
 
@@ -296,7 +310,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
     }.get(metadata.status, "❓")
 
     error_color = "#ef4444" if metadata.total_errors > 0 else "#22c55e"
-    gcs_url = f"https://console.cloud.google.com/storage/browser/mc-redis-etl/redis-search/etl/runs/{metadata.run_date}"
+    gcs_url = f"https://console.cloud.google.com/storage/browser/mc-redis-etl-dev/redis-search/etl/runs/{metadata.run_date}"
 
     # Build job rows
     job_rows_list = []
@@ -310,7 +324,7 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         )
         mm_sent_display = format_number(job.mm_docs_sent) if job.mm_docs_sent > 0 else "—"
         microgenre_display = (
-            f'{format_number(job.microgenres_generated)} ok / {format_number(job.microgenres_failed)} fail'
+            f"{format_number(job.microgenres_generated)} ok / {format_number(job.microgenres_failed)} fail"
             if job.new_entries or job.microgenres_generated or job.microgenres_failed
             else "—"
         )
@@ -374,13 +388,15 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
         mm_rows = _build_mm_pipeline_html(metadata)
         html_parts.append(mm_rows)
 
-    html_parts.extend([
-        # Footer
-        '<div style="padding:15px 20px;background:#111827;border-top:1px solid #374151;font-size:12px;color:#6b7280">',
-        f'<p style="margin:0">Redis Search ETL • <a href="{gcs_url}" style="color:#60a5fa">View in GCS</a></p>',
-        "</div>",
-        "</div></body></html>",
-    ])
+    html_parts.extend(
+        [
+            # Footer
+            '<div style="padding:15px 20px;background:#111827;border-top:1px solid #374151;font-size:12px;color:#6b7280">',
+            f'<p style="margin:0">Redis Search ETL • <a href="{gcs_url}" style="color:#60a5fa">View in GCS</a></p>',
+            "</div>",
+            "</div></body></html>",
+        ]
+    )
 
     return "".join(html_parts)
 

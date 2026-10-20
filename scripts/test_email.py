@@ -63,7 +63,7 @@ def build_html(metadata: ETLRunMetadata) -> str:
 
     status_emoji = {"completed": "✅", "partial": "⚠️", "failed": "❌"}.get(metadata.status, "❓")
     error_color = "#ef4444" if metadata.total_errors > 0 else "#22c55e"
-    gcs_url = f"https://console.cloud.google.com/storage/browser/mc-redis-etl/redis-search/etl/runs/{metadata.run_date}"
+    gcs_url = f"https://console.cloud.google.com/storage/browser/mc-redis-etl-dev/redis-search/etl/runs/{metadata.run_date}"
 
     job_rows = ""
     for job in metadata.job_results:

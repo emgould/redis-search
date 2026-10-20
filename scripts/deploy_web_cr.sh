@@ -66,7 +66,7 @@ else
 fi
 
 # Grant GCS access for ETL metadata
-GCS_BUCKET="mc-redis-etl"
+GCS_BUCKET="mc-redis-etl-dev"
 echo "🪣 Ensuring GCS bucket access..."
 if gsutil iam ch "serviceAccount:${SERVICE_ACCOUNT}:objectAdmin" "gs://${GCS_BUCKET}" 2>/dev/null; then
     echo "   ✅ GCS access granted"

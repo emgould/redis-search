@@ -60,7 +60,7 @@ logger = get_logger(__name__)
 # GCS mirror of the PodcastIndex database dump (uploaded daily by GitHub Actions).
 # The ETL VM's GCE egress IP is blocked by Cloudflare on the public URL, so we
 # pull from GCS first and fall back to the public URL only as a last resort.
-GCS_MIRROR_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl")
+GCS_MIRROR_BUCKET = os.getenv("GCS_BUCKET", "mc-redis-etl-dev")
 GCS_MIRROR_PATH = "redis-search/podcastindex/podcastindex_feeds.db.tgz"
 
 # Public PodcastIndex database dump URL (fallback)
@@ -232,9 +232,7 @@ class PodcastIndexNightlyETL:
         logger.info(f"Downloading database from {DB_DOWNLOAD_URL}")
         logger.info(f"  Target: {tgz_path}")
 
-        request = urllib.request.Request(
-            DB_DOWNLOAD_URL, headers={"User-Agent": USER_AGENT}
-        )
+        request = urllib.request.Request(DB_DOWNLOAD_URL, headers={"User-Agent": USER_AGENT})
         response = urllib.request.urlopen(request)
         total_size = int(response.headers.get("Content-Length", 0))
 
@@ -255,8 +253,7 @@ class PodcastIndexNightlyETL:
                     percent = downloaded * 100 / total_size
                     mb_total = total_size / (1024 * 1024)
                     logger.info(
-                        f"  Download progress: {percent:.1f}%"
-                        f" ({current_mb}/{mb_total:.0f} MB)"
+                        f"  Download progress: {percent:.1f}% ({current_mb}/{mb_total:.0f} MB)"
                     )
                     last_log_mb = current_mb
 
@@ -537,9 +534,7 @@ class PodcastIndexNightlyETL:
                     existing_docs: list[object] = await read_pipe.execute()
 
                     write_pipe = self.redis.pipeline()  # type: ignore[union-attr]
-                    for (key, redis_doc), existing in zip(
-                        batch, existing_docs, strict=True
-                    ):
+                    for (key, redis_doc), existing in zip(batch, existing_docs, strict=True):
                         existing_dict = existing if isinstance(existing, dict) else None
                         ca, ma, _ = resolve_timestamps(existing_dict, now_ts)
                         redis_doc["created_at"] = ca
