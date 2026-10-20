@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+      "codebase-memory-mcp": {
+        "command": "/bin/bash",
+        "args": [
+          "-lc",
+          "cd \"${workspaceFolder}\" && exec \"$HOME/.local/bin/codebase-memory-mcp\""
+        ]
+      }
+    }
+  }

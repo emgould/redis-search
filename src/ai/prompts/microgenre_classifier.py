@@ -30,7 +30,7 @@ PROMPT_HASH = hashlib.sha256(
         score_threshold="{score_threshold}",
     ).encode("utf-8")
 ).hexdigest()
-DEFAULT_MODEL: str = OpenAIModels.GPT_5_6_TERRA
+DEFAULT_MODEL: str = OpenAIModels.GPT_5_6_LUNA
 DEFAULT_CEREBRAS_MODEL: str = CerebrasModels.GPT_OSS
 SUMMARY_MAX_CHARS = 4_000
 ENRICHMENT_MAX_CHARS = 8_000
@@ -216,6 +216,18 @@ async def score_microgenres(
     )
 
 
+def _empty_score_needs_retry(response: MicroGenreClassifyResponse) -> bool:
+    """True when a classified title returned no leaf scores.
+
+    ``unknown=true`` is allowed to return an empty map. A confident empty map is
+    retried because omitted leaves are stored as a finished classification.
+    """
+    result = response.result
+    if result is None or result.unknown:
+        return False
+    return len(result.microgenre_scores) == 0
+
+
 async def _score_with_output_retries(
     *,
     prompt: str,
@@ -224,7 +236,7 @@ async def _score_with_output_retries(
     model: str | None,
     enable_web_search: bool,
 ) -> MicroGenreClassifyResponse:
-    """Retry malformed JSON/contract responses for either LLM provider."""
+    """Retry malformed JSON/contract responses and empty score maps."""
     response: MicroGenreClassifyResponse | None = None
     for attempt in range(1, MODEL_OUTPUT_MAX_ATTEMPTS + 1):
         response = await _score_with_provider(
@@ -234,21 +246,33 @@ async def _score_with_output_retries(
             model=model,
             enable_web_search=enable_web_search,
         )
-        if response.result is not None:
+        empty_scores = _empty_score_needs_retry(response)
+        if response.result is not None and not empty_scores:
             return response
-        if response.error_type not in ("invalid_json", "invalid_contract"):
+        if not empty_scores and response.error_type not in ("invalid_json", "invalid_contract"):
             return response
         if attempt < MODEL_OUTPUT_MAX_ATTEMPTS:
             logger.warning(
                 "%s microgenre output failed validation (%s; attempt %d/%d); retrying",
                 provider,
-                response.error_type,
+                "empty_scores" if empty_scores else response.error_type,
                 attempt,
                 MODEL_OUTPUT_MAX_ATTEMPTS,
             )
 
     if response is None:
         raise RuntimeError("Microgenre output retry loop produced no response")
+    if _empty_score_needs_retry(response):
+        return _failure_response(
+            text=response.text,
+            error_type="invalid_contract",
+            error="Model returned an empty microgenre_scores object.",
+            error_detail=(
+                "All classifier attempts returned unknown=false with no scores at or "
+                "above the threshold. The empty map was not stored."
+            ),
+            execution_time=response.execution_time,
+        )
     return response
 
 

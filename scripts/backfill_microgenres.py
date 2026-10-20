@@ -7,6 +7,10 @@ Two modes:
    ``microgenres`` that are eligible (have an RT score, or release/first-air
    within the last 3 years), classify via the live LLM, write Redis, and push
    updated docs to Media Manager with ``metadata_only=True``.
+   ``--all-missing`` drops that eligibility gate and classifies every movie/tv
+   document that does not already have valid microgenres.
+   ``--empty-scores`` queries ``idx:media`` for movie/tv documents whose
+   ``microgenre_scores`` object is empty and reclassifies those only.
 
 2. ``sidecar`` — apply precomputed JSONL classifications onto Redis (no LLM).
    Optionally push updated docs to Media Manager (``metadata_only=True``).
@@ -17,6 +21,8 @@ Usage:
     make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50'
     make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run'
     make backfill-microgenres REDIS=dev ARGS='--no-push-to-mm --limit 20'
+    make backfill-microgenres REDIS=dev ARGS='--all-missing --dry-run'
+    make backfill-microgenres REDIS=local ARGS='--empty-scores --dry-run'
 """
 
 from __future__ import annotations
@@ -73,6 +79,10 @@ SCAN_COUNT = 1000
 MGET_BATCH_SIZE = 500
 MM_BATCH_SIZE = 100
 DEFAULT_CONCURRENCY = DEFAULT_BATCH_CONCURRENCY
+# Cerebras pay-as-you-go is capped at 1.5M tokens/minute. This prompt is about
+# 11k tokens per call, so ~4 in flight saturates that cap at a 1.5s call.
+# 150 in flight submits the whole minute budget at once and returns 429s.
+DEFAULT_CEREBRAS_CONCURRENCY = 4
 RECENT_RELEASE_YEARS = 3
 
 
@@ -118,7 +128,10 @@ def parse_args() -> argparse.Namespace:
             "Backfill media:* microgenres. Default mode scans Redis for missing "
             "microgenres on titles with an RT score or release/first-air within "
             "the last 3 years, classifies them, writes Redis, and pushes Media "
-            "Manager metadata updates."
+            "Manager metadata updates. --all-missing classifies every movie/tv "
+            "document that is missing valid microgenres. --empty-scores "
+            "reclassifies idx:media movie/tv documents whose microgenre_scores "
+            "object is empty."
         )
     )
     parser.add_argument(
@@ -133,6 +146,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
+        "--all-missing",
+        action="store_true",
+        help=(
+            "Classify every movie/tv document missing valid microgenres. "
+            "Skips the RT-score and last-3-years eligibility gate."
+        ),
+    )
+    parser.add_argument(
+        "--empty-scores",
+        action="store_true",
+        help=(
+            "Reclassify idx:media movie/tv documents whose microgenre_scores "
+            "object is {}. Does not select missing microgenres or populated scores."
+        ),
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Reclassify/overwrite docs that already have valid microgenres.",
@@ -140,11 +169,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=DEFAULT_CONCURRENCY,
+        default=None,
         help=(
-            f"Max concurrent LLM classifications in missing mode "
-            f"(default {DEFAULT_CONCURRENCY}, max {MAX_BATCH_CONCURRENCY}; "
-            "same scale as microgenre-batch)."
+            "Max concurrent LLM classifications in missing mode "
+            f"(default {DEFAULT_CONCURRENCY} for OpenAI, "
+            f"{DEFAULT_CEREBRAS_CONCURRENCY} for Cerebras, "
+            f"max {MAX_BATCH_CONCURRENCY})."
         ),
     )
     parser.add_argument(
@@ -187,6 +217,16 @@ def _selected_types(mc_type: str) -> set[str]:
     return {"tv", "movie"} if mc_type == "both" else {mc_type}
 
 
+def _resolve_concurrency(requested: int | None, llm_provider: MicroGenreProvider) -> int:
+    if requested is None:
+        requested = (
+            DEFAULT_CEREBRAS_CONCURRENCY
+            if llm_provider == "cerebras"
+            else DEFAULT_CONCURRENCY
+        )
+    return max(1, min(requested, MAX_BATCH_CONCURRENCY))
+
+
 def _json_doc(raw: object) -> dict[str, Any] | None:
     """Parse RedisJSON MGET payloads (string / list-wrapped / dict)."""
     if isinstance(raw, str):
@@ -214,6 +254,31 @@ def _doc_media_type(doc: dict[str, Any]) -> Literal["movie", "tv"] | None:
 
 def _has_valid_microgenres(value: object) -> bool:
     return valid_microgenres_value(value) is not None
+
+
+def _score_map_is_empty(raw: object) -> bool:
+    """True only for an empty score object. Missing and populated maps are not empty."""
+    if isinstance(raw, str):
+        cleaned = raw.strip()
+        if not cleaned or cleaned == "null":
+            return False
+        try:
+            raw = json.loads(cleaned)
+        except json.JSONDecodeError:
+            return False
+    return isinstance(raw, dict) and len(raw) == 0
+
+
+def _aggregate_row(row: object) -> dict[str, str]:
+    if not isinstance(row, list):
+        return {}
+    parsed: dict[str, str] = {}
+    for index in range(0, len(row) - 1, 2):
+        key = row[index]
+        value = row[index + 1]
+        if isinstance(key, str) and isinstance(value, str):
+            parsed[key] = value
+    return parsed
 
 
 def _parse_iso_date(value: object) -> date | None:
@@ -488,6 +553,8 @@ async def collect_missing_docs(
     mc_type: str,
     force: bool,
     limit: int | None,
+    *,
+    all_missing: bool = False,
 ) -> tuple[list[tuple[str, dict[str, Any]]], MissingStats]:
     """Stream SCAN + MGET; stop as soon as ``limit`` missing candidates are found."""
     stats = MissingStats()
@@ -497,13 +564,13 @@ async def collect_missing_docs(
     last_log_scanned = 0
     keys_seen = 0
     parse_failures = 0
+    eligibility = "all-missing" if all_missing else f"RT-or-last-{RECENT_RELEASE_YEARS}y"
 
     logger.info(
-        "Scanning media:* for missing microgenres "
-        "(mc_type=%s limit=%s eligibility=RT-or-last-%dy)...",
+        "Scanning media:* for missing microgenres (mc_type=%s limit=%s eligibility=%s)...",
         mc_type,
         "none" if limit is None else str(limit),
-        RECENT_RELEASE_YEARS,
+        eligibility,
     )
 
     async def _consume_batch(keys: list[str]) -> bool:
@@ -528,7 +595,7 @@ async def collect_missing_docs(
             if not force and _has_valid_microgenres(doc.get("microgenres")):
                 stats.already_has_microgenres += 1
                 continue
-            if not eligible_for_microgenre_backfill(doc, media_type):
+            if not all_missing and not eligible_for_microgenre_backfill(doc, media_type):
                 stats.skipped_ineligible += 1
                 continue
             candidates.append((key, doc))
@@ -565,6 +632,105 @@ async def collect_missing_docs(
 
     if await _consume_batch(batch_keys):
         return candidates, stats
+
+    stats.candidates = len(candidates)
+    return candidates, stats
+
+
+def _index_type_query(mc_type: str) -> str:
+    if mc_type == "movie":
+        return "@mc_type:{movie}"
+    if mc_type == "tv":
+        return "@mc_type:{tv}"
+    return "@mc_type:{movie|tv}"
+
+
+async def collect_empty_score_docs(
+    redis: Redis,  # type: ignore[type-arg]
+    mc_type: str,
+    limit: int | None,
+) -> tuple[list[tuple[str, dict[str, Any]]], MissingStats]:
+    """Read idx:media and keep documents whose microgenre_scores object is empty."""
+    stats = MissingStats()
+    empty_ids: list[str] = []
+    cursor: object = None
+    page: object = None
+
+    logger.info(
+        "Querying idx:media for empty microgenre_scores (mc_type=%s limit=%s)...",
+        mc_type,
+        "none" if limit is None else str(limit),
+    )
+
+    while True:
+        if cursor is None:
+            response = await redis.execute_command(
+                "FT.AGGREGATE",
+                "idx:media",
+                _index_type_query(mc_type),
+                "LOAD",
+                "2",
+                "$.mc_id",
+                "$.microgenres.microgenre_scores",
+                "WITHCURSOR",
+                "COUNT",
+                "2000",
+            )
+        else:
+            response = await redis.execute_command(
+                "FT.CURSOR",
+                "READ",
+                "idx:media",
+                str(cursor),
+                "COUNT",
+                "2000",
+            )
+        if not isinstance(response, list) or len(response) != 2:
+            break
+        page, cursor = response
+        rows = page[1:] if isinstance(page, list) else []
+        for row in rows:
+            item = _aggregate_row(row)
+            mc_id = item.get("$.mc_id")
+            if mc_id is None:
+                continue
+            stats.scanned_docs += 1
+            if not _score_map_is_empty(item.get("$.microgenres.microgenre_scores")):
+                stats.already_has_microgenres += 1
+                continue
+            empty_ids.append(mc_id)
+            if len(stats.sample_mc_ids) < 20:
+                stats.sample_mc_ids.append(mc_id)
+            if limit is not None and len(empty_ids) >= limit:
+                cursor = 0
+                break
+        if stats.scanned_docs and stats.scanned_docs % 20000 < 2000:
+            logger.info(
+                "Index progress: scanned=%d populated=%d empty=%d",
+                stats.scanned_docs,
+                stats.already_has_microgenres,
+                len(empty_ids),
+            )
+        if not cursor or cursor == "0" or cursor == 0:
+            break
+
+    candidates: list[tuple[str, dict[str, Any]]] = []
+    for offset in range(0, len(empty_ids), MGET_BATCH_SIZE):
+        chunk = empty_ids[offset : offset + MGET_BATCH_SIZE]
+        keys = [f"media:{mc_id}" for mc_id in chunk]
+        raw_docs = await redis.execute_command("JSON.MGET", *keys, "$")
+        if not isinstance(raw_docs, list):
+            continue
+        for key, raw_doc in zip(keys, raw_docs, strict=False):
+            doc = _json_doc(raw_doc)
+            if doc is None:
+                continue
+            microgenres = doc.get("microgenres")
+            if not isinstance(microgenres, dict) or not _score_map_is_empty(
+                microgenres.get("microgenre_scores")
+            ):
+                continue
+            candidates.append((key, doc))
 
     stats.candidates = len(candidates)
     return candidates, stats
@@ -805,7 +971,23 @@ async def run(args: argparse.Namespace) -> int:
             logger.info("  Duration:           %.2fs", elapsed)
             return 0 if stats.malformed_rows == 0 and stats.mm_errors == 0 else 1
 
-        candidates, stats = await collect_missing_docs(redis, args.mc_type, args.force, args.limit)
+        if args.empty_scores and args.all_missing:
+            logger.error("--empty-scores cannot be combined with --all-missing")
+            return 2
+        if args.empty_scores:
+            candidates, stats = await collect_empty_score_docs(
+                redis,
+                args.mc_type,
+                args.limit,
+            )
+        else:
+            candidates, stats = await collect_missing_docs(
+                redis,
+                args.mc_type,
+                args.force,
+                args.limit,
+                all_missing=args.all_missing,
+            )
         logger.info(
             "Redis scan complete: scanned=%d already_populated=%d ineligible=%d missing_candidates=%d",
             stats.scanned_docs,
@@ -825,7 +1007,7 @@ async def run(args: argparse.Namespace) -> int:
             candidates,
             stats,
             args.dry_run,
-            args.concurrency,
+            _resolve_concurrency(args.concurrency, llm_provider),
             args.push_to_mm,
             args.web_search,
             llm_provider,
