@@ -106,6 +106,7 @@ help:
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--limit 50' - Classify missing microgenres via Cerebras gpt-oss-120b (default), write Redis, MM metadata_only"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50' - Same using OpenAI gpt-5.6-terra"
 	@echo "    make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run' - Apply JSONL sidecar classifications only"
+	@echo "    make backfill-media-manager-since ARGS='--dry-run' - Push public Redis media modified since 2026-10-10 to Media Manager"
 	@echo "    make backfill-flixpatrol ENV=dev              - US monthly chart pull + title files (no Redis write)"
 	@echo "    make backfill-flixpatrol ENV=dev write=1      - Same, then stamp \$$.flixpatrol on existing media docs"
 	@echo "    make backfill-flixpatrol ENV=dev start=2025-01-01 end=2025-01-31 write=1"
@@ -647,6 +648,17 @@ push-flixpatrol-to-mm:
 			export MEDIA_MANAGER_API_URL="http://127.0.0.1:$(MM_PROXY_PORT)"; \
 		fi; \
 		PYTHONPATH=src:$$PWD python scripts/push_flixpatrol_to_media_manager.py $(ARGS)'
+
+# Push movie/TV docs modified since 2026-10-10 (UTC) from public Redis (IAP tunnel :6381)
+# to the public Media Manager ETL service.
+# Usage: make backfill-media-manager-since ARGS="--dry-run"
+#        make backfill-media-manager-since ARGS="--dry-run --limit 20"
+#        make backfill-media-manager-since ARGS="--since 2026-10-10"
+#        make backfill-media-manager-since ARGS="--since 2026-10-10 --finalize"
+backfill-media-manager-since:
+	@bash -c 'source venv/bin/activate && \
+		set -a && source config/local.env && source config/etl.dev.env && set +a && \
+		PYTHONPATH=src:$$PWD python scripts/backfill_media_manager_since.py $(ARGS)'
 
 # Batch classify Redis media docs into microgenre JSONL sidecars
 # Usage: make microgenre-batch REDIS=local ARGS="--media-type movie --take 10 --dry-run"
