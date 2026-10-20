@@ -36,8 +36,11 @@ Nightly ETL still classifies titles it writes regardless of this backfill gate.
    / 2025-06-01).
 3. If OpenAI fails with an API/empty error (429, billing, timeout, etc.),
    `score_microgenres` falls back once to Cerebras `gpt-oss-120b` (no web_search).
-4. Both OpenAI and Cerebras retry malformed JSON or invalid classifier-contract
-   responses twice (three total model-output attempts).
+4. Both OpenAI and Cerebras retry malformed JSON, invalid classifier-contract
+   responses, and `unknown=false` results whose `microgenre_scores` is `{}`
+   twice (three total model-output attempts). An explicit `unknown=true` empty
+   map is kept. If every attempt is still an empty score map, the call fails
+   and Redis is not updated.
 5. Classifier failures remain fail-open (doc still writes; gap can be healed by
    backfill or a later ETL update).
 
@@ -59,6 +62,8 @@ fallback coverage.
 | Mode | Behavior |
 |------|----------|
 | `missing` (default) | SCAN `media:*`, find movie/tv with null/missing microgenres **and** (RT score **or** release/first-air within last 3 years), live-classify, write Redis, push Media Manager with `metadata_only=True` |
+| `missing --all-missing` | Same write path, but every movie/tv document missing valid microgenres is classified. The RT and 3-year gates are not applied. |
+| `missing --empty-scores` | Query `idx:media` for movie/tv documents whose `microgenre_scores` object is `{}` and reclassify those only. Populated scores and missing microgenres are not selected. |
 | `sidecar` | Apply precomputed JSONL classifications only (optional MM metadata push) |
 
 ### Dev usage
@@ -71,9 +76,13 @@ make backfill-microgenres REDIS=dev
 make backfill-microgenres REDIS=dev ARGS='--no-push-to-mm'
 make backfill-microgenres REDIS=dev ARGS='--finalize --limit 20'
 make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run'
+make backfill-microgenres REDIS=dev ARGS='--all-missing --dry-run'
+make backfill-microgenres REDIS=dev ARGS='--all-missing'
+make backfill-microgenres REDIS=local ARGS='--empty-scores --dry-run'
+make backfill-microgenres REDIS=local ARGS='--empty-scores --no-push-to-mm --llm openai'
 ```
 
-Default missing-mode concurrency is **150** (same as `microgenre-batch`, cap 175). Overnight ETL still uses its own lower `MICROGENRE_ETL_CONCURRENCY`.
+OpenAI missing-mode concurrency stays **150** (same as `microgenre-batch`, cap 175). Cerebras defaults to **4**. Its pay-as-you-go cap is 1.5 million tokens per minute, and this prompt is about 11k tokens per call, so four in-flight requests saturate that cap without the 429 burst that 150 produces. Pass `--concurrency` to override. Overnight ETL still uses its own lower `MICROGENRE_ETL_CONCURRENCY`.
 
 Cerebras microgenre calls pass `no_cache=True` on the shared AI RedisCache — title-unique prompts do not benefit from caching, and high concurrency previously exhausted the async Redis pool (`Too many connections`).
 

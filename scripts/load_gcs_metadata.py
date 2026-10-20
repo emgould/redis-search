@@ -32,7 +32,7 @@ from src.contracts.models import MCSources, MCType
 from src.core.normalize import document_to_redis, normalize_document
 
 # GCS configuration
-DEFAULT_BUCKET = "mc-media-manager"
+DEFAULT_BUCKET = "mc-media-manager-dev"
 DEFAULT_PREFIX = "us"  # New default - uses the new format
 
 # Legacy single-file format

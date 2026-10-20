@@ -202,5 +202,46 @@ Only the aggregate ETL flow uses **poll-before-finalize**: `ETLRunner.run_all()`
 submits movie/tv batches across the run, polls `/insert-docs/status` until the
 queue is empty, then calls `/api/etl/finalize-publish` exactly once.
 
-Helper/backfill scripts do **not** call finalize-publish. They may wait for queue
-drain, but publish finalization is reserved for the single aggregate boundary.
+Helper/backfill scripts do **not** call finalize-publish unless the operator
+passes an explicit finalize flag. They may wait for queue drain, but publish
+finalization is reserved for the single aggregate boundary.
+
+## Modified-since backfill
+
+`scripts/backfill_media_manager_since.py` catch-up pushes movie and TV
+documents from public Redis (`PUBLIC_REDIS_HOST:PUBLIC_REDIS_PORT`, default
+`localhost:6381` via IAP tunnel) whose `modified_at` is on or after a UTC date
+directly to the public Media Manager ETL service (`MEDIA_MANAGER_API_URL` from
+`config/etl.dev.env`, authenticated with OIDC via
+`GOOGLE_APPLICATION_CREDENTIALS`). The default date is `2026-10-10`
+(`--since 2026-10-10`).
+
+Selection uses `FT.AGGREGATE` on `idx:media`:
+
+```
+@mc_type:{movie|tv} @modified_at:[<unix since> +inf]
+```
+
+`--until YYYY-MM-DD` closes the range at the last second of that UTC day.
+The script loads each hit with `JSON.MGET`, then applies
+`passes_media_manager_filter` — the same gate as nightly ETL and the full
+FAISS backfill. It does not write Redis and does not change `modified_at`.
+
+Default submit mode is full `/insert-docs` (same as nightly ETL).
+`--metadata-only` updates stored FAISS metadata; documents missing from
+Media Manager still fall through to the full pipeline.
+
+The script polls until the queue drains. It does not call
+`/api/etl/finalize-publish` unless `--finalize` is set. `--no-wait` returns
+after the batches are accepted.
+
+```bash
+# Count eligible public Redis docs without calling Media Manager
+make backfill-media-manager-since ARGS="--dry-run"
+
+# Public catch-up (requires the IAP Redis tunnel on 6381)
+make backfill-media-manager-since ARGS="--since 2026-10-10"
+
+# Same run, then publish so readers pick up the index
+make backfill-media-manager-since ARGS="--since 2026-10-10 --finalize"
+```
