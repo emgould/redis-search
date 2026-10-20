@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GCS_BUCKET: mc-redis-etl
+  GCS_BUCKET: mc-redis-etl-dev
   GCS_PATH: redis-search/podcastindex/podcastindex_feeds.db.tgz
   SOURCE_URL: https://public.podcastindex.org/podcastindex_feeds.db.tgz
   SOURCE_USER_AGENT: MediaCircle-PodcastIndexMirror/1.0 (+https://mediacircle.io; redis-search podcast database mirror)

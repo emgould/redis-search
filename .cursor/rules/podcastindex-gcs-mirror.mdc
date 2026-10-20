@@ -26,7 +26,7 @@ The ETL reads from GCS first and falls back to the public URL.
 ### GCS Location
 
 ```
-gs://mc-redis-etl/redis-search/podcastindex/podcastindex_feeds.db.tgz
+gs://mc-redis-etl-dev/redis-search/podcastindex/podcastindex_feeds.db.tgz
 ```
 
 ### Schedule

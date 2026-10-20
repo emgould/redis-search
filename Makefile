@@ -127,7 +127,11 @@ help:
 	@echo "    make lint          - Run linting and type checking"
 	@echo "    make test          - Run pytest suite"
 	@echo "    make test-microgenres-integration - Run live AI + Redis microgenre integration tests"
-
+	@echo ""
+	@echo "  Encryption:"
+	@echo "    make decrypt ENV=local - Decrypt environment files (local/dev/test/prod)"
+	@echo "    make encrypt ENV=local - Encrypt environment files (local/dev/test/prod)"
+	@echo ""	
 install:
 	bash scripts/python_setup.sh
 
@@ -720,3 +724,17 @@ clone-prefix-to-local:
 validate-clone:
 	@if [ -z "$(TARGET)" ]; then echo "ERROR: TARGET is required. Usage: make validate-clone TARGET=scratch"; exit 1; fi
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/validate_clone.py --source public --target $(TARGET) $(if $(PREFIXES),--prefixes $(PREFIXES),)'
+
+encrypt:
+	@if [ -z "$(ENV)" ]; then \
+		echo "Error: ENV is required. Usage: make encrypt ENV=local"; \
+		exit 1; \
+	fi
+	@./bin/encrypt $(ENV)
+
+decrypt:
+	@if [ -z "$(ENV)" ]; then \
+		echo "Error: ENV is required. Usage: make decrypt ENV=local"; \
+		exit 1; \
+	fi
+	@./bin/decrypt $(ENV)
