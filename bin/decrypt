@@ -1,0 +1,60 @@
+#!/bin/bash
+# Decrypt environment files using SOPS
+# Usage: ./bin/decrypt <environment>
+# Example: ./bin/decrypt local
+#
+# Available environments: local, dev, test, prod
+
+set -e
+
+if [ -z "$1" ]; then
+    echo "Usage: ./bin/decrypt <environment>"
+    echo "Example: ./bin/decrypt local"
+    echo ""
+    echo "Available environments: local, dev, test, prod"
+    exit 1
+fi
+
+ENV=$1
+
+echo "Decrypting config/${ENV}.env.encrypted..."
+
+# Check if SOPS is installed
+if ! command -v sops &> /dev/null; then
+    echo "Error: SOPS is not installed. Please install it first:"
+    echo "  brew install sops  # macOS"
+    echo "  # or see https://github.com/mozilla/sops"
+    exit 1
+fi
+
+# Check if encrypted file exists
+if [ ! -f "config/api.${ENV}.env.encrypted" ]; then
+    echo "Error: config/api.${ENV}.env.encrypted not found"
+    exit 1
+fi
+if [ ! -f "config/etl.${ENV}.env.encrypted" ]; then
+    echo "Error: config/etl.${ENV}.env.encrypted not found"
+    exit 1
+fi
+if [ ! -f "config/${ENV}.env.encrypted" ]; then
+    echo "Error: config/${ENV}.env.encrypted not found"
+    exit 1
+fi
+
+# Check if encrypted google credentials file exists
+if [ ! -f "config/media-circle-3db28338ecf4.json.encrypted" ]; then
+    echo "Error: config/media-circle-3db28338ecf4.json.encrypted not found"
+    exit 1
+fi
+
+# Decrypt the google credentials file
+sops -d --input-type json --output-type json "config/media-circle-3db28338ecf4.json.encrypted" > "config/media-circle-3db28338ecf4.json"
+echo "✓ Decrypted to config/media-circle-3db28338ecf4.json"
+
+# Decrypt the file
+sops -d --input-type dotenv --output-type dotenv "config/${ENV}.env.encrypted" > "config/${ENV}.env"
+
+echo "✓ Decrypted to config/${ENV}.env"
+echo ""
+echo "Note: This file is gitignored and will not be committed."
+

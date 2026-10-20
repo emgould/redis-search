@@ -1,0 +1,63 @@
+#!/bin/bash
+# Encrypt environment files using SOPS
+# Usage: ./bin/encrypt
+# Example: ./bin/encrypt
+#
+# Available environments: local, dev, test, prod
+
+set -e
+
+echo "Encrypting environment files with SOPS..."
+
+ENV=$1
+
+if [ -z "$ENV" ]; then
+    echo "Error: ENV is required. Usage: make encrypt ENV=local"
+    exit 1
+fi
+
+# Check if SOPS is installed
+if ! command -v sops &> /dev/null; then
+    echo "Error: SOPS is not installed. Please install it first:"
+    echo "  brew install sops  # macOS"
+    echo "  # or see https://github.com/mozilla/sops"
+    exit 1
+fi
+
+# Encrypt each environment file
+if [ "$ENV" = "local" ]; then
+    if [ -f "config/${env}.env" ]; then
+        echo "Encrypting config/${ENV}.env..."
+        sops -e --input-type dotenv "config/${ENV}.env" > "config/${ENV}.env.encrypted"
+        echo "  ✓ Created config/${ENV}.env.encrypted"
+    else
+        echo "  ⚠ Skipping config/${ENV}.env (file not found)"
+    fi
+elif [ -f "config/api.${ENV}.env" ]; then
+    echo "Encrypting config/api.${ENV}.env..."
+    sops -e --input-type dotenv "config/api.${ENV}.env" > "config/api.${ENV}.env.encrypted"
+    echo "  ✓ Created config/api.${ENV}.env.encrypted"
+    if [ -f "config/etl.${ENV}.env" ]; then
+        echo "Encrypting config/etl.${ENV}.env..."
+        sops -e --input-type dotenv "config/etl.${ENV}.env" > "config/etl.${ENV}.env.encrypted"
+        echo "  ✓ Created config/etl.${ENV}.env.encrypted"
+    else
+        echo "  ⚠ Skipping config/etl.${ENV}.env (file not found)"
+    fi
+else
+    echo "  ⚠ Skipping config/api.${ENV}.env (file not found)"
+fi
+
+echo "Encrypting google credentials..."
+if [ -f "config/media-circle-3db28338ecf4.json" ]; then
+    sops -e --input-type json "config/media-circle-3db28338ecf4.json" > "config/media-circle-3db28338ecf4.json.encrypted"
+    echo "  ✓ Created config/media-circle-3db28338ecf4.json.encrypted"
+else
+    echo "  ⚠ Skipping config/media-circle-3db28338ecf4.json (file not found)"
+fi
+
+echo ""
+echo "Encryption complete!"
+echo "Note: The unencrypted .env files are gitignored."
+echo "      Only the .encrypted files will be committed to git."
+
