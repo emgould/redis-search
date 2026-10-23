@@ -402,16 +402,19 @@ class ETLRunner:
         self._run_metadata.total_jobs = total_runs
         self._run_metadata.add_log(f"Starting ETL run with {total_runs} job runs")
 
-        # Wait for Media Manager. A failed cold start must not drop the FAISS push
-        # until the deadline passes; then email and continue the Redis ETL.
-        connection = await open_media_manager_client()
-        mm_client: MediaManagerClient | None = connection.client
-        if connection.client is not None:
-            self._run_metadata.mm_health_check = "ok"
-            self._run_metadata.add_log("Media Manager health check passed")
-        elif connection.configured:
-            self._run_metadata.mm_health_check = "unavailable"
-            self._run_metadata.add_log(f"Media Manager unavailable: {connection.error}")
+        # Wait for Media Manager when movie/tv jobs are included. A failed cold start
+        # must not drop the FAISS push until the deadline passes; then email and
+        # continue the Redis ETL.
+        mm_client: MediaManagerClient | None = None
+        if any(p.media_type in ("movie", "tv") for j in enabled_jobs for p in j.runs):
+            connection = await open_media_manager_client()
+            mm_client = connection.client
+            if connection.client is not None:
+                self._run_metadata.mm_health_check = "ok"
+                self._run_metadata.add_log("Media Manager health check passed")
+            elif connection.configured:
+                self._run_metadata.mm_health_check = "unavailable"
+                self._run_metadata.add_log(f"Media Manager unavailable: {connection.error}")
 
         print("=" * 60)
         print("🚀 ETL Runner - Starting Full Run")
