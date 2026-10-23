@@ -4674,9 +4674,16 @@ def _is_zone_exhaustion_error(message: str) -> bool:
 
 
 def _vm_start_retry_worker() -> None:
-    """Background worker that retries starting the ETL VM until GCE allocates resources."""
-    attempt = 1
+    """Background worker that retries starting the ETL VM until GCE allocates resources.
+
+    Attempt 1 already ran synchronously in ``start_etl_vm``, so this worker sleeps
+    ``_ETL_VM_START_RETRY_INTERVAL`` before attempt 2 and checks cancellation before
+    and after every ``gcloud`` invocation.
+    """
+    attempt = 2
     while True:
+        time.sleep(_ETL_VM_START_RETRY_INTERVAL)
+
         with _vm_start_retry_lock:
             if not _vm_start_retry_state["retrying"]:
                 return
@@ -4699,6 +4706,10 @@ def _vm_start_retry_worker() -> None:
                     _vm_start_retry_state["last_error"] = None
                 return
 
+            with _vm_start_retry_lock:
+                if not _vm_start_retry_state["retrying"]:
+                    return
+
             _, stderr, rc = _gcloud_run(
                 ["compute", "instances", "start", _ETL_VM_NAME, f"--zone={_ETL_VM_ZONE}"]
             )
@@ -4710,20 +4721,25 @@ def _vm_start_retry_worker() -> None:
 
             if not _is_zone_exhaustion_error(stderr):
                 with _vm_start_retry_lock:
+                    if not _vm_start_retry_state["retrying"]:
+                        return
                     _vm_start_retry_state["retrying"] = False
                     _vm_start_retry_state["last_error"] = stderr or f"gcloud exited {rc}"
                 return
 
             with _vm_start_retry_lock:
+                if not _vm_start_retry_state["retrying"]:
+                    return
                 _vm_start_retry_state["last_error"] = (
                     f"Zone capacity unavailable in {_ETL_VM_ZONE} (attempt {attempt}); "
                     f"retrying every {_ETL_VM_START_RETRY_INTERVAL}s..."
                 )
         except Exception as exc:
             with _vm_start_retry_lock:
+                if not _vm_start_retry_state["retrying"]:
+                    return
                 _vm_start_retry_state["last_error"] = str(exc)
 
-        time.sleep(_ETL_VM_START_RETRY_INTERVAL)
         attempt += 1
 
 

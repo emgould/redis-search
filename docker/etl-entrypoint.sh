@@ -53,10 +53,12 @@ setup_cron() {
     echo "Setting up cron job for 3 AM Eastern..."
 
     mkdir -p /var/log/etl
+    # Clear any lock directories left in the container writable layer from a prior VM shutdown
+    rm -rf /tmp/etl-nightly.lock /tmp/mm-warmup.lock
 
     # Wrapper script: tees output to both a dated log file and docker logs
-    # Uses a lockfile so scheduled cron and late-boot catch-up cannot overlap,
-    # and writes a daily stamp file once the scheduled run has launched.
+    # Uses a PID-checked lock directory so scheduled cron and late-boot catch-up
+    # cannot overlap, and writes a daily stamp file once the scheduled run has launched.
     cat > /app/run-etl-cron.sh << 'SCRIPT'
 #!/bin/bash
 . /app/.env
@@ -69,10 +71,16 @@ STAMP_FILE="$LOG_DIR/.etl-started-${TODAY}"
 LOCK_DIR="/tmp/etl-nightly.lock"
 
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    echo "=== ETL Run Skipped (already running): $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
-    exit 0
+    EXISTING_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "=== ETL Run Skipped (already running, pid=$EXISTING_PID): $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
 fi
-trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+echo "$$" > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 touch "$STAMP_FILE"
 echo "=== ETL Run Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
@@ -92,9 +100,15 @@ LOG_FILE="$LOG_DIR/etl-$(date +%Y-%m-%d).log"
 LOCK_DIR="/tmp/mm-warmup.lock"
 
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    exit 0
+    EXISTING_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
 fi
-trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+echo "$$" > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 echo "=== MM Warmup Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
 python -m etl.mm_warmup 2>&1 | tee -a "$LOG_FILE" > /proc/1/fd/1

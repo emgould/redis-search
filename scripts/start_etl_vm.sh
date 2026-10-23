@@ -64,12 +64,18 @@ while true; do
     set -e
 
     if [[ ${START_RC} -eq 0 ]]; then
-        STATUS="$(get_vm_status)"
-        if [[ "${STATUS}" == "RUNNING" ]]; then
-            echo "✅ ${VM_NAME} is now RUNNING."
-            exit 0
-        fi
-        echo "⚠️  Start command returned 0 but VM status is ${STATUS}; verifying..."
+        for _ in {1..6}; do
+            STATUS="$(get_vm_status)"
+            if [[ "${STATUS}" == "RUNNING" ]]; then
+                echo "✅ ${VM_NAME} is now RUNNING."
+                exit 0
+            fi
+            if [[ "${STATUS}" != "STAGING" && "${STATUS}" != "PROVISIONING" ]]; then
+                break
+            fi
+            sleep 5
+        done
+        echo "⚠️  Start command returned 0 but VM status is ${STATUS}; retrying..."
     else
         if ! is_zone_exhaustion_error "${START_OUTPUT}"; then
             echo "❌ Failed to start ${VM_NAME} due to non-retryable error:" >&2
