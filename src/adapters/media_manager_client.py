@@ -18,6 +18,8 @@ logger = get_logger(__name__)
 
 DEFAULT_TIMEOUT = 3600.0  # 1 hour fail-safe
 REBUILD_TIMEOUT = 900.0  # 15 minutes per index rebuild
+HEALTH_DEADLINE_SECONDS = 300.0  # ETL waits this long for Media Manager to come up
+HEALTH_RETRY_INTERVAL_SECONDS = 5.0
 _TOKEN_REFRESH_MARGIN = 300  # refresh OIDC token 5 min before expiry
 _TOKEN_LIFETIME = 3600  # GCP identity tokens live 1 hour
 
@@ -201,17 +203,18 @@ class MediaManagerClient:
             await self._client.aclose()
             self._client = None
 
-    async def health_check(self) -> HealthResponse:
+    async def health_check(self, timeout: float = 60.0) -> HealthResponse:
         """Verify Media Manager is reachable and initialized.
 
         Raises ``RuntimeError`` if the service is unhealthy.
         """
         try:
-            resp = await self._request("GET", "/health", timeout=60.0)
+            resp = await self._request("GET", "/health", timeout=timeout)
             resp.raise_for_status()
         except (httpx.HTTPError, httpx.StreamError) as exc:
+            detail = str(exc).strip() or type(exc).__name__
             raise RuntimeError(
-                f"Media Manager health check failed at {self._base_url}/health: {exc}"
+                f"Media Manager health check failed at {self._base_url}/health: {detail}"
             ) from exc
 
         data: dict[str, Any] = resp.json()
@@ -222,6 +225,54 @@ class MediaManagerClient:
             status=data["status"],
             media_manager_initialized=data["media_manager_initialized"],
         )
+
+    async def wait_until_healthy(
+        self,
+        deadline_seconds: float = HEALTH_DEADLINE_SECONDS,
+        retry_interval_seconds: float = HEALTH_RETRY_INTERVAL_SECONDS,
+    ) -> HealthResponse:
+        """Poll ``/health`` until Media Manager is ready or the deadline passes.
+
+        A cold start holds the request open, so each attempt uses the time
+        remaining in the deadline. Fast failures are retried until that
+        deadline. Raises ``TimeoutError`` when Media Manager is still down.
+        """
+        if deadline_seconds <= 0:
+            raise ValueError("deadline_seconds must be positive")
+
+        deadline = time.monotonic() + deadline_seconds
+        last_error: Exception | None = None
+        attempt = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            attempt += 1
+            try:
+                return await self.health_check(timeout=remaining)
+            except Exception as exc:
+                last_error = exc
+                remaining = deadline - time.monotonic()
+                logger.warning(
+                    "Media Manager health check attempt %d failed (%.0fs remaining): %s",
+                    attempt,
+                    max(remaining, 0.0),
+                    exc,
+                )
+                if remaining <= 0:
+                    break
+                await asyncio.sleep(min(retry_interval_seconds, remaining))
+
+        detail = str(last_error).strip() if last_error is not None else "no response"
+        if not detail and last_error is not None:
+            detail = type(last_error).__name__
+        message = (
+            f"Media Manager unavailable after {deadline_seconds:.0f}s "
+            f"({attempt} attempts): {detail}"
+        )
+        if last_error is None:
+            raise TimeoutError(message)
+        raise TimeoutError(message) from last_error
 
     async def insert_docs(
         self,

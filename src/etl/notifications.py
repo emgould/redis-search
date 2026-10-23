@@ -8,6 +8,7 @@ and error information.
 
 import os
 import smtplib
+from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import TYPE_CHECKING
@@ -401,6 +402,103 @@ def build_summary_html(metadata: "ETLRunMetadata") -> str:
     return "".join(html_parts)
 
 
+@dataclass(frozen=True)
+class _EtlSmtpConfig:
+    server: str
+    port: int
+    user: str
+    password: str
+    from_email: str
+    recipient: str
+    use_tls: bool
+
+
+def _resolve_etl_smtp() -> _EtlSmtpConfig | None:
+    """Resolve the ETL notification recipient and SMTP transport."""
+    recipient = os.getenv("ETL_NOTIFICATION_EMAIL")
+    if not recipient:
+        logger.info("ETL_NOTIFICATION_EMAIL not set, skipping email notification")
+        return None
+
+    sendgrid_password = os.getenv("SENDGRID_PASSWORD")
+    if sendgrid_password:
+        smtp_port = int(os.getenv("SENDGRID_PORT", "587"))
+        return _EtlSmtpConfig(
+            server=os.getenv("SENDGRID_SERVER", "smtp.sendgrid.net"),
+            port=smtp_port,
+            user=os.getenv("SENDGRID_USERNAME", "apikey"),
+            password=sendgrid_password,
+            from_email=os.getenv("SENDGRID_FROM_EMAIL", recipient),
+            recipient=recipient,
+            use_tls=smtp_port == 587,
+        )
+
+    gmail_user = os.getenv("SMTP_USER")
+    gmail_password = os.getenv("SMTP_PASSWORD")
+    if not gmail_user or not gmail_password:
+        logger.warning(
+            "No email credentials configured (SENDGRID_PASSWORD or SMTP_USER), "
+            "skipping email notification"
+        )
+        return None
+
+    return _EtlSmtpConfig(
+        server="smtp.gmail.com",
+        port=465,
+        user=gmail_user,
+        password=gmail_password,
+        from_email=gmail_user,
+        recipient=recipient,
+        use_tls=False,
+    )
+
+
+def _deliver_etl_email(subject: str, plain_body: str, html_body: str | None = None) -> bool:
+    """Send one ETL notification email. Returns False when delivery is skipped or fails."""
+    smtp = _resolve_etl_smtp()
+    if smtp is None:
+        return False
+
+    message = MIMEMultipart("alternative")
+    message["From"] = smtp.from_email
+    message["To"] = smtp.recipient
+    message["Subject"] = subject
+    message.attach(MIMEText(plain_body, "plain", "utf-8"))
+    if html_body is not None:
+        message.attach(MIMEText(html_body, "html", "utf-8"))
+
+    try:
+        logger.info("Sending ETL email to %s via %s", smtp.recipient, smtp.server)
+        if smtp.use_tls:
+            with smtplib.SMTP(smtp.server, smtp.port) as server:
+                server.starttls()
+                server.login(smtp.user, smtp.password)
+                server.sendmail(smtp.from_email, smtp.recipient, message.as_string())
+        else:
+            with smtplib.SMTP_SSL(smtp.server, smtp.port) as server:
+                server.login(smtp.user, smtp.password)
+                server.sendmail(smtp.from_email, smtp.recipient, message.as_string())
+        logger.info("ETL email sent successfully")
+        return True
+    except Exception as exc:
+        logger.error("Failed to send ETL email: %s", exc)
+        return False
+
+
+def send_media_manager_failure_email(base_url: str, error: str, waited_seconds: float) -> bool:
+    """Email that Media Manager stayed unavailable and this ETL run will skip FAISS."""
+    subject = "ETL: Media Manager unavailable"
+    body = (
+        "Media Manager did not become healthy before the ETL gave up.\n\n"
+        f"URL: {base_url}\n"
+        f"Waited: {waited_seconds:.0f}s\n"
+        f"Error: {error}\n\n"
+        "This ETL run will continue writing to Redis and will not push documents "
+        "to Media Manager, rebuild indexes, or finalize publish."
+    )
+    return _deliver_etl_email(subject, body)
+
+
 def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     """
     Send ETL run summary email.
@@ -426,40 +524,6 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
     Returns:
         True if email sent successfully, False otherwise
     """
-    recipient = os.getenv("ETL_NOTIFICATION_EMAIL")
-    if not recipient:
-        logger.info("ETL_NOTIFICATION_EMAIL not set, skipping email notification")
-        return False
-
-    # Check for SendGrid first
-    sendgrid_password = os.getenv("SENDGRID_PASSWORD")
-    if sendgrid_password:
-        smtp_server = os.getenv("SENDGRID_SERVER", "smtp.sendgrid.net")
-        smtp_port = int(os.getenv("SENDGRID_PORT", "587"))
-        smtp_user = os.getenv("SENDGRID_USERNAME", "apikey")
-        smtp_password = sendgrid_password
-        from_email = os.getenv("SENDGRID_FROM_EMAIL", recipient)
-        use_tls = smtp_port == 587
-    else:
-        # Fall back to Gmail SMTP
-        smtp_server = "smtp.gmail.com"
-        smtp_port = 465
-        gmail_user = os.getenv("SMTP_USER")
-        gmail_password = os.getenv("SMTP_PASSWORD")
-        use_tls = False
-
-        if not gmail_user or not gmail_password:
-            logger.warning(
-                "No email credentials configured (SENDGRID_PASSWORD or SMTP_USER), "
-                "skipping email notification"
-            )
-            return False
-
-        smtp_user = gmail_user
-        smtp_password = gmail_password
-        from_email = gmail_user
-
-    # Build email
     status_prefix = {
         "completed": "✅",
         "partial": "⚠️",
@@ -472,34 +536,4 @@ def send_etl_summary_email(metadata: "ETLRunMetadata") -> bool:
         f"{metadata.total_errors} errors ({metadata.run_date})"
     )
 
-    # Create multipart message with both plain text and HTML
-    msg = MIMEMultipart("alternative")
-    msg["From"] = from_email
-    msg["To"] = recipient
-    msg["Subject"] = subject
-
-    # Attach both plain text and HTML versions
-    text_part = MIMEText(build_summary_text(metadata), "plain", "utf-8")
-    html_part = MIMEText(build_summary_html(metadata), "html", "utf-8")
-
-    msg.attach(text_part)
-    msg.attach(html_part)
-
-    try:
-        logger.info(f"Sending ETL summary email to {recipient} via {smtp_server}")
-        if use_tls:
-            # TLS on port 587
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_password)
-                server.sendmail(from_email, recipient, msg.as_string())
-        else:
-            # SSL on port 465
-            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-                server.login(smtp_user, smtp_password)
-                server.sendmail(from_email, recipient, msg.as_string())
-        logger.info("ETL summary email sent successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send ETL summary email: {e}")
-        return False
+    return _deliver_etl_email(subject, build_summary_text(metadata), build_summary_html(metadata))

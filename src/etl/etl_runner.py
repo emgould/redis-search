@@ -27,6 +27,7 @@ from etl.etl_metadata import (
     JobRunResult,
     create_run_metadata,
 )
+from etl.media_manager_connection import open_media_manager_client
 from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
 from etl.tmdb_nightly_etl import ChangesETLStats, run_nightly_etl
 from utils.alerts import send_alert
@@ -401,22 +402,19 @@ class ETLRunner:
         self._run_metadata.total_jobs = total_runs
         self._run_metadata.add_log(f"Starting ETL run with {total_runs} job runs")
 
-        # Create Media Manager client if configured (non-fatal)
+        # Wait for Media Manager when movie/tv jobs are included. A failed cold start
+        # must not drop the FAISS push until the deadline passes; then email and
+        # continue the Redis ETL.
         mm_client: MediaManagerClient | None = None
-        mm_url = os.getenv("MEDIA_MANAGER_API_URL")
-        if mm_url:
-            try:
-                mm_client = MediaManagerClient()
-                await mm_client.health_check()
+        if any(p.media_type in ("movie", "tv") for j in enabled_jobs for p in j.runs):
+            connection = await open_media_manager_client()
+            mm_client = connection.client
+            if connection.client is not None:
                 self._run_metadata.mm_health_check = "ok"
                 self._run_metadata.add_log("Media Manager health check passed")
-            except Exception as e:
-                logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
+            elif connection.configured:
                 self._run_metadata.mm_health_check = "unavailable"
-                if mm_client:
-                    await mm_client.close()
-                mm_client = None
-                self._run_metadata.add_log(f"Media Manager unavailable: {e}")
+                self._run_metadata.add_log(f"Media Manager unavailable: {connection.error}")
 
         print("=" * 60)
         print("🚀 ETL Runner - Starting Full Run")
@@ -720,17 +718,7 @@ class ETLRunner:
         # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
         mm_client: MediaManagerClient | None = None
         if media_type in ("movie", "tv"):
-            mm_url = os.getenv("MEDIA_MANAGER_API_URL")
-            if mm_url:
-                try:
-                    mm_client = MediaManagerClient()
-                    await mm_client.health_check()
-                    logger.info("Media Manager health check passed")
-                except Exception as e:
-                    logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
-                    if mm_client:
-                        await mm_client.close()
-                    mm_client = None
+            mm_client = (await open_media_manager_client()).client
 
         try:
             # Create params
@@ -820,18 +808,9 @@ async def run_single_etl(
     # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
     mm_client: MediaManagerClient | None = None
     if media_type in ("movie", "tv"):
-        mm_url = os.getenv("MEDIA_MANAGER_API_URL")
-        if mm_url:
-            try:
-                mm_client = MediaManagerClient()
-                await mm_client.health_check()
-                logger.info("Media Manager health check passed")
-            except Exception as e:
-                logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
-                if mm_client:
-                    await mm_client.close()
-                mm_client = None
-        else:
+        connection = await open_media_manager_client()
+        mm_client = connection.client
+        if not connection.configured:
             logger.info("Media Manager not configured (MEDIA_MANAGER_API_URL not set)")
 
     try:
