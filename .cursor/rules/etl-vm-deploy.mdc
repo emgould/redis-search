@@ -92,6 +92,25 @@ gcloud compute ssh etl-runner-vm --zone=us-central1-a --tunnel-through-iap -- \
   grep -q total_microgenres_generated /app/src/etl/notifications.py && echo "✓ all checks passed"'
 ```
 
+## Nightly VM Scheduling & Zone Stockout Resilience
+
+GCE zone capacity stockouts (`ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS` / `ZONE_RESOURCE_AVAILABILITY`) can occur at 2:00 AM Eastern when `etl-runner-vm` boots. Because GCE Instance Schedules (`etl-daily-schedule`) only attempt to start the VM once and GCE's `POST /instances/{vm}/start` endpoint returns `200 OK` before hardware is allocated asynchronously, three layers ensure the VM keeps retrying and runs the nightly ETL once capacity frees up:
+
+1. **Cloud Scheduler Start Retry Window (`scripts/setup_etl_vm_scheduler.sh`)**:
+   - Detaches the legacy one-shot `etl-daily-schedule` GCE resource policy if present.
+   - Configures `etl-vm-start` to run on `*/5 2-4 * * *` (`America/New_York`), polling `POST /instances/etl-runner-vm/start` every 5 minutes from 2:00 AM through 4:55 AM ET. Calling `start` on an already-`RUNNING` instance is an idempotent no-op in GCE.
+   - Configures `etl-vm-stop` to stop the VM at `0 7 * * *` (7:00 AM ET).
+   - Manage via `make setup-etl-schedule action=create|update|status`.
+   - `bin/batch-deploy.sh` deploys the ETL image and then creates the scheduler jobs, or updates them if `etl-vm-start` already exists. Both actions detach `etl-daily-schedule`.
+
+2. **Late-Boot Container Catch-Up (`docker/etl-entrypoint.sh`)**:
+   - If a stockout delays VM boot past the 3:00 AM ET cron trigger (e.g., VM boots between 3:01 AM and 4:59 AM ET), `maybe_catch_up_late_boot` detects on container startup that today's `/var/log/etl/.etl-started-YYYY-MM-DD` stamp is absent and immediately launches both `/app/run-mm-warmup.sh` and `/app/run-etl-cron.sh` in the background.
+   - `/tmp/etl-nightly.lock` and `/tmp/mm-warmup.lock` prevent overlapping runs.
+
+3. **CLI, Deploy, and Web UI Start Retries (`scripts/start_etl_vm.sh`, `scripts/deploy_etl_vm.sh`, `web/app.py`)**:
+   - `make etl-vm-start` and `scripts/deploy_etl_vm.sh` invoke `scripts/start_etl_vm.sh`, which loops on `ZONE_RESOURCE_POOL_EXHAUSTED` / `ZONE_RESOURCE_AVAILABILITY` errors every 30s until the VM reaches `RUNNING`.
+   - `POST /api/etl/vm/start` in `web/app.py` spawns a background retry worker if `gcloud compute instances start` fails with zone exhaustion, surfacing `RETRYING_START` status (with attempt count and cancel support) in the ETL Web UI.
+
 ## Media Manager Rebuild Response
 
 `MediaManagerClient.rebuild_index()` tolerates the current Media Manager response shape.

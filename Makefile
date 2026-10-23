@@ -409,7 +409,7 @@ etl-vm-status:
 	@gcloud compute instances describe etl-runner-vm --zone=us-central1-a --format='table(name,status,machineType.basename(),lastStartTimestamp)'
 
 etl-vm-start:
-	gcloud compute instances start etl-runner-vm --zone=us-central1-a
+	./scripts/start_etl_vm.sh
 
 etl-vm-stop:
 	gcloud compute instances stop etl-runner-vm --zone=us-central1-a

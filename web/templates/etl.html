@@ -1973,16 +1973,17 @@ Loading configuration...</pre
   let _vmCurrentStatus = null;
 
   const VM_STATUS_STYLES = {
-    RUNNING:     { dot: "bg-green-400",  badge: "bg-green-900/40 text-green-400" },
-    TERMINATED:  { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
-    STOPPED:     { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
-    STAGING:     { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
-    STOPPING:    { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
-    PROVISIONING:{ dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
-    SUSPENDING:  { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
-    SUSPENDED:   { dot: "bg-surface-400",badge: "bg-surface-700 text-surface-400" },
+    RUNNING:        { dot: "bg-green-400",  badge: "bg-green-900/40 text-green-400" },
+    TERMINATED:     { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
+    STOPPED:        { dot: "bg-red-400",    badge: "bg-red-900/40 text-red-400" },
+    STAGING:        { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    STOPPING:       { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    PROVISIONING:   { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    SUSPENDING:     { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    RETRYING_START: { dot: "bg-amber-400",  badge: "bg-amber-900/40 text-amber-400" },
+    SUSPENDED:      { dot: "bg-surface-400",badge: "bg-surface-700 text-surface-400" },
   };
-  const VM_TRANSITION_STATES = new Set(["STAGING", "STOPPING", "PROVISIONING", "SUSPENDING"]);
+  const VM_TRANSITION_STATES = new Set(["STAGING", "STOPPING", "PROVISIONING", "SUSPENDING", "RETRYING_START"]);
 
   function renderVmStatus(data) {
     _vmCurrentStatus = data.status;
@@ -2000,9 +2001,14 @@ Loading configuration...</pre
 
     const badge = document.getElementById("vm-status-badge");
     badge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${style.badge}`;
-    document.getElementById("vm-status-text").textContent = data.status;
+    const statusLabel = data.status === "RETRYING_START"
+      ? `RETRYING START (#${data.retry_attempt || 1})`
+      : data.status;
+    document.getElementById("vm-status-text").textContent = statusLabel;
 
-    if (data.last_start) {
+    if (data.status === "RETRYING_START" && data.retry_error) {
+      document.getElementById("vm-last-start").textContent = data.retry_error;
+    } else if (data.last_start) {
       const d = new Date(data.last_start);
       document.getElementById("vm-last-start").textContent = "Started " + d.toLocaleString();
     } else {
@@ -2010,7 +2016,12 @@ Loading configuration...</pre
     }
 
     const btn = document.getElementById("vm-action-btn");
-    if (VM_TRANSITION_STATES.has(data.status)) {
+    if (data.status === "RETRYING_START") {
+      btn.disabled = false;
+      btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors";
+      btn.textContent = "Cancel Retry";
+      startVmPoll();
+    } else if (VM_TRANSITION_STATES.has(data.status)) {
       btn.disabled = true;
       btn.className = "px-4 py-2 rounded-lg text-sm font-medium bg-surface-700 text-surface-400 opacity-60 cursor-not-allowed flex items-center gap-2";
       btn.innerHTML = '<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> ' + data.status + '…';
@@ -2083,8 +2094,13 @@ Loading configuration...</pre
   }
 
   async function vmAction() {
-    const action = _vmCurrentStatus === "RUNNING" ? "stop" : "start";
-    const verb = action === "stop" ? "Stop" : "Start";
+    const isStoppingOrCancelling = _vmCurrentStatus === "RUNNING" || _vmCurrentStatus === "RETRYING_START";
+    const action = isStoppingOrCancelling ? "stop" : "start";
+    const verb = _vmCurrentStatus === "RETRYING_START"
+      ? "Cancel start retry for"
+      : action === "stop"
+        ? "Stop"
+        : "Start";
     if (!confirm(`${verb} the ETL VM?`)) return;
 
     const btn = document.getElementById("vm-action-btn");

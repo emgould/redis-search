@@ -47,8 +47,9 @@ VM_STATUS=$(gcloud compute instances describe "${VM_NAME}" \
     --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
 
 if [ "$VM_STATUS" = "TERMINATED" ] || [ "$VM_STATUS" = "STOPPED" ]; then
-    echo "   VM is ${VM_STATUS}, starting it..."
-    gcloud compute instances start "${VM_NAME}" --zone="${ZONE}" --quiet
+    echo "   VM is ${VM_STATUS}, starting it (with zone-exhaustion retry)..."
+    GCP_PROJECT_ID="${PROJECT_ID}" ETL_VM_NAME="${VM_NAME}" ETL_VM_ZONE="${ZONE}" \
+        ./scripts/start_etl_vm.sh
     
     echo "   Waiting for VM to boot and SSH to become available..."
     # Wait up to 60 seconds for SSH to be ready

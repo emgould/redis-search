@@ -53,15 +53,36 @@ setup_cron() {
     echo "Setting up cron job for 3 AM Eastern..."
 
     mkdir -p /var/log/etl
+    # Clear any lock directories left in the container writable layer from a prior VM shutdown
+    rm -rf /tmp/etl-nightly.lock /tmp/mm-warmup.lock
 
     # Wrapper script: tees output to both a dated log file and docker logs
+    # Uses a PID-checked lock directory so scheduled cron and late-boot catch-up
+    # cannot overlap, and writes a daily stamp file once the scheduled run has launched.
     cat > /app/run-etl-cron.sh << 'SCRIPT'
 #!/bin/bash
 . /app/.env
 cd /app
 LOG_DIR="/var/log/etl"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/etl-$(date +%Y-%m-%d).log"
+TODAY="$(date +%Y-%m-%d)"
+LOG_FILE="$LOG_DIR/etl-${TODAY}.log"
+STAMP_FILE="$LOG_DIR/.etl-started-${TODAY}"
+LOCK_DIR="/tmp/etl-nightly.lock"
+
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    EXISTING_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "=== ETL Run Skipped (already running, pid=$EXISTING_PID): $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
+fi
+echo "$$" > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
+
+touch "$STAMP_FILE"
 echo "=== ETL Run Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
 python -m etl.run_nightly_etl 2>&1 | tee -a "$LOG_FILE" > /proc/1/fd/1
 echo "=== ETL Run Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
@@ -76,6 +97,19 @@ cd /app
 LOG_DIR="/var/log/etl"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/etl-$(date +%Y-%m-%d).log"
+LOCK_DIR="/tmp/mm-warmup.lock"
+
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    EXISTING_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        exit 0
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || exit 0
+fi
+echo "$$" > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
+
 echo "=== MM Warmup Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
 python -m etl.mm_warmup 2>&1 | tee -a "$LOG_FILE" > /proc/1/fd/1
 echo "=== MM Warmup Finished: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ===" | tee -a "$LOG_FILE" > /proc/1/fd/1
@@ -98,6 +132,31 @@ EOF
     crontab -l
 }
 
+# Catch up if the VM booted late within the ETL window (e.g. after GCE zone
+# stockout recovery between 2:01 AM and 4:59 AM Eastern).
+maybe_catch_up_late_boot() {
+    local current_hour today stamp_file log_file
+    current_hour=$((10#$(date +%H)))
+    today="$(date +%Y-%m-%d)"
+    stamp_file="/var/log/etl/.etl-started-${today}"
+    log_file="/var/log/etl/etl-${today}.log"
+
+    # Start warmup immediately if we booted during the active ETL window (2:00-4:59 AM ET)
+    if [[ "${current_hour}" -ge 2 && "${current_hour}" -lt 5 ]]; then
+        echo "Booted during ETL window (hour=${current_hour} ET); starting MM warmup in background..."
+        /app/run-mm-warmup.sh &
+    fi
+
+    # If the VM started after 3:00 AM ET (between 3:00 and 4:59 AM ET) and ETL
+    # has not started today, launch ETL immediately instead of missing the day.
+    if [[ "${current_hour}" -ge 3 && "${current_hour}" -lt 5 ]]; then
+        if [[ ! -f "${stamp_file}" ]] && ! grep -q "=== ETL Run Started:" "${log_file}" 2>/dev/null; then
+            echo "Late VM boot detected at $(date '+%Y-%m-%d %H:%M:%S %Z') (missed 3:00 AM cron); triggering catch-up ETL run..."
+            /app/run-etl-cron.sh &
+        fi
+    fi
+}
+
 case "${1:-run}" in
     run)
         echo "Running ETL once..."
@@ -106,6 +165,7 @@ case "${1:-run}" in
     cron)
         export_env_for_cron
         setup_cron
+        maybe_catch_up_late_boot
         
         echo "Starting cron daemon..."
         echo "MM warmup starts at 2:00 AM Eastern (pings every 60s for 5 hrs)"
