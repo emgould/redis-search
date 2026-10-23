@@ -2,8 +2,21 @@
 # Manage Cloud Scheduler jobs that start/stop the ETL VM on a daily schedule.
 #
 # Two jobs are created:
-#   etl-vm-start  -- starts the VM at 2 AM ET (30 min before warmup, 1 hr before ETL)
+#   etl-vm-start  -- retries starting the VM every 5 min from 2:00-4:55 AM ET
+#                    (handles GCE ZONE_RESOURCE_POOL_EXHAUSTED stockouts;
+#                    no-op once the VM is already RUNNING)
 #   etl-vm-stop   -- stops the VM at 7 AM ET (buffer after up to 3 hr ETL run)
+#
+# Why a repeating start schedule instead of a single 2 AM trigger?
+#   1. GCE Instance Schedules (resource policies) only try once at 2:00 AM ET
+#      and never retry if the zone has a transient stockout.
+#   2. Compute Engine's HTTP POST /instances/{vm}/start endpoint is asynchronous:
+#      it returns HTTP 200 immediately with a RUNNING/PENDING zone operation
+#      before hardware is allocated. If a stockout occurs a few seconds later,
+#      the zone operation fails asynchronously without returning HTTP 5xx to
+#      Cloud Scheduler. Polling /start every 5 minutes across the 2:00-4:55 AM ET
+#      window guarantees retries until the VM reaches RUNNING.
+#   3. Calling /start on an already-RUNNING VM is an idempotent no-op in GCE.
 #
 # The VM's Docker container uses --restart=always, so the etl-runner container
 # (and its internal cron) comes back automatically when the VM starts.
@@ -23,11 +36,15 @@ ZONE="${REGION}-a"
 VM_NAME="etl-runner-vm"
 
 # Schedule defaults (America/New_York)
-#   Start at 2 AM ET — 30 min before warmup, 1 hr before ETL cron
-#   Stop at 7 AM ET — buffer for up to 3 hr ETL run
-START_SCHEDULE="${ETL_VM_START_SCHEDULE:-0 2 * * *}"
+#   Start every 5 min from 2:00 AM through 4:55 AM ET — retries across transient
+#   zone stockouts (ZONE_RESOURCE_POOL_EXHAUSTED); idempotent once RUNNING.
+#   Stop at 7 AM ET — buffer for up to 3 hr ETL run.
+START_SCHEDULE="${ETL_VM_START_SCHEDULE:-*/5 2-4 * * *}"
 STOP_SCHEDULE="${ETL_VM_STOP_SCHEDULE:-0 7 * * *}"
 TIME_ZONE="${ETL_VM_TIME_ZONE:-America/New_York}"
+
+# Legacy GCE Instance Schedule resource policy (single-shot, no stockout retry)
+LEGACY_RESOURCE_POLICY="etl-daily-schedule"
 
 # Scheduler job names
 START_JOB_NAME="etl-vm-start"
@@ -58,8 +75,8 @@ Actions:
 
 Environment variables (optional overrides):
   GCP_PROJECT_ID            GCP project (default: media-circle)
-  ETL_VM_START_SCHEDULE     Cron for start (default: 0 21 * * *)
-  ETL_VM_STOP_SCHEDULE      Cron for stop  (default: 0 18 * * *)
+  ETL_VM_START_SCHEDULE     Cron for start (default: */5 2-4 * * *)
+  ETL_VM_STOP_SCHEDULE      Cron for stop  (default: 0 7 * * *)
   ETL_VM_TIME_ZONE          Timezone (default: America/New_York)
 EOF
 }
@@ -114,6 +131,23 @@ setup_service_account() {
         --role="roles/compute.instanceAdmin.v1" 2>/dev/null || {
         echo "  Note: Permission may already be granted."
     }
+}
+
+detach_legacy_instance_schedule() {
+    local attached_policies
+    attached_policies=$(gcloud compute instances describe "${VM_NAME}" \
+        --project="${PROJECT_ID}" \
+        --zone="${ZONE}" \
+        --format="value(resourcePolicies)" 2>/dev/null || true)
+
+    if echo "${attached_policies}" | grep -q "${LEGACY_RESOURCE_POLICY}"; then
+        echo "Detaching legacy one-shot GCE Instance Schedule (${LEGACY_RESOURCE_POLICY}) from ${VM_NAME}..."
+        gcloud compute instances remove-resource-policies "${VM_NAME}" \
+            --project="${PROJECT_ID}" \
+            --zone="${ZONE}" \
+            --resource-policies="${LEGACY_RESOURCE_POLICY}"
+        echo "  Detached ${LEGACY_RESOURCE_POLICY} from ${VM_NAME}"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -211,7 +245,9 @@ update_scheduler_jobs() {
         --oauth-token-scope="https://www.googleapis.com/auth/compute" \
         --description="Start ETL VM (${VM_NAME}) at ${START_SCHEDULE} ${TIME_ZONE}" \
         --attempt-deadline=120s \
-        --max-retry-attempts=2
+        --max-retry-attempts=2 \
+        --min-backoff=30s \
+        --max-backoff=60s
 
     echo "  Updated ${START_JOB_NAME}"
 
@@ -226,7 +262,9 @@ update_scheduler_jobs() {
         --oauth-token-scope="https://www.googleapis.com/auth/compute" \
         --description="Stop ETL VM (${VM_NAME}) at ${STOP_SCHEDULE} ${TIME_ZONE}" \
         --attempt-deadline=120s \
-        --max-retry-attempts=2
+        --max-retry-attempts=2 \
+        --min-backoff=30s \
+        --max-backoff=60s
 
     echo "  Updated ${STOP_JOB_NAME}"
     echo ""
@@ -299,10 +337,16 @@ show_status() {
     echo ""
 
     # VM status
-    local vm_status
+    local vm_status attached_policies
     vm_status=$(gcloud compute instances describe "${VM_NAME}" \
         --zone="${ZONE}" --format="value(status)" 2>/dev/null || echo "NOT_FOUND")
+    attached_policies=$(gcloud compute instances describe "${VM_NAME}" \
+        --zone="${ZONE}" --format="value(resourcePolicies)" 2>/dev/null || true)
     echo "  VM: ${VM_NAME} (${ZONE}) → ${vm_status}"
+    if [[ -n "${attached_policies}" ]]; then
+        echo "  ⚠️  Attached GCE Resource Policies: ${attached_policies}"
+        echo "     (Run './scripts/setup_etl_vm_scheduler.sh create' or 'update' to replace one-shot GCE policy with retrying Cloud Scheduler jobs)"
+    fi
     echo ""
 
     # Scheduler jobs
@@ -336,10 +380,12 @@ show_status() {
 case "${ACTION}" in
     create)
         setup_service_account
+        detach_legacy_instance_schedule
         create_scheduler_jobs
         ;;
     update)
         setup_service_account
+        detach_legacy_instance_schedule
         update_scheduler_jobs
         ;;
     test)

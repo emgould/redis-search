@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -4644,6 +4645,20 @@ async def get_etl_vm_logs(
 # ---------------------------------------------------------------------------
 
 _GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "media-circle")
+_ETL_VM_START_RETRY_INTERVAL = int(os.getenv("ETL_VM_START_RETRY_INTERVAL", "30"))
+
+_ZONE_EXHAUSTION_RE = re.compile(
+    r"(ZONE_RESOURCE_POOL_EXHAUSTED|ZONE_RESOURCE_AVAILABILITY|stockout|"
+    r"does not have enough resources available|currently unavailable in the .* zone)",
+    re.IGNORECASE,
+)
+
+_vm_start_retry_lock = threading.Lock()
+_vm_start_retry_state: dict[str, bool | int | str | None] = {
+    "retrying": False,
+    "attempt": 0,
+    "last_error": None,
+}
 
 
 def _gcloud_run(args: list[str], timeout: int = 90) -> tuple[str, str, int]:
@@ -4651,6 +4666,79 @@ def _gcloud_run(args: list[str], timeout: int = 90) -> tuple[str, str, int]:
     cmd = ["gcloud", *args, f"--project={_GCP_PROJECT_ID}"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     return result.stdout.strip(), result.stderr.strip(), result.returncode
+
+
+def _is_zone_exhaustion_error(message: str) -> bool:
+    """Return True if gcloud stderr indicates a GCE zone capacity stockout."""
+    return bool(_ZONE_EXHAUSTION_RE.search(message))
+
+
+def _vm_start_retry_worker() -> None:
+    """Background worker that retries starting the ETL VM until GCE allocates resources."""
+    attempt = 1
+    while True:
+        with _vm_start_retry_lock:
+            if not _vm_start_retry_state["retrying"]:
+                return
+            _vm_start_retry_state["attempt"] = attempt
+
+        try:
+            desc_out, _, desc_rc = _gcloud_run(
+                [
+                    "compute",
+                    "instances",
+                    "describe",
+                    _ETL_VM_NAME,
+                    f"--zone={_ETL_VM_ZONE}",
+                    "--format=value(status)",
+                ]
+            )
+            if desc_rc == 0 and desc_out.strip() == "RUNNING":
+                with _vm_start_retry_lock:
+                    _vm_start_retry_state["retrying"] = False
+                    _vm_start_retry_state["last_error"] = None
+                return
+
+            _, stderr, rc = _gcloud_run(
+                ["compute", "instances", "start", _ETL_VM_NAME, f"--zone={_ETL_VM_ZONE}"]
+            )
+            if rc == 0:
+                with _vm_start_retry_lock:
+                    _vm_start_retry_state["retrying"] = False
+                    _vm_start_retry_state["last_error"] = None
+                return
+
+            if not _is_zone_exhaustion_error(stderr):
+                with _vm_start_retry_lock:
+                    _vm_start_retry_state["retrying"] = False
+                    _vm_start_retry_state["last_error"] = stderr or f"gcloud exited {rc}"
+                return
+
+            with _vm_start_retry_lock:
+                _vm_start_retry_state["last_error"] = (
+                    f"Zone capacity unavailable in {_ETL_VM_ZONE} (attempt {attempt}); "
+                    f"retrying every {_ETL_VM_START_RETRY_INTERVAL}s..."
+                )
+        except Exception as exc:
+            with _vm_start_retry_lock:
+                _vm_start_retry_state["last_error"] = str(exc)
+
+        time.sleep(_ETL_VM_START_RETRY_INTERVAL)
+        attempt += 1
+
+
+def _ensure_vm_start_retry_thread() -> None:
+    """Start the background VM start retry loop if not already active."""
+    with _vm_start_retry_lock:
+        if _vm_start_retry_state["retrying"]:
+            return
+        _vm_start_retry_state["retrying"] = True
+        _vm_start_retry_state["attempt"] = 1
+        _vm_start_retry_state["last_error"] = (
+            f"Zone capacity unavailable in {_ETL_VM_ZONE}; retrying every {_ETL_VM_START_RETRY_INTERVAL}s..."
+        )
+    worker = threading.Thread(target=_vm_start_retry_worker, daemon=True)
+    worker.start()
 
 
 @app.get("/api/etl/vm/status")
@@ -4681,11 +4769,24 @@ async def get_etl_vm_status(
         if "/" in machine_type:
             machine_type = machine_type.rsplit("/", 1)[-1]
 
+        vm_status = info.get("status", "UNKNOWN")
+        with _vm_start_retry_lock:
+            if vm_status == "RUNNING" and _vm_start_retry_state["retrying"]:
+                _vm_start_retry_state["retrying"] = False
+                _vm_start_retry_state["last_error"] = None
+            retrying = bool(_vm_start_retry_state["retrying"])
+            retry_attempt = int(_vm_start_retry_state["attempt"] or 0)
+            retry_error = _vm_start_retry_state["last_error"]
+
         return JSONResponse(
             content={
                 "success": True,
                 "name": info.get("name", _ETL_VM_NAME),
-                "status": info.get("status", "UNKNOWN"),
+                "status": "RETRYING_START" if retrying and vm_status != "RUNNING" else vm_status,
+                "raw_status": vm_status,
+                "retrying_start": retrying,
+                "retry_attempt": retry_attempt,
+                "retry_error": retry_error,
                 "machine_type": machine_type,
                 "last_start": info.get("lastStartTimestamp"),
                 "zone": _ETL_VM_ZONE,
@@ -4709,17 +4810,32 @@ async def get_etl_vm_status(
 async def start_etl_vm(
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Start the ETL VM."""
+    """Start the ETL VM, automatically retrying in the background on zone capacity exhaustion."""
     try:
         stdout, stderr, rc = await asyncio.to_thread(
             _gcloud_run,
             ["compute", "instances", "start", _ETL_VM_NAME, f"--zone={_ETL_VM_ZONE}"],
         )
         if rc != 0:
+            if _is_zone_exhaustion_error(stderr):
+                _ensure_vm_start_retry_thread()
+                return JSONResponse(
+                    content={
+                        "success": True,
+                        "retrying": True,
+                        "message": (
+                            f"Zone {_ETL_VM_ZONE} is temporarily out of capacity; "
+                            f"retrying {_ETL_VM_NAME} start every {_ETL_VM_START_RETRY_INTERVAL}s until available."
+                        ),
+                    }
+                )
             return JSONResponse(
                 status_code=502,
                 content={"success": False, "error": stderr or f"gcloud exited {rc}"},
             )
+        with _vm_start_retry_lock:
+            _vm_start_retry_state["retrying"] = False
+            _vm_start_retry_state["last_error"] = None
         return JSONResponse(content={"success": True, "message": f"{_ETL_VM_NAME} starting."})
     except subprocess.TimeoutExpired:
         return JSONResponse(
@@ -4739,13 +4855,22 @@ async def start_etl_vm(
 async def stop_etl_vm(
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Stop the ETL VM."""
+    """Stop the ETL VM (or cancel an active start-retry loop)."""
+    with _vm_start_retry_lock:
+        was_retrying = bool(_vm_start_retry_state["retrying"])
+        _vm_start_retry_state["retrying"] = False
+        _vm_start_retry_state["last_error"] = None
+
     try:
         stdout, stderr, rc = await asyncio.to_thread(
             _gcloud_run,
             ["compute", "instances", "stop", _ETL_VM_NAME, f"--zone={_ETL_VM_ZONE}"],
         )
         if rc != 0:
+            if was_retrying:
+                return JSONResponse(
+                    content={"success": True, "message": f"Cancelled start retry for {_ETL_VM_NAME}."}
+                )
             return JSONResponse(
                 status_code=502,
                 content={"success": False, "error": stderr or f"gcloud exited {rc}"},
