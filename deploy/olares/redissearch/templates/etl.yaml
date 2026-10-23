@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: etl
+spec:
+  replicas: {{ .Values.workloads.etl.replicaCount }}
+  # Recreate: the entrypoint's lock directory is per-container, so two pods could run ETL concurrently.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: etl
+  template:
+    metadata:
+      labels:
+        app: etl
+    spec:
+      containers:
+      - name: etl
+        image: {{ .Values.images.etl }}
+        imagePullPolicy: Never
+        command: ["/bin/bash", "-c"]
+        args:
+        - set -a && . /secrets/env && set +a && exec /app/entrypoint.sh cron
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+        volumeMounts:
+        - name: secrets
+          mountPath: /secrets
+          readOnly: true
+        # Persists dated logs and the daily start stamps used by the late-start catch-up.
+        - name: logs
+          mountPath: /var/log/etl
+      volumes:
+      - name: secrets
+        hostPath:
+          path: {{ .Values.userspace.appData }}/config
+          type: Directory
+      - name: logs
+        hostPath:
+          path: {{ .Values.userspace.appData }}/etl-logs
+          type: DirectoryOrCreate

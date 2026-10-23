@@ -1,0 +1,18 @@
+# Web and ETL images are built locally and imported into the node's containerd
+# (k8s.io namespace) by scripts/olares.sh; they are never pulled from a registry.
+images:
+  redis: docker.io/redis/redis-stack-server:7.4.0-v8
+  web: docker.io/library/redissearch-web:olares
+  etl: docker.io/library/redissearch-etl:olares
+
+redis:
+  maxmemory: 16gb
+
+# Required by Olares: replica counts must come from here and match OlaresManifest workloadReplicas.
+workloads:
+  redissearch:
+    replicaCount: 1
+  redis:
+    replicaCount: 1
+  etl:
+    replicaCount: 1

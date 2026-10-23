@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: redis
+spec:
+  replicas: {{ .Values.workloads.redis.replicaCount }}
+  # Recreate: two Redis processes must never share the same AOF directory.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+      - name: redis
+        image: {{ .Values.images.redis }}
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        # Redis ignores dump.rdb when appendonly=yes and no AOF exists, so a seeded
+        # snapshot must boot with appendonly=no and switch AOF on once loaded.
+        args:
+        - |
+          PW="$(cat /secrets/redis_password)"
+          AOF=yes
+          if [ ! -d /data/appendonlydir ] && [ -f /data/dump.rdb ]; then
+            AOF=no
+            (
+              until redis-cli -a "$PW" --no-auth-warning ping 2>/dev/null | grep -q PONG; do sleep 2; done
+              redis-cli -a "$PW" --no-auth-warning CONFIG SET appendonly yes
+            ) &
+          fi
+          export REDIS_ARGS="--requirepass $PW --appendonly $AOF --save 60 1 --maxmemory {{ .Values.redis.maxmemory }} --maxmemory-policy volatile-lru"
+          exec /entrypoint.sh
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: "4"
+            memory: 20Gi
+        readinessProbe:
+          exec:
+            command: ["/bin/sh", "-c", "redis-cli -a \"$(cat /secrets/redis_password)\" --no-auth-warning ping | grep -q PONG"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 60
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: secrets
+          mountPath: /secrets
+          readOnly: true
+      volumes:
+      - name: data
+        hostPath:
+          path: {{ .Values.userspace.appData }}/redis
+          type: DirectoryOrCreate
+      - name: secrets
+        hostPath:
+          path: {{ .Values.userspace.appData }}/config
+          type: Directory

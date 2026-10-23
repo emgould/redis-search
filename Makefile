@@ -3,7 +3,7 @@ export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 MM_PROXY_PORT ?= 8099
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol push-flixpatrol-to-mm microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol push-flixpatrol-to-mm microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish olares-config olares-seed olares-build olares-import olares-install olares-upgrade olares-etl-catchup olares-status olares-deploy olares-rollback olares-tunnel olares-stop olares-start olares-iap-image
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -67,6 +67,22 @@ help:
 	@echo "    make etl-docker-test  - Test ETL configuration and environment (dry-run)"
 	@echo "    make etl-docker-cron  - Start ETL with cron scheduler (3 AM Eastern daily)"
 	@echo "    make etl-docker-cron-stop - Stop cron scheduler container"
+	@echo ""
+	@echo "  Olares box (Redis Stack + web + ETL cron; see .cursor/rules/olares-redis-search.mdc):"
+	@echo "    make olares-deploy    - Build + push local code to the box, restart web + ETL, verify health"
+	@echo "    make olares-rollback  - List deployed tags; TAG=<tag> to roll web + ETL back"
+	@echo "    make olares-config    - Push env, GCP key, Redis password to the box"
+	@echo "    make olares-seed      - Copy local Docker Redis snapshot to the box (FORCE=1 to replace)"
+	@echo "    make olares-build     - Build linux/amd64 web + ETL images"
+	@echo "    make olares-import    - Import images into the box's containerd and restart web + ETL"
+	@echo "    make olares-iap-image - Build + import the gcloud image for the public Redis IAP tunnel"
+	@echo "    make olares-install   - Upload chart to Olares Market and install"
+	@echo "    make olares-upgrade   - Re-upload chart and upgrade the installed app"
+	@echo "    make olares-etl-catchup START=YYYY-MM-DD - One-off ETL run on the box from START"
+	@echo "    make olares-status    - Show pods and services on the box"
+	@echo "    make olares-stop      - Suspend the app on the box (data kept; refuses during ETL window)"
+	@echo "    make olares-start     - Resume the app and wait until Redis + web are healthy"
+	@echo "    make olares-tunnel    - Serve the box's web API on localhost:9001 until Ctrl-C (TUNNEL_PORT= overrides)"
 	@echo ""
 	@echo "  Deployment:"
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
@@ -724,6 +740,58 @@ clone-prefix-to-local:
 validate-clone:
 	@if [ -z "$(TARGET)" ]; then echo "ERROR: TARGET is required. Usage: make validate-clone TARGET=scratch"; exit 1; fi
 	@bash -c 'source venv/bin/activate && set -a && source config/local.env && set +a && python scripts/validate_clone.py --source public --target $(TARGET) $(if $(PREFIXES),--prefixes $(PREFIXES),)'
+
+# ============================================================================
+# Olares box (scripts/olares.sh)
+# ============================================================================
+
+olares-config:
+	@bash scripts/olares.sh config
+
+olares-seed:
+	@bash scripts/olares.sh seed
+
+olares-build:
+	@bash scripts/olares.sh build
+
+olares-import:
+	@bash scripts/olares.sh import
+
+olares-iap-image:
+	@bash scripts/olares.sh iap-image
+
+olares-install:
+	@bash scripts/olares.sh install
+
+olares-upgrade:
+	@bash scripts/olares.sh upgrade
+
+# Usage: make olares-etl-catchup START=2026-10-20
+olares-etl-catchup:
+	@if [ -z "$(START)" ]; then echo "ERROR: START is required. Usage: make olares-etl-catchup START=YYYY-MM-DD"; exit 1; fi
+	@bash scripts/olares.sh etl-catchup $(START)
+
+olares-status:
+	@bash scripts/olares.sh status
+
+olares-deploy:
+	@bash scripts/olares.sh deploy
+
+# Usage: make olares-rollback            (list tags)
+#        make olares-rollback TAG=<tag>
+olares-rollback:
+	@bash scripts/olares.sh rollback $(TAG)
+
+# Usage: make olares-tunnel                 (localhost:9001; stop the local web container first)
+#        make olares-tunnel TUNNEL_PORT=19001
+olares-tunnel:
+	@TUNNEL_PORT=$(TUNNEL_PORT) bash scripts/olares.sh tunnel
+
+olares-stop:
+	@bash scripts/olares.sh stop
+
+olares-start:
+	@bash scripts/olares.sh start
 
 encrypt:
 	@if [ -z "$(ENV)" ]; then \

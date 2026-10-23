@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redissearch
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: redissearch
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redissearch
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: redissearch
+spec:
+  replicas: {{ .Values.workloads.redissearch.replicaCount }}
+  # Olares rejects RollingUpdate on Deployments that mount hostPath volumes.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: redissearch
+  template:
+    metadata:
+      labels:
+        app: redissearch
+    spec:
+      containers:
+      - name: web
+        image: {{ .Values.images.web }}
+        imagePullPolicy: Never
+        # Image CMD sources /secrets/env before starting uvicorn on $PORT.
+        env:
+        - name: PORT
+          value: "8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        volumeMounts:
+        - name: secrets
+          mountPath: /secrets
+          readOnly: true
+      # IAP tunnel to public Redis; localhost:6381 matches the code's PUBLIC_REDIS_HOST/PORT defaults.
+      # Literals, not values: Olares upgrades reuse the installed release's values, so new keys are nil.
+      # media-manager SA needs roles/iap.tunnelResourceAccessor (port 6379) + compute.viewer on the VM.
+      # No probes and a retry loop: an exited or unready container would mark the whole pod unready
+      # and take the web UI down with public Redis.
+      - name: public-redis-tunnel
+        image: docker.io/library/redissearch-iap:olares
+        imagePullPolicy: Never
+        command:
+        - sh
+        - -c
+        - |
+          while :; do
+            gcloud compute start-iap-tunnel redis-stack-vm 6379 --local-host-port=localhost:6381 \
+              --zone=us-central1-a --project=media-circle
+            echo "IAP tunnel exited ($?); retrying in 15s"
+            sleep 15
+          done
+        env:
+        - name: CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+          value: /secrets/gcp-key.json
+        - name: CLOUDSDK_CONFIG
+          value: /tmp/gcloud
+        - name: CLOUDSDK_CORE_DISABLE_PROMPTS
+          value: "1"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: secrets
+          mountPath: /secrets
+          readOnly: true
+      volumes:
+      - name: secrets
+        hostPath:
+          path: {{ .Values.userspace.appData }}/config
+          type: Directory
