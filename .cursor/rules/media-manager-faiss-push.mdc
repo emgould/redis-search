@@ -32,7 +32,9 @@ push entirely (Redis writes still proceed normally).
 Async `httpx` client at `src/adapters/media_manager_client.py`.
 
 - Default timeout: **3600 seconds** (1-hour fail-safe matching Cloud Run limits).
-- `health_check()` — `GET /health`, raises `RuntimeError` if unhealthy or unreachable.
+- `health_check()` — `GET /health`, raises `RuntimeError` if unhealthy or unreachable. One attempt, 60s default timeout.
+- `wait_until_healthy()` — retries `health_check()` until Media Manager is ready or `HEALTH_DEADLINE_SECONDS` (300s) elapses, then raises `TimeoutError`. Each attempt stays open for the time remaining, so a cold start that takes longer than 60s is not abandoned.
+- ETL entry points (`ETLRunner.run_all`, single-job runs, and `python -m etl.tmdb_nightly_etl`) call `open_media_manager_client()`. That waits the full deadline. If Media Manager is still down, it sends one email to `ETL_NOTIFICATION_EMAIL` and the run continues with Redis writes only: no insert, rebuild, or finalize-publish. The warmup pinger still uses a single `health_check()` so it does not block for five minutes per ping.
 - `insert_docs(documents, dry_run)` — `POST /insert-docs` with batch of up to 100 docs.
 - `get_metadata(media_id)` — `POST /api/metadata` to check whether a `mc_id` exists.
 - `get_status()` — `GET /insert-docs/status` for queue depth and session stats.

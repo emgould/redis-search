@@ -54,6 +54,7 @@ from etl.flixpatrol_payload import (
     flixpatrol_sidecar_key,
     flixpatrol_titles_dir,
 )
+from etl.media_manager_connection import open_media_manager_client
 from etl.media_manager_filter import passes_media_manager_filter
 from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 from utils.get_logger import get_logger
@@ -1193,18 +1194,9 @@ if __name__ == "__main__":
         # Create Media Manager client only for movie/tv (person jobs don't push to Media Manager)
         mm_client: MediaManagerClient | None = None
         if args.media_type in ("movie", "tv"):
-            mm_url = os.getenv("MEDIA_MANAGER_API_URL")
-            if mm_url:
-                try:
-                    mm_client = MediaManagerClient()
-                    await mm_client.health_check()
-                    logger.info("Media Manager health check passed")
-                except Exception as e:
-                    logger.warning("Media Manager unavailable, skipping FAISS push: %s", e)
-                    if mm_client:
-                        await mm_client.close()
-                    mm_client = None
-            else:
+            connection = await open_media_manager_client()
+            mm_client = connection.client
+            if not connection.configured:
                 logger.info("Media Manager not configured (MEDIA_MANAGER_API_URL not set)")
 
         try:
