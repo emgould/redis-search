@@ -76,9 +76,32 @@ both, then `OLARES_MM_URL=http://<ip>:8098 make olares-config` and restart the E
     as external and redirects to Olares login unless DNS points it at 192.168.4.153 (or via LarePass VPN).
   - `.local` costs 2-5s of mDNS lookup per new connection on macOS; avoid it for API clients.
 - `make olares-tunnel` serves the web API on `localhost:9001` (SSH + `kubectl port-forward`, box port
-  = local port + 10000). This is how local mediacircle uses the box: its emulator code paths hard-code
-  `http://localhost:9001` and ignore `REDIS_SEARCH_API_URL`. Stop the local web container first.
+  = local port + 10000) and the box Redis on `localhost:6380` (SSH to the `46379` listener).
   Hitting the Service IP from the box host returns 401 (Olares auth proxy), hence port-forward.
+
+## mediacircle local development against the box
+
+mediacircle's emulator code cannot point at a remote host: the search clients hard-code
+`http://localhost:9001` (ignoring `REDIS_SEARCH_API_URL`), and the Redis cache clients
+(`utils/redis_cache.py`, `utils/redis-cache.ts`) force the host to `localhost` and only send
+`REDIS_PASSWORD` to localhost. So the box must appear on the Mac's localhost via `olares-tunnel`,
+replacing the local Docker stack on the same ports. The only mediacircle change is the password.
+
+| Step | To the box | Back to local Docker |
+|---|---|---|
+| redis-search | `make docker-down-all`, then `make olares-tunnel` (leave running) | Ctrl-C the tunnel, `make web-docker` |
+| mediacircle `config/local.env` | add `REDIS_PASSWORD=<make olares-redis-password>` | remove `REDIS_PASSWORD` (local Redis has none; AUTH would fail) |
+| mediacircle | restart dev (`dev-start.sh` copies `local.env` into the functions `.env` files) | restart dev |
+
+`REDIS_HOST=localhost`, `REDIS_PORT=6380`, `REDIS_SEARCH_API_URL=http://localhost:9001` stay as they
+are. mediacircle Makefile targets that `unset REDIS_PASSWORD` (`inspect-generic-pools-local`,
+`taste-profile-redis-resync-local`) fail auth against the box.
+
+## Logs
+
+`make olares-logs [SVC=web|iap|redis|etl] [FOLLOW=0] [TAIL=n]` tails `kubectl logs` over SSH
+(default: web, follow, last 200 lines). The ETL cron tees its dated files in `etl-logs/` to stdout,
+so `SVC=etl` covers nightly runs; the files persist across pod restarts, the stream does not.
 - Redis: TCP `exposePort: 46379` on 192.168.4.153 (LAN/VPN only), password in
   `config/redis_password` on the box.
 - Outbound: Olares allows HTTP(S) egress; SMTP 587 (SendGrid) is opened via

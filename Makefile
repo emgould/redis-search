@@ -3,7 +3,7 @@ export PYTHONPATH := src:$(PYTHONPATH)
 MICROGENRE_PYTHON ?= PYENV_VERSION=3.11.13 python
 MM_PROXY_PORT ?= 8099
 
-.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol push-flixpatrol-to-mm microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish olares-config olares-seed olares-build olares-import olares-install olares-upgrade olares-etl-catchup olares-status olares-deploy olares-rollback olares-tunnel olares-stop olares-start olares-iap-image
+.PHONY: help install etl redis-mac redis-docker test web-local web-docker web-docker-down redis-docker-down docker-down-all lint local-dev local-etl local-setup secrets-setup secrets-download local-gcs-load-movies local-gcs-load-tv local-gcs-load-all deploy deploy-api deploy-etl deploy-etl-force deploy-vm deploy-vm-all setup-etl-schedule create-redis-vm upgrade-redis-vm local tunnel etl-docker etl-docker-build etl-docker-tv etl-docker-movie etl-docker-person etl-docker-test etl-docker-cron etl-docker-cron-stop etl-smoke-test cache-version-get cache-version-set cache-version-list cache-version-seed last-etl-date backfill backfill-rt backfill-media-date-sort-fields backfill-major-provider backfill-external-ids backfill-person-credit-ids backfill-microgenres backfill-flixpatrol push-flixpatrol-to-mm microgenre-batch test-microgenres-integration etl-media get-media-details-tv get-media-details-movie get-doc-tv get-doc-movie add scratch-redis-up scratch-redis-down scratch-redis-reset snapshot-to-scratch snapshot-to-local clone-prefix-to-scratch clone-prefix-to-local validate-clone etl-vm-status etl-vm-start etl-vm-stop finalize-publish olares-config olares-seed olares-build olares-import olares-install olares-upgrade olares-etl-catchup olares-status olares-deploy olares-rollback olares-tunnel olares-stop olares-start olares-iap-image olares-redis-password olares-logs
 
 help:
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -82,7 +82,9 @@ help:
 	@echo "    make olares-status    - Show pods and services on the box"
 	@echo "    make olares-stop      - Suspend the app on the box (data kept; refuses during ETL window)"
 	@echo "    make olares-start     - Resume the app and wait until Redis + web are healthy"
-	@echo "    make olares-tunnel    - Serve the box's web API on localhost:9001 until Ctrl-C (TUNNEL_PORT= overrides)"
+	@echo "    make olares-tunnel    - Box web API on localhost:9001 + Redis on localhost:6380 until Ctrl-C (for mediacircle)"
+	@echo "    make olares-redis-password - Print the box's Redis password (pipe to pbcopy)"
+	@echo "    make olares-logs [SVC=web|iap|redis|etl] [FOLLOW=0] [TAIL=n] - Tail box container logs"
 	@echo ""
 	@echo "  Deployment:"
 	@echo "    make deploy-web       - Deploy Search Web App(autocomplete service) to Cloud Run"
@@ -782,10 +784,18 @@ olares-deploy:
 olares-rollback:
 	@bash scripts/olares.sh rollback $(TAG)
 
-# Usage: make olares-tunnel                 (localhost:9001; stop the local web container first)
-#        make olares-tunnel TUNNEL_PORT=19001
+# Usage: make olares-tunnel                 (localhost:9001 + 6380; make docker-down-all first)
+#        make olares-tunnel TUNNEL_PORT=19001 REDIS_TUNNEL_PORT=16380
 olares-tunnel:
-	@TUNNEL_PORT=$(TUNNEL_PORT) bash scripts/olares.sh tunnel
+	@TUNNEL_PORT=$(TUNNEL_PORT) REDIS_TUNNEL_PORT=$(REDIS_TUNNEL_PORT) bash scripts/olares.sh tunnel
+
+olares-redis-password:
+	@bash scripts/olares.sh redis-password
+
+# Usage: make olares-logs                   (web, follow, last 200 lines)
+#        make olares-logs SVC=etl FOLLOW=0 TAIL=1000
+olares-logs:
+	@FOLLOW=$(FOLLOW) TAIL=$(TAIL) bash scripts/olares.sh logs $(SVC)
 
 olares-stop:
 	@bash scripts/olares.sh stop

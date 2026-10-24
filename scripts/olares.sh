@@ -23,7 +23,10 @@
 #   start         Resume the app and wait for Redis to load and web /health to pass
 #
 # Local clients:
-#   tunnel        Serve the box's web API on localhost:9001 (TUNNEL_PORT overrides) until Ctrl-C
+#   tunnel        Serve the box's web API on localhost:9001 and Redis on localhost:6380 until Ctrl-C
+#                 (TUNNEL_PORT / REDIS_TUNNEL_PORT override)
+#   redis-password  Print the box's Redis password (for clients such as mediacircle)
+#   logs [svc]    Tail container logs: web (default), iap, redis, etl. FOLLOW=0 to not follow, TAIL=<n>
 #
 # Images are tagged :olares (what the pods run) and :<git sha>[-dirty-<hash>] (for rollback).
 # deploy/rollback refuse to run 2-5 AM Eastern or while an ETL run is active (ALLOW_ETL_WINDOW=1 overrides).
@@ -385,22 +388,54 @@ cmd_start() {
     verify_web_health
 }
 
-# kubectl port-forward rather than the Service IP: Olares' auth proxy rejects host-to-pod traffic (401).
+# Web: kubectl port-forward rather than the Service IP, because Olares' auth proxy rejects host-to-pod
+# traffic (401). Redis: the exposePort listener (envoy on the box, 0.0.0.0:46379).
+# Both on localhost because mediacircle's emulator forces Redis to localhost (and only sends
+# REDIS_PASSWORD to localhost) and hard-codes the search API at localhost:9001.
 # The pty ties the remote port-forward to this session so Ctrl-C or a dropped connection stops it.
 # port-forward exits when its pod is replaced (deploy/rollback), so the loop reconnects to the new pod.
 cmd_tunnel() {
-    local port="${TUNNEL_PORT:-9001}"
+    local port="${TUNNEL_PORT:-9001}" redis_port="${REDIS_TUNNEL_PORT:-6380}"
     local box_port=$((port + 10000))
     if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-        die "localhost:${port} is in use (local web container? make web-docker-down). Or pick another: TUNNEL_PORT=<port>"
+        die "localhost:${port} is in use (local web container? make docker-down-all). Or pick another: TUNNEL_PORT=<port>"
+    fi
+    if lsof -nP -iTCP:"$redis_port" -sTCP:LISTEN >/dev/null 2>&1; then
+        die "localhost:${redis_port} is in use (local Redis container? make docker-down-all). Or pick another: REDIS_TUNNEL_PORT=<port>"
     fi
     if remote "ss -Hltn 'sport = :${box_port}'" | grep -q .; then
         die "Port ${box_port} is in use on the box (stale tunnel? kubectl hides its args, so check: sudo ss -ltnp 'sport = :${box_port}')"
     fi
-    echo "🚇 localhost:${port} -> ${APP} web on ${OLARES_SSH} (Ctrl-C to stop)"
+    echo "🚇 localhost:${port} -> ${APP} web, localhost:${redis_port} -> Redis on ${OLARES_SSH} (Ctrl-C to stop)"
+    echo "   Redis requires the box password: make olares-redis-password"
     ssh -tt -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
-        -L "${port}:127.0.0.1:${box_port}" "$OLARES_SSH" \
+        -L "${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
         "while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done"
+}
+
+cmd_redis_password() {
+    local data_dir
+    data_dir="$(app_data_dir)"
+    remote "sudo cat '${data_dir}/config/redis_password'"
+}
+
+# Every container also writes to stdout (the ETL cron tees its dated log files there).
+cmd_logs() {
+    local svc="${1:-web}" target follow=() tty=(-T)
+    case "$svc" in
+        web) target="deploy/${APP} -c web" ;;
+        iap) target="deploy/${APP} -c public-redis-tunnel" ;;
+        redis) target="deploy/redis" ;;
+        etl) target="deploy/etl" ;;
+        *) die "Unknown service '${svc}'. Use: web, iap, redis, etl" ;;
+    esac
+    # pty only when following, so Ctrl-C also stops the remote kubectl.
+    if [[ "${FOLLOW:-1}" == "1" ]]; then
+        follow=(-f)
+        tty=(-tt)
+    fi
+    ssh "${tty[@]}" -o ServerAliveInterval=30 "$OLARES_SSH" \
+        "kubectl logs -n ${NAMESPACE} ${target} --tail=${TAIL:-200} ${follow[*]:-}"
 }
 
 case "${1:-}" in
@@ -416,10 +451,12 @@ case "${1:-}" in
     rollback) cmd_rollback "${2:-}" ;;
     status) cmd_status ;;
     tunnel) cmd_tunnel ;;
+    redis-password) cmd_redis_password ;;
+    logs) cmd_logs "${2:-}" ;;
     stop) cmd_stop ;;
     start) cmd_start ;;
     *)
-        sed -n '2,37p' "$0"
+        sed -n '2,39p' "$0"
         exit 1
         ;;
 esac
