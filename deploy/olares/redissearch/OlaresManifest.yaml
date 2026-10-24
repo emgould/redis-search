@@ -12,7 +12,7 @@ metadata:
   title: Redis Search
   description: Redis Stack, search API, and nightly TMDB ETL
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
-  version: 0.2.1
+  version: 0.2.4
   categories:
   - Developer Tools
 
@@ -32,13 +32,22 @@ ports:
   port: 6379
   protocol: tcp
   exposePort: 46379
+# App-to-app API for media-manager. Declared ports bypass the entrance's envoy auth sidecar.
+# Other apps cannot reach this namespace directly (Olares removes chart NetworkPolicies), so they
+# call <node IP>:47438; the host proxy's source address is admitted by app-np.
+# Olares fixes exposePort at first assignment (47438 was auto-assigned) and ignores changes on upgrade.
+- name: web-api
+  host: redissearch
+  port: 18080
+  protocol: tcp
+  exposePort: 47438
 
 permission:
   appCache: false
   appData: true
 
 spec:
-  versionName: '0.2.1'
+  versionName: '0.2.4'
   fullDescription: |
     Self-hosted redis-search: Redis Stack (RediSearch + RedisJSON), the FastAPI
     web/API service, and the cron-driven nightly ETL.

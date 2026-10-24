@@ -11,6 +11,10 @@ spec:
   - name: http
     port: 8080
     targetPort: 8080
+  # App-to-app API (media-manager): see the api-forward container.
+  - name: api
+    port: 18080
+    targetPort: 18080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,6 +44,13 @@ spec:
         env:
         - name: PORT
           value: "8080"
+        # Media Manager on this box, through its exposed port (see the mediamanager app's manifest).
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: MEDIA_MANAGER_API_URL
+          value: "http://$(HOST_IP):48098"
         ports:
         - containerPort: 8080
         resources:
@@ -94,6 +105,52 @@ spec:
         - name: secrets
           mountPath: /secrets
           readOnly: true
+      # Olares' envoy sidecar sends all inbound traffic on the entrance pod through Authelia, which
+      # rejects other apps (no session). Ports declared under OlaresManifest `ports` are exempt, so
+      # other apps call 18080, relayed here to the app over loopback (not intercepted). The 8080
+      # entrance keeps its login check, which guards access from outside the LAN.
+      - name: api-forward
+        image: docker.io/library/redissearch-iap:olares
+        imagePullPolicy: Never
+        command:
+        - python
+        - -c
+        - |
+          import asyncio
+
+          async def pipe(reader, writer):
+              try:
+                  while data := await reader.read(65536):
+                      writer.write(data)
+                      await writer.drain()
+              except OSError:
+                  pass
+              finally:
+                  writer.close()
+
+          async def handle(client_reader, client_writer):
+              try:
+                  app_reader, app_writer = await asyncio.open_connection("127.0.0.1", 8080)
+              except OSError:
+                  client_writer.close()
+                  return
+              await asyncio.gather(pipe(client_reader, app_writer), pipe(app_reader, client_writer))
+
+          async def main():
+              server = await asyncio.start_server(handle, "0.0.0.0", 18080)
+              async with server:
+                  await server.serve_forever()
+
+          asyncio.run(main())
+        ports:
+        - containerPort: 18080
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
       volumes:
       - name: secrets
         hostPath:

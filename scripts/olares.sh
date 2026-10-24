@@ -34,7 +34,6 @@
 # Environment overrides:
 #   OLARES_SSH       SSH host alias for the box (default: olares)
 #   OLARES_USER      Olares username / namespace suffix (default: 2019065722)
-#   OLARES_MM_URL    Media Manager URL reachable from the box (default: http://192.168.4.210:8098)
 #   LOCAL_REDIS      Local Docker Redis container to snapshot (default: redis-search-redis-1)
 #   FORCE=1          Allow `seed` to replace existing Redis data on the box (old AOF is kept as a .bak dir)
 
@@ -46,7 +45,6 @@ cd "$REPO_ROOT"
 APP="redissearch"
 OLARES_SSH="${OLARES_SSH:-olares}"
 OLARES_USER="${OLARES_USER:-2019065722}"
-OLARES_MM_URL="${OLARES_MM_URL:-http://192.168.4.210:8098}"
 LOCAL_REDIS="${LOCAL_REDIS:-redis-search-redis-1}"
 NAMESPACE="${APP}-${OLARES_USER}"
 CHART_DIR="deploy/olares/${APP}"
@@ -103,6 +101,7 @@ cmd_config() {
     printf '%s\n' "$password" | remote "sudo sh -c 'umask 077; cat > \"${cfg}/redis_password\"'"
     remote "sudo sh -c 'umask 077; cat > \"${cfg}/gcp-key.json\"'" < "$GCP_KEY_FILE"
     {
+        # MEDIA_MANAGER_API_URL is set by the chart (the box's Media Manager), so it is dropped here.
         grep -vE '^(ENVIRONMENT|REDIS_HOST|REDIS_PORT|REDIS_PASSWORD|GCS_ETL_PREFIX|GOOGLE_APPLICATION_CREDENTIALS|MEDIA_MANAGER_API_URL|ETL_CONFIG_PATH)=' "$LOCAL_ENV"
         echo ""
         echo "# --- Olares overrides (scripts/olares.sh) ---"
@@ -112,7 +111,6 @@ cmd_config() {
         echo "REDIS_PASSWORD=${password}"
         echo "GCS_ETL_PREFIX=${ETL_PREFIX_OLARES}"
         echo "GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json"
-        echo "MEDIA_MANAGER_API_URL=${OLARES_MM_URL}"
         echo "ETL_CONFIG_PATH=/app/config/etl_jobs.yaml"
     } | remote "sudo sh -c 'umask 077; cat > \"${cfg}/env\"'"
 
@@ -456,7 +454,7 @@ case "${1:-}" in
     stop) cmd_stop ;;
     start) cmd_start ;;
     *)
-        sed -n '2,39p' "$0"
+        sed -n '2,38p' "$0"
         exit 1
         ;;
 esac

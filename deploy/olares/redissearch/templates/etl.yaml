@@ -25,6 +25,14 @@ spec:
         command: ["/bin/bash", "-c"]
         args:
         - set -a && . /secrets/env && set +a && exec /app/entrypoint.sh cron
+        # Media Manager on this box, through its exposed port (see the mediamanager app's manifest).
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: MEDIA_MANAGER_API_URL
+          value: "http://$(HOST_IP):48098"
         resources:
           requests:
             cpu: 250m

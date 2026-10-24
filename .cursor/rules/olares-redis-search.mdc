@@ -59,14 +59,12 @@ rollout restart). The Redis password is generated once and reused on later `olar
 
 Olares overrides written into `env`: `REDIS_HOST=redis`, `REDIS_PORT=6379`, generated
 `REDIS_PASSWORD`, `GCS_ETL_PREFIX=redis-search/etl/olares`,
-`GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json`,
-`MEDIA_MANAGER_API_URL` (`OLARES_MM_URL`, default the Mac at `http://192.168.4.210:8098`),
-`ENVIRONMENT=local`.
+`GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json`, `ENVIRONMENT=local`.
 
-The Mac Media Manager URL is a stopgap until Media Manager runs on Olares: it relies on the Mac's
-DHCP address, and Media Manager must list that IP in `MEDIA_MANAGER_ALLOWED_HOSTS` (its
-TrustedHostMiddleware otherwise answers `400 Invalid host header`). If the Mac's IP changes, update
-both, then `OLARES_MM_URL=http://<ip>:8098 make olares-config` and restart the ETL and web pods.
+`MEDIA_MANAGER_API_URL` is set by the chart, not the env file: the web and etl containers point at
+the box's Media Manager app (`mediamanager`, deployed from the media-manager repo) at
+`http://$(HOST_IP):48098`, where `HOST_IP` is the node IP from the Downward API (`status.hostIP`).
+See "Calling between Olares apps" below.
 
 ## Networking
 
@@ -78,6 +76,32 @@ both, then `OLARES_MM_URL=http://<ip>:8098 make olares-config` and restart the E
 - `make olares-tunnel` serves the web API on `localhost:9001` (SSH + `kubectl port-forward`, box port
   = local port + 10000) and the box Redis on `localhost:6380` (SSH to the `46379` listener).
   Hitting the Service IP from the box host returns 401 (Olares auth proxy), hence port-forward.
+- Redis: TCP `exposePort: 46379` on 192.168.4.153 (LAN/VPN only), password in
+  `config/redis_password` on the box.
+- Web API for other apps: TCP `exposePort: 47438` (manifest port `web-api`, container `api-forward`).
+- Outbound: Olares allows HTTP(S) egress; SMTP 587 (SendGrid) is opened via
+  `options.allowedOutboundPorts`. Any new non-HTTP egress port must be added there.
+
+## Calling between Olares apps
+
+Pods in another app (e.g. `mediamanager`) cannot call this app's Services directly:
+
+- Each app namespace gets an `app-np` NetworkPolicy, owned by app-service's security controller, that
+  only admits system namespaces, the user's internal namespace, the app's own namespace and the host
+  proxy (`10.233.98.0/32`). NetworkPolicies shipped in a chart are deleted by that controller.
+- Entrance pods get an envoy sidecar that redirects all inbound traffic to Authelia; pod-to-pod HTTP
+  gets `400 cannot get user name from header` (or 401). Loopback traffic is not intercepted, and
+  ports declared in the manifest `ports:` are exempt.
+
+Pattern used by both apps: a forwarder container listens on a declared port and relays to
+`127.0.0.1:<app port>`; the declared port has an `exposePort`, and callers use
+`<node IP>:<exposePort>` (node IP via `status.hostIP`). redis-search: 18080 -> 8080, exposed on
+47438. Media Manager: 18098 -> 8080, exposed on 48098. These ports skip Olares auth, so they are
+LAN-open like Redis on 46379; the 8080 entrances keep their login check for external access.
+
+Olares fixes `exposePort` the first time a port is assigned and ignores later edits, so the manifest
+pins the assigned value. `appScope.clusterScoped`/`appRef` sharing needs a cluster-scoped reinstall
+and was not used.
 
 ## mediacircle local development against the box
 
@@ -102,10 +126,9 @@ are. mediacircle Makefile targets that `unset REDIS_PASSWORD` (`inspect-generic-
 `make olares-logs [SVC=web|iap|redis|etl] [FOLLOW=0] [TAIL=n]` tails `kubectl logs` over SSH
 (default: web, follow, last 200 lines). The ETL cron tees its dated files in `etl-logs/` to stdout,
 so `SVC=etl` covers nightly runs; the files persist across pod restarts, the stream does not.
-- Redis: TCP `exposePort: 46379` on 192.168.4.153 (LAN/VPN only), password in
-  `config/redis_password` on the box.
-- Outbound: Olares allows HTTP(S) egress; SMTP 587 (SendGrid) is opened via
-  `options.allowedOutboundPorts`. Any new non-HTTP egress port must be added there.
+
+## Public Redis
+
 - Public Redis (`redis-stack-vm`, internal IP only): the web pod's `public-redis-tunnel` container
   runs `gcloud compute start-iap-tunnel` on `localhost:6381`, so the code's `PUBLIC_REDIS_HOST/PORT`
   defaults work unchanged and the web UI's environment switcher reaches public Redis.
