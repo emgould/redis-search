@@ -406,9 +406,22 @@ cmd_tunnel() {
     fi
     echo "🚇 localhost:${port} -> ${APP} web, localhost:${redis_port} -> Redis on ${OLARES_SSH} (Ctrl-C to stop)"
     echo "   Redis requires the box password: make olares-redis-password"
-    ssh -tt -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
-        -L "${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
-        "while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done"
+    trap 'exit 130' INT
+    # ssh exits 255 only on connection loss (Wi-Fi drop, sleep). Ctrl-C reaches the remote pty, and
+    # kubectl exits 0 on SIGINT, so the remote loop needs its own trap to end with status 0.
+    # If the box still holds the old session's port-forward, the new ssh reuses it.
+    local rc
+    while :; do
+        rc=0
+        ssh -tt -o ExitOnForwardFailure=yes -o ConnectTimeout=10 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            -L "${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
+            "trap 'exit 0' INT; while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done" \
+            || rc=$?
+        [[ "$rc" == "255" ]] || return "$rc"
+        echo "🔁 $(date '+%H:%M:%S') lost connection to ${OLARES_SSH}; reconnecting in 5s (Ctrl-C to stop)"
+        sleep 5
+    done
 }
 
 cmd_redis_password() {
