@@ -1,0 +1,77 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  redissearch: 1
+  redis: 1
+  etl: 1
+
+metadata:
+  name: redissearch
+  title: Redis Search
+  description: Redis Stack, search API, and nightly TMDB ETL
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
+  version: 0.2.4
+  categories:
+  - Developer Tools
+
+entrances:
+- name: redissearch
+  host: redissearch
+  port: 8080
+  title: Redis Search
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
+  # internal: no login on LAN/VPN, Olares login required from outside
+  authLevel: internal
+  openMethod: window
+
+ports:
+- name: redis-tcp
+  host: redis
+  port: 6379
+  protocol: tcp
+  exposePort: 46379
+# App-to-app API for media-manager. Declared ports bypass the entrance's envoy auth sidecar.
+# Other apps cannot reach this namespace directly (Olares removes chart NetworkPolicies), so they
+# call <node IP>:47438; the host proxy's source address is admitted by app-np.
+# Olares fixes exposePort at first assignment (47438 was auto-assigned) and ignores changes on upgrade.
+- name: web-api
+  host: redissearch
+  port: 18080
+  protocol: tcp
+  exposePort: 47438
+
+permission:
+  appCache: false
+  appData: true
+
+spec:
+  versionName: '0.2.4'
+  fullDescription: |
+    Self-hosted redis-search: Redis Stack (RediSearch + RedisJSON), the FastAPI
+    web/API service, and the cron-driven nightly ETL.
+  developer: Media Circle
+  submitter: Media Circle
+  locale:
+  - en-US
+  supportArch:
+  - amd64
+  onlyAdmin: true
+  accelerator:
+  - mode: cpu
+    requiredCpu: 1100m
+    limitedCpu: "9"
+    requiredMemory: 2560Mi
+    limitedMemory: 29Gi
+    requiredDisk: 10Gi
+    limitedDisk: 200Gi
+
+options:
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+  apiTimeout: 0
+  allowedOutboundPorts:
+  - 587

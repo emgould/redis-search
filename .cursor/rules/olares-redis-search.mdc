@@ -1,0 +1,221 @@
+---
+description: Running redis-search (Redis Stack + web + ETL cron) on the Olares One box
+globs: deploy/olares/**,scripts/olares.sh
+alwaysApply: false
+---
+
+# redis-search on Olares
+
+The Olares One box (`ssh olares`, 192.168.4.153, Olares OS 1.12.6, K3s + containerd) runs a
+self-contained redis-search stack as an Olares app named `redissearch`
+(namespace `redissearch-2019065722`, Olares ID `2019065722@olares.com`).
+
+## Why not the built-in Olares Redis
+
+Olares' Redis middleware is Apache Kvrocks (`os-platform/kvrocks-0`). It cannot load Redis
+modules and its native FT.* subset lacks `ON JSON` indexes and `FT.ALTER`, both of which this
+repo uses. The app runs its own `redis/redis-stack-server:7.4.0-v8`, pinned to the GCP VM
+version.
+
+## Layout
+
+- Chart: `deploy/olares/redissearch/` (Helm chart + `OlaresManifest.yaml`, manifest 0.12.0 / `apiVersion: v3`).
+- Workloads: `redis` (Redis Stack), `redissearch` (web, `docker/cloudrun.Dockerfile`, plus the
+  public Redis IAP tunnel sidecar),
+  `etl` (`docker/etl.Dockerfile` in `cron` mode: MM warmup 2 AM, ETL 3 AM Eastern).
+- Ops: `scripts/olares.sh`, wrapped by `make olares-*`.
+- Docker is not used on the box. Web/ETL images are built locally for `linux/amd64` and imported
+  into the system containerd (`/run/containerd`, `k8s.io` namespace; Olares K3s does not use
+  the K3s-embedded containerd, so `k3s ctr` fails) with `imagePullPolicy: Never`. Pods always run
+  the mutable `:olares` tag; every build is also tagged `:<git sha>[-dirty-<hash>]` for rollback.
+
+## Olares chart rules enforced at upload (1.12.6)
+
+- Every Deployment's `spec.replicas` must be `{{ .Values.workloads.<name>.replicaCount }}`, with the
+  value defined in `values.yaml` and matching `workloadReplicas` in the manifest.
+- Deployments that mount `hostPath` volumes must use `strategy: Recreate`.
+- The sum of all containers' requests/limits must fit `spec.accelerator` (`requiredCpu`,
+  `limitedCpu`, `requiredMemory`, `limitedMemory`) in the manifest; raise those when adding containers.
+- Upgrades reuse the installed release's values, so keys added to `values.yaml` later render as nil
+  and fail the upgrade. Put new settings in templates as literals (or reinstall).
+- After a failed upgrade, re-uploading the same chart version does not start a new operation (the
+  watcher echoes the old failure). Bump the chart version and upgrade again.
+
+## Storage and secrets
+
+Everything lives in the app Data folder (`.Values.userspace.appData`,
+`/olares/rootfs/userspace/pvc-userspace-2019065722-*/Data/redissearch`), which survives uninstall:
+
+| Path | Contents |
+|---|---|
+| `config/` (root, 0700) | `env` (rendered from `config/local.env` + Olares overrides), `gcp-key.json`, `redis_password` |
+| `redis/` | `dump.rdb`, `appendonlydir/` |
+| `etl-logs/` | Dated ETL logs and daily start stamps (late-start catch-up relies on them) |
+
+`config/` is mounted read-only at `/secrets` in every pod. The web image already sources
+`/secrets/env`; the ETL container sources it before `entrypoint.sh cron`. After editing
+`config/local.env`, run `make olares-config` then restart the pods (`make olares-import` or a
+rollout restart). The Redis password is generated once and reused on later `olares-config` runs.
+
+Olares overrides written into `env`: `REDIS_HOST=redis`, `REDIS_PORT=6379`, generated
+`REDIS_PASSWORD`, `GCS_ETL_PREFIX=redis-search/etl/olares`,
+`GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json`, `ENVIRONMENT=local`.
+
+`MEDIA_MANAGER_API_URL` is set by the chart, not the env file: the web and etl containers point at
+the box's Media Manager app (`mediamanager`, deployed from the media-manager repo) at
+`http://$(HOST_IP):48098`, where `HOST_IP` is the node IP from the Downward API (`status.hostIP`).
+See "Calling between Olares apps" below.
+
+## Networking
+
+- Web: Olares entrance `redissearch` (appid `08dca9d2`), `authLevel: internal`.
+  - LAN, no login: `http://08dca9d2.2019065722.olares.local`
+  - `https://08dca9d2.2019065722.olares.com` resolves to the public Olares relay, so it is treated
+    as external and redirects to Olares login unless DNS points it at 192.168.4.153 (or via LarePass VPN).
+  - `.local` costs 2-5s of mDNS lookup per new connection on macOS; avoid it for API clients.
+- `make olares-tunnel` serves the web API on `localhost:9001` (SSH + `kubectl port-forward`, box port
+  = local port + 10000) and the box Redis on `localhost:6380` (SSH to the `46379` listener).
+  Hitting the Service IP from the box host returns 401 (Olares auth proxy), hence port-forward.
+- Redis: TCP `exposePort: 46379` on 192.168.4.153 (LAN/VPN only), password in
+  `config/redis_password` on the box.
+- Web API for other apps: TCP `exposePort: 47438` (manifest port `web-api`, container `api-forward`).
+- Outbound: Olares allows HTTP(S) egress; SMTP 587 (SendGrid) is opened via
+  `options.allowedOutboundPorts`. Any new non-HTTP egress port must be added there.
+
+## Calling between Olares apps
+
+Pods in another app (e.g. `mediamanager`) cannot call this app's Services directly:
+
+- Each app namespace gets an `app-np` NetworkPolicy, owned by app-service's security controller, that
+  only admits system namespaces, the user's internal namespace, the app's own namespace and the host
+  proxy (`10.233.98.0/32`). NetworkPolicies shipped in a chart are deleted by that controller.
+- Entrance pods get an envoy sidecar that redirects all inbound traffic to Authelia; pod-to-pod HTTP
+  gets `400 cannot get user name from header` (or 401). Loopback traffic is not intercepted, and
+  ports declared in the manifest `ports:` are exempt.
+
+Pattern used by both apps: a forwarder container listens on a declared port and relays to
+`127.0.0.1:<app port>`; the declared port has an `exposePort`, and callers use
+`<node IP>:<exposePort>` (node IP via `status.hostIP`). redis-search: 18080 -> 8080, exposed on
+47438. Media Manager: 18098 -> 8080, exposed on 48098. These ports skip Olares auth, so they are
+LAN-open like Redis on 46379; the 8080 entrances keep their login check for external access.
+
+Olares fixes `exposePort` the first time a port is assigned and ignores later edits, so the manifest
+pins the assigned value. `appScope.clusterScoped`/`appRef` sharing needs a cluster-scoped reinstall
+and was not used.
+
+## mediacircle local development against the box
+
+mediacircle's emulator code cannot point at a remote host: the search clients hard-code
+`http://localhost:9001` (ignoring `REDIS_SEARCH_API_URL`), and the Redis cache clients
+(`utils/redis_cache.py`, `utils/redis-cache.ts`) force the host to `localhost` and only send
+`REDIS_PASSWORD` to localhost. So the box must appear on the Mac's localhost via `olares-tunnel`,
+replacing the local Docker stack on the same ports. The only mediacircle change is the password.
+
+| Step | To the box | Back to local Docker |
+|---|---|---|
+| redis-search | `make docker-down-all`, then `make olares-tunnel` (leave running) | Ctrl-C the tunnel, `make web-docker` |
+| mediacircle `config/local.env` | add `REDIS_PASSWORD=<make olares-redis-password>` | remove `REDIS_PASSWORD` (local Redis has none; AUTH would fail) |
+| mediacircle | restart dev (`dev-start.sh` copies `local.env` into the functions `.env` files) | restart dev |
+
+`REDIS_HOST=localhost`, `REDIS_PORT=6380`, `REDIS_SEARCH_API_URL=http://localhost:9001` stay as they
+are. mediacircle Makefile targets that `unset REDIS_PASSWORD` (`inspect-generic-pools-local`,
+`taste-profile-redis-resync-local`) fail auth against the box.
+
+## Logs
+
+`make olares-logs [SVC=web|iap|redis|etl] [FOLLOW=0] [TAIL=n]` tails `kubectl logs` over SSH
+(default: web, follow, last 200 lines). The ETL cron tees its dated files in `etl-logs/` to stdout,
+so `SVC=etl` covers nightly runs; the files persist across pod restarts, the stream does not.
+
+## Public Redis
+
+- Public Redis (`redis-stack-vm`, internal IP only): the web pod's `public-redis-tunnel` container
+  runs `gcloud compute start-iap-tunnel` on `localhost:6381`, so the code's `PUBLIC_REDIS_HOST/PORT`
+  defaults work unchanged and the web UI's environment switcher reaches public Redis.
+  - Image `redissearch-iap:olares` (`docker/iap-tunnel.Dockerfile`, gcloud only) is built and
+    imported separately with `make olares-iap-image`, so `olares-deploy` does not ship the Cloud SDK.
+    `olares-install`/`olares-upgrade` refuse to run if it is missing from the box.
+  - Auth: `/secrets/gcp-key.json` (media-manager SA) via `CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE`.
+    The SA holds `roles/iap.tunnelResourceAccessor` on the project with condition
+    `destination.port == 6379`, and `roles/compute.viewer` on the instance (gcloud looks up the VM).
+  - The container has no probes and loops on exit, so an IAP outage never marks the web pod unready.
+    Tunnel logs: `kubectl logs -n redissearch-2019065722 deploy/redissearch -c public-redis-tunnel`.
+  - `/api/switch-redis` changes the active Redis for every client of the box's API (including
+    mediacircle via `olares-tunnel`), not just the browser session.
+
+## Seeding Redis from a snapshot
+
+Redis 7.4 ignores `dump.rdb` when it starts with `appendonly yes` and no AOF exists (it creates an
+empty AOF and later overwrites the snapshot). The `redis` container therefore starts with
+`appendonly no` when `/data/appendonlydir` is missing and `/data/dump.rdb` exists, then issues
+`CONFIG SET appendonly yes` once the dataset is loaded. Do not remove that logic.
+
+`make olares-seed` BGSAVEs the local Docker Redis, streams `dump.rdb` to the box, and verifies the
+sha256. It refuses to run while Redis is running on the box, and refuses to replace existing data
+without `FORCE=1` (the old `appendonlydir` is moved aside, not deleted).
+
+## ETL resume state
+
+The box uses its own GCS prefix `redis-search/etl/olares` so it never advances the Mac (`local`)
+or dev resume dates. With no state, the ETL starts from yesterday, so after seeding run one
+catch-up from the day before the snapshot's newest document (printed by `olares-seed`):
+
+```bash
+make olares-etl-catchup START=YYYY-MM-DD
+```
+
+That run records the first `olares` state; the nightly cron resumes from it.
+
+## First deploy
+
+```bash
+make olares-config
+make olares-seed            # before install: Redis is not running yet
+make olares-build
+make olares-import
+make olares-iap-image
+# one-time, on the box: olares-cli profile login --olares-id 2019065722@olares.com
+make olares-install
+make olares-etl-catchup START=YYYY-MM-DD
+make olares-status
+```
+
+## Deploying code changes
+
+There is no live reload on the box (unlike the local `web` container's mounted source +
+`uvicorn --reload`); code ships inside the images.
+
+```bash
+make olares-deploy                 # build working tree, import, restart web + ETL, check /health
+make olares-rollback               # list deploy history and tags on the box
+make olares-rollback TAG=<tag>     # retag :olares to <tag> on the box and restart
+```
+
+- The tag is the git short sha; uncommitted changes add `-dirty-<hash of the diff>`, so a dirty deploy
+  is visibly not reproducible from a commit.
+- Deploy/rollback refuse to run 2-5 AM Eastern or while `etl.run_nightly_etl` is running in the etl pod,
+  because restarting the etl pod kills the run. `ALLOW_ETL_WINDOW=1` overrides.
+- History is appended to `deploy-history` in the app Data folder.
+- Old sha tags accumulate in containerd; they share base layers, so only changed layers cost space.
+
+| Change | Command |
+|---|---|
+| Python code, `requirements.txt` | `make olares-deploy` |
+| `config/local.env` values | `make olares-config`, then `make olares-deploy` (or restart pods) |
+| Chart (resources, ports, Redis flags) | `make olares-upgrade` |
+
+Chart changes: bump `version` in `Chart.yaml` and `metadata.version`/`spec.versionName` in
+`OlaresManifest.yaml` (same-version re-upload is also accepted for the `upload` source), then
+`make olares-upgrade`.
+
+## Stopping and starting
+
+`make olares-stop` / `make olares-start` wrap `olares-cli market stop` / `resume` (needs the
+`olares-cli profile login` session on the box). Data in the app Data folder is untouched.
+
+- Stop is guarded like deploy (ETL window / active run) and then waits for pods to exit: Olares reports
+  `stopped` before pods terminate, and `olares-seed` must not overwrite files under a live Redis.
+- The backend returns HTTP 500 for stop-when-stopped, so both targets check state first and are no-ops
+  in the requested state.
+- Start waits for Redis readiness (the AOF load of ~1.5M keys takes ~1.5 min) and web `/health`.
+- A stopped app misses the 3 AM ETL; after a long stop run `make olares-etl-catchup START=<date>`.
