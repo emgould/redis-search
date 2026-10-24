@@ -76,6 +76,10 @@ See "Calling between Olares apps" below.
 - `make olares-tunnel` serves the web API on `localhost:9001` (SSH + `kubectl port-forward`, box port
   = local port + 10000) and the box Redis on `localhost:6380` (SSH to the `46379` listener).
   Hitting the Service IP from the box host returns 401 (Olares auth proxy), hence port-forward.
+  The box-side loop restarts `kubectl port-forward` when the web pod is replaced; the Mac-side loop
+  reconnects SSH when it exits 255 (Wi-Fi drop or sleep: `Read from remote host ...: Operation timed
+  out`). Ctrl-C ends both. To stop it from another shell, kill the `olares.sh tunnel` process: killing
+  only its `ssh` child counts as a dropped connection and reconnects.
 - Redis: TCP `exposePort: 46379` on 192.168.4.153 (LAN/VPN only), password in
   `config/redis_password` on the box.
 - Web API for other apps: TCP `exposePort: 47438` (manifest port `web-api`, container `api-forward`).
