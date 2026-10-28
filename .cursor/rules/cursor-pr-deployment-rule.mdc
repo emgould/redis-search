@@ -1,0 +1,175 @@
+---
+alwaysApply: true
+---
+# Cursor Rule: Deployment Requirements for Pull Requests
+
+# Deployment Plan Requirements
+
+Every PR or release summary must include the exact commands required to get the change into production.
+
+## Required Behavior
+
+- Treat code changes as production-bound by default.
+- If a change adds, renames, exports, or modifies Firebase Functions behavior, the deployment plan must list the exact function deploy command.
+- Modify the `bin/bactch-deploy.sh` script. For a new or changed TypeScript Firebase callable/export, specificy the appropriate make command to deploy:
+  - `make deploy-only FILTER=<functionName>`
+ 
+ - For non-function deployables, list the exact repo command or script required for that surface.
+- If env/config/secrets must be changed before deploy, list those steps before deploy commands.
+- If no production command is needed, explain why in one concrete sentence tied to the actual diff.
+
+## Forbidden Deployment Plan Language
+
+Do not use local validation as a deployment plan:
+- Bad: `No deployment actions required. Local emulator/code-watch flow will pick up the changes.`
+- Bad: `No deploy needed because this was tested locally.`
+
+Do not write vague deployment instructions:
+- Bad: `Deploy Firebase Functions.`
+- Bad: `Release normally.`
+## Purpose
+
+Every Pull Request must explicitly identify **all deployment
+requirements**. Deployment should never rely on tribal knowledge or
+require a developer to inspect the diff to determine what must be
+deployed.
+
+The objective is that **one script (`bin/batch-deploy.sh`) completely
+captures the deployment required by the PR.**
+
+------------------------------------------------------------------------
+
+## Required Workflow
+
+Before creating a Pull Request:
+
+1.  Inspect every changed file.
+2.  Determine whether the PR changes any deployable infrastructure.
+3.  Identify every Firebase Function that must be deployed.
+4.  Update `bin/batch-deploy.sh` so it performs every deployment
+    required for the PR.
+5.  Include a Deployment section in the PR describing exactly what the
+    script deploys.
+
+------------------------------------------------------------------------
+
+## Deploy Script Requirements
+
+If Firebase Functions have changed, `bin/batch-deploy.sh` **must** be
+updated to invoke the appropriate deployment commands.
+
+remove any functions from the functions list that are not part of the changes
+that need to be deployed as a result of changes in this branch. Add ALL
+functions that need to be redeployed
+
+If multiple functions must be deployed, the script should contain all
+required commands in the proper order.
+
+The deployment script is considered the canonical definition of the
+infrastructure changes for the PR.
+
+## Thin TypeScript bundles
+
+A function listed in `bin/batch-deploy.sh` is not thin by being listed there.
+`./bin/batch-deploy.sh` calls `firebase/deploy-functions.sh --only-exact` with
+the names in `functions=()`. Thin upload happens only when **every** name in
+that `--only-exact` list is a key in
+`firebase/functions/thin-entrypoints.json`. One unregistered name makes that
+command build and upload the `lib/index.js` monolith for the whole list.
+
+Register each changed TypeScript export before it goes into `functions=()`:
+
+```json
+{
+  "functionExportName": "src/path/to/module-that-exports-it.ts"
+}
+```
+
+The registry value is the module that already exports `functionExportName`.
+Do not call `setGlobalOptions` in that module or in a thin wrapper.
+`firebase/functions/scripts/build-thin-function.mjs` generates one bundle
+entry and calls `setGlobalOptions({ region: 'us-central1' })` once. A second
+call in an imported module makes Firebase log
+`Calling setGlobalOptions twice leads to undefined behavior` when several
+functions share `lib/thin/_batch.js`.
+
+`firebase/deploy-functions.sh --only-exact` and
+`firebase/deploy-function.sh --js` then:
+
+- one registered name → `lib/thin/<name>.js`
+- several registered names in one command → `lib/thin/_batch.js`
+- point `functions/package.json` `main` at that file for the upload
+- omit `lib/index.js`
+- restore `package.json` and `firebase.json` on the EXIT trap
+
+`bin/batch-deploy.sh` chunks `functions=()` by `DEPLOY_BATCH_SIZE`. Keep a
+batch entirely registered or entirely unregistered. A mixed chunk fat-deploys
+every name in that chunk.
+
+Unregistered functions stay on the monolith. Local emulators keep loading
+`src/index.ts`. Do not commit `lib/thin/`.
+
+Deployment instructions must **never** exist only in the PR description.
+
+------------------------------------------------------------------------
+
+## Pull Request Requirements
+
+Every PR must contain a section like:
+
+``` md
+## Deployment
+
+Deployment script updated:
+`bin/batch-deploy.sh`
+
+This PR deploys:
+
+### Firebase Functions
+
+- getTrending
+- getProvidersList
+- syncNetflixHistory
+
+- You need to specify if make deploy-rules needs to be run
+
+#### BAckfilling
+- list all the make commands that must be run both locally and to dev for this pr
+
+### Other Infrastructure
+
+- None
+
+Deploy by running:
+
+```bash
+./bin/batch-deploy.sh
+```
+
+
+    If no deployment is required:
+
+    ```md
+    ## Deployment
+
+    No deployment required.
+
+    This PR contains application-only changes.
+
+    `bin/batch-deploy.sh` was intentionally not modified.
+
+------------------------------------------------------------------------
+
+## Enforcement
+
+A Pull Request is **not complete** until:
+
+-   All deployment requirements have been identified.
+-   `bin/batch-deploy.sh` has been updated (if required).
+-   The PR contains a complete **Deployment** section documenting
+    exactly what the deployment script performs.
+
+Do not create or finalize a PR until these requirements have been
+satisfied.
+
+Every deployable change must be represented exactly once in bin/batch-deploy.sh. There should never be deployment instructions in Slack, PR comments, commit messages, or the PR body that are not reflected in the script. The script is the single source of truth.
