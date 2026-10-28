@@ -13,7 +13,6 @@ from core.streaming_providers import MAJOR_STREAMING_PROVIDERS
 
 VALID_PROVIDER_TYPES = frozenset({"flatrate", "buy", "rent", "in theater", "on_demand"})
 CANCELED_STATUS = "Canceled"
-MIN_VOTE_COUNT = 5
 MIN_VOTE_AVERAGE = 4.0
 
 
@@ -72,10 +71,6 @@ def passes_media_manager_filter(doc: Mapping[str, Any]) -> tuple[bool, str]:
     image = doc.get("image")
     if not image or (isinstance(image, str) and not image.strip()):
         return False, "no poster image"
-
-    vote_count = doc.get("vote_count")
-    if not isinstance(vote_count, (int, float)) or vote_count < MIN_VOTE_COUNT:
-        return False, f"vote_count {vote_count} < {MIN_VOTE_COUNT}"
 
     vote_average = doc.get("vote_average")
     if not isinstance(vote_average, (int, float)) or vote_average < MIN_VOTE_AVERAGE:
