@@ -1,0 +1,70 @@
+# Watchmode sports and MediaCircle parity
+
+This repo’s `src/api/watchmode` tracks the MediaCircle Firebase Python watchmode package, including live sports, team-alias resolution, catalog hardening, and Streaming Availability fallback for what’s new.
+
+## Environment variables
+
+| Variable | Used by | Notes |
+|----------|---------|--------|
+| `WATCHMODE_API_KEY` | `api.watchmode.auth` | Catalog + live sports upstream |
+| `TMDB_READ_TOKEN` | `api.watchmode.auth` | TMDB enrichment in wrappers |
+| `RAPIDAPI_KEY` | `api.streaming_availability.auth` | Comma-separated RapidAPI key pool; optional fallback when Watchmode what’s-new fails |
+
+Dev ETL env: `config/etl.dev.env` (local) and `config/etl.dev.env.encrypted` (committed). Re-encrypt after changing secrets: `make encrypt ENV=dev`.
+
+## Cache namespaces (Redis)
+
+Catalog (unchanged prefixes):
+
+- `watchmode` — title/search/releases request cache (`WatchmodeCache`)
+- `watchmode_wrapper` — wrapper methods including `get_whats_new_wrapper`; **version registry** bumped when what’s-new behavior changes (see `scripts/seed_cache_versions.py`)
+
+Sports (independent of catalog cache):
+
+| Prefix | TTL (typical) | Role |
+|--------|---------------|------|
+| `watchmode_sports_directory` | 24h / 7d teams | Leagues, coverage, team directories |
+| `watchmode_sports_schedule` | 24h | Day snapshots, ESPN NCAAM scoreboard |
+| `watchmode_sports_activity` | persistent | Activity markers |
+| `watchmode_sports_sources` | 24h | Per-event viewing options |
+
+Streaming Availability (fallback only):
+
+- `sa_request` / `streaming_availability` — RapidAPI change feeds
+
+Cache busting for what’s new uses the shared version registry key for `watchmode_wrapper`, not prefix renames.
+
+## Live sports access
+
+Watchmode live endpoints require Startup or Business live access (`get_live_coverage` → `access_level`). The wrapper (`get_sports`) is the frontend broker; handlers expose `GET` with `action=events|event|sources|leagues|teams|coverage`.
+
+Schedule bucketing uses canonical timezone `America/New_York` with viewer-local day mapping (`new_york_dates_for_viewer_day`, `sports_feed_section`).
+
+## Team aliases (Firestore)
+
+When Firebase is initialized, `team_alias_store` persists alias groups:
+
+- Collection `watchmodeTeamAliases`
+- Collection `watchmodeTeamAliasMembers`
+
+Tests and offline runs use an in-memory store when no Firebase app is available.
+
+## ESPN NCAAM supplement
+
+`espn_ncaam_scoreboard.py` supplies supplemental scoreboard data cached under `watchmode_sports_schedule` prefix `espn_ncaam_scoreboard_v1`; imported from `core.py` and `wrappers.py`.
+
+## What’s new fallback
+
+`WatchmodeWrapper.get_whats_new`:
+
+1. Watchmode `/releases/` with 5s timeout and `max_retries=1`
+2. On failure/empty, `StreamingAvailabilityService.get_changes` when `RAPIDAPI_KEY` is configured
+3. TMDB enrichment unchanged; `data_source` reflects watchmode vs streaming_availability path
+
+## Sync source of truth
+
+Compare against MediaCircle: `firebase/python_functions/api/watchmode` and `api/streaming_availability`. After copying, diff should show no file-level differences except repo-specific paths in docs.
+
+## Redis fail-closed types
+
+Sports wrapper imports `RedisUnavailableError` and related emulator fail-closed helpers from `utils.redis_cache`. MediaCircle’s full fail-closed read/write behavior is not fully ported; only the exception types and `_redis_fail_closed()` hook required for sports imports and tests are present in this repo.

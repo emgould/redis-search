@@ -36,7 +36,7 @@ CACHE_VERSIONS: dict[str, str] = {
     # Watchmode
     "watchmode_request": "1.0.0",
     "watchmode": "2.1.0",
-    "watchmode_wrapper": "4.1.0",
+    "watchmode_wrapper": "4.2.0",
     # OpenLibrary
     "openlibrary_editions": "1.0.0",
     "openlibrary_request": "1.0.22",

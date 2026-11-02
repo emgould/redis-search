@@ -7,6 +7,7 @@ Handlers exclusively call wrapper methods - no auth or business logic here.
 
 import json
 import logging
+from typing import Any
 
 from firebase_functions import https_fn
 
@@ -16,6 +17,41 @@ from utils.async_runner import run_async
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def _safe_model_payload(value: object) -> object:
+    """
+    Safely serialize pydantic-heavy payloads for HTTP responses.
+
+    In emulator hot-reload flows, some models can transiently carry mocked
+    serializer internals, which may raise when calling model_dump().
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, list | tuple):
+        return [_safe_model_payload(item) for item in value]
+
+    if isinstance(value, dict):
+        return {str(key): _safe_model_payload(item) for key, item in value.items()}
+
+    if hasattr(value, "model_dump"):
+        try:
+            return value.model_dump()  # type: ignore[attr-defined]
+        except Exception as exc:
+            logger.warning(
+                "model_dump failed, falling back to attribute serialization: %s",
+                exc,
+            )
+
+    if hasattr(value, "__dict__"):
+        return {
+            key: _safe_model_payload(item)
+            for key, item in vars(value).items()
+            if not key.startswith("__pydantic_")
+        }
+
+    return str(value)
 
 
 class WatchmodeHandler:
@@ -60,7 +96,7 @@ class WatchmodeHandler:
             status_code = response.status_code
             if status_code != 200 or response.error:
                 return https_fn.Response(
-                    json.dumps(response.model_dump()),
+                    json.dumps(_safe_model_payload(response), default=str),
                     status=status_code,
                     headers={"Content-Type": "application/json"},
                 )
@@ -71,7 +107,7 @@ class WatchmodeHandler:
                     f"Response object missing 'results' attribute. "
                     f"Available attributes: {dir(response)}, "
                     f"Type: {type(response)}, "
-                    f"Model dump: {response.model_dump()}"
+                    f"Model dump: {_safe_model_payload(response)}"
                 )
                 return https_fn.Response(
                     json.dumps({"error": "Invalid response structure from wrapper"}),
@@ -99,7 +135,7 @@ class WatchmodeHandler:
                 )
 
             return https_fn.Response(
-                json.dumps(response.model_dump(), default=str),
+                json.dumps(_safe_model_payload(response), default=str),
                 status=200,
                 headers={"Content-Type": "application/json"},
             )
@@ -260,6 +296,38 @@ class WatchmodeHandler:
                 status=500,
                 headers={"Content-Type": "application/json"},
             )
+
+    def get_sports(self, req: https_fn.Request) -> https_fn.Response:
+        """GET sports frontend API. Bind using existing auth/App Check deployment pattern.
+
+        action=events|event|sources|leagues|teams|coverage. No cache bypass,
+        refresh or upstream continuation controls are exposed to callers.
+        """
+        if req.method != "GET":
+            return https_fn.Response(json.dumps({"error": "GET required"}), status=405,
+                headers={"Content-Type": "application/json", "Allow": "GET"})
+        try:
+            allowed = {"action", "region", "date", "timezone", "mode", "league_ids", "team_ids",
+                       "followed_league_ids", "followed_team_ids", "search", "page",
+                       "limit", "version", "event_id", "league_id", "team_league_hints"}
+            if set(req.args) - allowed:
+                raise ValueError("Unknown sports query parameter")
+            params: dict[str, Any] = dict(req.args)
+            if "timezone" in params:
+                params["timezone_name"] = params.pop("timezone")
+            for key in ("page", "limit", "event_id", "league_id"):
+                if key in params:
+                    params[key] = int(params[key])
+            result = run_async(watchmode_wrapper.get_sports(**params))
+            return https_fn.Response(json.dumps(_safe_model_payload(result), default=str),
+                status=result.status_code, headers={"Content-Type": "application/json", "Cache-Control": "private, no-store"})
+        except ValueError as exc:
+            return https_fn.Response(json.dumps({"error": str(exc), "code": "INVALID_QUERY"}),
+                status=400, headers={"Content-Type": "application/json"})
+        except Exception:
+            logger.exception("Watchmode sports handler failed")
+            return https_fn.Response(json.dumps({"error": "Sports temporarily unavailable"}),
+                status=503, headers={"Content-Type": "application/json"})
 
 
 # Create a global instance of the handler
