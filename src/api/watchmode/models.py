@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from api.tmdb.models import MCMovieItem, MCTvItem
 from contracts.models import MCBaseItem, MCSources, MCType
@@ -235,3 +235,101 @@ WatchmodeStreamingSourceDict = dict[str, Any]  # Represents WatchmodeStreamingSo
 WatchmodeReleaseDict = dict[str, Any]  # Represents WatchmodeRelease.model_dump()
 WatchmodeTitleDetailsDict = dict[str, Any]  # Represents WatchmodeTitleDetails.model_dump()
 WatchmodeSearchResultDict = dict[str, Any]  # Represents WatchmodeSearchResult.model_dump()
+
+
+class WatchmodeSportsParticipant(BaseModelWithMethods):
+    """Text-only participant identity. No assumption that every event has teams."""
+    model_config = ConfigDict(extra="ignore")
+    id: int
+    name: str | None = None
+
+
+class WatchmodeSportsEvent(BaseModelWithMethods):
+    """Sports-specific model; deliberately independent of TMDB/media-title IDs."""
+    model_config = ConfigDict(extra="ignore")
+    id: int
+    name: str
+    event_type: str = "sport"
+    league: dict[str, Any] | None = None
+    home_team: WatchmodeSportsParticipant | None = None
+    away_team: WatchmodeSportsParticipant | None = None
+    start_time: str
+    status: str = "unknown"
+    venue: str | None = None
+    season: str | None = None
+    round: str | None = None
+    broadcasts: list[dict[str, Any]] = Field(default_factory=list)
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    event_destinations: list[dict[str, Any]] = Field(default_factory=list)
+    sources_state: str = "unknown"
+    sources_fetched_at: str | None = None
+    status_fetched_at: str | None = None
+    display_kind: str = "event"
+    primary_action: str = "where_to_watch"
+    section: str = "upcoming"
+    viewing_links_need_refresh: bool = False
+
+    @model_validator(mode="after")
+    def prepare_frontend(self) -> WatchmodeSportsEvent:
+        """Validate links on EVERY response, after Redis retrieval, not before caching."""
+        from copy import deepcopy
+        from datetime import UTC, datetime
+        self.display_kind = "matchup" if self.home_team and self.away_team else "event"
+        if self.league:
+            self.league = {k: v for k, v in self.league.items() if "logo" not in k.lower()}
+        now = datetime.now(UTC)
+        for name in ("sources", "event_destinations"):
+            items = deepcopy(getattr(self, name))
+            for source in items:
+                for key in list(source):
+                    if "logo" in key.lower():
+                        del source[key]
+                valid_links = []
+                for link in source.get("links", []):
+                    valid = source.get("freshness") != "stale"
+                    deadline = link.get("refresh_after")
+                    if deadline:
+                        try:
+                            parsed = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+                            valid = valid and parsed.tzinfo is not None and parsed > now
+                        except (ValueError, TypeError, AttributeError):
+                            valid = False
+                    if valid:
+                        valid_links.append(link)
+                    else:
+                        self.viewing_links_need_refresh = True
+                source["links"] = valid_links
+            setattr(self, name, items)
+        return self
+
+
+class WatchmodeSportsResponse(BaseModelWithMethods):
+    """Uniform response for the Sports handler; all public fields JSON serializable."""
+    model_config = ConfigDict(extra="ignore")
+    status_code: int = 200
+    error: str | None = None
+    code: str | None = None
+    region: str = "US"
+    date: str | None = None
+    timezone: str | None = None
+    fetched_at: str | None = None
+    status_fetched_at: str | None = None
+    version: str | None = None
+    date_range_limited: bool = False
+    effective_date_from: str | None = None
+    effective_date_to: str | None = None
+    events: list[WatchmodeSportsEvent] = Field(default_factory=list)
+    event: WatchmodeSportsEvent | None = None
+    leagues: list[dict[str, Any]] = Field(default_factory=list)
+    teams: list[dict[str, Any]] = Field(default_factory=list)
+    coverage: dict[str, Any] | None = None
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    event_destinations: list[dict[str, Any]] = Field(default_factory=list)
+    sources_state: str | None = None
+    viewing_links_need_refresh: bool = False
+    market: dict[str, Any] | None = None
+    total_results: int = 0
+    page: int = 1
+    has_more: bool = False
+    preferences_required: bool = False
+    status_refresh_failed: bool = False
