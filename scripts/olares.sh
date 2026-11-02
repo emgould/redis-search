@@ -23,8 +23,9 @@
 #   start         Resume the app and wait for Redis to load and web /health to pass
 #
 # Local clients:
-#   tunnel        Serve the box's web API on localhost:9001 and Redis on localhost:6380 until Ctrl-C
-#                 (TUNNEL_PORT / REDIS_TUNNEL_PORT override)
+#   tunnel        Forward the box's web API (default localhost:9001) and Redis (localhost:6380) until Ctrl-C
+#                 TUNNEL_PORT / REDIS_TUNNEL_PORT override ports; TUNNEL_BIND=0.0.0.0 exposes the web API on
+#                 the LAN for physical iOS/Android devices (EXPO_PUBLIC_EMULATOR_HOST:<port> in mediacircle)
 #   redis-password  Print the box's Redis password (for clients such as mediacircle)
 #   logs [svc]    Tail container logs: web (default), iap, redis, etl. FOLLOW=0 to not follow, TAIL=<n>
 #
@@ -35,6 +36,7 @@
 #   OLARES_SSH       SSH host alias for the box (default: olares)
 #   OLARES_USER      Olares username / namespace suffix (default: 2019065722)
 #   LOCAL_REDIS      Local Docker Redis container to snapshot (default: redis-search-redis-1)
+#   TUNNEL_BIND      Local bind address for the web API forward (default: 127.0.0.1; use 0.0.0.0 for LAN/mobile)
 #   FORCE=1          Allow `seed` to replace existing Redis data on the box (old AOF is kept as a .bak dir)
 
 set -euo pipefail
@@ -388,15 +390,17 @@ cmd_start() {
 
 # Web: kubectl port-forward rather than the Service IP, because Olares' auth proxy rejects host-to-pod
 # traffic (401). Redis: the exposePort listener (envoy on the box, 0.0.0.0:46379).
-# Both on localhost because mediacircle's emulator forces Redis to localhost (and only sends
-# REDIS_PASSWORD to localhost) and hard-codes the search API at localhost:9001.
+# Web API bind is TUNNEL_BIND (127.0.0.1 for Mac-only clients; 0.0.0.0 so phones can reach
+# http://<host-lan-ip>:9001 with mediacircle EXPO_PUBLIC_EMULATOR_HOST). Redis stays on loopback
+# (mediacircle emulators use localhost:6380 and REDIS_PASSWORD only for localhost).
 # The pty ties the remote port-forward to this session so Ctrl-C or a dropped connection stops it.
 # port-forward exits when its pod is replaced (deploy/rollback), so the loop reconnects to the new pod.
 cmd_tunnel() {
     local port="${TUNNEL_PORT:-9001}" redis_port="${REDIS_TUNNEL_PORT:-6380}"
+    local bind_addr="${TUNNEL_BIND:-127.0.0.1}"
     local box_port=$((port + 10000))
     if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-        die "localhost:${port} is in use (local web container? make docker-down-all). Or pick another: TUNNEL_PORT=<port>"
+        die "Port ${port} is in use (local web container? make docker-down-all). Or pick another: TUNNEL_PORT=<port>"
     fi
     if lsof -nP -iTCP:"$redis_port" -sTCP:LISTEN >/dev/null 2>&1; then
         die "localhost:${redis_port} is in use (local Redis container? make docker-down-all). Or pick another: REDIS_TUNNEL_PORT=<port>"
@@ -404,7 +408,10 @@ cmd_tunnel() {
     if remote "ss -Hltn 'sport = :${box_port}'" | grep -q .; then
         die "Port ${box_port} is in use on the box (stale tunnel? kubectl hides its args, so check: sudo ss -ltnp 'sport = :${box_port}')"
     fi
-    echo "🚇 localhost:${port} -> ${APP} web, localhost:${redis_port} -> Redis on ${OLARES_SSH} (Ctrl-C to stop)"
+    echo "🚇 ${bind_addr}:${port} -> ${APP} web, 127.0.0.1:${redis_port} -> Redis on ${OLARES_SSH} (Ctrl-C to stop)"
+    if [[ "$bind_addr" == "0.0.0.0" ]]; then
+        echo "   Web API is reachable on this machine's LAN IP at port ${port} (physical mobile dev)"
+    fi
     echo "   Redis requires the box password: make olares-redis-password"
     trap 'exit 130' INT
     # ssh exits 255 only on connection loss (Wi-Fi drop, sleep). Ctrl-C reaches the remote pty, and
@@ -415,7 +422,7 @@ cmd_tunnel() {
         rc=0
         ssh -tt -o ExitOnForwardFailure=yes -o ConnectTimeout=10 \
             -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-            -L "${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
+            -L "${bind_addr}:${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
             "trap 'exit 0' INT; while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done" \
             || rc=$?
         [[ "$rc" == "255" ]] || return "$rc"

@@ -82,7 +82,7 @@ help:
 	@echo "    make olares-status    - Show pods and services on the box"
 	@echo "    make olares-stop      - Suspend the app on the box (data kept; refuses during ETL window)"
 	@echo "    make olares-start     - Resume the app and wait until Redis + web are healthy"
-	@echo "    make olares-tunnel    - Box web API on localhost:9001 + Redis on localhost:6380 until Ctrl-C (for mediacircle)"
+	@echo "    make olares-tunnel    - Box web API :9001 + Redis :6380 until Ctrl-C (TUNNEL_BIND=0.0.0.0 for LAN/mobile)"
 	@echo "    make olares-redis-password - Print the box's Redis password (pipe to pbcopy)"
 	@echo "    make olares-logs [SVC=web|iap|redis|etl] [FOLLOW=0] [TAIL=n] - Tail box container logs"
 	@echo ""
@@ -784,10 +784,11 @@ olares-deploy:
 olares-rollback:
 	@bash scripts/olares.sh rollback $(TAG)
 
-# Usage: make olares-tunnel                 (localhost:9001 + 6380; make docker-down-all first)
+# Usage: make olares-tunnel                 (127.0.0.1:9001 + 6380; make docker-down-all first)
+#        make olares-tunnel TUNNEL_BIND=0.0.0.0   (physical iOS/Android via mediacircle EXPO_PUBLIC_EMULATOR_HOST)
 #        make olares-tunnel TUNNEL_PORT=19001 REDIS_TUNNEL_PORT=16380
 olares-tunnel:
-	@TUNNEL_PORT=$(TUNNEL_PORT) REDIS_TUNNEL_PORT=$(REDIS_TUNNEL_PORT) bash scripts/olares.sh tunnel
+	@TUNNEL_PORT=$(TUNNEL_PORT) REDIS_TUNNEL_PORT=$(REDIS_TUNNEL_PORT) TUNNEL_BIND=$(TUNNEL_BIND) bash scripts/olares.sh tunnel
 
 olares-redis-password:
 	@bash scripts/olares.sh redis-password
