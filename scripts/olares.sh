@@ -416,14 +416,21 @@ cmd_tunnel() {
     trap 'exit 130' INT
     # ssh exits 255 only on connection loss (Wi-Fi drop, sleep). Ctrl-C reaches the remote pty, and
     # kubectl exits 0 on SIGINT, so the remote loop needs its own trap to end with status 0.
-    # If the box still holds the old session's port-forward, the new ssh reuses it.
+    # After a dropped connection the box can keep the old session's retry loop and kubectl alive, so
+    # the new session's port-forward fails with "address already in use" on ${box_port} forever.
+    # Every (re)connect therefore first stops the previous session's loop (matched by its command
+    # line; the [k] keeps pkill from matching this shell) and then whatever still listens on the port.
+    local stale_cleanup
+    stale_cleanup="pkill -f '[k]ubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080' 2>/dev/null;"
+    stale_cleanup+=" for p in \$(ss -Htlnp 'sport = :${box_port}' 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u); do kill \"\$p\" 2>/dev/null; done;"
+    stale_cleanup+=" sleep 1;"
     local rc
     while :; do
         rc=0
         ssh -tt -o ExitOnForwardFailure=yes -o ConnectTimeout=10 \
             -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
             -L "${bind_addr}:${port}:127.0.0.1:${box_port}" -L "${redis_port}:127.0.0.1:46379" "$OLARES_SSH" \
-            "trap 'exit 0' INT; while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done" \
+            "${stale_cleanup} trap 'exit 0' INT; while :; do kubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080; sleep 2; done" \
             || rc=$?
         [[ "$rc" == "255" ]] || return "$rc"
         echo "🔁 $(date '+%H:%M:%S') lost connection to ${OLARES_SSH}; reconnecting in 5s (Ctrl-C to stop)"
