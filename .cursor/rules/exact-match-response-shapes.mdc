@@ -61,17 +61,16 @@ The exact match feature adds a new `exact_match` property to search and autocomp
 - **Type:** `ExactMatchItem | null`
 - **When present:** At least one exact match found; contains the single best match (hero pick).
 - **Media tie-break:** For `movie`/`tv`, when multiple exact matches exist:
-  1. **Viable filter:** Candidates without watch providers are eliminated — unless they are movies released within the last ~6 months (theatrical window) or unless no candidates survive the filter.
-  2. **Sort by effective date (YYYYMM) descending:** `release_date` for movies, `last_air_date` for TV, rounded to year-month (day dropped). Most recent month-bucket wins.
-  3. **Within same YYYYMM:** higher `popularity` wins.
-  4. **Within same YYYYMM and popularity:** movie before TV.
+  1. **Title tightness:** word-level / article-insensitive title before compact-only match.
+  2. **Composite prominence (`compute_media_prominence`) descending:** blends popularity, Bayesian rating, vote footprint, bounded recency, US/English affinity, and watchability.
+  3. **Within equal prominence:** higher `popularity`, then movie before TV.
 - **Non-media fallback:** After media, non-media exact matches fall back to source priority (`person > podcast > book > author`).
 - **When absent:** Omit key, or use `"exact_match": null` for consistent typing (recommend always include, use `null` when none)
 - **Cast shape:** For `exact_match`, `cast` is now `Array<{ name: string, id: string | null }>` (name + TMDB ID).
 
 **`exact_matches` field:**
 - **Type:** `ExactMatchItem[]`
-- **Contents:** All items across all sources that qualified as exact matches, ranked (media items by `score_media_result`, non-media by source priority).
+- **Contents:** All items across all sources that qualified as exact matches, ranked (media items by title tightness then `compute_media_prominence`; non-media by source priority).
 - **Includes the hero pick:** The `exact_match` winner is included in this array. The UI filters it out at render time to avoid visual duplication.
 - **When empty:** `[]` (no exact matches found).
 

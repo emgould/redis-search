@@ -23,8 +23,10 @@ from contracts.models import MCType
 from core.iptc import expand_query_string, get_search_aliases
 from core.ranking import (
     EXACT_MATCH_SOURCE_PRIORITY,
+    compute_media_prominence,
     is_exact_match,
     media_titles_match_exactly,
+    media_titles_match_ignoring_article,
     score_book_result,
     score_media_result,
     score_person_result,
@@ -83,12 +85,12 @@ def _rank_person_result(person: dict, query: str) -> tuple[int, int, float]:
     return result
 
 
-def _rank_media_result(media: dict, query: str) -> tuple[int, int, float]:
+def _rank_media_result(media: dict, query: str) -> tuple[int, float, float]:
     """
     Generate a sort key for ranking movie/TV results.
     Delegates to score_media_result from core.ranking.
     """
-    result: tuple[int, int, float] = score_media_result(query, media)
+    result: tuple[int, float, float] = score_media_result(query, media)
     return result
 
 
@@ -225,28 +227,43 @@ def _effective_date_yyyymm(source: str, item: dict[str, Any]) -> int:
         return 0
 
 
+def _media_exact_tightness(query: str, item: dict[str, Any]) -> int:
+    """0 for literal or article-insensitive title match; 1 for compact-only."""
+    if media_titles_match_exactly(query, item):
+        return 0
+    if media_titles_match_ignoring_article(query, item):
+        return 0
+    return 1
+
+
+def _title_without_leading_article(title: str) -> str:
+    """Lowercase title with a single leading the/a/an removed when more words follow."""
+    words = title.lower().strip().split()
+    if len(words) > 1 and words[0] in ("the", "a", "an"):
+        return " ".join(words[1:])
+    return title.lower().strip()
+
+
 def _exact_match_media_sort_key(
     candidate: tuple[str, dict[str, Any]],
     query: str,
-) -> tuple[int, int, int, float, int]:
+) -> tuple[int, float, float, int]:
     """Sort key for media exact-match candidates.
 
     Ordering (all via ``min()``):
-      1. Same-word title before a space-collapsed compact match
-      2. Viable first                   (has providers or in theatrical window)
-      3. Most recent ``YYYYMM`` first   (negate for ascending min)
-      4. Highest popularity first        (negate for ascending min)
-      5. Movie before TV                 (lower source-priority index)
+      1. Literal or article-insensitive title before compact-only match
+      2. Composite prominence score descending (popularity, Bayesian rating,
+         vote footprint, bounded recency decay, US/English affinity, watchability)
+      3. Raw popularity descending
+      4. Movie before TV (lower source-priority index)
     """
     source, item = candidate
-    tightness = 0 if media_titles_match_exactly(query, item) else 1
-    viable = 0 if (_has_watch_providers(item) or _in_theatrical_window(item)) else 1
-    yyyymm = _effective_date_yyyymm(source, item)
+    tightness = _media_exact_tightness(query, item)
+    prominence = compute_media_prominence(item)
     popularity = float(item.get("popularity") or 0)
     return (
         tightness,
-        viable,
-        -yyyymm,
+        -prominence,
         -popularity,
         _SOURCE_PRIORITY_INDEX.get(source, len(EXACT_MATCH_SOURCE_PRIORITY)),
     )
@@ -258,9 +275,10 @@ def _pick_exact_match(
     """
     Pick the single best exact match from search results.
 
-    A same-word title beats a space-collapsed compact match. Remaining media
-    candidates are filtered (viable filter), then sorted by effective-date
-    YYYYMM descending, popularity descending, movie-before-tv.
+    Literal and article-insensitive title matches tie; both beat compact-only.
+    Within the best tightness tier, candidates are ranked by composite media
+    prominence (popularity, Bayesian quality, vote footprint, bounded recency,
+    US/English affinity, and watchability), then movie-before-tv.
     Non-media sources fall back to static cross-source priority.
     """
     if not query or len(query.strip()) < 2:
@@ -276,22 +294,13 @@ def _pick_exact_match(
 
     if media_exact_candidates:
         best_tightness = min(
-            0 if media_titles_match_exactly(q, item) else 1
-            for _, item in media_exact_candidates
+            _media_exact_tightness(q, item) for _, item in media_exact_candidates
         )
         media_exact_candidates = [
             pair
             for pair in media_exact_candidates
-            if (0 if media_titles_match_exactly(q, pair[1]) else 1) == best_tightness
+            if _media_exact_tightness(q, pair[1]) == best_tightness
         ]
-        if len(media_exact_candidates) > 1:
-            viable = [
-                (s, item)
-                for s, item in media_exact_candidates
-                if _has_watch_providers(item) or _in_theatrical_window(item)
-            ]
-            if viable:
-                media_exact_candidates = viable
 
         _, best_media_item = min(
             media_exact_candidates,
@@ -316,8 +325,8 @@ def _collect_exact_matches(
 ) -> list[dict[str, Any]]:
     """Return all exact-match items across sources, ranked.
 
-    Media items are sorted by same-word title before a collapsed compact match,
-    then effective-date YYYYMM descending, then popularity descending, then
+    Media items are sorted by literal/article title tightness before compact-only,
+    then composite media prominence descending, then popularity descending, then
     movie-before-tv.  Non-media items follow the static
     ``EXACT_MATCH_SOURCE_PRIORITY`` order.
 
@@ -1019,7 +1028,7 @@ def _item_date_key(item: dict[str, Any]) -> str:
 def _rerank_results(
     results: list[dict[str, Any]], query_words: list[str], limit: int
 ) -> list[dict[str, Any]]:
-    """Sort results: titles starting with the typed text first, then by recency.
+    """Sort results: titles starting with the typed text first, then by prominence.
 
     Also promotes compact-title matches so collapsed queries like
     ``goodwillhunting`` surface the correct title.
@@ -1031,6 +1040,8 @@ def _rerank_results(
         title = str(item.get("search_title") or item.get("title") or "").lower().strip()
         if title.startswith(prefix):
             return 0
+        if _title_without_leading_article(title).startswith(prefix):
+            return 0
         if len(compact_query) >= 4:
             tc = str(item.get("title_compact") or "")
             if not tc:
@@ -1039,8 +1050,13 @@ def _rerank_results(
                 return 0
         return 1
 
-    results.sort(key=_item_date_key, reverse=True)
-    results.sort(key=_is_title_match)
+    results.sort(
+        key=lambda item: (
+            _is_title_match(item),
+            -compute_media_prominence(item),
+            -float(item.get("popularity") or 0.0),
+        )
+    )
     return results[:limit]
 
 
@@ -1418,9 +1434,13 @@ async def autocomplete_minimal(
     repo = get_repo()
 
     title_field_needed = "search_title" not in fields and "title" not in fields
-    request_fields = sorted(_MINIMAL_ALWAYS_FIELDS | set(fields))
-    if title_field_needed and "search_title" not in request_fields:
-        request_fields = sorted(set(request_fields) | {"search_title"})
+    internal_only_fields = (
+        {"popularity", "rating", "vote_count", "original_language", "origin_country"}
+        - set(fields)
+    )
+    if title_field_needed:
+        internal_only_fields.add("search_title")
+    request_fields = sorted(set(fields) | _MINIMAL_ALWAYS_FIELDS | internal_only_fields)
 
     q_stripped = q.replace(":", " ").strip()
     query_words = [w.lower() for w in q_stripped.split() if w]
@@ -1467,9 +1487,10 @@ async def autocomplete_minimal(
             if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                 parsed = [_parse_projected_doc(doc) for doc in data.docs]
                 ranked = _rerank_results(parsed, query_words, limit)
-                if title_field_needed:
+                if internal_only_fields:
                     for doc in ranked:
-                        doc.pop("search_title", None)
+                        for f_name in internal_only_fields:
+                            doc.pop(f_name, None)
                 response[name] = ranked
             else:
                 response[name] = []

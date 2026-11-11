@@ -302,9 +302,9 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 **Query activation:** Media query builders (`build_autocomplete_query`, `build_minimal_autocomplete_query`, `build_fuzzy_fulltext_query`) add a `@title_compact` clause only when the preprocessed query is a single token of 4+ characters. Normal spaced queries use `@search_title` only.
 
-**Ranking:** `score_media_result()` compares compact forms at tier 1 (exact) and tiers 11/13 (substring/prefix). `_rerank_results()` also promotes compact matches for `/api/autocomplete/minimal`. Fuzzy near-miss scoring in `/api/resolve` considers compact Levenshtein distance when `title_compact` is available.
+**Ranking:** `score_media_result()` treats leading `the` / `a` / `an` as optional at tier 1 (exact) via `strip_leading_article()` on `normalize_for_match` output, and ranks candidates within each tier by `compute_media_prominence()` (blending popularity, Bayesian-weighted rating + RT scores, uncapped log10 vote footprint, 540-day half-life recency decay, US/English market affinity, and US watchability). Compact forms still match at tier 1 and in tiers 11/13 (substring/prefix). `_rerank_results()` promotes prefix matches on the raw title and on the title with a leading article removed (`/api/autocomplete/minimal`) and orders within buckets by `compute_media_prominence()`. Fuzzy near-miss scoring in `/api/resolve` considers compact Levenshtein distance when `title_compact` is available.
 
-**Exact match:** a same-word title outranks a space-collapsed compact hit. `"VisionQuest"` is a tighter match for `VisionQuest` than for `Vision Quest`. Compact equality still qualifies as an exact-match candidate and still ranks in the result list; it loses the hero pick when a same-word title is present.
+**Exact match:** literal same-word and article-insensitive title matches share the same tightness (e.g. query `Godfather` and title `The Godfather` both qualify as exact). A space-collapsed compact hit ranks lower. `"VisionQuest"` is a tighter match for `VisionQuest` than for `Vision Quest`. Compact equality still qualifies as an exact-match candidate and loses the hero pick when a word-level exact title is present.
 
 **Backfill:** Existing `media:*` documents must be populated via `scripts/backfill_title_compact.py`. The `--alter-index` flag issues `FT.ALTER` to add the field to the live `idx:media` index. New documents get the field automatically via `document_to_redis()`.
 
@@ -314,11 +314,10 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 - JSON search/autocomplete responses expose both `exact_match` (single hero pick) and `exact_matches` (all qualifying items, ranked array including the hero pick).
 - For media (`movie`/`tv`), when multiple exact matches exist:
-  1. **Same-word title first:** case and punctuation are ignored, spaces are not. A space-collapsed compact match is kept, and it loses to a same-word title.
-  2. **Viable filter:** within that tightness, candidates without watch providers are eliminated — unless they are movies in their theatrical window (~6 months) or unless no candidates survive the filter.
-  3. **Sort by effective date (YYYYMM) descending:** `release_date` for movies, `last_air_date` for TV, rounded to year-month. Most recent month-bucket wins.
-  4. **Within same YYYYMM:** higher `popularity` wins.
-  5. **Within same YYYYMM and popularity:** movie before TV.
+  1. **Word-level title before compact:** case and punctuation are ignored; spaces are not. Leading `the` / `a` / `an` may differ between query and title. A space-collapsed compact match is kept and loses to word-level exact titles.
+  2. **Composite prominence (`compute_media_prominence`) descending:** blends `popularity` (0.45), Bayesian-shrunk rating + RT scores (0.25), uncapped log10 `vote_count` up to \(10^6\) (0.15), bounded 540-day half-life recency decay (0.15), US/English language affinity (`-10` to `+10`), and US streaming/theatrical watchability (`0` to `+12`).
+  3. **Within equal prominence:** higher `popularity` wins.
+  4. **Within equal prominence and popularity:** movie before TV.
 - Non-media exact matches fall back to the static source-priority ordering (`person > podcast > book > author`).
 - Stream responses emit provisional `exact_match` events during the search, then an authoritative `exact_match_final` event and an `exact_matches_final` event (full ranked array) at stream completion.
 
