@@ -127,7 +127,7 @@ class TestWrapperRequiredFields:
             poster_path="/test2.jpg",
             source_id="67890",
         )
-        mock_response = WatchmodeWhatsNewResponse(
+        WatchmodeWhatsNewResponse(
             results=[mock_movie, mock_tv],
             total_results=2,
             region="US",

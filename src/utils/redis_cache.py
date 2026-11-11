@@ -63,6 +63,26 @@ end
 """
 
 
+def _is_emulator_runtime() -> bool:
+    """Return True when running under Firebase/local emulator tooling."""
+    return os.getenv("FUNCTIONS_EMULATOR", "").lower() == "true" or bool(
+        os.getenv("FIRESTORE_EMULATOR_HOST")
+    )
+
+
+class CacheVersionUnavailableError(RuntimeError):
+    """Raised when Redis cannot provide a cache prefix version."""
+
+
+class RedisUnavailableError(RuntimeError):
+    """Raised when Redis is unreachable and the runtime refuses cache bypass."""
+
+
+def _redis_fail_closed() -> bool:
+    """Emulator/local dev must not silently bypass cache and hit origin APIs."""
+    return _is_emulator_runtime()
+
+
 def get_cache_version(prefix: str) -> str:
     """Read the shared cache version for *prefix* from the Redis registry.
 

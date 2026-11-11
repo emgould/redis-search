@@ -16,6 +16,9 @@ from api.watchmode.models import (
     WatchmodeSearchResponse,
     WatchmodeSearchResult,
     WatchmodeSearchResultDict,
+    WatchmodeSportsEvent,
+    WatchmodeSportsParticipant,
+    WatchmodeSportsResponse,
     WatchmodeStreamingSource,
     WatchmodeStreamingSourceDict,
     WatchmodeTitleDetails,
@@ -34,6 +37,9 @@ __all__ = [
     # Handlers
     "WatchmodeHandler",
     "watchmode_handler",
+    "WatchmodeSportsParticipant",
+    "WatchmodeSportsEvent",
+    "WatchmodeSportsResponse",
     # Models
     "WatchmodeStreamingSource",
     "WatchmodeRelease",
