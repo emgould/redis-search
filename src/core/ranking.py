@@ -46,9 +46,142 @@ Performance optimizations:
 - Short-circuits array checks with any() generators
 """
 
+import math
+from datetime import UTC, datetime
 from typing import Any
 
 from core.iptc import get_search_aliases
+
+_LEADING_ARTICLES: tuple[str, ...] = ("the_", "a_", "an_")
+_THEATRICAL_WINDOW_DAYS = 183
+_RECENCY_HALF_LIFE_DAYS = 540.0
+_BAYESIAN_MIN_VOTES = 500.0
+_BAYESIAN_PRIOR_RATING = 6.5
+
+
+def strip_leading_article(value_norm: str) -> str:
+    """Drop one leading the/a/an word from a normalize_for_match value."""
+    for article in _LEADING_ARTICLES:
+        if value_norm.startswith(article) and len(value_norm) > len(article):
+            return value_norm[len(article) :]
+    return value_norm
+
+
+def _parse_effective_date(doc: dict[str, Any]) -> datetime | None:
+    """Parse release_date (movies) or last_air_date/first_air_date (TV) to UTC datetime."""
+    mc_type = doc.get("mc_type")
+    if mc_type == "tv":
+        raw = doc.get("last_air_date") or doc.get("last_aired_date") or doc.get("first_air_date")
+    else:
+        raw = doc.get("release_date") or doc.get("last_air_date") or doc.get("first_air_date")
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def compute_media_prominence(doc: dict[str, Any]) -> float:
+    """
+    Compute a composite prominence score for ranking media within the same match tier.
+
+    Combines:
+    - Base popularity (0.45 weight, 0-100)
+    - Bayesian-shrunk rating + optional RT blend (0.25 weight, 0-100)
+    - Uncapped log10 vote footprint up to 10^6 votes (0.15 weight, 0-100)
+    - Exponential recency decay with 540-day half-life (0.15 weight, 0-100)
+    - Language / US-market affinity modifier (-10 to +10)
+    - US watchability / theatrical viability modifier (0 to +12)
+    """
+    popularity = max(0.0, min(100.0, float(doc.get("popularity") or 0.0)))
+
+    try:
+        vote_count = max(0, int(doc.get("vote_count") or 0))
+    except (ValueError, TypeError):
+        vote_count = 0
+
+    try:
+        raw_rating = float(doc.get("rating") or doc.get("vote_average") or 0.0)
+    except (ValueError, TypeError):
+        raw_rating = 0.0
+
+    # Bayesian-weighted quality (0-100)
+    if raw_rating > 0.0:
+        r_bayes = (
+            vote_count * raw_rating + _BAYESIAN_MIN_VOTES * _BAYESIAN_PRIOR_RATING
+        ) / (vote_count + _BAYESIAN_MIN_VOTES)
+        q_bayes = max(0.0, min(100.0, r_bayes * 10.0))
+    else:
+        q_bayes = _BAYESIAN_PRIOR_RATING * 10.0
+
+    rt_scores: list[float] = []
+    for rt_key in ("rt_critics_score", "rt_audience_score"):
+        rt_val = doc.get(rt_key)
+        if isinstance(rt_val, (int, float)) and rt_val > 0:
+            rt_scores.append(float(rt_val))
+    if rt_scores:
+        rt_avg = sum(rt_scores) / len(rt_scores)
+        q_bayes = 0.70 * q_bayes + 0.30 * rt_avg
+
+    # Uncapped cultural footprint up to 1,000,000 votes (0-100)
+    v_scale = min(100.0, (math.log10(vote_count + 1) / 6.0) * 100.0) if vote_count > 0 else 0.0
+
+    # Bounded recency decay (0-100, 540-day half-life)
+    now = datetime.now(tz=UTC)
+    eff_dt = _parse_effective_date(doc)
+    in_theatrical = False
+    if eff_dt is not None:
+        days_old = max(0.0, (now - eff_dt).total_seconds() / 86400.0)
+        r_decay = 100.0 * math.pow(2.0, -days_old / _RECENCY_HALF_LIFE_DAYS)
+        if doc.get("mc_type") == "movie" and days_old <= _THEATRICAL_WINDOW_DAYS:
+            in_theatrical = True
+    else:
+        year = int(doc.get("year") or 0)
+        if year > 0:
+            approx_days = max(0.0, (now.year - year) * 365.25)
+            r_decay = 100.0 * math.pow(2.0, -approx_days / _RECENCY_HALF_LIFE_DAYS)
+        else:
+            r_decay = 0.0
+
+    # Language & US market affinity (-10 to +10)
+    orig_lang = str(doc.get("original_language") or "").lower().strip()
+    origin_countries_raw = doc.get("origin_country")
+    origin_countries: list[str] = (
+        [str(c).upper() for c in origin_countries_raw]
+        if isinstance(origin_countries_raw, list)
+        else []
+    )
+    if orig_lang == "en" or "US" in origin_countries:
+        b_lang = 10.0
+    elif orig_lang and vote_count < 1000:
+        b_lang = -10.0
+    else:
+        b_lang = 0.0
+
+    # Watchability / viability boost (0 to +12)
+    wp = doc.get("watch_providers")
+    b_viable = 0.0
+    if isinstance(wp, dict):
+        if wp.get("streaming_platform_ids") or in_theatrical:
+            b_viable = 12.0
+        elif wp.get("on_demand_platform_ids") or wp.get("primary_provider"):
+            b_viable = 6.0
+    elif in_theatrical:
+        b_viable = 12.0
+
+    score = (
+        0.45 * popularity
+        + 0.25 * q_bayes
+        + 0.15 * v_scale
+        + 0.15 * r_decay
+        + b_lang
+        + b_viable
+    )
+    return round(score, 3)
 
 
 def normalize_for_match(value: str) -> str:
@@ -77,19 +210,19 @@ def normalize_for_match(value: str) -> str:
     return s.strip("_")
 
 
-def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float]:
+def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, float, float]:
     """
     Score a media result against a search query.
 
-    Returns a tuple for sorting: (tier, -year, -popularity)
-    Lower tier = better match. Negative year/popularity for descending sort.
+    Returns a tuple for sorting: (tier, -prominence, -popularity)
+    Lower tier = better match. Negative prominence/popularity for descending sort.
 
     Args:
         query: The search query string
         doc: The media document with fields like search_title, director_name, etc.
 
     Returns:
-        Tuple of (tier, -year, -popularity) for use as sort key
+        Tuple of (tier, -prominence, -popularity) for use as sort key
     """
     # Pre-normalize query ONCE
     query_lower = query.lower().strip()
@@ -105,32 +238,36 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
     keywords: list[str] = doc.get("keywords") or []
     genres: list[str] = doc.get("genres") or []
 
-    year = int(doc.get("year") or 0)
+    prominence = compute_media_prominence(doc)
     popularity = float(doc.get("popularity") or 0)
 
     # Tier 0: EXACT title (raw) - case-insensitive but not normalized
     if query_lower == title_raw:
-        return (0, -year, -popularity)
+        return (0, -prominence, -popularity)
 
     # Tier 1: EXACT title (normalized)
     if query_norm == title_norm:
-        return (1, -year, -popularity)
+        return (1, -prominence, -popularity)
+
+    # Tier 1: EXACT title (leading article ignored on either side)
+    if strip_leading_article(query_norm) == strip_leading_article(title_norm):
+        return (1, -prominence, -popularity)
 
     # Tier 1: EXACT title (compact) — collapsed-token queries like "goodwillhunting"
     if len(query_compact) >= 4 and query_compact == title_compact:
-        return (1, -year, -popularity)
+        return (1, -prominence, -popularity)
 
     # Tier 2: EXACT director_name
     if query_norm == director:
-        return (2, -year, -popularity)
+        return (2, -prominence, -popularity)
 
     # Tier 3: EXACT cast_names (any match)
     if any(query_norm == c for c in cast_names):
-        return (3, -year, -popularity)
+        return (3, -prominence, -popularity)
 
     # Tier 4: EXACT keywords (any match)
     if any(query_norm == k for k in keywords):
-        return (4, -year, -popularity)
+        return (4, -prominence, -popularity)
 
     # Get IPTC expanded aliases for later checks
     query_aliases = get_search_aliases(query_norm)
@@ -140,7 +277,7 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
     # matches title "A.I. Artificial Intelligence" which normalizes to contain "artificial_intelligence")
     # Title matches rank higher than keyword-only matches
     if expanded_aliases and any(alias in title_norm for alias in expanded_aliases):
-        return (4, -year, -popularity)
+        return (4, -prominence, -popularity)
 
     # Tier 4.2: Keyword starts with IPTC alias (e.g., "AI" -> "artificial_intelligence"
     # matches keyword "artificial_intelligence_a_i")
@@ -149,47 +286,47 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
     if expanded_aliases and any(
         any(k.startswith(alias) for alias in expanded_aliases) for k in keywords
     ):
-        return (5, -year, -popularity)
+        return (5, -prominence, -popularity)
 
     # Tier 5: EXACT genres (any match)
     if any(query_norm == g for g in genres):
-        return (5, -year, -popularity)
+        return (5, -prominence, -popularity)
 
     # Tier 6: CONTAINS_WORD title (query is complete token in title)
     title_tokens = title_norm.split("_")
     if query_norm in title_tokens:
-        return (6, -year, -popularity)
+        return (6, -prominence, -popularity)
 
     # Tier 7: CONTAINS_WORD director_name
     if director and query_norm in director.split("_"):
-        return (7, -year, -popularity)
+        return (7, -prominence, -popularity)
 
     # Tier 8: CONTAINS_WORD cast_names
     if any(query_norm in c.split("_") for c in cast_names):
-        return (8, -year, -popularity)
+        return (8, -prominence, -popularity)
 
     # Tier 9: CONTAINS_WORD keywords
     if any(query_norm in k.split("_") for k in keywords):
-        return (9, -year, -popularity)
+        return (9, -prominence, -popularity)
 
     # Tier 10: CONTAINS_WORD genres
     if any(query_norm in g.split("_") for g in genres):
-        return (10, -year, -popularity)
+        return (10, -prominence, -popularity)
 
     # Tier 11: CONTAINS_SUBSTRING title (raw query or IPTC alias)
     # e.g., "AI" query with title "A.I. Artificial Intelligence" - check if any IPTC alias
     # like "artificial_intelligence" is in the normalized title
     if query_norm in title_norm:
-        return (11, -year, -popularity)
+        return (11, -prominence, -popularity)
 
     # Compact substring (e.g. "goodwillhunt" in "goodwillhunting")
     if len(query_compact) >= 4 and query_compact in title_compact:
-        return (11, -year, -popularity)
+        return (11, -prominence, -popularity)
 
     # Also check IPTC-expanded aliases in title (e.g., "AI" -> "artificial_intelligence")
     query_aliases = get_search_aliases(query_norm)
     if any(alias in title_norm for alias in query_aliases if alias != query_norm):
-        return (11, -year, -popularity)
+        return (11, -prominence, -popularity)
 
     # Tier 12: CONTAINS_SUBSTRING any TAG field (raw query or IPTC alias)
     if (
@@ -198,20 +335,20 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
         or any(query_norm in k for k in keywords)
         or any(query_norm in g for g in genres)
     ):
-        return (12, -year, -popularity)
+        return (12, -prominence, -popularity)
 
     # Also check IPTC-expanded aliases in keywords
     # e.g., "AI" -> ["artificial_intelligence"] matches keyword "artificial_intelligence_a_i"
     if any(any(alias in k for alias in query_aliases if alias != query_norm) for k in keywords):
-        return (12, -year, -popularity)
+        return (12, -prominence, -popularity)
 
     # Tier 13: PREFIX title
     if title_norm.startswith(query_norm):
-        return (13, -year, -popularity)
+        return (13, -prominence, -popularity)
 
     # Compact prefix (e.g. "goodwillhunt" -> "goodwillhunting")
     if len(query_compact) >= 4 and title_compact.startswith(query_compact):
-        return (13, -year, -popularity)
+        return (13, -prominence, -popularity)
 
     # Tier 14: PREFIX any TAG field
     if (
@@ -220,10 +357,10 @@ def score_media_result(query: str, doc: dict[str, Any]) -> tuple[int, int, float
         or any(k.startswith(query_norm) for k in keywords)
         or any(g.startswith(query_norm) for g in genres)
     ):
-        return (14, -year, -popularity)
+        return (14, -prominence, -popularity)
 
     # Tier 15: Fallback (no match found)
-    return (15, -year, -popularity)
+    return (15, -prominence, -popularity)
 
 
 def score_podcast_result(query: str, doc: dict[str, Any]) -> tuple[int, float, int]:
@@ -537,6 +674,16 @@ def media_titles_match_exactly(query: str, doc: dict[str, Any]) -> bool:
     return _words_for_exact_title(query_clean) == _words_for_exact_title(title_raw)
 
 
+def media_titles_match_ignoring_article(query: str, doc: dict[str, Any]) -> bool:
+    """Return True when query and title match after stripping a leading the/a/an."""
+    title_raw = (doc.get("search_title") or doc.get("title") or "").strip()
+    if not title_raw:
+        return False
+    query_norm = normalize_for_match(query.strip())
+    title_norm = normalize_for_match(title_raw)
+    return strip_leading_article(query_norm) == strip_leading_article(title_norm)
+
+
 def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
     """
     Return True if doc is an exact match for the query (tier 0-1 title/name match).
@@ -545,8 +692,8 @@ def is_exact_match(query: str, doc: dict[str, Any], source: str) -> bool:
     a known entity (e.g., "the godfather" -> movie "The Godfather").
 
     Definition of exact:
-    - Media (tv, movie): tier 0-1, including a space-collapsed compact title.
-      Same-word matches outrank collapsed matches when one hero is chosen.
+    - Media (tv, movie): tier 0-1, including article-insensitive title equality
+      and space-collapsed compact titles. Word-level exact matches outrank compact-only.
     - Person: tier 0-1 (exact name)
     - Book: tier 0-1 (exact title)
     - Podcast: tier 0-1 (exact title raw/normalized)
