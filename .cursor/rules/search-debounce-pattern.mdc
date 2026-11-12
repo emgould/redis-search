@@ -145,6 +145,20 @@ controller.triggerSearch(query);        // fire Tier 2 immediately
 | `/api/resolve` | — (Enter) | GET (fetch) | Indexed sources only (Direct Match mode) |
 | `/api/media-details` | — | GET | TMDB (tv/movie inspection) |
 
+## Batch search pagination (`skip`)
+
+- **`GET /api/search` only** supports `skip` (default `0`, max `240`) with `limit` (per source bucket).
+- Response includes top-level `skip`, `limit`, and `pagination.{source}` with `total`, `count`, `has_more`, `next_skip` for indexed sources (`tv`, `movie`, `person`, `podcast`, `author`, `book`, `list`).
+- **`skip > 0`:** `exact_match` is `null`, brokered sources are not called (empty arrays). Use page 0 for hero pick and external APIs.
+- Tier 1 autocomplete and `/api/search/stream` do **not** accept `skip` in v1.
+- See `.cursor/rules/api-search-pagination.mdc` for ranking pool and person-filmography rules.
+
+### TV/movie “Show all” (web UI)
+
+- Categories still **preview 3** rows; **TV** and **Movie** use a **Show all** control (not “Show N more”).
+- First click expands any rows already loaded, then if `pagination.{tv|movie}.has_more`, calls `searchController.fetchSearchPage()` with `skip=next_skip`, `limit=50`, `sources` set to that bucket, and `full=true` when the Full toggle is off.
+- Appends results in place; **Show all** stays visible while `has_more` is true.
+
 ## Result Item JSON Inspection (TV/Movie)
 
 TV and movie result items show two hover buttons:

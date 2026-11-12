@@ -384,7 +384,7 @@ Shows{% endblock %} {% block body %}
   </div>
 </div>
 
-<script src="/static/js/search-controller.js"></script>
+<script src="/static/js/search-controller.js?v=20260312-full"></script>
 <script>
   const searchInput = document.getElementById("search-input");
   const resultsContainer = document.getElementById("results-container");
@@ -943,6 +943,32 @@ Shows{% endblock %} {% block body %}
   // Make toggleCategoryExpand globally accessible
   window.toggleCategoryExpand = toggleCategoryExpand;
 
+  async function loadMediaCategoryAll(category) {
+    if (category !== "tv" && category !== "movie") {
+      toggleCategoryExpand(category);
+      return;
+    }
+    const query = window._lastQuery || searchController.getCurrentQuery();
+    const results = window._lastResults || searchController.getCurrentResults();
+    expandedCategories[category] = true;
+    renderResults(results, query);
+
+    const pag = results.pagination?.[category];
+    if (!pag?.has_more || pag.next_skip == null) {
+      return;
+    }
+
+    await searchController.fetchSearchPage(query, {
+      sources: category,
+      skip: pag.next_skip,
+      limit: searchController.SEARCH_PAGE_MAX_LIMIT,
+    });
+    expandedCategories[category] = true;
+    renderResults(searchController.getCurrentResults(), query);
+  }
+
+  window.loadMediaCategoryAll = loadMediaCategoryAll;
+
   function renderResults(results, query) {
     // Store for re-render on expand/collapse
     window._lastResults = results;
@@ -1263,8 +1289,21 @@ Shows{% endblock %} {% block body %}
     resultsList.innerHTML = categories
       .map((category, catIndex) => {
         const isExpanded = expandedCategories[category.key] || false;
+        const isMediaCategory = category.key === "tv" || category.key === "movie";
+        const pageMeta = results.pagination?.[category.key];
         const hasMore = category.items.length > 3;
         const hiddenCount = category.items.length - 3;
+        const hasMoreFromApi = pageMeta?.has_more === true;
+        const showMediaShowAll =
+          isMediaCategory &&
+          (!isExpanded
+            ? category.items.length > 3 || hasMoreFromApi
+            : hasMoreFromApi);
+        const showLegacyExpand = !isMediaCategory && hasMore;
+        const countLabel =
+          pageMeta?.total != null && pageMeta.total > category.items.length
+            ? `${category.items.length} of ${pageMeta.total}`
+            : `${category.items.length} result${category.items.length !== 1 ? "s" : ""}`;
 
         // Render ALL items, but mark items beyond index 2 as hidden (unless expanded)
         const itemsHtml = category.items
@@ -1285,13 +1324,22 @@ Shows{% endblock %} {% block body %}
           <div class="flex items-center justify-between px-4 py-2 bg-surface-800/50">
             <h4 class="text-sm font-medium text-surface-300">${category.label
           }</h4>
-            <span class="text-xs text-surface-500">${category.items.length
-          } result${category.items.length !== 1 ? "s" : ""}</span>
+            <span class="text-xs text-surface-500">${countLabel}</span>
           </div>
           <div class="category-items">
             ${itemsHtml}
           </div>
-          ${hasMore
+          ${showMediaShowAll
+            ? `
+            <button type="button" onclick="event.stopPropagation(); loadMediaCategoryAll('${category.key}')" 
+                    class="expand-toggle-btn w-full py-2 text-sm text-${category.color
+            }-400 hover:text-${category.color
+            }-300 hover:bg-surface-800/50 transition-colors flex items-center justify-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              Show all
+            </button>
+          `
+            : showLegacyExpand
             ? `
             <button type="button" onclick="event.stopPropagation(); toggleCategoryExpand('${category.key}')" 
                     class="expand-toggle-btn w-full py-2 text-sm text-${category.color

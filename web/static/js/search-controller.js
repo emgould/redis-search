@@ -28,6 +28,8 @@
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 750;
+/** Max `/api/search` page size — used for TV/movie “Show all” pagination loads. */
+const SEARCH_PAGE_MAX_LIMIT = 50;
 const EXACT_MATCH_PRIORITY = {
   movie: 0,
   tv: 1,
@@ -89,7 +91,9 @@ function initSearchController(cfg) {
   // ---- Helpers ----
 
   function buildUrl(endpoint, query, extraParams) {
-    const sources = getActiveFiltersParam();
+    const extra = extraParams ? { ...extraParams } : {};
+    const sources = extra.sources ?? getActiveFiltersParam();
+    delete extra.sources;
     const raw = isRawMode(query) ? "&raw=true" : "";
     let url = getApiUrl(
       `${endpoint}?q=${encodeURIComponent(query)}${raw}`
@@ -97,12 +101,40 @@ function initSearchController(cfg) {
     if (sources) url += `&sources=${encodeURIComponent(sources)}`;
     if (isNoDuplicateEnabled && isNoDuplicateEnabled()) url += "&no_duplicate=true";
     if (isFullSearchEnabled && isFullSearchEnabled()) url += "&full=true";
-    if (extraParams) {
-      for (const [k, v] of Object.entries(extraParams)) {
-        url += `&${k}=${encodeURIComponent(v)}`;
-      }
+    for (const [k, v] of Object.entries(extra)) {
+      url += `&${k}=${encodeURIComponent(String(v))}`;
     }
     return url;
+  }
+
+  function mergeSearchPayload(data) {
+    const pagination = data.pagination;
+    const skipMeta = data.skip;
+    const limitMeta = data.limit;
+    const reserved = new Set([
+      "pagination",
+      "skip",
+      "limit",
+      "exact_match",
+      "exact_matches",
+      "source_hint",
+    ]);
+    for (const [key, value] of Object.entries(data)) {
+      if (reserved.has(key)) continue;
+      if (Array.isArray(value) && Array.isArray(currentResults[key])) {
+        currentResults[key] = [...currentResults[key], ...value];
+      } else {
+        currentResults[key] = value;
+      }
+    }
+    if (pagination && typeof pagination === "object") {
+      currentResults.pagination = {
+        ...(currentResults.pagination || {}),
+        ...pagination,
+      };
+    }
+    if (skipMeta !== undefined) currentResults.skip = skipMeta;
+    if (limitMeta !== undefined) currentResults.limit = limitMeta;
   }
 
   function showSpinner() {
@@ -274,6 +306,11 @@ function initSearchController(cfg) {
             .join(", ")
         );
         currentResults = { ...currentResults, ...data };
+        if (data.pagination) {
+          currentResults.pagination = data.pagination;
+        }
+        if (data.skip !== undefined) currentResults.skip = data.skip;
+        if (data.limit !== undefined) currentResults.limit = data.limit;
         render(query);
       }
     } catch (e) {
@@ -470,6 +507,39 @@ function initSearchController(cfg) {
     }
   });
 
+  // ---- Paginated indexed fetch (TV/movie “Show all”) ----
+
+  async function fetchSearchPage(query, { sources, skip, limit = SEARCH_PAGE_MAX_LIMIT }) {
+    if (searchCtrl) searchCtrl.abort();
+    searchCtrl = new AbortController();
+    showSpinner();
+    try {
+      const pageParams = {
+        sources,
+        skip: String(skip),
+        limit: String(limit),
+      };
+      if (!(isFullSearchEnabled && isFullSearchEnabled())) {
+        pageParams.full = "true";
+      }
+      const url = buildUrl("/api/search", query, pageParams);
+      console.log("[Search Page]", url);
+      const resp = await fetch(url, { signal: searchCtrl.signal });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (query !== currentQuery) return;
+      mergeSearchPayload(data);
+      render(query);
+      return data;
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      console.error("[Search Page] Error:", e);
+    } finally {
+      hideSpinner();
+    }
+    return null;
+  }
+
   // ---- Public API ----
 
   return {
@@ -485,5 +555,7 @@ function initSearchController(cfg) {
       currentQuery = query;
       triggerSearch(query);
     },
+    fetchSearchPage,
+    SEARCH_PAGE_MAX_LIMIT,
   };
 }

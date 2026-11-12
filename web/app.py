@@ -733,6 +733,12 @@ async def api_search(
         "If not provided, searches all sources.",
     ),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results per source"),
+    skip: int = Query(
+        default=0,
+        ge=0,
+        le=240,
+        description="Number of results to skip per source (pagination offset)",
+    ),
     genre_ids: str | None = Query(
         default=None, description="Comma-separated TMDB genre IDs (e.g., 35,18 for Comedy,Drama)"
     ),
@@ -837,6 +843,7 @@ async def api_search(
     - /api/search?q=matrix&sources=movie,ratings&ratings_sort=audience_score - Sort ratings by audience score
     - /api/search?sources=movie&genre_ids=878&year_min=2020 - Browse sci-fi movies from 2020+
     - /api/search?sources=tv&rating_min=8 - Browse highly-rated TV shows
+    - /api/search?q=holiday&sources=movie&limit=10&skip=10 - Second page of movie results
     """
     # Check if any filters are provided
     has_date_filters = any(
@@ -1007,6 +1014,7 @@ async def api_search(
         raw=raw,
         no_duplicate=no_duplicate,
         full=full,
+        skip=skip,
     )
     if source_hint_applied is not None:
         results = dict(results)

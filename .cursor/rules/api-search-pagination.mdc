@@ -1,0 +1,47 @@
+---
+description: GET /api/search skip/limit pagination contract for indexed sources
+globs:
+  - src/services/search_service.py
+  - src/adapters/redis_repository.py
+  - web/app.py
+alwaysApply: false
+---
+
+# `/api/search` pagination (`skip` + `limit`)
+
+## Request
+
+| Param | Default | Range | Semantics |
+|-------|---------|-------|-----------|
+| `limit` | 10 | 1–50 | Page size **per source bucket** (unchanged) |
+| `skip` | 0 | 0–240 | Offset **per source bucket** |
+
+Example: `GET /api/search?q=holiday&sources=movie&limit=10&skip=10`
+
+## Response
+
+Indexed source arrays (`tv`, `movie`, `person`, …) are the current page. Top-level metadata:
+
+- `skip`, `limit` — echo request
+- `pagination.{source}` — for each requested indexed source:
+  - `total` — match count (Redis `FT.SEARCH` total when Redis pages; otherwise ranked pool size)
+  - `count` — items returned this page
+  - `has_more` — `skip + count < total`
+  - `next_skip` — `skip + limit` when `has_more`, else `null`
+
+## Rules
+
+- **`skip > 0`:** `exact_match` / `exact_matches` are `null` / `[]`. Brokered sources (`news`, `video`, `ratings`, `artist`, `album`) are **not** called; requested brokered keys are `[]`.
+- **`no_duplicate`:** hero exact match is removed from full ranked lists **before** slicing `[skip : skip + limit]` so page boundaries stay stable.
+- **Person filmography rewrite** (`q=Tom Hanks` with `person` + `movie`/`tv`): paginates over the full hydrated credit list on all pages (`skip` applies to filmography ordering by popularity).
+- **Text media search + `media_sort=popularity`:** Python re-ranking uses a fixed **250**-doc candidate pool when `skip > 0` or `full=true` (avoid page drift). Default first page without `full` keeps `max(limit * 5, 50)`.
+- **Filter-only browse or non-popularity `media_sort`:** Redis `Query.paging(skip, limit)` — deep pages use native index offset.
+
+## Out of scope (v1)
+
+- `/api/autocomplete`, `/api/autocomplete/stream`, `/api/search/stream`
+- Brokered API offset (future: map `news` `page` from `skip // limit + 1`)
+
+## Deploy
+
+Application-only FastAPI change; `make deploy-web` when releasing. No Firebase Functions or `bin/batch-deploy.sh` update.
