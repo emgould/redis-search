@@ -30,6 +30,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
+        offset: int = 0,
         sort_by: str | None = "popularity",
         sort_asc: bool = False,
     ):
@@ -39,10 +40,11 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
+            offset: Number of results to skip (Redis FT.SEARCH paging offset)
             sort_by: Field to sort by (popularity, rating, year), or None for query relevance
             sort_asc: Sort ascending if True, descending if False
         """
-        query = Query(query_str).paging(0, limit)
+        query = Query(query_str).paging(offset, limit)
 
         # Sort by the specified field (default: popularity descending)
         # Pass sort_by=None to use query relevance scoring instead
@@ -55,6 +57,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
+        offset: int = 0,
         sort_by: str = "popularity",
         sort_asc: bool = False,
     ):
@@ -64,10 +67,11 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
+            offset: Number of results to skip
             sort_by: Field to sort by (popularity)
             sort_asc: Sort ascending if True, descending if False
         """
-        query = Query(query_str).paging(0, limit)
+        query = Query(query_str).paging(offset, limit)
 
         # Sort by the specified field (default: popularity descending)
         if sort_by:
@@ -79,6 +83,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
+        offset: int = 0,
         sort_by: str = "popularity",
         sort_asc: bool = False,
     ):
@@ -88,10 +93,11 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
+            offset: Number of results to skip
             sort_by: Field to sort by (popularity, episode_count)
             sort_asc: Sort ascending if True, descending if False
         """
-        query = Query(query_str).paging(0, limit)
+        query = Query(query_str).paging(offset, limit)
 
         # Sort by the specified field (default: popularity descending)
         if sort_by:
@@ -103,6 +109,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
+        offset: int = 0,
         sort_by: str | None = None,
         sort_asc: bool = False,
     ):
@@ -112,10 +119,11 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
+            offset: Number of results to skip
             sort_by: Field to sort by (optional, no default for authors)
             sort_asc: Sort ascending if True, descending if False
         """
-        query = Query(query_str).paging(0, limit)
+        query = Query(query_str).paging(offset, limit)
 
         # Sort by the specified field if provided
         if sort_by:
@@ -127,6 +135,7 @@ class RedisRepository:
         self,
         query_str: str,
         limit: int = 10,
+        offset: int = 0,
         sort_by: str | None = None,
         sort_asc: bool = False,
     ):
@@ -136,12 +145,13 @@ class RedisRepository:
         Args:
             query_str: Redis Search query string
             limit: Maximum results to return
+            offset: Number of results to skip
             sort_by: Field to sort by (first_publish_year, ratings_average, etc.)
             sort_asc: Sort ascending if True, descending if False
         """
         # Use BM25 scorer for better ranking - normalizes by document length
         # so shorter exact matches rank higher than longer titles containing the terms
-        query = Query(query_str).paging(0, limit).scorer("BM25")
+        query = Query(query_str).paging(offset, limit).scorer("BM25")
 
         # Sort by the specified field if provided
         if sort_by:
@@ -187,6 +197,7 @@ class RedisRepository:
         query_str: str,
         fields: list[str],
         limit: int = 10,
+        offset: int = 0,
         sort_by: str | None = "popularity",
         sort_asc: bool = False,
     ) -> Any:
@@ -201,6 +212,7 @@ class RedisRepository:
             query_str: Redis Search query string.
             fields: JSON field names to return (e.g. ["mc_id", "search_title"]).
             limit: Maximum results to return.
+            offset: Number of results to skip.
             sort_by: Field to sort by, or None for relevance scoring.
             sort_asc: Sort ascending if True, descending if False.
         """
@@ -209,7 +221,7 @@ class RedisRepository:
             raise ValueError(f"Unknown source for projected search: {source}")
 
         idx = getattr(self, attr)
-        query = Query(query_str).paging(0, limit)
+        query = Query(query_str).paging(offset, limit)
 
         for field in fields:
             query.return_field(f"$.{field}", as_field=field)

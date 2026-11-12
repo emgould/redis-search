@@ -506,10 +506,9 @@ def _select_exact_person_with_credits(
 async def _hydrate_credit_media(
     credit_ids: list[str],
     media_type: Literal["movie", "tv"],
-    limit: int,
 ) -> list[dict[str, Any]] | None:
     """MGET Redis media docs for credit IDs; drop misses; sort by popularity."""
-    if not credit_ids or limit <= 0:
+    if not credit_ids:
         return []
 
     redis = get_redis()
@@ -537,20 +536,18 @@ async def _hydrate_credit_media(
         docs.append(merged)
 
     docs.sort(key=lambda d: float(d.get("popularity") or 0), reverse=True)
-    return docs[:limit]
+    return docs
 
 
 async def _apply_person_credit_rewrite(
     *,
-    final_results: dict[str, Any],
     full_results: dict[str, list[dict[str, Any]]],
     query: str,
-    limit: int,
     requested_sources: set[str],
     person: dict[str, Any] | None = None,
 ) -> bool:
     """Replace tv/movie buckets from person credit IDs. Returns True if applied."""
-    people = full_results.get("person") or final_results.get("person") or []
+    people = full_results.get("person") or []
     match = person if person is not None else _select_exact_person_with_credits(people, query)
     if match is None:
         return False
@@ -561,10 +558,10 @@ async def _apply_person_credit_rewrite(
     hydrate_tasks: list[Any] = []
     labels: list[str] = []
     if "movie" in requested_sources:
-        hydrate_tasks.append(_hydrate_credit_media(movie_ids, "movie", limit))
+        hydrate_tasks.append(_hydrate_credit_media(movie_ids, "movie"))
         labels.append("movie")
     if "tv" in requested_sources:
-        hydrate_tasks.append(_hydrate_credit_media(tv_ids, "tv", limit))
+        hydrate_tasks.append(_hydrate_credit_media(tv_ids, "tv"))
         labels.append("tv")
     if not hydrate_tasks:
         return False
@@ -576,7 +573,6 @@ async def _apply_person_credit_rewrite(
         if docs is None:
             return False
         full_results[label] = docs
-        final_results[label] = docs[:limit]
     return True
 
 
@@ -586,6 +582,92 @@ def _extract_docs(result: object) -> list[object]:
     if isinstance(docs, list):
         return docs
     return []
+
+
+def _extract_total(result: object) -> int:
+    """Return Redis FT.SEARCH match count from a search result object."""
+    raw = getattr(result, "total", None)
+    if raw is None:
+        return 0
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _indexed_query_fetch_limit(skip: int, limit: int) -> int:
+    """Candidate pool size for indexed sources that filter/rank in Python."""
+    return min(250, max((skip + limit) * 2, 50))
+
+
+def _media_pool_fetch_limit(skip: int, limit: int, full: bool) -> int:
+    """Fixed candidate pool for media text search with Python re-ranking."""
+    if full or skip > 0:
+        return 250
+    return max(limit * 5, 50)
+
+
+def _build_source_pagination(skip: int, limit: int, total: int, count: int) -> dict[str, Any]:
+    has_more = skip + count < total
+    return {
+        "total": total,
+        "count": count,
+        "has_more": has_more,
+        "next_skip": skip + limit if has_more else None,
+    }
+
+
+def _attach_search_pagination(
+    final_results: dict[str, Any],
+    *,
+    skip: int,
+    limit: int,
+    requested_sources: set[str],
+    pagination_totals: dict[str, int],
+) -> None:
+    pagination: dict[str, dict[str, Any]] = {}
+    indexed = frozenset({"tv", "movie", "person", "podcast", "author", "book", "list"})
+    for src in requested_sources:
+        if src not in indexed:
+            continue
+        items = final_results.get(src, [])
+        if not isinstance(items, list):
+            continue
+        count = len(items)
+        total = pagination_totals.get(src, count)
+        pagination[src] = _build_source_pagination(skip, limit, total, count)
+    final_results["skip"] = skip
+    final_results["limit"] = limit
+    final_results["pagination"] = pagination
+
+
+def _slice_indexed_pages(
+    final_results: dict[str, Any],
+    full_results: dict[str, list[dict[str, Any]]],
+    *,
+    skip: int,
+    limit: int,
+    requested_sources: set[str],
+    redis_paged_sources: frozenset[str],
+) -> None:
+    for src in ("tv", "movie", "person", "podcast", "author", "book", "list"):
+        if src not in requested_sources:
+            continue
+        full_list = full_results.get(src, [])
+        if src in redis_paged_sources:
+            final_results[src] = full_list[:limit]
+        else:
+            final_results[src] = full_list[skip : skip + limit]
+
+
+def _empty_search_payload(requested: set[str], skip: int, limit: int) -> dict[str, Any]:
+    out: dict[str, Any] = {src: [] for src in requested}
+    out["exact_match"] = None
+    out["exact_matches"] = []
+    out["skip"] = skip
+    out["limit"] = limit
+    out["pagination"] = {}
+    return out
 
 
 def _build_media_source_query(query_str: str, media_source: str) -> str:
@@ -1679,13 +1761,10 @@ async def autocomplete_stream(
 
     if credit_person is not None:
         hydrate_start = time.perf_counter()
-        final_results: dict[str, Any] = {}
         full_results: dict[str, list[dict[str, Any]]] = {"person": person_full_early}
         rewrite_applied = await _apply_person_credit_rewrite(
-            final_results=final_results,
             full_results=full_results,
             query=q,
-            limit=ac_limit,
             requested_sources=sources,
             person=credit_person,
         )
@@ -1920,6 +1999,7 @@ async def search(
     raw: bool = False,
     no_duplicate: bool = False,
     full: bool = False,
+    skip: int = 0,
 ) -> dict[str, Any]:
     """
     Unified search API that returns categorized results.
@@ -1931,6 +2011,7 @@ async def search(
         sources: Set of source types to search. If None, searches all sources.
                  Valid sources: tv, movie, person, podcast, author, book, artist, album, video, news, ratings
         limit: Maximum results per source (default: 10)
+        skip: Number of results to skip per source (pagination offset; default: 0)
         genre_ids: List of TMDB genre IDs to filter by
         genre_match: "any" for OR logic (default), "all" for AND logic
         cast_ids: List of TMDB person IDs to filter by
@@ -1986,10 +2067,7 @@ async def search(
 
     if not has_query and not has_filters:
         requested = sources if sources else VALID_SOURCES
-        out: dict[str, Any] = {src: [] for src in requested}
-        out["exact_match"] = None
-        out["exact_matches"] = []
-        return out
+        return _empty_search_payload(requested, skip, limit)
 
     # Default to all sources if none specified
     requested_sources = sources if sources else VALID_SOURCES
@@ -1997,8 +2075,7 @@ async def search(
     requested_sources = requested_sources & VALID_SOURCES
 
     if not requested_sources:
-        empty: dict[str, Any] = {"exact_match": None, "exact_matches": []}
-        return empty
+        return _empty_search_payload(set(), skip, limit)
 
     repo = get_repo()
 
@@ -2066,12 +2143,22 @@ async def search(
     timed_tasks: list[Any] = []
 
     # Indexed sources (RediSearch) - no timeout needed
-    # Fetch limit * 5 for media to ensure exact title matches aren't pushed out
-    # by higher-popularity keyword/cast matches in the union query.
-    # Python re-ranking (score_media_result) handles final ordering.
-    # full=True bumps to 250 so low-popularity exact matches aren't missed.
-    _base = 250 if full else max(limit * 5, 50)
-    media_fetch_limit = _base if has_query else limit * 2
+    media_python_rerank = has_query and media_sort == "popularity"
+    if media_python_rerank:
+        media_redis_offset = 0
+        media_redis_page_limit = _media_pool_fetch_limit(skip, limit, full)
+    else:
+        media_redis_offset = skip
+        media_redis_page_limit = limit
+
+    person_fetch_limit = _indexed_query_fetch_limit(skip, limit) if has_query else limit
+    person_redis_offset = 0 if has_query else skip
+    podcast_fetch_limit = _indexed_query_fetch_limit(skip, limit) if has_query else limit
+    podcast_redis_offset = 0 if has_query else skip
+    author_fetch_limit = _indexed_query_fetch_limit(skip, limit) if has_query else limit
+    author_redis_offset = 0 if has_query else skip
+    book_fetch_limit = _indexed_query_fetch_limit(skip, limit) if has_query else limit
+    book_redis_offset = 0 if has_query else skip
 
     # Person results remain concurrent with media and brokered sources. The
     # filmography rewrite is applied after all indexed results are parsed, so
@@ -2083,13 +2170,27 @@ async def search(
         requested_sources=requested_sources,
     )
 
+    redis_paged: set[str] = set()
+    if not media_python_rerank:
+        if "tv" in requested_sources:
+            redis_paged.add("tv")
+        if "movie" in requested_sources:
+            redis_paged.add("movie")
+    if not has_query:
+        for src in ("person", "podcast", "author", "book"):
+            if src in requested_sources:
+                redis_paged.add(src)
+    if "list" in requested_sources:
+        redis_paged.add("list")
+
     if "tv" in requested_sources:
         timed_tasks.append(
             timed_task(
                 "tv_media",
                 repo.search(
                     _build_media_source_query(media_query, "tv"),
-                    limit=media_fetch_limit,
+                    limit=media_redis_page_limit,
+                    offset=media_redis_offset,
                     sort_by=media_sort,
                 ),
             )
@@ -2100,29 +2201,71 @@ async def search(
                 "movie_media",
                 repo.search(
                     _build_media_source_query(media_query, "movie"),
-                    limit=media_fetch_limit,
+                    limit=media_redis_page_limit,
+                    offset=media_redis_offset,
                     sort_by=media_sort,
                 ),
             )
         )
     if "person" in requested_sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
-        timed_tasks.append(timed_task("person", repo.search_people(people_query, limit=limit * 2)))
+        timed_tasks.append(
+            timed_task(
+                "person",
+                repo.search_people(
+                    people_query,
+                    limit=person_fetch_limit,
+                    offset=person_redis_offset,
+                ),
+            )
+        )
     if "podcast" in requested_sources:
-        timed_tasks.append(timed_task("podcast", repo.search_podcasts(podcasts_query, limit=limit)))
+        timed_tasks.append(
+            timed_task(
+                "podcast",
+                repo.search_podcasts(
+                    podcasts_query,
+                    limit=podcast_fetch_limit,
+                    offset=podcast_redis_offset,
+                ),
+            )
+        )
     if "author" in requested_sources:
-        timed_tasks.append(timed_task("author", repo.search_authors(authors_query, limit=limit)))
+        timed_tasks.append(
+            timed_task(
+                "author",
+                repo.search_authors(
+                    authors_query,
+                    limit=author_fetch_limit,
+                    offset=author_redis_offset,
+                ),
+            )
+        )
     if "book" in requested_sources:
-        timed_tasks.append(timed_task("book", repo.search_books(books_query, limit=limit)))
+        timed_tasks.append(
+            timed_task(
+                "book",
+                repo.search_books(
+                    books_query,
+                    limit=book_fetch_limit,
+                    offset=book_redis_offset,
+                ),
+            )
+        )
     if "list" in requested_sources:
         # Public Lists index: text queries search name/description/topics/item
         # titles; filter-only searches fall back to freshness-ordered browse.
-        timed_tasks.append(timed_task("list", search_public_lists(q=query_text, limit=limit)))
+        timed_tasks.append(
+            timed_task(
+                "list",
+                search_public_lists(q=query_text, limit=limit, offset=skip),
+            )
+        )
 
     # Brokered sources (Redis-cached API calls) - apply timeout
     # Ratings can be enriched from indexed results when no query is provided
     # Other sources require a text query - skip if no query provided or raw mode
-    if query_text is not None and not raw:
+    if skip == 0 and query_text is not None and not raw:
         if "news" in requested_sources:
             timed_tasks.append(
                 timed_task(
@@ -2170,10 +2313,7 @@ async def search(
         timed_results = await asyncio.gather(*timed_tasks, return_exceptions=True)
     except Exception:
         # If gather itself fails, return empty results
-        fail_out: dict[str, Any] = {src: [] for src in requested_sources}
-        fail_out["exact_match"] = None
-        fail_out["exact_matches"] = []
-        return fail_out
+        return _empty_search_payload(requested_sources, skip, limit)
     total_elapsed = (time.perf_counter() - total_start) * 1000
 
     # Log timing for each source
@@ -2197,6 +2337,7 @@ async def search(
     # Handle exceptions and parse results
     final_results: dict[str, Any] = {}
     full_results: dict[str, list[dict[str, Any]]] = {}
+    pagination_totals: dict[str, int] = {}
 
     # Process media (tv/movie) results
     if "tv" in requested_sources:
@@ -2209,7 +2350,10 @@ async def search(
             preserve_redis_order=media_sort != "popularity",
         )
         full_results["tv"] = tv_full
-        final_results["tv"] = tv_full[:limit]
+        if media_python_rerank:
+            pagination_totals["tv"] = len(tv_full)
+        else:
+            pagination_totals["tv"] = _extract_total(tv_media_res)
     if "movie" in requested_sources:
         movie_media_res = results_map.get("movie_media", empty_result)
         if isinstance(movie_media_res, BaseException):
@@ -2220,7 +2364,10 @@ async def search(
             preserve_redis_order=media_sort != "popularity",
         )
         full_results["movie"] = movie_full
-        final_results["movie"] = movie_full[:limit]
+        if media_python_rerank:
+            pagination_totals["movie"] = len(movie_full)
+        else:
+            pagination_totals["movie"] = _extract_total(movie_media_res)
 
     # Process person results with autocomplete prefix filtering and re-ranking
     if "person" in results_map:
@@ -2239,17 +2386,26 @@ async def search(
         else:
             person_full = parsed_people
         full_results["person"] = person_full
-        final_results["person"] = person_full[:limit]
+        pagination_totals["person"] = (
+            len(person_full) if has_query else _extract_total(person_res)
+        )
 
     # Person exact-match filmography rewrite (catalog-only MGET)
+    credit_rewrite_applied = False
     if credit_eligible and query_text is not None:
-        await _apply_person_credit_rewrite(
-            final_results=final_results,
+        credit_rewrite_applied = await _apply_person_credit_rewrite(
             full_results=full_results,
             query=query_text,
-            limit=limit,
             requested_sources=requested_sources,
         )
+        if credit_rewrite_applied:
+            redis_paged.discard("tv")
+            redis_paged.discard("movie")
+            for media_src in ("tv", "movie"):
+                if media_src in full_results:
+                    pagination_totals[media_src] = len(full_results[media_src])
+
+    redis_paged_sources = frozenset(redis_paged)
 
     # Process podcast results with re-ranking when query is present
     if "podcast" in results_map:
@@ -2260,7 +2416,9 @@ async def search(
         if q:
             parsed_podcasts = sorted(parsed_podcasts, key=lambda p: _rank_podcast_result(p, q))
         full_results["podcast"] = parsed_podcasts
-        final_results["podcast"] = parsed_podcasts[:limit]
+        pagination_totals["podcast"] = (
+            len(parsed_podcasts) if has_query else _extract_total(podcast_res)
+        )
 
     # Process author results with exact word matching filter
     if "author" in results_map:
@@ -2275,7 +2433,9 @@ async def search(
                 if is_author_name_match(q, a.get("search_title", "") or a.get("name", ""))
             ]
         full_results["author"] = parsed_authors
-        final_results["author"] = parsed_authors[:limit]
+        pagination_totals["author"] = (
+            len(parsed_authors) if has_query else _extract_total(author_res)
+        )
 
     # Process book results
     if "book" in results_map:
@@ -2286,7 +2446,7 @@ async def search(
         if q:
             parsed_books = sorted(parsed_books, key=lambda b: _rank_book_result(b, q))
         full_results["book"] = parsed_books
-        final_results["book"] = parsed_books[:limit]
+        pagination_totals["book"] = len(parsed_books) if has_query else _extract_total(book_res)
 
     # Process public list results (already parsed dicts from the list service)
     if "list" in results_map:
@@ -2295,8 +2455,13 @@ async def search(
         if list_res and not isinstance(list_res, BaseException) and isinstance(list_res, dict):
             raw_lists = list_res.get("results", [])
             if isinstance(raw_lists, list):
-                list_results = raw_lists[:limit]
-        final_results["list"] = list_results
+                list_results = raw_lists
+            total_raw = list_res.get("total")
+            if isinstance(total_raw, int):
+                pagination_totals["list"] = total_raw
+            else:
+                pagination_totals["list"] = len(list_results)
+        full_results["list"] = list_results
 
     # Process news results (API)
     if "news" in results_map:
@@ -2341,7 +2506,8 @@ async def search(
         ):
             ratings_results = [item.model_dump() for item in ratings_res.results[:limit]]
     elif (
-        not has_query
+        skip == 0
+        and not has_query
         and "ratings" in requested_sources
         and ("tv" in requested_sources or "movie" in requested_sources)
     ):
@@ -2349,15 +2515,15 @@ async def search(
         # Collect titles from indexed tv/movie results
         indexed_titles: list[tuple[str, int | None, str]] = []  # (title, year, mc_type)
 
-        if "tv" in final_results:
-            for item in final_results["tv"]:
+        if "tv" in full_results:
+            for item in full_results["tv"][skip : skip + limit]:
                 title = item.get("search_title") or item.get("title") or ""
                 year = item.get("year")
                 if title:
                     indexed_titles.append((title, year, "tv"))
 
-        if "movie" in final_results:
-            for item in final_results["movie"]:
+        if "movie" in full_results:
+            for item in full_results["movie"][skip : skip + limit]:
                 title = item.get("search_title") or item.get("title") or ""
                 year = item.get("year")
                 if title:
@@ -2491,6 +2657,16 @@ async def search(
             album_results = [album.model_dump() for album in album_res.results[:limit]]
         final_results["album"] = album_results
 
+    # Slice indexed sources after full candidate sets are ready
+    _slice_indexed_pages(
+        final_results,
+        full_results,
+        skip=skip,
+        limit=limit,
+        requested_sources=requested_sources,
+        redis_paged_sources=redis_paged_sources,
+    )
+
     # Ensure all requested sources have a key (even if empty)
     for src in requested_sources:
         if src not in final_results:
@@ -2501,10 +2677,32 @@ async def search(
     # outside the per-source ``limit`` are still discovered.
     q_for_exact = q if has_query else None
     exact = _pick_exact_match(full_results, q_for_exact)
-    final_results["exact_match"] = exact
-    final_results["exact_matches"] = _collect_exact_matches(full_results, q_for_exact, hero=exact)
     if no_duplicate and exact is not None:
-        _remove_exact_from_results(final_results, exact)
+        _remove_exact_from_results(full_results, exact)
+        _slice_indexed_pages(
+            final_results,
+            full_results,
+            skip=skip,
+            limit=limit,
+            requested_sources=requested_sources,
+            redis_paged_sources=redis_paged_sources,
+        )
+    if skip == 0:
+        final_results["exact_match"] = exact
+        final_results["exact_matches"] = _collect_exact_matches(
+            full_results, q_for_exact, hero=exact
+        )
+    else:
+        final_results["exact_match"] = None
+        final_results["exact_matches"] = []
+
+    _attach_search_pagination(
+        final_results,
+        skip=skip,
+        limit=limit,
+        requested_sources=requested_sources,
+        pagination_totals=pagination_totals,
+    )
 
     return final_results
 
@@ -2811,13 +3009,10 @@ async def search_stream(
 
     if credit_person is not None and query_text is not None:
         hydrate_start = time.perf_counter()
-        final_results: dict[str, Any] = {}
         full_results: dict[str, list[dict[str, Any]]] = {"person": person_full_early}
         rewrite_applied = await _apply_person_credit_rewrite(
-            final_results=final_results,
             full_results=full_results,
             query=query_text,
-            limit=limit,
             requested_sources=requested_sources,
             person=credit_person,
         )

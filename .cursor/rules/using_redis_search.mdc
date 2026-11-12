@@ -291,6 +291,7 @@ Search consumers should treat `tv` and `movie` as separate media buckets even th
 
 - `src/services/search_service.py` now queries `idx:media` separately for `@mc_type:{tv}` and `@mc_type:{movie}` whenever those sources are requested.
 - `limit` applies per requested source bucket, not across a shared movie+tv candidate pool.
+- **`GET /api/search`** also accepts **`skip`** (per source, default `0`) for paginated indexed results; see `.cursor/rules/api-search-pagination.mdc`.
 - Bucket-local Python re-ranking still uses the shared media ranker (`score_media_result`) after Redis returns candidates for that source.
 - This avoids exact-title TV hits being pushed out by higher-popularity movie keyword / genre matches before re-ranking.
 

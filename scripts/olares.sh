@@ -418,11 +418,10 @@ cmd_tunnel() {
     # kubectl exits 0 on SIGINT, so the remote loop needs its own trap to end with status 0.
     # After a dropped connection the box can keep the old session's retry loop and kubectl alive, so
     # the new session's port-forward fails with "address already in use" on ${box_port} forever.
-    # Every (re)connect therefore first stops the previous session's loop (matched by its command
-    # line; the [k] keeps pkill from matching this shell) and then whatever still listens on the port.
+    # Every (re)connect kills whatever still listens on ${box_port} (do not pkill -f kubectl here:
+    # the remote command line also contains that port-forward text, so pkill would suicide the session).
     local stale_cleanup
-    stale_cleanup="pkill -f '[k]ubectl port-forward -n ${NAMESPACE} svc/${APP} ${box_port}:8080' 2>/dev/null;"
-    stale_cleanup+=" for p in \$(ss -Htlnp 'sport = :${box_port}' 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u); do kill \"\$p\" 2>/dev/null; done;"
+    stale_cleanup="set +e; for p in \$(ss -Htlnp 'sport = :${box_port}' 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u); do kill \"\$p\" 2>/dev/null; done;"
     stale_cleanup+=" sleep 1;"
     local rc
     while :; do

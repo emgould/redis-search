@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Canonical production deploy for this branch (leading-article exact-match ranking).
+# Canonical production deploy for this branch (GET /api/search skip pagination + web search UI).
 # Cloud Run web only; no ETL or Redis backfill.
 set -euo pipefail
 
