@@ -172,6 +172,8 @@ function initSearchController(cfg) {
         ...pagination,
       };
     }
+    if ("exact_match" in data) currentResults.exact_match = data.exact_match;
+    if ("exact_matches" in data) currentResults.exact_matches = data.exact_matches;
     if (skipMeta !== undefined) currentResults.skip = skipMeta;
     if (limitMeta !== undefined) currentResults.limit = limitMeta;
   }
