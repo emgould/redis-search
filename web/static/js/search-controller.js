@@ -28,8 +28,8 @@
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_DEBOUNCE_MS = 750;
-/** Max `/api/search` page size — used for TV/movie “Show all” pagination loads. */
-const SEARCH_PAGE_MAX_LIMIT = 50;
+/** API max per-source page size (see GET /api/search `limit`). */
+const API_MAX_PER_SOURCE_LIMIT = 50;
 const EXACT_MATCH_PRIORITY = {
   movie: 0,
   tv: 1,
@@ -59,6 +59,7 @@ const EXACT_MATCH_PRIORITY = {
  * @param {function():boolean} cfg.isMinimalAutocompleteEnabled — returns current lite autocomplete toggle state
  * @param {function():boolean} cfg.isDirectMatchEnabled        — returns current direct match toggle state
  * @param {function():boolean} cfg.isOpenlibraryModeEnabled    — returns current OpenLibrary mode toggle state
+ * @param {number}            cfg.perSourceLimit               — max results per source (1–50; set from server HTML)
  */
 function initSearchController(cfg) {
   const {
@@ -77,7 +78,20 @@ function initSearchController(cfg) {
     isMinimalAutocompleteEnabled,
     isDirectMatchEnabled,
     isOpenlibraryModeEnabled,
+    perSourceLimit: perSourceLimitCfg,
   } = cfg;
+
+  const SEARCH_PAGE_MAX_LIMIT = Math.min(
+    API_MAX_PER_SOURCE_LIMIT,
+    Math.max(
+      1,
+      Number(
+        perSourceLimitCfg ??
+          (typeof window !== "undefined" && window.__SEARCH_UI_PER_SOURCE_LIMIT__) ??
+          API_MAX_PER_SOURCE_LIMIT
+      )
+    )
+  );
 
   // ---- State ----
   let autocompleteTimer = null;
@@ -87,8 +101,20 @@ function initSearchController(cfg) {
   let eventSource = null;      // EventSource for stream search
   let currentQuery = "";
   let currentResults = {};
+  /** Tier-2 armed for this query — late autocomplete must not shrink results. */
+  let tier2ArmedForQuery = null;
 
   // ---- Helpers ----
+
+  function authoritativeSearchLoaded() {
+    const lim = currentResults.limit;
+    return (
+      (typeof lim === "number" && lim >= SEARCH_PAGE_MAX_LIMIT) ||
+      (currentResults.pagination &&
+        typeof currentResults.pagination === "object" &&
+        Object.keys(currentResults.pagination).length > 0)
+    );
+  }
 
   function buildUrl(endpoint, query, extraParams) {
     const extra = extraParams ? { ...extraParams } : {};
@@ -107,7 +133,7 @@ function initSearchController(cfg) {
     return url;
   }
 
-  function mergeSearchPayload(data) {
+  function mergeSearchPayload(data, { appendLists = false, allowShrink = true } = {}) {
     const pagination = data.pagination;
     const skipMeta = data.skip;
     const limitMeta = data.limit;
@@ -121,7 +147,20 @@ function initSearchController(cfg) {
     ]);
     for (const [key, value] of Object.entries(data)) {
       if (reserved.has(key)) continue;
-      if (Array.isArray(value) && Array.isArray(currentResults[key])) {
+      if (
+        !allowShrink &&
+        Array.isArray(value) &&
+        Array.isArray(currentResults[key]) &&
+        value.length < currentResults[key].length
+      ) {
+        continue;
+      }
+      if (
+        appendLists &&
+        Array.isArray(value) &&
+        Array.isArray(currentResults[key]) &&
+        value.length > 0
+      ) {
         currentResults[key] = [...currentResults[key], ...value];
       } else {
         currentResults[key] = value;
@@ -133,6 +172,8 @@ function initSearchController(cfg) {
         ...pagination,
       };
     }
+    if ("exact_match" in data) currentResults.exact_match = data.exact_match;
+    if ("exact_matches" in data) currentResults.exact_matches = data.exact_matches;
     if (skipMeta !== undefined) currentResults.skip = skipMeta;
     if (limitMeta !== undefined) currentResults.limit = limitMeta;
   }
@@ -264,16 +305,21 @@ function initSearchController(cfg) {
       if (isMinimalAutocompleteEnabled && isMinimalAutocompleteEnabled()) {
         const sources = getActiveFiltersParam() || "tv,movie";
         url = getApiUrl(
-          `/api/autocomplete/minimal?q=${encodeURIComponent(query)}&sources=${encodeURIComponent(sources)}`
+          `/api/autocomplete/minimal?q=${encodeURIComponent(query)}&sources=${encodeURIComponent(
+            sources
+          )}&limit=${SEARCH_PAGE_MAX_LIMIT}`
         );
       } else {
-        url = buildUrl("/api/autocomplete", query);
+        url = buildUrl("/api/autocomplete", query, { limit: String(SEARCH_PAGE_MAX_LIMIT) });
       }
       const resp = await fetch(url, { signal: autocompleteCtrl.signal });
       const data = await resp.json();
 
       if (query === currentQuery) {
-        currentResults = { ...currentResults, ...data };
+        if (tier2ArmedForQuery === query && authoritativeSearchLoaded()) {
+          return;
+        }
+        mergeSearchPayload(data, { allowShrink: false });
         render(query);
       }
     } catch (e) {
@@ -287,13 +333,18 @@ function initSearchController(cfg) {
   // ---- Tier 2a: Batch search ----
 
   async function runSearchBatch(query) {
+    tier2ArmedForQuery = query;
+    if (autocompleteCtrl) {
+      autocompleteCtrl.abort();
+      autocompleteCtrl = null;
+    }
     if (searchCtrl) searchCtrl.abort();
     searchCtrl = new AbortController();
     showSpinner();
 
     try {
-      const url = buildUrl("/api/search", query, { limit: "10" });
-      console.log("[Search Batch]", url);
+      const url = buildUrl("/api/search", query, { limit: String(SEARCH_PAGE_MAX_LIMIT) });
+      console.log("[Search Batch]", url, `(perSourceLimit=${SEARCH_PAGE_MAX_LIMIT})`);
       const resp = await fetch(url, { signal: searchCtrl.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
@@ -305,12 +356,7 @@ function initSearchController(cfg) {
             .map((k) => `${k}:${data[k]?.length || 0}`)
             .join(", ")
         );
-        currentResults = { ...currentResults, ...data };
-        if (data.pagination) {
-          currentResults.pagination = data.pagination;
-        }
-        if (data.skip !== undefined) currentResults.skip = data.skip;
-        if (data.limit !== undefined) currentResults.limit = data.limit;
+        mergeSearchPayload(data);
         render(query);
       }
     } catch (e) {
@@ -324,10 +370,15 @@ function initSearchController(cfg) {
   // ---- Tier 2b: Stream search ----
 
   function runSearchStream(query) {
+    tier2ArmedForQuery = query;
+    if (autocompleteCtrl) {
+      autocompleteCtrl.abort();
+      autocompleteCtrl = null;
+    }
     if (eventSource) { eventSource.close(); eventSource = null; }
     showSpinner();
 
-    const url = buildUrl("/api/search/stream", query, { limit: "10" });
+    const url = buildUrl("/api/search/stream", query, { limit: String(SEARCH_PAGE_MAX_LIMIT) });
     console.log("[Search Stream]", url);
     eventSource = new EventSource(url);
     const startTime = performance.now();
@@ -425,6 +476,7 @@ function initSearchController(cfg) {
       cancelAll();
       clearTimers();
       currentResults = {};
+      tier2ArmedForQuery = null;
       resetExpandedState();
     } else {
       clearTimers();
@@ -528,7 +580,7 @@ function initSearchController(cfg) {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       if (query !== currentQuery) return;
-      mergeSearchPayload(data);
+      mergeSearchPayload(data, { appendLists: Number(skip) > 0 });
       render(query);
       return data;
     } catch (e) {

@@ -21,8 +21,10 @@ from api.tmdb.wrappers import get_person_credits_async
 from api.youtube.wrappers import youtube_wrapper
 from contracts.models import MCType
 from core.iptc import expand_query_string, get_search_aliases
+from core.query_hints import SourceHintPlan, build_source_hint_plan
 from core.ranking import (
     EXACT_MATCH_SOURCE_PRIORITY,
+    _words_for_exact_title,
     compute_media_prominence,
     is_exact_match,
     media_titles_match_exactly,
@@ -691,6 +693,214 @@ def _parse_media_results(
     return parsed_results
 
 
+def _stripped_hint_echoes_in_title(item: dict[str, Any], stripped_q: str) -> bool:
+    """True when a stripped hint token appears as a word in the media title."""
+    title = (item.get("search_title") or item.get("title") or "").strip()
+    if not title or not stripped_q.strip():
+        return False
+    title_words = set(_words_for_exact_title(title).split())
+    hint_words = [
+        w
+        for w in _words_for_exact_title(stripped_q).split()
+        if w and w not in STOPWORDS
+    ]
+    return any(w in title_words for w in hint_words)
+
+
+def _dual_hint_title_echo_sort_bucket(
+    item: dict[str, Any],
+    literal_q: str,
+    stripped_q: str,
+) -> int:
+    """0 = literal query is the title; 1 = normal; 2 = stripped token echoed in title."""
+    if media_titles_match_exactly(literal_q, item) or media_titles_match_ignoring_article(
+        literal_q, item
+    ):
+        return 0
+    if _stripped_hint_echoes_in_title(item, stripped_q):
+        return 2
+    return 1
+
+
+def _dual_hint_union_sort_key(
+    item: dict[str, Any],
+    literal_q: str,
+    stripped_q: str,
+) -> tuple[int, float, float]:
+    """Sort dual-query union: de-emphasize titles that echo the stripped hint token.
+
+    Uses prominence and popularity, not title-match tiers. Items whose title
+    repeats the stripped hint (e.g. *The Holiday* for ``Holiday Movies`` →
+    ``Holiday``) sort after theme/keyword matches unless the literal query is
+    the film title (``Scary Movie``).
+    """
+    bucket = _dual_hint_title_echo_sort_bucket(item, literal_q, stripped_q)
+    prominence = compute_media_prominence(item)
+    popularity = float(item.get("popularity") or 0)
+    return (bucket, -prominence, -popularity)
+
+
+def _merge_dual_media_search_results(
+    literal_res: object,
+    stripped_res: object,
+    literal_q: str,
+    stripped_q: str,
+    *,
+    preserve_redis_order: bool = False,
+) -> list[dict[str, Any]]:
+    """Union literal and stripped media Redis results; dedupe by ``mc_id``."""
+    literal_parsed = [parse_doc(doc) for doc in _extract_docs(literal_res)]
+    stripped_parsed = [parse_doc(doc) for doc in _extract_docs(stripped_res)]
+
+    by_id: dict[str, dict[str, Any]] = {}
+    literal_order: list[str] = []
+    stripped_only_order: list[str] = []
+
+    for item in literal_parsed:
+        mc_id = str(item.get("mc_id") or item.get("id") or "")
+        if not mc_id:
+            continue
+        by_id[mc_id] = item
+        literal_order.append(mc_id)
+
+    for item in stripped_parsed:
+        mc_id = str(item.get("mc_id") or item.get("id") or "")
+        if not mc_id:
+            continue
+        if mc_id not in by_id:
+            by_id[mc_id] = item
+            stripped_only_order.append(mc_id)
+
+    if preserve_redis_order:
+        ordered_ids = literal_order + stripped_only_order
+        return [by_id[mc_id] for mc_id in ordered_ids if mc_id in by_id]
+
+    merged = list(by_id.values())
+    merged.sort(key=lambda doc: _dual_hint_union_sort_key(doc, literal_q, stripped_q))
+    return merged
+
+
+def _dual_media_pagination_total(
+    literal_res: object,
+    stripped_res: object,
+    merged_count: int,
+    *,
+    python_rerank: bool,
+) -> int:
+    if python_rerank:
+        return merged_count
+    return max(_extract_total(literal_res), _extract_total(stripped_res))
+
+
+async def _search_media_bucket(
+    repo: RedisRepository,
+    mc_type: Literal["tv", "movie"],
+    media_query_literal: str,
+    media_query_stripped: str | None,
+    hint_plan: SourceHintPlan | None,
+    query_text: str | None,
+    limit: int,
+    offset: int,
+    sort_by: str,
+    *,
+    preserve_redis_order: bool,
+    python_rerank: bool,
+) -> tuple[list[dict[str, Any]], int]:
+    """Run literal and stripped media queries in parallel when a hint plan exists."""
+    search_kw: dict[str, Any] = {
+        "limit": limit,
+        "offset": offset,
+        "sort_by": sort_by,
+    }
+
+    async def _one(query: str) -> object:
+        return await repo.search(_build_media_source_query(query, mc_type), **search_kw)
+
+    if hint_plan is not None and media_query_stripped is not None:
+        literal_res, stripped_res = await asyncio.gather(
+            _one(media_query_literal),
+            _one(media_query_stripped),
+        )
+        merged = _merge_dual_media_search_results(
+            literal_res,
+            stripped_res,
+            hint_plan.literal_q,
+            hint_plan.stripped_q,
+            preserve_redis_order=preserve_redis_order,
+        )
+        total = _dual_media_pagination_total(
+            literal_res,
+            stripped_res,
+            len(merged),
+            python_rerank=python_rerank,
+        )
+        return merged, total
+
+    single = await _one(media_query_literal)
+    full = _parse_media_results(
+        single,
+        query_text,
+        preserve_redis_order=preserve_redis_order,
+    )
+    if python_rerank:
+        total = len(full)
+    else:
+        total = _extract_total(single)
+    return full, total
+
+
+def _parsed_media_from_task_result(
+    data: object,
+    query: str | None,
+    *,
+    preserve_redis_order: bool = False,
+) -> list[dict[str, Any]] | None:
+    if isinstance(data, list):
+        return data
+    if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+        return _parse_media_results(
+            data,
+            query,
+            preserve_redis_order=preserve_redis_order,
+        )
+    return None
+
+
+def _append_media_bucket_task(
+    timed_tasks: list[Any],
+    *,
+    mc_type: Literal["tv", "movie"],
+    media_query_literal: str,
+    media_query_stripped: str | None,
+    hint_plan: SourceHintPlan | None,
+    repo: RedisRepository,
+    query_text: str | None,
+    limit: int,
+    offset: int,
+    sort_by: str,
+    preserve_redis_order: bool,
+    python_rerank: bool,
+) -> None:
+    task_name = f"{mc_type}_media"
+
+    async def _run() -> tuple[list[dict[str, Any]], int]:
+        return await _search_media_bucket(
+            repo,
+            mc_type,
+            media_query_literal,
+            media_query_stripped,
+            hint_plan,
+            query_text,
+            limit,
+            offset,
+            sort_by,
+            preserve_redis_order=preserve_redis_order,
+            python_rerank=python_rerank,
+        )
+
+    timed_tasks.append(timed_task(task_name, _run()))
+
+
 def build_people_autocomplete_query(q: str) -> str:
     """
     Build a prefix search query for people autocomplete.
@@ -939,11 +1149,12 @@ async def autocomplete(
     raw: bool = False,
     no_duplicate: bool = False,
     full: bool = False,
+    limit: int = _AUTOCOMPLETE_LIMIT,
 ) -> dict[str, Any]:
     """
     Autocomplete JSON results for indexed sources.
 
-    Delegates to :func:`search` with the same ``limit`` (10), ranking, and
+    Delegates to :func:`search` with the same ``limit``, ranking, and
     ``exact_match`` selection as ``GET /api/search`` so per-source list order
     matches batch search for the same ``q``, indexed ``sources``, and flags.
     Brokered sources are never fetched; their keys are always empty lists.
@@ -985,7 +1196,7 @@ async def autocomplete(
     merged = await search(
         q,
         sources=indexed,
-        limit=_AUTOCOMPLETE_LIMIT,
+        limit=limit,
         raw=raw,
         no_duplicate=no_duplicate,
         full=full,
@@ -997,6 +1208,12 @@ async def autocomplete(
     }
     for key in _AUTOCOMPLETE_RESPONSE_KEYS:
         out[key] = merged.get(key, []) if key in indexed else []
+    if merged.get("pagination") is not None:
+        out["pagination"] = merged["pagination"]
+    if merged.get("skip") is not None:
+        out["skip"] = merged["skip"]
+    if merged.get("limit") is not None:
+        out["limit"] = merged["limit"]
     return out
 
 
@@ -1527,32 +1744,92 @@ async def autocomplete_minimal(
     q_stripped = q.replace(":", " ").strip()
     query_words = [w.lower() for w in q_stripped.split() if w]
 
+    hint_plan = build_source_hint_plan(q)
+    base_query_literal = build_minimal_autocomplete_query(q)
+    base_query_stripped: str | None = None
+    if hint_plan is not None:
+        base_query_stripped = build_minimal_autocomplete_query(hint_plan.stripped_q)
+
     tasks: list[Any] = []
 
-    base_query = build_minimal_autocomplete_query(q)
+    async def _minimal_media_union(
+        source: Literal["tv", "movie"],
+        *,
+        sort_by: str,
+    ) -> list[dict[str, Any]]:
+        if hint_plan is None or base_query_stripped is None:
+            data = await repo.search_projected(
+                source=source,
+                query_str=_build_media_source_query(base_query_literal, source),
+                fields=request_fields,
+                limit=limit,
+                sort_by=sort_by,
+            )
+            if not data or not hasattr(data, "docs"):
+                return []
+            return [_parse_projected_doc(doc) for doc in data.docs]
 
-    for source in sources:
-        if source in ("tv", "movie"):
-            query_str = _build_media_source_query(base_query, source)
-        elif source in ("person", "podcast", "author", "book"):
-            query_str = base_query
-        else:
-            continue
-
-        sort_by = _MINIMAL_SORT_DEFAULTS.get(source, "popularity")
-
-        tasks.append(
-            timed_task(
-                source,
-                repo.search_projected(
-                    source=source,
-                    query_str=query_str,
-                    fields=request_fields,
-                    limit=limit,
-                    sort_by=sort_by,
-                ),
+        literal_data, stripped_data = await asyncio.gather(
+            repo.search_projected(
+                source=source,
+                query_str=_build_media_source_query(base_query_literal, source),
+                fields=request_fields,
+                limit=limit,
+                sort_by=sort_by,
+            ),
+            repo.search_projected(
+                source=source,
+                query_str=_build_media_source_query(base_query_stripped, source),
+                fields=request_fields,
+                limit=limit,
+                sort_by=sort_by,
+            ),
+        )
+        by_id: dict[str, dict[str, Any]] = {}
+        for data in (literal_data, stripped_data):
+            if not data or not hasattr(data, "docs"):
+                continue
+            for doc in data.docs:
+                parsed = _parse_projected_doc(doc)
+                mc_id = str(parsed.get("mc_id") or parsed.get("id") or "")
+                if mc_id:
+                    by_id[mc_id] = parsed
+        merged = list(by_id.values())
+        merged.sort(
+            key=lambda item: _dual_hint_union_sort_key(
+                item,
+                hint_plan.literal_q,
+                hint_plan.stripped_q,
             )
         )
+        return merged
+
+    for source in sources:
+        sort_by: str = _MINIMAL_SORT_DEFAULTS.get(source) or "popularity"
+
+        if source in ("tv", "movie"):
+            tasks.append(
+                timed_task(
+                    source,
+                    _minimal_media_union(cast(Literal["tv", "movie"], source), sort_by=sort_by),
+                )
+            )
+            continue
+
+        if source in ("person", "podcast", "author", "book"):
+            query_str = base_query_literal
+            tasks.append(
+                timed_task(
+                    source,
+                    repo.search_projected(
+                        source=source,
+                        query_str=query_str,
+                        fields=request_fields,
+                        limit=limit,
+                        sort_by=sort_by,
+                    ),
+                )
+            )
 
     total_start = time.perf_counter()
     timed_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -1566,16 +1843,19 @@ async def autocomplete_minimal(
         if isinstance(item, tuple) and len(item) == 3:
             name, data, elapsed = item
             timing_parts.append(f"{name}={elapsed:.0f}ms")
-            if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
+            if isinstance(data, list):
+                parsed = data
+                ranked = _rerank_results(parsed, query_words, limit)
+            elif data and not isinstance(data, BaseException) and hasattr(data, "docs"):
                 parsed = [_parse_projected_doc(doc) for doc in data.docs]
                 ranked = _rerank_results(parsed, query_words, limit)
-                if internal_only_fields:
-                    for doc in ranked:
-                        for f_name in internal_only_fields:
-                            doc.pop(f_name, None)
-                response[name] = ranked
             else:
-                response[name] = []
+                ranked = []
+            if internal_only_fields and ranked:
+                for doc in ranked:
+                    for f_name in internal_only_fields:
+                        doc.pop(f_name, None)
+            response[name] = ranked
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
     logger.info(
@@ -1636,6 +1916,15 @@ async def autocomplete_stream(
 
     # Build queries - raw mode passes query through to all indexed sources
     media_query = build_media_query_from_user_input(q, raw=raw)
+    ac_hint_plan: SourceHintPlan | None = None
+    ac_media_query_stripped: str | None = None
+    if not raw:
+        ac_hint_plan = build_source_hint_plan(q)
+        if ac_hint_plan is not None:
+            ac_media_query_stripped = build_media_query_from_user_input(
+                ac_hint_plan.stripped_q,
+                raw=raw,
+            )
     if raw:
         raw_query = q.strip()
         people_query = raw_query
@@ -1685,25 +1974,29 @@ async def autocomplete_stream(
 
     skip_media_tag = credit_person is not None
 
+    async def _autocomplete_stream_media(mc_type: Literal["tv", "movie"]) -> list[dict[str, Any]]:
+        full, _ = await _search_media_bucket(
+            repo,
+            mc_type,
+            media_query,
+            ac_media_query_stripped,
+            ac_hint_plan,
+            q,
+            ac_media_limit,
+            0,
+            "popularity",
+            preserve_redis_order=False,
+            python_rerank=True,
+        )
+        return full
+
     if "tv" in sources and not skip_media_tag:
         tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "tv_media",
-                    repo.search(_build_media_source_query(media_query, "tv"), limit=ac_media_limit),
-                )
-            )
+            asyncio.create_task(timed_task("tv_media", _autocomplete_stream_media("tv")))
         ] = "tv_media"
     if "movie" in sources and not skip_media_tag:
         tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "movie_media",
-                    repo.search(
-                        _build_media_source_query(media_query, "movie"), limit=ac_media_limit
-                    ),
-                )
-            )
+            asyncio.create_task(timed_task("movie_media", _autocomplete_stream_media("movie")))
         ] = "movie_media"
     if "person" in sources and not credit_eligible:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
@@ -1787,14 +2080,12 @@ async def autocomplete_stream(
             for source_name in ("tv", "movie"):
                 if source_name not in sources:
                     continue
+                mc_type = cast(Literal["tv", "movie"], source_name)
                 tasks_dict[
                     asyncio.create_task(
                         timed_task(
                             f"{source_name}_media",
-                            repo.search(
-                                _build_media_source_query(media_query, source_name),
-                                limit=ac_media_limit,
-                            ),
+                            _autocomplete_stream_media(mc_type),
                         )
                     )
                 ] = f"{source_name}_media"
@@ -1827,9 +2118,9 @@ async def autocomplete_stream(
             parsed_results: list[dict] = []
 
             if name in {"tv_media", "movie_media"}:
-                if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
-                    source_name = "tv" if name == "tv_media" else "movie"
-                    media_parsed_full = _parse_media_results(data, q)
+                source_name = "tv" if name == "tv_media" else "movie"
+                media_parsed_full = _parsed_media_from_task_result(data, q)
+                if media_parsed_full is not None:
                     streamed_full[source_name] = media_parsed_full
                     media_results = media_parsed_full[:ac_limit]
                     streamed_results[source_name] = media_results
@@ -1840,7 +2131,7 @@ async def autocomplete_stream(
                         yield (source_name, media_results, elapsed)
                     for item in media_exact:
                         yield ("exact_match", item)
-                continue
+                    continue
 
             elif name == "person":
                 # Person results need autocomplete prefix filtering and re-ranking
@@ -2112,7 +2403,25 @@ async def search(
     else:
         media_query = "*"
 
+    media_hint_plan: SourceHintPlan | None = None
+    media_query_stripped: str | None = None
+    if query_text is not None and not raw and not has_filters:
+        media_hint_plan = build_source_hint_plan(query_text)
+        if media_hint_plan is not None:
+            media_query_stripped = build_media_query_from_user_input(
+                media_hint_plan.stripped_q,
+                raw=raw,
+            )
+
     # For other indices, build query from text or pass raw through
+    non_media_query_text = query_text
+    if (
+        query_text is not None
+        and media_hint_plan is not None
+        and requested_sources.intersection(media_hint_plan.hinted_sources)
+    ):
+        non_media_query_text = media_hint_plan.stripped_q
+
     if query_text is not None:
         if raw:
             raw_query = query_text.strip()
@@ -2121,10 +2430,10 @@ async def search(
             authors_query = raw_query
             books_query = raw_query
         else:
-            people_query = build_people_autocomplete_query(query_text)
-            podcasts_query = build_podcasts_autocomplete_query(query_text)
-            authors_query = build_authors_autocomplete_query(query_text)
-            books_query = build_books_autocomplete_query(query_text)
+            people_query = build_people_autocomplete_query(non_media_query_text or query_text)
+            podcasts_query = build_podcasts_autocomplete_query(non_media_query_text or query_text)
+            authors_query = build_authors_autocomplete_query(non_media_query_text or query_text)
+            books_query = build_books_autocomplete_query(non_media_query_text or query_text)
     else:
         # Filter-only mode: use match-all for indices without specific filters
         people_query = "*"
@@ -2183,29 +2492,36 @@ async def search(
     if "list" in requested_sources:
         redis_paged.add("list")
 
+    media_preserve_order = media_sort != "popularity"
     if "tv" in requested_sources:
-        timed_tasks.append(
-            timed_task(
-                "tv_media",
-                repo.search(
-                    _build_media_source_query(media_query, "tv"),
-                    limit=media_redis_page_limit,
-                    offset=media_redis_offset,
-                    sort_by=media_sort,
-                ),
-            )
+        _append_media_bucket_task(
+            timed_tasks,
+            mc_type="tv",
+            media_query_literal=media_query,
+            media_query_stripped=media_query_stripped,
+            hint_plan=media_hint_plan,
+            repo=repo,
+            query_text=query_text,
+            limit=media_redis_page_limit,
+            offset=media_redis_offset,
+            sort_by=media_sort,
+            preserve_redis_order=media_preserve_order,
+            python_rerank=media_python_rerank,
         )
     if "movie" in requested_sources:
-        timed_tasks.append(
-            timed_task(
-                "movie_media",
-                repo.search(
-                    _build_media_source_query(media_query, "movie"),
-                    limit=media_redis_page_limit,
-                    offset=media_redis_offset,
-                    sort_by=media_sort,
-                ),
-            )
+        _append_media_bucket_task(
+            timed_tasks,
+            mc_type="movie",
+            media_query_literal=media_query,
+            media_query_stripped=media_query_stripped,
+            hint_plan=media_hint_plan,
+            repo=repo,
+            query_text=query_text,
+            limit=media_redis_page_limit,
+            offset=media_redis_offset,
+            sort_by=media_sort,
+            preserve_redis_order=media_preserve_order,
+            python_rerank=media_python_rerank,
         )
     if "person" in requested_sources:
         # Fetch more results for post-query filtering (handles 1-char prefix case)
@@ -2341,33 +2657,21 @@ async def search(
 
     # Process media (tv/movie) results
     if "tv" in requested_sources:
-        tv_media_res = results_map.get("tv_media", empty_result)
-        if isinstance(tv_media_res, BaseException):
-            tv_media_res = empty_result
-        tv_full = _parse_media_results(
-            tv_media_res,
-            q,
-            preserve_redis_order=media_sort != "popularity",
-        )
+        tv_payload = results_map.get("tv_media")
+        if isinstance(tv_payload, BaseException) or tv_payload is None:
+            tv_full, tv_total = [], 0
+        else:
+            tv_full, tv_total = tv_payload
         full_results["tv"] = tv_full
-        if media_python_rerank:
-            pagination_totals["tv"] = len(tv_full)
-        else:
-            pagination_totals["tv"] = _extract_total(tv_media_res)
+        pagination_totals["tv"] = tv_total
     if "movie" in requested_sources:
-        movie_media_res = results_map.get("movie_media", empty_result)
-        if isinstance(movie_media_res, BaseException):
-            movie_media_res = empty_result
-        movie_full = _parse_media_results(
-            movie_media_res,
-            q,
-            preserve_redis_order=media_sort != "popularity",
-        )
-        full_results["movie"] = movie_full
-        if media_python_rerank:
-            pagination_totals["movie"] = len(movie_full)
+        movie_payload = results_map.get("movie_media")
+        if isinstance(movie_payload, BaseException) or movie_payload is None:
+            movie_full, movie_total = [], 0
         else:
-            pagination_totals["movie"] = _extract_total(movie_media_res)
+            movie_full, movie_total = movie_payload
+        full_results["movie"] = movie_full
+        pagination_totals["movie"] = movie_total
 
     # Process person results with autocomplete prefix filtering and re-ranking
     if "person" in results_map:
@@ -2820,6 +3124,24 @@ async def search_stream(
     else:
         media_query = "*"
 
+    stream_hint_plan: SourceHintPlan | None = None
+    stream_media_query_stripped: str | None = None
+    if query_text is not None and not raw and not has_filters:
+        stream_hint_plan = build_source_hint_plan(query_text)
+        if stream_hint_plan is not None:
+            stream_media_query_stripped = build_media_query_from_user_input(
+                stream_hint_plan.stripped_q,
+                raw=raw,
+            )
+
+    non_media_query_text = query_text
+    if (
+        query_text is not None
+        and stream_hint_plan is not None
+        and requested_sources.intersection(stream_hint_plan.hinted_sources)
+    ):
+        non_media_query_text = stream_hint_plan.stripped_q
+
     if query_text is not None:
         if raw:
             raw_query = query_text.strip()
@@ -2828,10 +3150,10 @@ async def search_stream(
             authors_query = raw_query
             books_query = raw_query
         else:
-            people_query = build_people_autocomplete_query(query_text)
-            podcasts_query = build_podcasts_autocomplete_query(query_text)
-            authors_query = build_authors_autocomplete_query(query_text)
-            books_query = build_books_autocomplete_query(query_text)
+            people_query = build_people_autocomplete_query(non_media_query_text or query_text)
+            podcasts_query = build_podcasts_autocomplete_query(non_media_query_text or query_text)
+            authors_query = build_authors_autocomplete_query(non_media_query_text or query_text)
+            books_query = build_books_autocomplete_query(non_media_query_text or query_text)
     else:
         people_query = "*"
         podcasts_query = "*"
@@ -2849,6 +3171,8 @@ async def search_stream(
     # aren't pushed out by popularity-sorted keyword/cast/genre matches.
     _stream_base = 250 if full else max(limit * 5, 50)
     media_fetch_limit = _stream_base if has_query else limit * 2
+    stream_media_preserve = media_sort != "popularity"
+    stream_media_python_rerank = has_query and media_sort == "popularity"
 
     credit_eligible = _credit_rewrite_eligible(
         has_query=has_query,
@@ -2883,31 +3207,29 @@ async def search_stream(
 
     skip_media_tag = credit_person is not None
 
+    async def _search_stream_media(mc_type: Literal["tv", "movie"]) -> list[dict[str, Any]]:
+        full, _ = await _search_media_bucket(
+            repo,
+            mc_type,
+            media_query,
+            stream_media_query_stripped,
+            stream_hint_plan,
+            query_text,
+            media_fetch_limit,
+            0,
+            media_sort,
+            preserve_redis_order=stream_media_preserve,
+            python_rerank=stream_media_python_rerank,
+        )
+        return full
+
     if "tv" in requested_sources and not skip_media_tag:
         tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "tv_media",
-                    repo.search(
-                        _build_media_source_query(media_query, "tv"),
-                        limit=media_fetch_limit,
-                        sort_by=media_sort,
-                    ),
-                )
-            )
+            asyncio.create_task(timed_task("tv_media", _search_stream_media("tv")))
         ] = "tv_media"
     if "movie" in requested_sources and not skip_media_tag:
         tasks_dict[
-            asyncio.create_task(
-                timed_task(
-                    "movie_media",
-                    repo.search(
-                        _build_media_source_query(media_query, "movie"),
-                        limit=media_fetch_limit,
-                        sort_by=media_sort,
-                    ),
-                )
-            )
+            asyncio.create_task(timed_task("movie_media", _search_stream_media("movie")))
         ] = "movie_media"
     if "person" in requested_sources and not credit_eligible:
         tasks_dict[
@@ -3035,15 +3357,12 @@ async def search_stream(
             for source_name in ("tv", "movie"):
                 if source_name not in requested_sources:
                     continue
+                mc_type = cast(Literal["tv", "movie"], source_name)
                 tasks_dict[
                     asyncio.create_task(
                         timed_task(
                             f"{source_name}_media",
-                            repo.search(
-                                _build_media_source_query(media_query, source_name),
-                                limit=media_fetch_limit,
-                                sort_by=media_sort,
-                            ),
+                            _search_stream_media(mc_type),
                         )
                     )
                 ] = f"{source_name}_media"
@@ -3072,17 +3391,17 @@ async def search_stream(
             timing_parts.append(f"{name}={elapsed:.0f}ms")
 
             if name in {"tv_media", "movie_media"}:
-                if data and not isinstance(data, BaseException) and hasattr(data, "docs"):
-                    source_name = "tv" if name == "tv_media" else "movie"
-                    media_parsed_full = _parse_media_results(
-                        data,
-                        q,
-                        preserve_redis_order=media_sort != "popularity",
-                    )
+                source_name = "tv" if name == "tv_media" else "movie"
+                media_parsed_full = _parsed_media_from_task_result(
+                    data,
+                    query_text,
+                    preserve_redis_order=stream_media_preserve,
+                )
+                if media_parsed_full is not None:
                     streamed_full[source_name] = media_parsed_full
                     media_results = media_parsed_full[:limit]
                     streamed_results[source_name] = media_results
-                    media_exact = _iter_exact_matches(source_name, media_parsed_full, q)
+                    media_exact = _iter_exact_matches(source_name, media_parsed_full, query_text)
                     if no_duplicate and media_exact:
                         media_results = _filter_exact_items(media_results, media_exact)
                     if media_results:

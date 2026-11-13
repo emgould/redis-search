@@ -37,9 +37,13 @@ Indexed source arrays (`tv`, `movie`, `person`, …) are the current page. Top-l
 - **Text media search + `media_sort=popularity`:** Python re-ranking uses a fixed **250**-doc candidate pool when `skip > 0` or `full=true` (avoid page drift). Default first page without `full` keeps `max(limit * 5, 50)`.
 - **Filter-only browse or non-popularity `media_sort`:** Redis `Query.paging(skip, limit)` — deep pages use native index offset.
 
+## Autocomplete
+
+`GET /api/autocomplete` accepts optional `limit` (1–50, default 10) and may return `pagination`, `skip`, and `limit` when delegating to `search()`.
+
 ## Out of scope (v1)
 
-- `/api/autocomplete`, `/api/autocomplete/stream`, `/api/search/stream`
+- `/api/autocomplete/stream`, `/api/search/stream` (no `pagination` metadata on stream)
 - Brokered API offset (future: map `news` `page` from `skip // limit + 1`)
 
 ## Deploy
