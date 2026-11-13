@@ -2,13 +2,15 @@
 Source hint parsing for search queries.
 
 When a user types "the godfather movie" or "podcast joe rogan" without explicitly
-setting a sources filter, we parse the query to extract the source hint, strip it,
-and search with the appropriate source filter.
+setting a sources filter, we detect hint tokens and may infer the source scope.
+Search runs both the literal query and a hint-stripped query (see SourceHintPlan).
 
 Keywords (and their plurals): podcast, movie, video, book, actor, actress,
           author, artist, album, tv series, tv show(s), tvshow, tvseries (-> tv).
 Excluded: news, ratings, standalone tv, standalone show.
 """
+
+from dataclasses import dataclass
 
 # Multi-word keywords (suffix/prefix): (lowercase tuple) -> source
 _MULTI_WORD_KEYWORDS: dict[tuple[str, ...], str] = {
@@ -116,3 +118,70 @@ def parse_source_hint(query: str) -> tuple[str, set[str] | None]:
         return (query, None)
 
     return (stripped, {matched_source})
+
+
+@dataclass(frozen=True)
+class SourceHintPlan:
+    """Literal user query plus a hint-stripped variant for union search."""
+
+    literal_q: str
+    stripped_q: str
+    hinted_sources: frozenset[str]
+
+    @property
+    def source_hint_applied(self) -> list[str]:
+        return sorted(self.hinted_sources)
+
+
+def build_source_hint_plan(query: str) -> SourceHintPlan | None:
+    """
+    Build a dual-query plan when a prefix/suffix source hint is present.
+
+    Returns None when no hint matches or the stripped query is too short.
+    """
+    if not query or not query.strip():
+        return None
+    literal = query.strip()
+    stripped, hinted = parse_source_hint(literal)
+    if not hinted or stripped == literal:
+        return None
+    return SourceHintPlan(
+        literal_q=literal,
+        stripped_q=stripped,
+        hinted_sources=frozenset(hinted),
+    )
+
+
+def apply_source_hint_to_sources(
+    explicit_sources: set[str] | None,
+    plan: SourceHintPlan | None,
+) -> set[str] | None:
+    """Use hinted sources only when the client did not pass ``sources``."""
+    if explicit_sources is not None:
+        return explicit_sources
+    if plan is None:
+        return None
+    return set(plan.hinted_sources)
+
+
+def resolve_query_source_hint(
+    query: str,
+    explicit_sources: set[str] | None,
+    *,
+    raw: bool = False,
+) -> tuple[str, set[str] | None, list[str] | None]:
+    """
+    HTTP-layer helper: never rewrite ``query``; only infer sources when omitted.
+
+    Returns:
+        (query, sources, source_hint_applied)
+    """
+    if raw or not query or not query.strip():
+        return query, explicit_sources, None
+
+    plan = build_source_hint_plan(query)
+    if plan is None:
+        return query, explicit_sources, None
+
+    sources = apply_source_hint_to_sources(explicit_sources, plan)
+    return query, sources, plan.source_hint_applied

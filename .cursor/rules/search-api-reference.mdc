@@ -398,7 +398,12 @@ Search for a movie/TV show and return cast names split into first/last parts. Us
 
 ## Query Source Hints
 
-When `sources` is not specified and `raw=false`, the query can include source keywords as prefix or suffix to restrict the search. The keyword is stripped from the query and the corresponding source filter is applied.
+When `raw=false`, the query can include source keywords as prefix or suffix. The API **never rewrites** the client `q` string. For **tv/movie** text search, RediSearch runs **two queries in parallel** and merges results:
+
+1. **Literal** — full user string (e.g. `Holiday Movies`, preserves titles like `Scary Movie`)
+2. **Stripped** — hint token removed (e.g. `Holiday`)
+
+Merged buckets dedupe by `mc_id` and rank by the better score from either query variant. If `sources` was **not** specified, the hinted source set is applied; if the client sent `sources`, that set is unchanged (`source_hint` is metadata only).
 
 **Keywords:**
 
@@ -418,14 +423,19 @@ When `sources` is not specified and `raw=false`, the query can include source ke
 - Suffix wins over prefix (rightmost match)
 - Stripped query must be at least 3 characters; otherwise no hint is applied
 - Case-insensitive matching
-- Skipped when `raw=true` or when `sources` is explicitly provided
+- Skipped when `raw=true`
 
-**Examples:**
-| Query | Effective query | Source filter |
-|-------|-----------------|---------------|
-| the godfather movie | the godfather | movie |
+**Examples (tv/movie dual search):**
+| Query | RediSearch runs | Source filter (if `sources` omitted) |
+|-------|-----------------|--------------------------------------|
+| holiday movie | `holiday movie` **and** `holiday` (union) | movie |
+| scary movie | `scary movie` **and** `scary` (union) | movie |
+| breaking bad tv show | literal + `breaking bad` (union) | tv |
+
+**Examples (non-media hints — source inference only, single query in v1):**
+| Query | Stripped form used for inference | Source filter |
+|-------|----------------------------------|---------------|
 | podcast joe rogan | joe rogan | podcast |
-| breaking bad tv show | breaking bad | tv |
 | something movie podcast | something movie | podcast |
 
 **Response field:** When a hint is applied, responses include `source_hint` (array of source names). JSON responses add it as a top-level key; streaming `done` events include it in the payload.

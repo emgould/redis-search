@@ -45,7 +45,7 @@ from core.public_lists import (
     PUBLIC_LIST_PREFIX,
     public_list_index_schema,
 )
-from core.query_hints import parse_source_hint
+from core.query_hints import resolve_query_source_hint
 from core.search_queries import RawQueryError, parse_date_param_to_yyyymmdd, validate_raw_query
 from etl.bestseller_author_etl import BestsellerETLStats, run_bestseller_author_etl
 from etl.etl_metadata import ETLMetadataStore, ETLStateConfig, JobRunResult
@@ -461,15 +461,9 @@ async def api_autocomplete(
 
     # Parse sources if provided
     sources_set: set[str] | None = None
-    source_hint_applied: list[str] | None = None
     if sources:
         sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
-    elif not raw:
-        parsed_q, hinted = parse_source_hint(q)
-        if hinted:
-            q = parsed_q
-            sources_set = hinted
-            source_hint_applied = sorted(hinted)
+    q, sources_set, source_hint_applied = resolve_query_source_hint(q, sources_set, raw=raw)
 
     try:
         results = await autocomplete(q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full)
@@ -521,15 +515,9 @@ async def api_autocomplete_stream(
 
     # Parse sources if provided
     sources_set: set[str] | None = None
-    source_hint_applied: list[str] | None = None
     if sources:
         sources_set = {s.strip().lower() for s in sources.split(",") if s.strip()}
-    elif not raw:
-        parsed_q, hinted = parse_source_hint(q)
-        if hinted:
-            q = parsed_q
-            sources_set = hinted
-            source_hint_applied = sorted(hinted)
+    q, sources_set, source_hint_applied = resolve_query_source_hint(q, sources_set, raw=raw)
 
     # Raw mode: validate before streaming
     if raw:
@@ -614,6 +602,8 @@ async def api_autocomplete_minimal(
             status_code=400,
         )
 
+    q, sources_set, source_hint_applied = resolve_query_source_hint(q, sources_set)
+
     if fields:
         field_list = [f.strip() for f in fields.split(",") if f.strip()]
         invalid_fields = set(field_list) - MINIMAL_FIELD_ALLOWLIST
@@ -631,6 +621,9 @@ async def api_autocomplete_minimal(
         field_list = sorted(MINIMAL_DEFAULT_FIELDS)
 
     results = await autocomplete_minimal(q=q, sources=sources_set, fields=field_list, limit=limit)
+    if source_hint_applied is not None:
+        results = dict(results)
+        results["source_hint"] = source_hint_applied
     return JSONResponse(content=results)
 
 
@@ -695,6 +688,8 @@ async def api_resolve(
             },
             status_code=400,
         )
+
+    q, sources_set, _source_hint_applied = resolve_query_source_hint(q, sources_set)
 
     field_list: list[str] | None = None
     if fields and not full:
@@ -899,7 +894,6 @@ async def api_search(
 
     # Parse sources parameter
     source_set: set[str] | None = None
-    source_hint_applied: list[str] | None = None
     if sources:
         source_set = {s.strip().lower() for s in sources.split(",")}
         # Filter to only valid sources
@@ -911,13 +905,8 @@ async def api_search(
                 },
                 status_code=400,
             )
-    elif not raw and has_query and q:
-        parsed_q, hinted = parse_source_hint(q)
-        if hinted:
-            q = parsed_q
-            has_query = len(q) >= 2
-            source_set = hinted
-            source_hint_applied = sorted(hinted)
+    q, source_set, source_hint_applied = resolve_query_source_hint(q, source_set, raw=raw)
+    has_query = bool(q and len(q) >= 2)
 
     # Handle field-only filtering (no text query)
     if not has_query:
@@ -1434,7 +1423,6 @@ async def api_search_stream(
 
     # Parse parameters
     source_set: set[str] | None = None
-    source_hint_applied: list[str] | None = None
     if sources:
         source_set = {s.strip().lower() for s in sources.split(",")}
         source_set = source_set & VALID_SOURCES
@@ -1445,13 +1433,8 @@ async def api_search_stream(
                 },
                 status_code=400,
             )
-    elif not raw and has_query and q:
-        parsed_q, hinted = parse_source_hint(q)
-        if hinted:
-            q = parsed_q
-            has_query = len(q) >= 2
-            source_set = hinted
-            source_hint_applied = sorted(hinted)
+    q, source_set, source_hint_applied = resolve_query_source_hint(q, source_set, raw=raw)
+    has_query = bool(q and len(q) >= 2)
 
     genre_id_list: list[str] | None = None
     if genre_ids:
