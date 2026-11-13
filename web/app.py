@@ -267,6 +267,21 @@ app.include_router(public_lists_router)
 templates = Jinja2Templates(directory="web/templates")
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
+_LOCAL_DEV = os.getenv("LOCAL_DEV", "").lower() in ("true", "1", "yes")
+# Dev UI per-source fetch size (must match API `limit` max of 50).
+SEARCH_UI_PER_SOURCE_LIMIT = 50
+_STATIC_ASSET_VERSION = os.getenv("STATIC_ASSET_VERSION") or str(int(time.time()))
+
+
+@app.middleware("http")
+async def dev_static_no_cache(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Avoid stale search-controller.js during local development."""
+    response = await call_next(request)
+    if _LOCAL_DEV and request.url.path.startswith("/static/js/"):
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
 
 @app.get("/health")
 async def health_check():
@@ -387,7 +402,12 @@ async def home(request: Request, _ui: None = Depends(require_web_ui_enabled)):
     return templates.TemplateResponse(
         request=request,
         name="home.html",
-        context={"current_env": current_env.value},
+        context={
+            "current_env": current_env.value,
+            "search_ui_limit": SEARCH_UI_PER_SOURCE_LIMIT,
+            "static_asset_v": _STATIC_ASSET_VERSION,
+            "local_dev_ui": _LOCAL_DEV,
+        },
     )
 
 
@@ -454,6 +474,7 @@ async def api_autocomplete(
         default=False,
         description="If true, fetch 250 media candidates instead of 50 for deeper ranking",
     ),
+    limit: int = Query(default=10, ge=1, le=50, description="Max results per source"),
 ):
     """JSON API endpoint for autocomplete search."""
     if not q or len(q) < 2:
@@ -466,7 +487,14 @@ async def api_autocomplete(
     q, sources_set, source_hint_applied = resolve_query_source_hint(q, sources_set, raw=raw)
 
     try:
-        results = await autocomplete(q, sources_set, raw=raw, no_duplicate=no_duplicate, full=full)
+        results = await autocomplete(
+            q,
+            sources_set,
+            raw=raw,
+            no_duplicate=no_duplicate,
+            full=full,
+            limit=limit,
+        )
         if source_hint_applied is not None:
             results = dict(results)
             results["source_hint"] = source_hint_applied

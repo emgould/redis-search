@@ -403,7 +403,7 @@ When `raw=false`, the query can include source keywords as prefix or suffix. The
 1. **Literal** — full user string (e.g. `Holiday Movies`, preserves titles like `Scary Movie`)
 2. **Stripped** — hint token removed (e.g. `Holiday`)
 
-Merged buckets dedupe by `mc_id` and rank by the better score from either query variant. If `sources` was **not** specified, the hinted source set is applied; if the client sent `sources`, that set is unchanged (`source_hint` is metadata only).
+Merged buckets dedupe by `mc_id`. **Sort order** on the dual path does **not** use title-match tiers; items sort by **prominence**, then **popularity**, with a **deprioritization bucket** for titles that repeat the stripped hint token as a word (e.g. *The Holiday* when the hint is ``Holiday``) unless the **literal** client query is that film’s title (``Scary Movie``). Single-query media search (no source hint) still uses tiered `score_media_result` on the full `q`. If `sources` was **not** specified, the hinted source set is applied; if the client sent `sources`, that set is unchanged (`source_hint` is metadata only).
 
 **Keywords:**
 

@@ -206,6 +206,11 @@ Shows{% endblock %} {% block body %}
           Press <kbd class="px-1.5 py-0.5 bg-surface-700 rounded text-surface-300">Enter</kbd> to search all sources, or
           select filters above
         </p>
+        {% if local_dev_ui %}
+        <p class="text-center text-xs text-teal-500/90 mt-1" title="Check Network: /api/search and /api/autocomplete must include limit={{ search_ui_limit }}">
+          Local dev UI — per-source limit {{ search_ui_limit }} (use <code class="text-teal-400">make web-local</code> on port 19002, not the Olares :9001 tunnel UI)
+        </p>
+        {% endif %}
 
         <!-- Results Dropdown -->
         <div id="results-container" class="absolute top-full left-0 right-0 mt-2 hidden"
@@ -384,7 +389,8 @@ Shows{% endblock %} {% block body %}
   </div>
 </div>
 
-<script src="/static/js/search-controller.js?v=20260312-full"></script>
+<script>window.__SEARCH_UI_PER_SOURCE_LIMIT__ = {{ search_ui_limit }};</script>
+<script src="/static/js/search-controller.js?v={{ static_asset_v }}"></script>
 <script>
   const searchInput = document.getElementById("search-input");
   const resultsContainer = document.getElementById("results-container");
@@ -562,6 +568,7 @@ Shows{% endblock %} {% block body %}
     getApiUrl,
     renderResults,
     expandedCategories,
+    perSourceLimit: {{ search_ui_limit }},
     isStreamingEnabled: () => streamingEnabled,
     isNoDuplicateEnabled: () => noDuplicateEnabled,
     isFullSearchEnabled: () => fullSearchEnabled,

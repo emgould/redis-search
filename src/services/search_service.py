@@ -24,6 +24,7 @@ from core.iptc import expand_query_string, get_search_aliases
 from core.query_hints import SourceHintPlan, build_source_hint_plan
 from core.ranking import (
     EXACT_MATCH_SOURCE_PRIORITY,
+    _words_for_exact_title,
     compute_media_prominence,
     is_exact_match,
     media_titles_match_exactly,
@@ -692,17 +693,51 @@ def _parse_media_results(
     return parsed_results
 
 
-def _media_union_rank_key(
+def _stripped_hint_echoes_in_title(item: dict[str, Any], stripped_q: str) -> bool:
+    """True when a stripped hint token appears as a word in the media title."""
+    title = (item.get("search_title") or item.get("title") or "").strip()
+    if not title or not stripped_q.strip():
+        return False
+    title_words = set(_words_for_exact_title(title).split())
+    hint_words = [
+        w
+        for w in _words_for_exact_title(stripped_q).split()
+        if w and w not in STOPWORDS
+    ]
+    return any(w in title_words for w in hint_words)
+
+
+def _dual_hint_title_echo_sort_bucket(
+    item: dict[str, Any],
+    literal_q: str,
+    stripped_q: str,
+) -> int:
+    """0 = literal query is the title; 1 = normal; 2 = stripped token echoed in title."""
+    if media_titles_match_exactly(literal_q, item) or media_titles_match_ignoring_article(
+        literal_q, item
+    ):
+        return 0
+    if _stripped_hint_echoes_in_title(item, stripped_q):
+        return 2
+    return 1
+
+
+def _dual_hint_union_sort_key(
     item: dict[str, Any],
     literal_q: str,
     stripped_q: str,
 ) -> tuple[int, float, float]:
-    """Best (lowest) media rank across literal and stripped query variants."""
-    literal_rank = _rank_media_result(item, literal_q)
-    stripped_rank = _rank_media_result(item, stripped_q)
-    if stripped_rank < literal_rank:
-        return stripped_rank
-    return literal_rank
+    """Sort dual-query union: de-emphasize titles that echo the stripped hint token.
+
+    Uses prominence and popularity, not title-match tiers. Items whose title
+    repeats the stripped hint (e.g. *The Holiday* for ``Holiday Movies`` →
+    ``Holiday``) sort after theme/keyword matches unless the literal query is
+    the film title (``Scary Movie``).
+    """
+    bucket = _dual_hint_title_echo_sort_bucket(item, literal_q, stripped_q)
+    prominence = compute_media_prominence(item)
+    popularity = float(item.get("popularity") or 0)
+    return (bucket, -prominence, -popularity)
 
 
 def _merge_dual_media_search_results(
@@ -741,7 +776,7 @@ def _merge_dual_media_search_results(
         return [by_id[mc_id] for mc_id in ordered_ids if mc_id in by_id]
 
     merged = list(by_id.values())
-    merged.sort(key=lambda doc: _media_union_rank_key(doc, literal_q, stripped_q))
+    merged.sort(key=lambda doc: _dual_hint_union_sort_key(doc, literal_q, stripped_q))
     return merged
 
 
@@ -1114,11 +1149,12 @@ async def autocomplete(
     raw: bool = False,
     no_duplicate: bool = False,
     full: bool = False,
+    limit: int = _AUTOCOMPLETE_LIMIT,
 ) -> dict[str, Any]:
     """
     Autocomplete JSON results for indexed sources.
 
-    Delegates to :func:`search` with the same ``limit`` (10), ranking, and
+    Delegates to :func:`search` with the same ``limit``, ranking, and
     ``exact_match`` selection as ``GET /api/search`` so per-source list order
     matches batch search for the same ``q``, indexed ``sources``, and flags.
     Brokered sources are never fetched; their keys are always empty lists.
@@ -1160,7 +1196,7 @@ async def autocomplete(
     merged = await search(
         q,
         sources=indexed,
-        limit=_AUTOCOMPLETE_LIMIT,
+        limit=limit,
         raw=raw,
         no_duplicate=no_duplicate,
         full=full,
@@ -1172,6 +1208,12 @@ async def autocomplete(
     }
     for key in _AUTOCOMPLETE_RESPONSE_KEYS:
         out[key] = merged.get(key, []) if key in indexed else []
+    if merged.get("pagination") is not None:
+        out["pagination"] = merged["pagination"]
+    if merged.get("skip") is not None:
+        out["skip"] = merged["skip"]
+    if merged.get("limit") is not None:
+        out["limit"] = merged["limit"]
     return out
 
 
@@ -1754,7 +1796,7 @@ async def autocomplete_minimal(
                     by_id[mc_id] = parsed
         merged = list(by_id.values())
         merged.sort(
-            key=lambda item: _media_union_rank_key(
+            key=lambda item: _dual_hint_union_sort_key(
                 item,
                 hint_plan.literal_q,
                 hint_plan.stripped_q,
