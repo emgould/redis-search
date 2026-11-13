@@ -130,6 +130,7 @@ function initSearchController(cfg) {
     for (const [k, v] of Object.entries(extra)) {
       url += `&${k}=${encodeURIComponent(String(v))}`;
     }
+    url += `&_ts=${Date.now()}`;
     return url;
   }
 
@@ -144,6 +145,8 @@ function initSearchController(cfg) {
       "exact_match",
       "exact_matches",
       "source_hint",
+      "semantic_fallback",
+      "semantic_fallback_status",
     ]);
     for (const [key, value] of Object.entries(data)) {
       if (reserved.has(key)) continue;
@@ -312,7 +315,7 @@ function initSearchController(cfg) {
       } else {
         url = buildUrl("/api/autocomplete", query, { limit: String(SEARCH_PAGE_MAX_LIMIT) });
       }
-      const resp = await fetch(url, { signal: autocompleteCtrl.signal });
+      const resp = await fetch(url, { signal: autocompleteCtrl.signal, cache: "no-store" });
       const data = await resp.json();
 
       if (query === currentQuery) {
@@ -345,11 +348,17 @@ function initSearchController(cfg) {
     try {
       const url = buildUrl("/api/search", query, { limit: String(SEARCH_PAGE_MAX_LIMIT) });
       console.log("[Search Batch]", url, `(perSourceLimit=${SEARCH_PAGE_MAX_LIMIT})`);
-      const resp = await fetch(url, { signal: searchCtrl.signal });
+      const resp = await fetch(url, { signal: searchCtrl.signal, cache: "no-store" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
 
       if (query === currentQuery) {
+        if (data.semantic_fallback_status) {
+          console.log("[Search Batch] semantic_fallback_status:", data.semantic_fallback_status);
+        }
+        if (data.semantic_fallback) {
+          console.log("[Search Batch] semantic_fallback:", data.semantic_fallback);
+        }
         console.log(
           "[Search Batch] results:",
           Object.keys(data)
@@ -441,7 +450,20 @@ function initSearchController(cfg) {
       }
     });
 
-    eventSource.addEventListener("done", () => {
+    eventSource.addEventListener("done", (e) => {
+      try {
+        const done = e.data ? JSON.parse(e.data) : {};
+        if (done.semantic_fallback) {
+          currentResults.semantic_fallback = done.semantic_fallback;
+          console.log("[Search Stream] semantic_fallback:", done.semantic_fallback);
+        }
+        if (done.semantic_fallback_status) {
+          currentResults.semantic_fallback_status = done.semantic_fallback_status;
+          console.log("[Search Stream] semantic_fallback_status:", done.semantic_fallback_status);
+        }
+      } catch (err) {
+        console.debug("[Search Stream] done payload:", err);
+      }
       console.log(
         `[Search Stream] done: ${sourcesReceived} sources in ${Math.round(performance.now() - startTime)}ms`
       );
@@ -576,7 +598,7 @@ function initSearchController(cfg) {
       }
       const url = buildUrl("/api/search", query, pageParams);
       console.log("[Search Page]", url);
-      const resp = await fetch(url, { signal: searchCtrl.signal });
+      const resp = await fetch(url, { signal: searchCtrl.signal, cache: "no-store" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       if (query !== currentQuery) return;

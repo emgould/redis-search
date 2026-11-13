@@ -1504,6 +1504,7 @@ async def api_search_stream(
             return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def event_generator():
+        semantic_fallback_meta: dict[str, Any] | None = None
         async for event in search_stream(
             q=q if has_query else None,
             sources=source_set,
@@ -1533,6 +1534,9 @@ async def api_search_stream(
             no_duplicate=no_duplicate,
             full=full,
         ):
+            if len(event) == 2 and event[0] == "semantic_fallback":
+                _, semantic_fallback_meta = event
+                continue
             if len(event) == 2 and event[0] == "exact_match":
                 _, item = event
                 yield f"event: exact_match\ndata: {json.dumps(item)}\n\n"
@@ -1555,6 +1559,8 @@ async def api_search_stream(
         done_data: dict[str, Any] = {}
         if source_hint_applied is not None:
             done_data["source_hint"] = source_hint_applied
+        if semantic_fallback_meta is not None:
+            done_data["semantic_fallback"] = semantic_fallback_meta
         yield f"event: done\ndata: {json.dumps(done_data)}\n\n"
 
     return StreamingResponse(
