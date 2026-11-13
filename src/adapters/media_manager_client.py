@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
 import google.auth.transport.requests
@@ -27,6 +27,8 @@ MEDIA_INDEX_NAMES: dict[str, str] = {
     "movie": "movie-index",
     "tv": "tv-index",
 }
+
+SearchIndexName = Literal["tv-index", "movie-index"]
 
 
 def _first_int(data: dict[str, Any], *keys: str) -> int:
@@ -324,6 +326,31 @@ class MediaManagerClient:
                 "Unexpected /api/metadata response: missing metadata object"
             )
         return MetadataResponse(metadata=metadata)
+
+    async def search_index(
+        self,
+        *,
+        query: str,
+        index_name: SearchIndexName,
+        limit: int = 10,
+        re_rank: bool = False,
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """POST /api/search for FAISS semantic retrieval on movie or TV index."""
+        body: dict[str, Any] = {
+            "query": query,
+            "index_name": index_name,
+            "limit": limit,
+        }
+        if re_rank:
+            body["re_rank"] = True
+        request_timeout = timeout if timeout is not None else self._timeout
+        resp = await self._request("POST", "/api/search", json=body, timeout=request_timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, dict):
+            raise ValueError("Media Manager /api/search returned non-object JSON")
+        return data
 
     async def get_status(self) -> StatusResponse:
         """GET /insert-docs/status for current processing state."""

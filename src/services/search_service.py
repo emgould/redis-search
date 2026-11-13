@@ -47,6 +47,11 @@ from core.search_queries import (
     normalize_query_separators,
     strip_query_apostrophes,
 )
+from services.media_manager_search_fallback import (
+    apply_media_manager_semantic_fallback,
+    build_fallback_query_spec,
+    extra_queries_for_source_hint,
+)
 from services.public_list_service import search_public_lists
 from utils.get_logger import get_logger
 from utils.normalize import normalize
@@ -62,6 +67,7 @@ StreamEvent = Union[
     tuple[Literal["exact_match"], dict[str, Any]],
     tuple[Literal["exact_match_final"], dict[str, Any]],
     tuple[Literal["exact_matches_final"], list[dict[str, Any]]],
+    tuple[Literal["semantic_fallback"], dict[str, Any]],
 ]
 
 logger = get_logger(__name__)
@@ -2961,6 +2967,36 @@ async def search(
             album_results = [album.model_dump() for album in album_res.results[:limit]]
         final_results["album"] = album_results
 
+    query_spec = build_fallback_query_spec(
+        query_text,
+        extra_queries=extra_queries_for_source_hint(
+            stripped_q=media_hint_plan.stripped_q if media_hint_plan else None,
+            primary=query_text or "",
+        ),
+    )
+    semantic_fallback_meta: dict[str, Any] | None = None
+    if query_spec is not None:
+        semantic_fallback_meta = await apply_media_manager_semantic_fallback(
+            full_results=full_results,
+            query_spec=query_spec,
+            requested_sources=requested_sources,
+            limit=limit,
+            skip=skip,
+            raw=raw,
+            has_filters=has_filters,
+            media_sort=media_sort,
+            mc_type=mc_type,
+        )
+        if semantic_fallback_meta:
+            for media_src in ("tv", "movie"):
+                bucket_meta = semantic_fallback_meta.get(media_src)
+                if (
+                    isinstance(bucket_meta, dict)
+                    and bucket_meta.get("applied")
+                    and media_src in full_results
+                ):
+                    pagination_totals[media_src] = len(full_results[media_src])
+
     # Slice indexed sources after full candidate sets are ready
     _slice_indexed_pages(
         final_results,
@@ -3007,6 +3043,9 @@ async def search(
         requested_sources=requested_sources,
         pagination_totals=pagination_totals,
     )
+
+    if semantic_fallback_meta:
+        final_results["semantic_fallback"] = semantic_fallback_meta
 
     return final_results
 
@@ -3368,6 +3407,61 @@ async def search_stream(
                 ] = f"{source_name}_media"
 
     if not tasks_dict:
+        early_has_filters = any(
+            [
+                genre_ids,
+                cast_ids,
+                year_min,
+                year_max,
+                release_date_min,
+                release_date_max,
+                first_air_date_min,
+                first_air_date_max,
+                last_air_date_min,
+                last_air_date_max,
+                rating_min,
+                rating_max,
+                rt_audience_score_min is not None,
+                rt_critics_score_min is not None,
+                media_sort != "popularity",
+                mc_type,
+                original_language_include,
+                original_language_exclude,
+                origin_country_include,
+                origin_country_exclude,
+            ]
+        )
+        early_spec = build_fallback_query_spec(
+            query_text,
+            extra_queries=extra_queries_for_source_hint(
+                stripped_q=stream_hint_plan.stripped_q if stream_hint_plan else None,
+                primary=query_text or "",
+            ),
+        )
+        if early_spec is not None:
+            early_meta = await apply_media_manager_semantic_fallback(
+                full_results=streamed_full,
+                query_spec=early_spec,
+                requested_sources=requested_sources,
+                limit=limit,
+                skip=0,
+                raw=raw,
+                has_filters=early_has_filters,
+                media_sort=media_sort,
+                mc_type=mc_type,
+            )
+            if early_meta:
+                for source_name in ("tv", "movie"):
+                    bucket_meta = early_meta.get(source_name)
+                    if isinstance(bucket_meta, dict) and bucket_meta.get("applied"):
+                        docs = streamed_full.get(source_name) or []
+                        sliced = docs[:limit]
+                        streamed_results[source_name] = sliced
+                        if sliced:
+                            latency = float(bucket_meta.get("latency_ms") or 0.0)
+                            yield (source_name, sliced, latency)
+                yield ("semantic_fallback", early_meta)
+
         total_elapsed = (time.perf_counter() - total_start) * 1000
         q_for_exact = q if has_query else None
         final_exact = _pick_exact_match(streamed_full, q_for_exact)
@@ -3530,6 +3624,64 @@ async def search_stream(
         except Exception as e:
             logger.warning(f"Error processing streaming search result: {e}")
             continue
+
+    stream_has_filters = any(
+        [
+            genre_ids,
+            cast_ids,
+            year_min,
+            year_max,
+            release_date_min,
+            release_date_max,
+            first_air_date_min,
+            first_air_date_max,
+            last_air_date_min,
+            last_air_date_max,
+            rating_min,
+            rating_max,
+            rt_audience_score_min is not None,
+            rt_critics_score_min is not None,
+            media_sort != "popularity",
+            mc_type,
+            original_language_include,
+            original_language_exclude,
+            origin_country_include,
+            origin_country_exclude,
+        ]
+    )
+    stream_query_spec = build_fallback_query_spec(
+        query_text,
+        extra_queries=extra_queries_for_source_hint(
+            stripped_q=stream_hint_plan.stripped_q if stream_hint_plan else None,
+            primary=query_text or "",
+        ),
+    )
+    if stream_query_spec is not None:
+        stream_fallback_meta = await apply_media_manager_semantic_fallback(
+            full_results=streamed_full,
+            query_spec=stream_query_spec,
+            requested_sources=requested_sources,
+            limit=limit,
+            skip=0,
+            raw=raw,
+            has_filters=stream_has_filters,
+            media_sort=media_sort,
+            mc_type=mc_type,
+        )
+        if stream_fallback_meta:
+            for source_name in ("tv", "movie"):
+                bucket_meta = stream_fallback_meta.get(source_name)
+                if isinstance(bucket_meta, dict) and bucket_meta.get("applied"):
+                    docs = streamed_full.get(source_name) or []
+                    sliced = docs[:limit]
+                    streamed_results[source_name] = sliced
+                    media_exact = _iter_exact_matches(source_name, docs, query_text)
+                    if no_duplicate and media_exact:
+                        sliced = _filter_exact_items(sliced, media_exact)
+                    if sliced:
+                        latency = float(bucket_meta.get("latency_ms") or 0.0)
+                        yield (source_name, sliced, latency)
+            yield ("semantic_fallback", stream_fallback_meta)
 
     total_elapsed = (time.perf_counter() - total_start) * 1000
     q_for_exact = q if has_query else None

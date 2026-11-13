@@ -1,0 +1,29 @@
+# Media Manager semantic fallback (zero Redis hits)
+
+When indexed **movie** and/or **tv** buckets are empty after the normal `search()` pipeline (including person filmography rewrite), redis-search may call Media Manager **POST `/api/search`** and map FAISS hits into the existing redis card shape.
+
+## When it runs
+
+- **`GET /api/search`** batch path and **`GET /api/search/stream`** only (not autocomplete).
+- Fallback calls MM with **`re_rank: true`** (Media Manager’s LLM rerank flag; not `llm_rerank`). Timeout **60s** per bucket. Response extras (`re_rank_applied`, `commentary`, `query_used`) appear under **`semantic_fallback.{movie|tv}`**.
+- **Eligible:** `skip == 0`, `raw=false`, no field filters, `media_sort=popularity`, requested sources include the bucket, bucket still empty, query length ≥ 2.
+- **Env:** `MEDIA_MANAGER_SERVING_URL` if set, else `MEDIA_MANAGER_API_URL`; `MEDIA_MANAGER_INTERNAL_TOKEN` for `X-Internal-Token`; GCP OIDC when targeting Cloud Run (same as ETL client).
+
+## Response contract
+
+- Batch: top-level **`semantic_fallback`** object with per-bucket metadata (`applied`, `count`, `latency_ms`, `query`, optional `error`).
+- Stream: additional **`result`** events if fallback fills a bucket; **`semantic_fallback`** on the final **`done`** SSE payload.
+- Items include **`_semantic_fallback: true`**; existing Redis hits are never replaced.
+- Card JSON comes from MM FAISS **`metadata.index_metadata`** (the same redis-search document MM indexed). No second Redis **MGET** in redis-search. If **`image`** is missing on that payload, fill from MM **`poster_image_url`** or **`poster_path`** (`w185`) for the web UI.
+
+## Code layout
+
+- Eligibility, mapping, orchestration: `src/services/media_manager_search_fallback.py`
+- HTTP client: `MediaManagerClient.search_index()` in `src/adapters/media_manager_client.py`
+- Hooks: `search()` and `search_stream()` in `src/services/search_service.py`
+
+`SemanticFallbackQuerySpec` carries **`extras`** query strings for a future third parallel MM call alongside dual source-hint Redis queries (extras are not invoked in v1).
+
+## Deploy
+
+Application-only Cloud Run web change: `make deploy-web` after env vars are set on the serving service. No cache version bump.
