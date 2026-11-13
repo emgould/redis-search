@@ -52,7 +52,7 @@ help:
 	@echo "    make seed          - Seed example data"
 	@echo ""
 	@echo "  Web App:"
-	@echo "    make web-local        - Start web app locally on port 9001"
+	@echo "    make web-local        - Start local web app against Olares Redis on port 19002"
 	@echo "    make web-docker       - Start web app in Docker on port 9001 (auto-starts Redis if needed)"
 	@echo "    make web-docker-down  - Stop web container only (Redis keeps running)"
 	@echo "    make redis-docker-down - Stop Redis container"
@@ -217,9 +217,18 @@ test:
 	. venv/bin/activate && pytest -q
 
 web-local:
-	@echo "🐳 Starting local environment..."
+	@echo "🚇 Starting local web app against Olares Redis..."
 	@echo ""
-	@echo "1️⃣  Checking IAP tunnel to public Redis..."
+	@echo "1️⃣  Checking Olares Redis tunnel on localhost:6380..."
+	@if ! lsof -ti:6380 > /dev/null 2>&1; then \
+		echo "   ERROR: Olares Redis tunnel is not running."; \
+		echo "   Start it first with: make olares-tunnel TUNNEL_BIND=0.0.0.0"; \
+		exit 1; \
+	else \
+		echo "   ✅ Olares Redis tunnel is running"; \
+	fi
+	@echo ""
+	@echo "2️⃣  Checking IAP tunnel to public Redis..."
 	@if ! lsof -ti:6381 > /dev/null 2>&1; then \
 		echo "   Tunnel not running, starting it in background..."; \
 		(nohup gcloud compute start-iap-tunnel redis-stack-vm 6379 \
@@ -231,7 +240,9 @@ web-local:
 	else \
 		echo "   ✅ Tunnel already running on port 6381"; \
 	fi
-	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && uvicorn web.app:app --reload --port 9001'
+	@echo ""
+	@echo "3️⃣  Starting local web app on http://localhost:19002..."
+	@bash -c 'source venv/bin/activate && LOCAL_DEV=true source scripts/load_secrets.sh local api && export PYTHONPATH=src && export REDIS_PORT=6380 && export REDIS_PASSWORD="$$(make olares-redis-password)" && exec uvicorn web.app:app --reload --host 0.0.0.0 --port 19002'
 
 web-docker:
 	@echo "🐳 Starting Docker environment..."
