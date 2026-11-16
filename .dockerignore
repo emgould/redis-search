@@ -37,9 +37,11 @@ data/**
 docker/*.yml
 docker/*.Dockerfile
 
-# Scripts - exclude most but keep ETL runner
+# Scripts - exclude most but keep ETL runner and Redis promote/copy UI tasks
 scripts/*
 !scripts/run_etl.py
+!scripts/promote_to_dev.py
+!scripts/copy_to_local.py
 
 # Documentation
 *.md
