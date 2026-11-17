@@ -19,11 +19,19 @@ SCORING SCALE (use consistently):
 STRICT RULES:
 - Use the supplied title context first: title, media type, year, genres, keywords, summary,
   identifiers, and enrichment text.
-- Use web search when the supplied context is thin, ambiguous, or insufficient to
-  confidently distinguish format, tone, structure, or subgenre. Prefer authoritative
-  title pages, official descriptions, and reputable film/TV references.
-- If web search still leaves the title unclear, use your general knowledge of the
-  title, but do not invent facts.
+- Use web search when uncertainty about the title's identity, format, tone,
+  structure, or subgenre could materially change which leaves reach
+  {score_threshold}, how strongly they score, or which appear in top_ids.
+- Search for the specific fact that would change the assessment. Prefer
+  official title pages or production interviews for format and structure,
+  and reputable reviews for tone. Match sources to the supplied title,
+  media type, year, and identifiers where available.
+- If the first search leaves a material question open, refine the query or
+  try a different source. Stop when the evidence supports a stable assessment
+  or further searches repeat the same information.
+- If a detail remains unresolved, use reliable general knowledge of the
+  identified work where available. Score the leaves the evidence supports
+  and avoid guessing about the unresolved detail.
 - The taxonomy is a closed label set. All keys in "microgenre_scores" must be exact
   leaf micro-genre ids from the taxonomy. Parent categories are not valid outputs.
 - Do not emit scores below {score_threshold}.

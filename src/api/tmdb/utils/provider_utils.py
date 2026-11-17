@@ -13,6 +13,19 @@ from utils.get_logger import get_logger
 logger = get_logger(__name__)
 
 _UNKNOWN_PROVIDER_ORDER = 10_000
+_PROVIDER_NAME_ALIASES: dict[str, str] = {
+    "amazon prime video": "prime video",
+    "amazon prime": "prime video",
+    "prime video": "prime video",
+    "hbo max": "max",
+    "max": "max",
+    "apple tv+": "apple tv",
+    "apple tv plus": "apple tv",
+    "paramount+": "paramount plus",
+    "paramount plus": "paramount plus",
+    "disney+": "disney plus",
+    "disney plus": "disney plus",
+}
 
 
 def get_provider_display_map() -> list[dict[str, Any]]:
@@ -68,6 +81,88 @@ def get_full_provider_map(provider_display_map: list[dict[str, Any]]) -> dict[st
         for aggregator_id in aggregator_ids:
             aggregator_map[aggregator_id] = provider
     return aggregator_map
+
+
+def _normalize_provider_name(provider_name: str) -> str:
+    normalized = " ".join(provider_name.lower().replace("&", "and").split())
+    return _PROVIDER_NAME_ALIASES.get(normalized, normalized)
+
+
+def _provider_search_names(provider: dict[str, Any]) -> set[str]:
+    names = {
+        value
+        for value in (provider.get("provider_name"), provider.get("base_brand"))
+        if isinstance(value, str) and value
+    }
+    for package in provider.get("packages", []):
+        if isinstance(package, dict):
+            package_name = package.get("name")
+            if isinstance(package_name, str) and package_name:
+                names.add(package_name)
+    for channel in provider.get("channels", []):
+        if isinstance(channel, dict):
+            channel_name = channel.get("name")
+            if isinstance(channel_name, str) and channel_name:
+                names.add(channel_name)
+    return {_normalize_provider_name(name) for name in names}
+
+
+def _resolve_provider_logo_path(
+    provider: dict[str, Any], master_provider_map: dict[str, Any]
+) -> str | None:
+    logo_path = provider.get("logo_path")
+    if isinstance(logo_path, str) and logo_path:
+        return logo_path
+
+    provider_id = provider.get("provider_id")
+    if provider_id is None:
+        return None
+
+    master_entry = master_provider_map.get(str(provider_id))
+    if not isinstance(master_entry, dict):
+        return None
+
+    master_logo_path = master_entry.get("logo_path")
+    if isinstance(master_logo_path, str) and master_logo_path:
+        return master_logo_path
+
+    return None
+
+
+def resolve_provider_display_entry_by_name(provider_name: str) -> dict[str, Any] | None:
+    normalized_provider_name = _normalize_provider_name(provider_name)
+    provider_display_map = get_provider_display_map()
+    master_provider_map = get_master_provider_display_map()
+
+    for provider in provider_display_map:
+        if normalized_provider_name not in _provider_search_names(provider):
+            continue
+
+        provider_entry_display = _provider_display_entry(provider, True)
+        provider_entry_display["logo_path"] = _resolve_provider_logo_path(
+            provider, master_provider_map
+        )
+        return provider_entry_display
+
+    for provider in master_provider_map.values():
+        if not isinstance(provider, dict):
+            continue
+        provider_names = {
+            value
+            for value in (provider.get("provider_name"), provider.get("base_brand"))
+            if isinstance(value, str) and value
+        }
+        normalized_master_names = {_normalize_provider_name(name) for name in provider_names}
+        if normalized_provider_name not in normalized_master_names:
+            continue
+
+        provider_entry_display = _provider_display_entry(provider, False)
+        provider_entry_display["logo_path"] = _resolve_provider_logo_path(
+            provider, master_provider_map
+        )
+        return provider_entry_display
+
+    return None
 
 
 def extract_provider_items(

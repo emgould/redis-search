@@ -34,6 +34,21 @@ The implementation is intentionally split into:
   - `on_demand_platform_ids`: list of provider IDs from buy/rent
 - `on_demand_platforms`: list of `{provider_name, provider_id, logo_path, mkt_share_order}`
 
+## Watchmode release fallback (`get_media_details`)
+
+When TMDB `watch/providers` normalizes to an empty summary (no `streaming_platforms`,
+`flatrate`, `rent`, or `buy` lists), `TMDBService.get_media_details` calls
+`apply_watchmode_release_provider_enrichment` (same contract as MediaCircle
+`handlers._apply_watchmode_release_provider_enrichment`):
+
+- Skips if `has_provider_display_payload(watch_providers)` is already true.
+- Queries Watchmode `/releases/` (±30d past, +60d future, `limit=250`, `max_retries=1`).
+- Maps `source_name` → `resolve_provider_display_entry_by_name` → `build_streaming_platform_summary`.
+- Sets `streaming_platform` and `availability_type` on the media item.
+
+Requires `WATCHMODE_API_KEY`. Used by ETL / `prepare_media_redis_document` so new releases
+can pass documentary and major-provider filters when TMDB lags.
+
 ## Detailed Processing Rules
 
 - Invalid `content_type` returns `None` after logging the error.
