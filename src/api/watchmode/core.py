@@ -93,7 +93,13 @@ class WatchmodeService(BaseAPIClient):
 
     @RedisCache.use_cache(WatchmodeCache, prefix="new_releases")
     async def get_new_releases(
-        self, region: str = "US", types: str = "movie,tv", limit: int = 50
+        self,
+        region: str = "US",
+        types: str = "movie,tv",
+        limit: int = 50,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        max_retries: int = 3,
     ) -> dict | None:
         """Get new releases from streaming api.
 
@@ -103,25 +109,27 @@ class WatchmodeService(BaseAPIClient):
                    Note: The /releases/ endpoint uses different type names than /search/
                    Valid values: "movie", "tv", "tv_special", "tv_miniseries", "short_film"
             limit: Number of results (default: 50)
+            start_date: Inclusive YYYYMMDD (default: 7 days ago)
+            end_date: Inclusive YYYYMMDD (default: today)
+            max_retries: Retry budget for the HTTP call (default: 3)
 
         Returns:
             Dict with releases data or None on error
         """
         from datetime import datetime, timedelta
 
-        # Calculate date range for "this week" - last 7 days
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
+        end_datetime = datetime.now()
+        start_datetime = end_datetime - timedelta(days=7)
 
         params = {
-            "start_date": start_date.strftime("%Y%m%d"),
-            "end_date": end_date.strftime("%Y%m%d"),
+            "start_date": start_date or start_datetime.strftime("%Y%m%d"),
+            "end_date": end_date or end_datetime.strftime("%Y%m%d"),
             "regions": region,
             "types": types,
             "limit": limit,
         }
 
-        result = await self._make_request("/releases/", params)
+        result = await self._make_request("/releases/", params, max_retries=max_retries)
         return cast(dict[Any, Any] | None, result)
 
     @RedisCache.use_cache(WatchmodeCache, prefix="title_details")

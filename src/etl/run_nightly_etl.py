@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         "-j",
         type=str,
         help="Run specific job only (tv, movie, person, podcast, book)",
-        choices=["tv", "movie", "person", "podcast", "book"],
+        choices=["tv", "movie", "person", "podcast", "book", "microgenre"],
     )
     parser.add_argument(
         "--start-date",
@@ -106,6 +106,7 @@ async def main() -> int:
         job_filter_map = {
             "podcast": "podcastindex_changes",
             "book": "bestseller_authors",
+            "microgenre": "microgenre_gap_fill",
         }
         job_filter = [job_filter_map.get(args.job, f"tmdb_{args.job}_changes")]
 

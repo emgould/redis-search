@@ -67,6 +67,17 @@ jobs:
           media_type: "flixpatrol"
           verbose: false
 
+  # Microgenre gap-fill (weekly, default Sunday UTC; no-op other nights): scan for
+  # missing microgenres, classify, patch Redis, push Media Manager metadata_only.
+  - name: microgenre_gap_fill
+    target: microgenre_nightly_etl
+    enabled: true
+    runs:
+      - params:
+          media_type: "microgenre"
+          verbose: false
+          # max_batches: 50  # optional cap per night (same as MICROGENRE_NIGHTLY_LIMIT)
+
 # Redis configuration (can be overridden by environment variables)
 # redis:
 #   host: localhost
