@@ -56,7 +56,6 @@ from etl.flixpatrol_payload import (
 )
 from etl.media_manager_connection import open_media_manager_client
 from etl.media_manager_filter import passes_media_manager_filter
-from etl.microgenre_gap_fill import _has_populated_microgenres, microgenres_ready_for_redis
 from etl.rt_enrichment import enrich_from_algolia, enrich_from_local
 from utils.get_logger import get_logger
 from utils.redis_cache import disable_cache
@@ -750,21 +749,19 @@ class TMDBChangesETL(TMDBService):
                 existing Redis doc is missing/null microgenres (including prior
                 fail-open inserts).
                 """
-                existing_raw = existing_doc.get("microgenres") if existing_doc else None
-                if _has_populated_microgenres(existing_raw):
-                    existing_microgenres = valid_microgenres_value(existing_raw)
-                    if existing_microgenres is not None:
-                        redis_doc["microgenres"] = existing_microgenres
-                        stats.microgenres_preserved += 1
-                        return
+                existing_microgenres = valid_microgenres_value(
+                    existing_doc.get("microgenres") if existing_doc else None
+                )
+                if existing_microgenres is not None:
+                    redis_doc["microgenres"] = existing_microgenres
+                    stats.microgenres_preserved += 1
+                    return
 
-                current_raw = redis_doc.get("microgenres")
-                if _has_populated_microgenres(current_raw):
-                    current_microgenres = valid_microgenres_value(current_raw)
-                    if current_microgenres is not None:
-                        redis_doc["microgenres"] = current_microgenres
-                        stats.microgenres_preserved += 1
-                        return
+                current_microgenres = valid_microgenres_value(redis_doc.get("microgenres"))
+                if current_microgenres is not None:
+                    redis_doc["microgenres"] = current_microgenres
+                    stats.microgenres_preserved += 1
+                    return
 
                 doc_media_type = redis_doc.get("mc_type")
                 if doc_media_type not in ("movie", "tv"):
@@ -801,15 +798,7 @@ class TMDBChangesETL(TMDBService):
                     )
                     return
 
-                generated = microgenre_result_to_redis(response.result)
-                if not microgenres_ready_for_redis(generated):
-                    stats.microgenres_failed += 1
-                    logger.warning(
-                        "Microgenre classification returned no scores for %s",
-                        redis_doc.get("mc_id") or redis_doc.get("id"),
-                    )
-                    return
-                redis_doc["microgenres"] = generated
+                redis_doc["microgenres"] = microgenre_result_to_redis(response.result)
                 stats.microgenres_generated += 1
 
             for i in range(0, len(items), batch_size):

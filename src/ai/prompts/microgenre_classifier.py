@@ -30,14 +30,13 @@ PROMPT_HASH = hashlib.sha256(
         score_threshold="{score_threshold}",
     ).encode("utf-8")
 ).hexdigest()
-DEFAULT_MODEL: str = OpenAIModels.GPT_6_ASTRA
+DEFAULT_MODEL: str = OpenAIModels.GPT_5_6_LUNA
 DEFAULT_CEREBRAS_MODEL: str = CerebrasModels.GPT_OSS
 SUMMARY_MAX_CHARS = 4_000
 ENRICHMENT_MAX_CHARS = 8_000
 LLM_TIMEOUT_SECONDS = 45
 LLM_MAX_TOKENS = 5_000
 LLM_TEMPERATURE = 1.0
-MICROGENRE_REASONING_EFFORT = "medium"
 DEFAULT_SCORE_THRESHOLD = 0.1
 MODEL_OUTPUT_MAX_ATTEMPTS = 3
 
@@ -306,7 +305,6 @@ async def _score_with_provider(
             search_context_size="medium",
             enable_web_search=enable_web_search,
             prompt_cache_key=f"mgc:{PROMPT_HASH[:32]}",
-            reasoning_effort=MICROGENRE_REASONING_EFFORT,
         )
     execution_time = time.time() - t0
     return _response_to_classify_result(

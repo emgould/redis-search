@@ -341,17 +341,6 @@ class OpenAIProvider:
             else:
                 create_kwargs["text"] = {"format": {"type": "json_object"}}
 
-            reasoning_effort = kwargs.get("reasoning_effort", "low")
-            logger.debug(
-                "OpenAI responses.create model=%s reasoning.effort=%s web_search=%s "
-                "max_output_tokens=%s prompt_cache_key=%s",
-                create_kwargs.get("model"),
-                reasoning_effort,
-                enable_web_search,
-                create_kwargs.get("max_output_tokens"),
-                create_kwargs.get("prompt_cache_key", "(none)"),
-            )
-
             raw_response = await client.responses.create(**create_kwargs, timeout=float(timeout))
             response.response = raw_response
             output_text = getattr(raw_response, "output_text", None)

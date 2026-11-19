@@ -9,7 +9,6 @@ class CerebrasModels(StrEnum):
 
 
 class OpenAIModels(StrEnum):
-    GPT_6_ASTRA = "gpt-6-astra"
     GPT_5_6_TERRA = "gpt-5.6-terra"
     GPT_5_6_LUNA = "gpt-5.6-luna"
     GPT_6_1_SOL = "gpt-6.1-sol"
