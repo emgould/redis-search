@@ -28,7 +28,6 @@ from etl.etl_metadata import (
     create_run_metadata,
 )
 from etl.media_manager_connection import open_media_manager_client
-from etl.microgenre_nightly_etl import MicrogenreNightlyETLStats
 from etl.pi_nightly_etl import PIETLStats, run_pi_nightly_etl
 from etl.tmdb_nightly_etl import ChangesETLStats, run_nightly_etl
 from utils.alerts import send_alert
@@ -157,14 +156,12 @@ def _get_etl_functions() -> dict[str, Any]:
     # Lazy import to avoid circular import when running bestseller_author_etl as __main__
     from etl.bestseller_author_etl import run_bestseller_author_etl
     from etl.flixpatrol_nightly_etl import run_flixpatrol_nightly_etl
-    from etl.microgenre_nightly_etl import run_microgenre_nightly_etl
 
     return {
         "tmdb_nightly_etl": run_nightly_etl,
         "pi_nightly_etl": run_pi_nightly_etl,
         "bestseller_author_etl": run_bestseller_author_etl,
         "flixpatrol_nightly_etl": run_flixpatrol_nightly_etl,
-        "microgenre_nightly_etl": run_microgenre_nightly_etl,
     }
 
 
@@ -306,16 +303,6 @@ class ETLRunner:
                     verbose=params.verbose,
                     max_batches=params.max_batches,
                 )
-            elif job.target == "microgenre_nightly_etl":
-                stats = await etl_func(
-                    media_type=params.media_type,
-                    redis_host=self.config.redis_host,
-                    redis_port=self.config.redis_port,
-                    redis_password=self.config.redis_password,
-                    verbose=params.verbose,
-                    max_batches=params.max_batches,
-                    media_manager_client=media_manager_client,
-                )
             else:
                 # TMDB ETL - validate media_type
                 if params.media_type not in ("tv", "movie", "person"):
@@ -348,10 +335,6 @@ class ETLRunner:
                 result.microgenres_generated = stats.microgenres_generated
                 result.microgenres_preserved = stats.microgenres_preserved
                 result.microgenres_skipped_existing = stats.microgenres_skipped_existing
-                result.microgenres_failed = stats.microgenres_failed
-            elif isinstance(stats, MicrogenreNightlyETLStats):
-                result.mm_docs_sent = stats.mm_docs_sent
-                result.microgenres_generated = stats.microgenres_generated
                 result.microgenres_failed = stats.microgenres_failed
 
             # Collect all errors - bestseller ETL also has search_phase
@@ -423,12 +406,7 @@ class ETLRunner:
         # must not drop the FAISS push until the deadline passes; then email and
         # continue the Redis ETL.
         mm_client: MediaManagerClient | None = None
-        needs_media_manager = any(
-            j.target == "microgenre_nightly_etl"
-            or any(p.media_type in ("movie", "tv") for p in j.runs)
-            for j in enabled_jobs
-        )
-        if needs_media_manager:
+        if any(p.media_type in ("movie", "tv") for j in enabled_jobs for p in j.runs):
             connection = await open_media_manager_client()
             mm_client = connection.client
             if connection.client is not None:

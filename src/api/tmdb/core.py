@@ -430,15 +430,6 @@ class TMDBService(Auth, BaseAPIClient):
                 next_episode_to_air=details.next_episode_to_air,
                 last_episode_to_air=details.last_episode_to_air,
             )
-
-        if include_watch_providers and details.status_code != 404:
-            from api.tmdb.watchmode_provider_enrichment import (
-                apply_watchmode_release_provider_enrichment,
-            )
-
-            content_type = "movie" if media_type == MCType.MOVIE else "tv"
-            await apply_watchmode_release_provider_enrichment(details, tmdb_id, content_type)
-
         return details
 
     @RedisCache.use_cache(TMDBCache, prefix="enhance_media_item")

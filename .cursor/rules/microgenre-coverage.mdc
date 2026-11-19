@@ -25,30 +25,6 @@ Gap-fill eligibility (backfill `missing` mode only):
 
 Nightly ETL still classifies titles it writes regardless of this backfill gate.
 
-## Weekly microgenre gap-fill (after TMDB ETL)
-
-`config/etl_jobs.yaml` runs **`microgenre_gap_fill`** last (`target: microgenre_nightly_etl`).
-
-- **Schedule:** once per week on **Sunday UTC** by default; other nightly runs log
-  `Microgenre gap-fill skipped: not sunday` and exit without scanning (avoids re-hitting
-  unknown/empty rows every night). Override with `MICROGENRE_WEEKLY_WEEKDAY` (`sunday`..`monday`
-  or `0`..`6`). Set `MICROGENRE_WEEKLY_DISABLE=true` to run every night.
-- Scans `media:*` for movie/tv docs missing **populated** microgenres: absent/null
-  invalid shape, or **`microgenre_scores: {}`** (shape-valid but no labels).
-  Same rule applies to manual `backfill_microgenres` missing mode after this change.
-- Default: **`all_missing`** (every gap; not only RT/3-year eligible). Gate remains on
-  manual backfill unless `--all-missing`.
-- Classifies with **OpenAI** and date-gated web search by default (mirrors TMDB nightly
-  attach). Override with `MICROGENRE_NIGHTLY_LLM`, `MICROGENRE_NIGHTLY_WEB_SEARCH`.
-- Writes `$.microgenres` + `$.modified_at`, pushes Media Manager **`metadata_only=True`**
-  using the runner’s shared MM client; runner still drains/rebuilds/finalizes when
-  `total_mm_docs_sent > 0`.
-- Optional caps: `MICROGENRE_NIGHTLY_LIMIT`, or `max_batches` in YAML, or
-  `--job microgenre --max-batches N`.
-
-Env (ETL VM / Olares ETL pod): `OPENAI_API_KEY`, `CEREBRAS_API_KEY` (if cerebras),
-`MEDIA_MANAGER_API_URL`, `MICROGENRE_ETL_CONCURRENCY`.
-
 ## Nightly ETL
 
 `tmdb_nightly_etl._attach_microgenres`:
@@ -76,20 +52,8 @@ fallback coverage.
 
 | Path | LLM | Web search |
 |------|-----|------------|
-| Gap-fill backfill (`--mode missing`) | OpenAI `gpt-5.6-terra` (default) | On (date-gated; `--no-web-search` to disable) |
+| Gap-fill backfill (`--mode missing`) | Cerebras `gpt-oss-120b` (default) | Off (opt-in `--web-search` only with `--llm openai`) |
 | Nightly ETL / major-provider attach | OpenAI `gpt-5.6-terra` | Date-gated (≥ 2025-06-01); Cerebras fallback on API failure |
-
-`fill_missing` does not `JSON.SET` when the classifier returns zero scores; those
-rows increment **`unresolved`** (empty `microgenre_scores`, including `unknown=true`).
-
-Per-title **`failed`** (logged as `classify_errors` in the backfill summary) means the
-classifier path errored: uncaught exception, provider API error, empty response,
-non-JSON output, or JSON that does not match the contract. Those titles are not written.
-
-The backfill process **exits 0** when it finishes the scan/classify loop; **exit 1** only
-when `mm_errors > 0` or an unhandled exception aborts the run. Per-title
-`classify_errors` and `unresolved` do not change the exit code. Use logs/metrics to
-track classification quality.
 
 ## Gap-fill backfill
 
@@ -102,33 +66,18 @@ track classification quality.
 | `missing --empty-scores` | Query `idx:media` for movie/tv documents whose `microgenre_scores` object is `{}` and reclassify those only. Populated scores and missing microgenres are not selected. |
 | `sidecar` | Apply precomputed JSONL classifications only (optional MM metadata push) |
 
-### Local scan cache (`missing` mode, not `--empty-scores`)
-
-After a live Redis SCAN, the backfill writes `data/microgenre-backfill/scan-<REDIS>.json`
-(candidate keys + scan stats + request fingerprint). Makefile sets
-`MICROGENRE_SCAN_REDIS_LABEL` from `REDIS=local|dev`.
-
-On the next interactive run, if that file exists and matches the current flags
-(host/port, `mc_type`, `--all-missing`, `--force`, `--limit`), the CLI prompts
-`Use cached scan? [Y/n/refresh]`. `refresh` or `--refresh-scan-cache` forces a
-new SCAN and overwrites the file. Non-interactive runs must pass `--use-scan-cache`
-to reuse; otherwise they SCAN again. `--no-scan-cache` disables read, write, and
-the prompt. `--dry-run` does not update the cache file.
-
 ### Dev usage
 
 ```bash
 # IAP tunnel on 6381 required for REDIS=dev
 make backfill-microgenres REDIS=dev ARGS='--limit 50'
-make backfill-microgenres REDIS=dev ARGS='--llm cerebras --no-web-search --limit 50'
+make backfill-microgenres REDIS=dev ARGS='--llm openai --limit 50'
 make backfill-microgenres REDIS=dev
 make backfill-microgenres REDIS=dev ARGS='--no-push-to-mm'
 make backfill-microgenres REDIS=dev ARGS='--finalize --limit 20'
 make backfill-microgenres REDIS=dev ARGS='--mode sidecar --dry-run'
 make backfill-microgenres REDIS=dev ARGS='--all-missing --dry-run'
 make backfill-microgenres REDIS=dev ARGS='--all-missing'
-make backfill-microgenres REDIS=dev ARGS='--use-scan-cache --limit 50'
-make backfill-microgenres REDIS=dev ARGS='--refresh-scan-cache --all-missing'
 make backfill-microgenres REDIS=local ARGS='--empty-scores --dry-run'
 make backfill-microgenres REDIS=local ARGS='--empty-scores --no-push-to-mm --llm openai'
 ```
